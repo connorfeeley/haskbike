@@ -29,6 +29,7 @@ import           Data.FileEmbed                 (embedDir)
 import qualified Data.Maybe                     as Maybe
 
 import qualified StationInformation             as SI
+import qualified StationStatus                  as SS
 
 -- | Decode a ByteString into a value.
 decodeByteString :: FromJSON a => BL.ByteString -> Either String a
@@ -57,5 +58,6 @@ buildTestCase (_ :: a) name file = testCase name (testParse (undefined :: a) (Ma
 -- | Test decoding of JSON files.
 test_Decoding :: Test
 test_Decoding = testGroup "JSON decoding tests" $
-    [ buildTestCase (undefined :: SI.StationInformationResponse) "Station Information" "station_information.json"
+    [ buildTestCase (undefined :: SI.StationInformationResponse)    "Station Information"   "station_information.json"
+    , buildTestCase (undefined :: SS.StationStatusResponse)         "Station Status"        "station_status.json"
     ]
