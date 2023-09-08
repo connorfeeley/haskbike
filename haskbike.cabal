@@ -119,6 +119,7 @@ library
     -- Modules exported by the library.
     exposed-modules:  BikeShareAPI
                    ,  StationInformation
+                   ,  StationStatus
 
     -- Modules included in this library but not exported.
     -- other-modules:
