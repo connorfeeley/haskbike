@@ -32,28 +32,28 @@ instance FromJSON StationStatusString where
 
 -- | Type representing a BikeShare station's status.
 data StationStatus where
-  StationStatus :: { station_station_id :: String
-                   , station_num_bikes_available :: Int
-                   , station_num_bikes_disabled :: Int
-                   , station_num_docks_available :: Int
-                   , station_num_docks_disabled :: Int
-                   , station_last_reported :: Maybe Int
-                   , station_is_charging_station :: Bool
-                   , station_status :: StationStatusString
-                   , station_is_installed :: Bool
-                   , station_is_renting :: Bool
-                   , station_is_returning :: Bool
-                   , station_traffic :: Maybe String
-                   , station_vehicle_docks_available :: [VehicleDock]
-                   , station_vehicle_types_available :: [VehicleType]
+  StationStatus :: { status_station_id                  :: String
+                   , status_num_bikes_available         :: Int
+                   , status_num_bikes_disabled          :: Int
+                   , status_num_docks_available         :: Int
+                   , status_num_docks_disabled          :: Int
+                   , status_last_reported               :: Maybe Int
+                   , status_is_charging_station         :: Bool
+                   , status_status                      :: StationStatusString
+                   , status_is_installed                :: Bool
+                   , status_is_renting                  :: Bool
+                   , status_is_returning                :: Bool
+                   , status_traffic                     :: Maybe String
+                   , status_vehicle_docks_available     :: [VehicleDock]
+                   , status_vehicle_types_available     :: [VehicleType]
                    } -> StationStatus
   deriving (Show, Generic)
 
--- drop the "station_" prefix
+-- drop the "status_" prefix
 instance ToJSON StationStatus where
-  toJSON        = genericToJSON defaultOptions          { fieldLabelModifier = drop 8 }
+  toJSON        = genericToJSON defaultOptions          { fieldLabelModifier = drop 7 }
 instance FromJSON StationStatus where
-  parseJSON     = genericParseJSON defaultOptions       { fieldLabelModifier = drop 8 }
+  parseJSON     = genericParseJSON defaultOptions       { fieldLabelModifier = drop 7 }
 
 -- | A type representing a BikeShare station's vehicle dock status.
 data VehicleDock where
