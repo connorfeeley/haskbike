@@ -191,6 +191,7 @@ test-suite haskbike-test
                     -- API access
                     , servant
                     , aeson
+                    , aeson-better-errors
                     , servant-client
                     , http-client
                     , http-client-tls
