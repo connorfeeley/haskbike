@@ -33,5 +33,5 @@ testParse (_ :: a) bs = do
 -- | Test decoding of JSON files.
 test_Decoding :: Test
 test_Decoding = testGroup "JSON decoding tests" $
-    [ testCase "Station Information" (testParse (undefined :: SI.Station) (fromStrict $(embedFile "test/json/station_information.json")))
+    [ testCase "Station Information" (testParse (undefined :: SI.StationInformationResponse) (fromStrict $(embedFile "test/json/station_information.json")))
     ]

@@ -5,7 +5,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module StationInformation
-        ( Station
+        ( Station (..)
+        , StationInformationResponse (..)
         ) where
 
 import           Data.Aeson
@@ -123,3 +124,13 @@ instance FromJSON Station where
     <*> v .: "_bluetooth_id"
     <*> v .: "_ride_code_support"
     <*> v .: "rental_uris"
+
+-- | A wrapper type for the station information response.
+newtype StationInformationResponse where
+  StationInformationResponse :: {stations :: [Station]} -> StationInformationResponse
+  deriving (Show, Generic)
+
+instance FromJSON StationInformationResponse where
+  parseJSON = withObject "StationInformationResponse" $ \v -> do
+    dataObject <- v .: "data"
+    StationInformationResponse <$> dataObject .: "stations"
