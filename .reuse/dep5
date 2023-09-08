@@ -1,0 +1,24 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: haskbike
+Upstream-Contact: Connor Feeley <git@cfeeley.org>
+Source: https://github.com/connorfeeley/haskbike
+
+### Source files: exe, lib, test, etc.
+Files: src-exe/* src-lib/* test/* haskbike.cabal cabal.project.freeze hie.yaml flake.nix flake.lock
+Copyright: 2023 Connor Feeley <git@cfeeley.org>
+License: BSD-3-Clause
+
+### Documentation
+Files: README.org CHANGELOG.md docs/*
+Copyright: 2023 Connor Feeley <git@cfeeley.org>
+License: BSD-3-Clause
+
+### Other files
+Files: .dir-locals.el .envrc .gitignore
+Copyright: 2023 Connor Feeley <git@cfeeley.org>
+License: BSD-3-Clause
+
+### flake-compat
+Files: default.nix shell.nix
+Copyright: 2020-2021 Eelco Dolstra and the flake-compat contributors
+License: MIT

@@ -1,0 +1,49 @@
+{
+  "last_updated": 1694211221,
+  "ttl": 5,
+  "data": {
+    "vehicle_types": [
+      {
+        "vehicle_type_id": "ICONIC",
+        "form_factor": "bicycle",
+        "propulsion_type": "human",
+        "max_range_meters": 0.0,
+        "name": "ICONIC",
+        "default_pricing_plan_id": "186-1"
+      },
+      {
+        "vehicle_type_id": "FIT",
+        "form_factor": "bicycle",
+        "propulsion_type": "human",
+        "max_range_meters": 0.0,
+        "name": "FIT",
+        "default_pricing_plan_id": "186-1"
+      },
+      {
+        "vehicle_type_id": "BOOST",
+        "form_factor": "bicycle",
+        "propulsion_type": "electric_assist",
+        "max_range_meters": 0.0,
+        "name": "BOOST",
+        "default_pricing_plan_id": "186-2"
+      },
+      {
+        "vehicle_type_id": "EFIT",
+        "form_factor": "bicycle",
+        "propulsion_type": "electric_assist",
+        "max_range_meters": 0.0,
+        "name": "EFIT",
+        "default_pricing_plan_id": "186-2"
+      },
+      {
+        "vehicle_type_id": "EFIT G5",
+        "form_factor": "bicycle",
+        "propulsion_type": "electric_assist",
+        "max_range_meters": 60000.0,
+        "name": "EFIT G5",
+        "default_pricing_plan_id": "186-2"
+      }
+    ]
+  },
+  "version": "2.3"
+}

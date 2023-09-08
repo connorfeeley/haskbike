@@ -1,0 +1,2265 @@
+{
+  "last_updated": 1694211391,
+  "ttl": 40,
+  "data": {
+    "plans": [
+      {
+        "per_minute_pricing": [
+          {
+            "start": 30,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 863
+          }
+        ],
+        "plan_id": "186",
+        "name": "Annual 30",
+        "currency": "CAD",
+        "price": 105.0,
+        "description": "Unlimited 30-min trips on classic bikes",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 30,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 863
+          }
+        ],
+        "plan_id": "186-1",
+        "name": "Annual 30",
+        "currency": "CAD",
+        "price": 105.0,
+        "description": "Unlimited 30-min trips on classic bikes",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 0,
+            "rate": 0.1,
+            "interval": 1,
+            "end": 1000
+          }
+        ],
+        "plan_id": "186-2",
+        "name": "Annual 30",
+        "currency": "CAD",
+        "price": 105.0,
+        "description": "Unlimited 30-min trips on classic bikes",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [],
+        "plan_id": "191",
+        "name": "CMP - City of Toronto",
+        "currency": "CAD",
+        "price": 90.0,
+        "description": "CMP - City of Toronto",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [],
+        "plan_id": "191-2",
+        "name": "CMP - City of Toronto",
+        "currency": "CAD",
+        "price": 90.0,
+        "description": "CMP - City of Toronto",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 45,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 878
+          }
+        ],
+        "plan_id": "208",
+        "name": "Annual 45",
+        "currency": "CAD",
+        "price": 120.0,
+        "description": "Unlimited 45-min trips on classic bikes",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 45,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 878
+          }
+        ],
+        "plan_id": "208-1",
+        "name": "Annual 45",
+        "currency": "CAD",
+        "price": 120.0,
+        "description": "Unlimited 45-min trips on classic bikes",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 0,
+            "rate": 0.1,
+            "interval": 1,
+            "end": 1000
+          }
+        ],
+        "plan_id": "208-2",
+        "name": "Annual 45",
+        "currency": "CAD",
+        "price": 120.0,
+        "description": "Unlimited 45-min trips on classic bikes",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 30,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 863
+          }
+        ],
+        "plan_id": "209",
+        "name": "Corporate 30",
+        "currency": "CAD",
+        "price": 84.0,
+        "description": "Corporate 30",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 30,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 863
+          }
+        ],
+        "plan_id": "209-1",
+        "name": "Corporate 30",
+        "currency": "CAD",
+        "price": 84.0,
+        "description": "Corporate 30",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 0,
+            "rate": 0.1,
+            "interval": 1,
+            "end": 1000
+          }
+        ],
+        "plan_id": "209-2",
+        "name": "Corporate 30",
+        "currency": "CAD",
+        "price": 84.0,
+        "description": "Corporate 30",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 45,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 878
+          }
+        ],
+        "plan_id": "210-1",
+        "name": "Corporate 45",
+        "currency": "CAD",
+        "price": 96.0,
+        "description": "Corporate 45",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 0,
+            "rate": 0.1,
+            "interval": 1,
+            "end": 1000
+          }
+        ],
+        "plan_id": "210-2",
+        "name": "Corporate 45",
+        "currency": "CAD",
+        "price": 96.0,
+        "description": "Corporate 45",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 46,
+            "rate": 4.0,
+            "interval": 30,
+            "end": 76
+          },
+          {
+            "start": 76,
+            "rate": 4.0,
+            "interval": 30,
+            "end": 796
+          }
+        ],
+        "plan_id": "210",
+        "name": "Corporate 45",
+        "currency": "CAD",
+        "price": 96.0,
+        "description": "Corporate 45",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 31,
+            "rate": 4.0,
+            "interval": 29,
+            "end": 60
+          },
+          {
+            "start": 60,
+            "rate": 4.0,
+            "interval": 30,
+            "end": 780
+          }
+        ],
+        "plan_id": "211",
+        "name": "OPTION 2 TEST",
+        "currency": "CAD",
+        "price": 0.0,
+        "description": "",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 31,
+            "rate": 4.0,
+            "interval": 29,
+            "end": 60
+          },
+          {
+            "start": 60,
+            "rate": 4.0,
+            "interval": 30,
+            "end": 780
+          }
+        ],
+        "plan_id": "211-1",
+        "name": "OPTION 2 TEST",
+        "currency": "CAD",
+        "price": 0.0,
+        "description": "",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 31,
+            "rate": 4.0,
+            "interval": 29,
+            "end": 60
+          },
+          {
+            "start": 60,
+            "rate": 4.0,
+            "interval": 30,
+            "end": 780
+          }
+        ],
+        "plan_id": "211-2",
+        "name": "OPTION 2 TEST",
+        "currency": "CAD",
+        "price": 0.0,
+        "description": "",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 30,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 863
+          }
+        ],
+        "plan_id": "212",
+        "name": "CMP-MROC30",
+        "currency": "CAD",
+        "price": 0.0,
+        "description": "",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 30,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 863
+          }
+        ],
+        "plan_id": "212-1",
+        "name": "CMP-MROC30",
+        "currency": "CAD",
+        "price": 0.0,
+        "description": "",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 0,
+            "rate": 0.1,
+            "interval": 1,
+            "end": 1000
+          }
+        ],
+        "plan_id": "212-2",
+        "name": "CMP-MROC30",
+        "currency": "CAD",
+        "price": 0.0,
+        "description": "",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 45,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 878
+          }
+        ],
+        "plan_id": "213",
+        "name": "CMP-MROC45",
+        "currency": "CAD",
+        "price": 0.0,
+        "description": "CMP-MROC45",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 45,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 878
+          }
+        ],
+        "plan_id": "213-1",
+        "name": "CMP-MROC45",
+        "currency": "CAD",
+        "price": 0.0,
+        "description": "CMP-MROC45",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 0,
+            "rate": 0.1,
+            "interval": 1,
+            "end": 1000
+          }
+        ],
+        "plan_id": "213-2",
+        "name": "CMP-MROC45",
+        "currency": "CAD",
+        "price": 0.0,
+        "description": "CMP-MROC45",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 46,
+            "rate": 4.0,
+            "interval": 30,
+            "end": 76
+          },
+          {
+            "start": 76,
+            "rate": 4.0,
+            "interval": 30,
+            "end": 796
+          }
+        ],
+        "plan_id": "214",
+        "name": "CMP-PPCMP45",
+        "currency": "CAD",
+        "price": 0.0,
+        "description": "",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 46,
+            "rate": 4.0,
+            "interval": 30,
+            "end": 76
+          },
+          {
+            "start": 76,
+            "rate": 4.0,
+            "interval": 30,
+            "end": 796
+          }
+        ],
+        "plan_id": "214-1",
+        "name": "CMP-PPCMP45",
+        "currency": "CAD",
+        "price": 0.0,
+        "description": "",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 46,
+            "rate": 4.0,
+            "interval": 30,
+            "end": 76
+          },
+          {
+            "start": 76,
+            "rate": 4.0,
+            "interval": 30,
+            "end": 796
+          }
+        ],
+        "plan_id": "214-2",
+        "name": "CMP-PPCMP45",
+        "currency": "CAD",
+        "price": 0.0,
+        "description": "",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 31,
+            "rate": 4.0,
+            "interval": 29,
+            "end": 60
+          },
+          {
+            "start": 60,
+            "rate": 4.0,
+            "interval": 30,
+            "end": 780
+          }
+        ],
+        "plan_id": "215",
+        "name": "CMP-PPCMP30",
+        "currency": "CAD",
+        "price": 0.0,
+        "description": "",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 31,
+            "rate": 4.0,
+            "interval": 29,
+            "end": 60
+          },
+          {
+            "start": 60,
+            "rate": 4.0,
+            "interval": 30,
+            "end": 780
+          }
+        ],
+        "plan_id": "215-1",
+        "name": "CMP-PPCMP30",
+        "currency": "CAD",
+        "price": 0.0,
+        "description": "",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 31,
+            "rate": 4.0,
+            "interval": 29,
+            "end": 60
+          },
+          {
+            "start": 60,
+            "rate": 4.0,
+            "interval": 30,
+            "end": 780
+          }
+        ],
+        "plan_id": "215-2",
+        "name": "CMP-PPCMP30",
+        "currency": "CAD",
+        "price": 0.0,
+        "description": "",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 30,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 863
+          }
+        ],
+        "plan_id": "216",
+        "name": "CMP CoT30",
+        "currency": "CAD",
+        "price": 63.0,
+        "description": "CMP CoT30",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 30,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 863
+          }
+        ],
+        "plan_id": "216-1",
+        "name": "CMP CoT30",
+        "currency": "CAD",
+        "price": 63.0,
+        "description": "CMP CoT30",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 0,
+            "rate": 0.1,
+            "interval": 1,
+            "end": 1000
+          }
+        ],
+        "plan_id": "216-2",
+        "name": "CMP CoT30",
+        "currency": "CAD",
+        "price": 63.0,
+        "description": "CMP CoT30",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 45,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 878
+          }
+        ],
+        "plan_id": "217",
+        "name": "CMP CoT45",
+        "currency": "CAD",
+        "price": 72.0,
+        "description": "",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 45,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 878
+          }
+        ],
+        "plan_id": "217-1",
+        "name": "CMP CoT45",
+        "currency": "CAD",
+        "price": 72.0,
+        "description": "",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 0,
+            "rate": 0.1,
+            "interval": 1,
+            "end": 1000
+          }
+        ],
+        "plan_id": "217-2",
+        "name": "CMP CoT45",
+        "currency": "CAD",
+        "price": 72.0,
+        "description": "",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 30,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 863
+          }
+        ],
+        "plan_id": "218",
+        "name": "CMP-Smart30",
+        "currency": "CAD",
+        "price": 78.75,
+        "description": "",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 45,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 878
+          }
+        ],
+        "plan_id": "218-1",
+        "name": "CMP-Smart30",
+        "currency": "CAD",
+        "price": 78.75,
+        "description": "",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 0,
+            "rate": 0.1,
+            "interval": 1,
+            "end": 1000
+          }
+        ],
+        "plan_id": "218-2",
+        "name": "CMP-Smart30",
+        "currency": "CAD",
+        "price": 78.75,
+        "description": "",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 45,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 878
+          }
+        ],
+        "plan_id": "219",
+        "name": "CMP-Smart45",
+        "currency": "CAD",
+        "price": 90.0,
+        "description": "",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 45,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 878
+          }
+        ],
+        "plan_id": "219-1",
+        "name": "CMP-Smart45",
+        "currency": "CAD",
+        "price": 90.0,
+        "description": "",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 0,
+            "rate": 0.1,
+            "interval": 1,
+            "end": 1000
+          }
+        ],
+        "plan_id": "219-2",
+        "name": "CMP-Smart45",
+        "currency": "CAD",
+        "price": 90.0,
+        "description": "",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 30,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 863
+          }
+        ],
+        "plan_id": "220",
+        "name": "CMP AnimalClinic30",
+        "currency": "CAD",
+        "price": 52.5,
+        "description": "CMP AnimalClinic30",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 30,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 863
+          }
+        ],
+        "plan_id": "220-1",
+        "name": "CMP AnimalClinic30",
+        "currency": "CAD",
+        "price": 52.5,
+        "description": "CMP AnimalClinic30",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 0,
+            "rate": 0.1,
+            "interval": 1,
+            "end": 1000
+          }
+        ],
+        "plan_id": "220-2",
+        "name": "CMP AnimalClinic30",
+        "currency": "CAD",
+        "price": 52.5,
+        "description": "CMP AnimalClinic30",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 45,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 878
+          }
+        ],
+        "plan_id": "221",
+        "name": "CMP AnimalClinic45",
+        "currency": "CAD",
+        "price": 63.0,
+        "description": "CMP AnimalClinic45",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 45,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 878
+          }
+        ],
+        "plan_id": "221-1",
+        "name": "CMP AnimalClinic45",
+        "currency": "CAD",
+        "price": 63.0,
+        "description": "CMP AnimalClinic45",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 0,
+            "rate": 0.1,
+            "interval": 1,
+            "end": 1000
+          }
+        ],
+        "plan_id": "221-2",
+        "name": "CMP AnimalClinic45",
+        "currency": "CAD",
+        "price": 63.0,
+        "description": "CMP AnimalClinic45",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 30,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 863
+          }
+        ],
+        "plan_id": "222",
+        "name": "CMP-ParkPeople30",
+        "currency": "CAD",
+        "price": 0.0,
+        "description": "CMP-ParkPeople30",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 30,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 863
+          }
+        ],
+        "plan_id": "222-1",
+        "name": "CMP-ParkPeople30",
+        "currency": "CAD",
+        "price": 0.0,
+        "description": "CMP-ParkPeople30",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 0,
+            "rate": 0.1,
+            "interval": 1,
+            "end": 1000
+          }
+        ],
+        "plan_id": "222-2",
+        "name": "CMP-ParkPeople30",
+        "currency": "CAD",
+        "price": 0.0,
+        "description": "CMP-ParkPeople30",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 45,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 878
+          }
+        ],
+        "plan_id": "223",
+        "name": "CMP-ParkPeople45",
+        "currency": "CAD",
+        "price": 0.0,
+        "description": "CMP-ParkPeople45",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 45,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 878
+          }
+        ],
+        "plan_id": "223-1",
+        "name": "CMP-ParkPeople45",
+        "currency": "CAD",
+        "price": 0.0,
+        "description": "CMP-ParkPeople45",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 0,
+            "rate": 0.1,
+            "interval": 1,
+            "end": 1000
+          }
+        ],
+        "plan_id": "223-2",
+        "name": "CMP-ParkPeople45",
+        "currency": "CAD",
+        "price": 0.0,
+        "description": "CMP-ParkPeople45",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 46,
+            "rate": 4.0,
+            "interval": 30,
+            "end": 76
+          },
+          {
+            "start": 76,
+            "rate": 4.0,
+            "interval": 30,
+            "end": 796
+          }
+        ],
+        "plan_id": "224",
+        "name": "VIP Trial",
+        "currency": "CAD",
+        "price": 0.0,
+        "description": "VIP Trial",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 46,
+            "rate": 4.0,
+            "interval": 30,
+            "end": 76
+          },
+          {
+            "start": 76,
+            "rate": 4.0,
+            "interval": 30,
+            "end": 796
+          }
+        ],
+        "plan_id": "224-1",
+        "name": "VIP Trial",
+        "currency": "CAD",
+        "price": 0.0,
+        "description": "VIP Trial",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 46,
+            "rate": 4.0,
+            "interval": 30,
+            "end": 76
+          },
+          {
+            "start": 76,
+            "rate": 4.0,
+            "interval": 30,
+            "end": 796
+          }
+        ],
+        "plan_id": "224-2",
+        "name": "VIP Trial",
+        "currency": "CAD",
+        "price": 0.0,
+        "description": "VIP Trial",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 30,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 863
+          }
+        ],
+        "plan_id": "225",
+        "name": "CMP-TP30",
+        "currency": "CAD",
+        "price": 63.0,
+        "description": "CMP-TP30",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 30,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 863
+          }
+        ],
+        "plan_id": "225-1",
+        "name": "CMP-TP30",
+        "currency": "CAD",
+        "price": 63.0,
+        "description": "CMP-TP30",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 0,
+            "rate": 0.1,
+            "interval": 1,
+            "end": 1000
+          }
+        ],
+        "plan_id": "225-2",
+        "name": "CMP-TP30",
+        "currency": "CAD",
+        "price": 63.0,
+        "description": "CMP-TP30",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 45,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 878
+          }
+        ],
+        "plan_id": "226",
+        "name": "CMP-TP45",
+        "currency": "CAD",
+        "price": 72.0,
+        "description": "CMP-TP45",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 45,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 878
+          }
+        ],
+        "plan_id": "226-1",
+        "name": "CMP-TP45",
+        "currency": "CAD",
+        "price": 72.0,
+        "description": "CMP-TP45",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 0,
+            "rate": 0.1,
+            "interval": 1,
+            "end": 1000
+          }
+        ],
+        "plan_id": "226-2",
+        "name": "CMP-TP45",
+        "currency": "CAD",
+        "price": 72.0,
+        "description": "CMP-TP45",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 30,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 863
+          }
+        ],
+        "plan_id": "227",
+        "name": "CMP-MUR30",
+        "currency": "CAD",
+        "price": 31.5,
+        "description": "CMP-MUR30",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 30,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 863
+          }
+        ],
+        "plan_id": "227-1",
+        "name": "CMP-MUR30",
+        "currency": "CAD",
+        "price": 31.5,
+        "description": "CMP-MUR30",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 0,
+            "rate": 0.1,
+            "interval": 1,
+            "end": 1000
+          }
+        ],
+        "plan_id": "227-2",
+        "name": "CMP-MUR30",
+        "currency": "CAD",
+        "price": 31.5,
+        "description": "CMP-MUR30",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 45,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 878
+          }
+        ],
+        "plan_id": "228",
+        "name": "CMP-MUR45",
+        "currency": "CAD",
+        "price": 36.0,
+        "description": "CMP-MUR45",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 45,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 878
+          }
+        ],
+        "plan_id": "228-1",
+        "name": "CMP-MUR45",
+        "currency": "CAD",
+        "price": 36.0,
+        "description": "CMP-MUR45",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 0,
+            "rate": 0.1,
+            "interval": 1,
+            "end": 1000
+          }
+        ],
+        "plan_id": "228-2",
+        "name": "CMP-MUR45",
+        "currency": "CAD",
+        "price": 36.0,
+        "description": "CMP-MUR45",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 31,
+            "rate": 4.0,
+            "interval": 29,
+            "end": 60
+          },
+          {
+            "start": 60,
+            "rate": 4.0,
+            "interval": 30,
+            "end": 780
+          }
+        ],
+        "plan_id": "229",
+        "name": "CMP-GP30",
+        "currency": "CAD",
+        "price": 49.5,
+        "description": "CMP-GP30",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 30,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 863
+          }
+        ],
+        "plan_id": "229-1",
+        "name": "CMP-GP30",
+        "currency": "CAD",
+        "price": 49.5,
+        "description": "CMP-GP30",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 0,
+            "rate": 0.1,
+            "interval": 1,
+            "end": 1000
+          }
+        ],
+        "plan_id": "229-2",
+        "name": "CMP-GP30",
+        "currency": "CAD",
+        "price": 49.5,
+        "description": "CMP-GP30",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 46,
+            "rate": 4.0,
+            "interval": 30,
+            "end": 76
+          },
+          {
+            "start": 76,
+            "rate": 4.0,
+            "interval": 30,
+            "end": 796
+          }
+        ],
+        "plan_id": "230",
+        "name": "CMP-GP45",
+        "currency": "CAD",
+        "price": 57.5,
+        "description": "CMP-GP45",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 46,
+            "rate": 4.0,
+            "interval": 30,
+            "end": 76
+          },
+          {
+            "start": 76,
+            "rate": 4.0,
+            "interval": 30,
+            "end": 796
+          }
+        ],
+        "plan_id": "230-1",
+        "name": "CMP-GP45",
+        "currency": "CAD",
+        "price": 57.5,
+        "description": "CMP-GP45",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 46,
+            "rate": 4.0,
+            "interval": 30,
+            "end": 76
+          },
+          {
+            "start": 76,
+            "rate": 4.0,
+            "interval": 30,
+            "end": 796
+          }
+        ],
+        "plan_id": "230-2",
+        "name": "CMP-GP45",
+        "currency": "CAD",
+        "price": 57.5,
+        "description": "CMP-GP45",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 30,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 863
+          }
+        ],
+        "plan_id": "231",
+        "name": "CMP-LEA30",
+        "currency": "CAD",
+        "price": 63.0,
+        "description": "CMP-LEA30",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 30,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 863
+          }
+        ],
+        "plan_id": "231-1",
+        "name": "CMP-LEA30",
+        "currency": "CAD",
+        "price": 63.0,
+        "description": "CMP-LEA30",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 0,
+            "rate": 0.1,
+            "interval": 1,
+            "end": 1000
+          }
+        ],
+        "plan_id": "231-2",
+        "name": "CMP-LEA30",
+        "currency": "CAD",
+        "price": 63.0,
+        "description": "CMP-LEA30",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 45,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 878
+          }
+        ],
+        "plan_id": "232",
+        "name": "CMP-LEA45",
+        "currency": "CAD",
+        "price": 72.0,
+        "description": "CMP-LEA45",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 45,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 878
+          }
+        ],
+        "plan_id": "232-1",
+        "name": "CMP-LEA45",
+        "currency": "CAD",
+        "price": 72.0,
+        "description": "CMP-LEA45",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 0,
+            "rate": 0.1,
+            "interval": 1,
+            "end": 1000
+          }
+        ],
+        "plan_id": "232-2",
+        "name": "CMP-LEA45",
+        "currency": "CAD",
+        "price": 72.0,
+        "description": "CMP-LEA45",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 30,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 863
+          }
+        ],
+        "plan_id": "233",
+        "name": "CMP-SMH30",
+        "currency": "CAD",
+        "price": 31.5,
+        "description": "CMP-SMH30",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 30,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 863
+          }
+        ],
+        "plan_id": "233-1",
+        "name": "CMP-SMH30",
+        "currency": "CAD",
+        "price": 31.5,
+        "description": "CMP-SMH30",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 0,
+            "rate": 0.1,
+            "interval": 1,
+            "end": 1000
+          }
+        ],
+        "plan_id": "233-2",
+        "name": "CMP-SMH30",
+        "currency": "CAD",
+        "price": 31.5,
+        "description": "CMP-SMH30",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 45,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 878
+          }
+        ],
+        "plan_id": "234",
+        "name": "CMP-SMH45",
+        "currency": "CAD",
+        "price": 36.0,
+        "description": "CMP-SMH45",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 45,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 878
+          }
+        ],
+        "plan_id": "234-1",
+        "name": "CMP-SMH45",
+        "currency": "CAD",
+        "price": 36.0,
+        "description": "CMP-SMH45",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 0,
+            "rate": 0.1,
+            "interval": 1,
+            "end": 1000
+          }
+        ],
+        "plan_id": "234-2",
+        "name": "CMP-SMH45",
+        "currency": "CAD",
+        "price": 36.0,
+        "description": "CMP-SMH45",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 30,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 863
+          }
+        ],
+        "plan_id": "235",
+        "name": "CMP-PLUS30",
+        "currency": "CAD",
+        "price": 63.0,
+        "description": "CMP-PLUS30",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 30,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 863
+          }
+        ],
+        "plan_id": "235-1",
+        "name": "CMP-PLUS30",
+        "currency": "CAD",
+        "price": 63.0,
+        "description": "CMP-PLUS30",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 0,
+            "rate": 0.1,
+            "interval": 1,
+            "end": 1000
+          }
+        ],
+        "plan_id": "235-2",
+        "name": "CMP-PLUS30",
+        "currency": "CAD",
+        "price": 63.0,
+        "description": "CMP-PLUS30",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 45,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 878
+          }
+        ],
+        "plan_id": "236",
+        "name": "CMP-PLUS45",
+        "currency": "CAD",
+        "price": 72.0,
+        "description": "CMP-PLUS45",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 45,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 878
+          }
+        ],
+        "plan_id": "236-1",
+        "name": "CMP-PLUS45",
+        "currency": "CAD",
+        "price": 72.0,
+        "description": "CMP-PLUS45",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 0,
+            "rate": 0.1,
+            "interval": 1,
+            "end": 1000
+          }
+        ],
+        "plan_id": "236-2",
+        "name": "CMP-PLUS45",
+        "currency": "CAD",
+        "price": 72.0,
+        "description": "CMP-PLUS45",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 30,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 863
+          }
+        ],
+        "plan_id": "244",
+        "name": "CMP-SmartDen30",
+        "currency": "CAD",
+        "price": 0.0,
+        "description": "CMP-SmartDen30",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 30,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 863
+          }
+        ],
+        "plan_id": "244-1",
+        "name": "CMP-SmartDen30",
+        "currency": "CAD",
+        "price": 0.0,
+        "description": "CMP-SmartDen30",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 0,
+            "rate": 0.1,
+            "interval": 1,
+            "end": 1000
+          }
+        ],
+        "plan_id": "244-2",
+        "name": "CMP-SmartDen30",
+        "currency": "CAD",
+        "price": 0.0,
+        "description": "CMP-SmartDen30",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 45,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 878
+          }
+        ],
+        "plan_id": "245",
+        "name": "CMP-SmartDen45",
+        "currency": "CAD",
+        "price": 0.0,
+        "description": "CMP-SmartDen45",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 45,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 878
+          }
+        ],
+        "plan_id": "245-1",
+        "name": "CMP-SmartDen45",
+        "currency": "CAD",
+        "price": 0.0,
+        "description": "CMP-SmartDen45",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 0,
+            "rate": 0.1,
+            "interval": 1,
+            "end": 1000
+          }
+        ],
+        "plan_id": "245-2",
+        "name": "CMP-SmartDen45",
+        "currency": "CAD",
+        "price": 0.0,
+        "description": "CMP-SmartDen45",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 45,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 878
+          }
+        ],
+        "plan_id": "248-1",
+        "name": "CMP-DewartGleason45",
+        "currency": "CAD",
+        "price": 63.0,
+        "description": "",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 0,
+            "rate": 0.1,
+            "interval": 1,
+            "end": 1000
+          }
+        ],
+        "plan_id": "248-2",
+        "name": "CMP-DewartGleason45",
+        "currency": "CAD",
+        "price": 63.0,
+        "description": "",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 45,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 878
+          }
+        ],
+        "plan_id": "248",
+        "name": "CMP-DewartGleason45",
+        "currency": "CAD",
+        "price": 63.0,
+        "description": "",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 30,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 863
+          }
+        ],
+        "plan_id": "249",
+        "name": "CMP-DewartGleason30",
+        "currency": "CAD",
+        "price": 52.5,
+        "description": "CMP-DewartGleason30",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 30,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 863
+          }
+        ],
+        "plan_id": "249-1",
+        "name": "CMP-DewartGleason30",
+        "currency": "CAD",
+        "price": 52.5,
+        "description": "CMP-DewartGleason30",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 0,
+            "rate": 0.1,
+            "interval": 1,
+            "end": 1000
+          }
+        ],
+        "plan_id": "249-2",
+        "name": "CMP-DewartGleason30",
+        "currency": "CAD",
+        "price": 52.5,
+        "description": "CMP-DewartGleason30",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 90,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 923
+          }
+        ],
+        "plan_id": "251",
+        "name": "Classic Bike DayPass",
+        "currency": "CAD",
+        "price": 15.0,
+        "description": "90 min rides on classic bikes",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 90,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 923
+          }
+        ],
+        "plan_id": "251-1",
+        "name": "Classic Bike DayPass",
+        "currency": "CAD",
+        "price": 15.0,
+        "description": "90 min rides on classic bikes",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 0,
+            "rate": 1.2,
+            "interval": 1,
+            "end": 1
+          },
+          {
+            "start": 1,
+            "rate": 0.2,
+            "interval": 1,
+            "end": 495
+          }
+        ],
+        "plan_id": "251-2",
+        "name": "Classic Bike DayPass",
+        "currency": "CAD",
+        "price": 15.0,
+        "description": "90 min rides on classic bikes",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 0,
+            "rate": 1.12,
+            "interval": 1,
+            "end": 1
+          },
+          {
+            "start": 1,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 825
+          }
+        ],
+        "plan_id": "252",
+        "name": "Pay-As-You-Go ($1 Unlock Fee)",
+        "currency": "CAD",
+        "price": 0.0,
+        "description": "+Classic bike $0.12/min; Ebike $0.20/min  ",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 0,
+            "rate": 1.12,
+            "interval": 1,
+            "end": 1
+          },
+          {
+            "start": 1,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 825
+          }
+        ],
+        "plan_id": "252-1",
+        "name": "Pay-As-You-Go ($1 Unlock Fee)",
+        "currency": "CAD",
+        "price": 0.0,
+        "description": "+Classic bike $0.12/min; Ebike $0.20/min  ",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 0,
+            "rate": 1.2,
+            "interval": 1,
+            "end": 1
+          },
+          {
+            "start": 1,
+            "rate": 0.2,
+            "interval": 1,
+            "end": 495
+          }
+        ],
+        "plan_id": "252-2",
+        "name": "Pay-As-You-Go ($1 Unlock Fee)",
+        "currency": "CAD",
+        "price": 0.0,
+        "description": "+Classic bike $0.12/min; Ebike $0.20/min  ",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 30,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 863
+          }
+        ],
+        "plan_id": "254",
+        "name": "CMP-CollabArc30",
+        "currency": "CAD",
+        "price": 42.0,
+        "description": "CMP-CollabArc30",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 30,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 863
+          }
+        ],
+        "plan_id": "254-1",
+        "name": "CMP-CollabArc30",
+        "currency": "CAD",
+        "price": 42.0,
+        "description": "CMP-CollabArc30",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 0,
+            "rate": 0.1,
+            "interval": 1,
+            "end": 1000
+          }
+        ],
+        "plan_id": "254-2",
+        "name": "CMP-CollabArc30",
+        "currency": "CAD",
+        "price": 42.0,
+        "description": "CMP-CollabArc30",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 45,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 878
+          }
+        ],
+        "plan_id": "255",
+        "name": "CMP-CollabArc45",
+        "currency": "CAD",
+        "price": 48.0,
+        "description": "CMP-CollabArc45",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 45,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 878
+          }
+        ],
+        "plan_id": "255-1",
+        "name": "CMP-CollabArc45",
+        "currency": "CAD",
+        "price": 48.0,
+        "description": "CMP-CollabArc45",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 0,
+            "rate": 0.1,
+            "interval": 1,
+            "end": 1000
+          }
+        ],
+        "plan_id": "255-2",
+        "name": "CMP-CollabArc45",
+        "currency": "CAD",
+        "price": 48.0,
+        "description": "CMP-CollabArc45",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 45,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 878
+          }
+        ],
+        "plan_id": "256",
+        "name": "CMP-GPP45 (test)",
+        "currency": "CAD",
+        "price": 0.0,
+        "description": "",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 45,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 878
+          }
+        ],
+        "plan_id": "256-1",
+        "name": "CMP-GPP45 (test)",
+        "currency": "CAD",
+        "price": 0.0,
+        "description": "",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 45,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 878
+          }
+        ],
+        "plan_id": "256-2",
+        "name": "CMP-GPP45 (test)",
+        "currency": "CAD",
+        "price": 0.0,
+        "description": "",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 45,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 878
+          }
+        ],
+        "plan_id": "257",
+        "name": "CMP-GreenPParking45",
+        "currency": "CAD",
+        "price": 0.0,
+        "description": "CMP-GreenPParking45",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 45,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 878
+          }
+        ],
+        "plan_id": "257-1",
+        "name": "CMP-GreenPParking45",
+        "currency": "CAD",
+        "price": 0.0,
+        "description": "CMP-GreenPParking45",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 0,
+            "rate": 0.1,
+            "interval": 1,
+            "end": 1000
+          }
+        ],
+        "plan_id": "257-2",
+        "name": "CMP-GreenPParking45",
+        "currency": "CAD",
+        "price": 0.0,
+        "description": "CMP-GreenPParking45",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 30,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 863
+          }
+        ],
+        "plan_id": "258",
+        "name": "ODSP - Annual 30",
+        "currency": "CAD",
+        "price": 84.0,
+        "description": "Unlimited 30-min trips",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 30,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 863
+          }
+        ],
+        "plan_id": "258-1",
+        "name": "ODSP - Annual 30",
+        "currency": "CAD",
+        "price": 84.0,
+        "description": "Unlimited 30-min trips",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 30,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 863
+          }
+        ],
+        "plan_id": "258-2",
+        "name": "ODSP - Annual 30",
+        "currency": "CAD",
+        "price": 84.0,
+        "description": "Unlimited 30-min trips",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 45,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 878
+          }
+        ],
+        "plan_id": "259",
+        "name": "ODSP - Annual 45",
+        "currency": "CAD",
+        "price": 96.0,
+        "description": "Unlimited 45-min trips",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 45,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 878
+          }
+        ],
+        "plan_id": "259-1",
+        "name": "ODSP - Annual 45",
+        "currency": "CAD",
+        "price": 96.0,
+        "description": "Unlimited 45-min trips",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 45,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 878
+          }
+        ],
+        "plan_id": "259-2",
+        "name": "ODSP - Annual 45",
+        "currency": "CAD",
+        "price": 96.0,
+        "description": "Unlimited 45-min trips",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 45,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 878
+          }
+        ],
+        "plan_id": "260",
+        "name": "CMP-GCC 30",
+        "currency": "CAD",
+        "price": 63.0,
+        "description": "CMP-GCC 30",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 45,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 878
+          }
+        ],
+        "plan_id": "260-1",
+        "name": "CMP-GCC 30",
+        "currency": "CAD",
+        "price": 63.0,
+        "description": "CMP-GCC 30",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 0,
+            "rate": 0.1,
+            "interval": 1,
+            "end": 1000
+          }
+        ],
+        "plan_id": "260-2",
+        "name": "CMP-GCC 30",
+        "currency": "CAD",
+        "price": 63.0,
+        "description": "CMP-GCC 30",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 45,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 878
+          }
+        ],
+        "plan_id": "261",
+        "name": "CMP-GCC 45",
+        "currency": "CAD",
+        "price": 72.0,
+        "description": "CMP-GCC 45",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 45,
+            "rate": 0.12,
+            "interval": 1,
+            "end": 878
+          }
+        ],
+        "plan_id": "261-1",
+        "name": "CMP-GCC 45",
+        "currency": "CAD",
+        "price": 72.0,
+        "description": "CMP-GCC 45",
+        "is_taxable": true
+      },
+      {
+        "per_minute_pricing": [
+          {
+            "start": 0,
+            "rate": 0.1,
+            "interval": 1,
+            "end": 1000
+          }
+        ],
+        "plan_id": "261-2",
+        "name": "CMP-GCC 45",
+        "currency": "CAD",
+        "price": 72.0,
+        "description": "CMP-GCC 45",
+        "is_taxable": true
+      }
+    ]
+  },
+  "version": "2.3"
+}

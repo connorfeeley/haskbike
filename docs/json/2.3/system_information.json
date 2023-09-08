@@ -1,0 +1,22 @@
+{
+  "last_updated": 1694211363,
+  "ttl": 9,
+  "data": {
+    "system_id": "bike_share_toronto",
+    "language": "en",
+    "name": "bike_share_toronto",
+    "timezone": "America/Toronto",
+    "build_version": "2023.1",
+    "build_label": "2023-08-28",
+    "build_hash": "3ed0144",
+    "build_number": "200",
+    "mobile_head_version": "2",
+    "mobile_minimum_supported_version": "1",
+    "_vehicle_count": {
+      "_mechanical_count": 8051,
+      "_ebike_count": 825
+    },
+    "_station_count": 697
+  },
+  "version": "2.3"
+}

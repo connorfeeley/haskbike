@@ -1,0 +1,930 @@
+#+title: Toronto Bike Share API
+#+author: Connor Feeley
+#+date: 2023-09-08
+
+* GBFS Info
+- GBFS v2.3: https://toronto.publicbikesystem.net/customer/gbfs/v2/
+- GBFS v1.1: https://toronto.publicbikesystem.net/ube/gbfs/v1/
+* GBFS v1.1 Entrypoint
+
+#+begin_src restclient :file json/1.1/gbfs.json :noheaders :results value file
+GET https://toronto.publicbikesystem.net/ube/gbfs/v1/
+#+end_src
+
+#+RESULTS:
+[[file:json/1.1/gbfs.json]]
+
+* GBFS 2.3 Entrypoint
+
+#+begin_src restclient :file json/2.3/gbfs.json :noheaders :results value file
+GET https://tor.publicbikesystem.net/customer/gbfs/v2/gbfs.json
+#+end_src
+
+#+RESULTS:
+[[file:json/2.3/gbfs.json]]
+
+* GBFS Versions
+
+#+begin_src restclient :file json/2.3/gbfs_versions.json :noheaders :results value file
+GET https://tor.publicbikesystem.net/customer/gbfs/v2/gbfs_versions
+#+end_src
+
+#+RESULTS:
+[[file:json/2.3/gbfs_versions.json]]
+
+* GBFS Vehicle Types
+
+#+begin_src restclient :file json/2.3/vehicle_types.json :noheaders :results value file
+GET https://tor.publicbikesystem.net/customer/gbfs/v2/en/vehicle_types
+#+end_src
+
+#+RESULTS:
+[[file:json/2.3/vehicle_types.json]]
+
+* GBFS Station Information
+
+#+begin_src restclient :file json/2.3/station_information.json :noheaders :results value file
+GET https://tor.publicbikesystem.net/customer/gbfs/v2/en/station_information
+#+end_src
+
+#+RESULTS:
+[[file:json/2.3/station_information.json]]
+
+* GBFS Station Status
+
+#+begin_src restclient :file json/2.3/station_status.json :noheaders :results value file
+GET https://tor.publicbikesystem.net/customer/gbfs/v2/en/station_status
+#+end_src
+
+#+RESULTS:
+[[file:json/2.3/station_status.json]]
+
+* GBFS System Regions
+
+#+begin_src restclient :file json/2.3/system_regions.json :noheaders :results value file
+GET https://tor.publicbikesystem.net/customer/gbfs/v2/en/system_regions
+#+end_src
+
+#+RESULTS:
+[[file:json/2.3/system_regions.json]]
+
+* GBFS System Information
+
+#+begin_src restclient :file json/2.3/system_information.json :noheaders :results value file
+GET https://tor.publicbikesystem.net/customer/gbfs/v2/en/system_information
+#+end_src
+
+#+RESULTS:
+[[file:json/2.3/system_information.json]]
+
+* GBFS System Pricing Plans
+
+#+begin_src restclient :file json/2.3/system_pricing_plans.json :noheaders :results value file
+GET https://toronto.publicbikesystem.net/customer/gbfs/v2/en/system_pricing_plans
+#+end_src
+
+#+RESULTS:
+[[file:json/2.3/system_pricing_plans.json]]
+* Findings
+** Number of charging stations
+#+begin_src shell
+jq '.data.stations[] | .is_charging_station' json/2.3/station_information.json | sort | uniq --count
+#+end_src
+
+#+RESULTS:
+| 681 | false |
+|  16 | true  |
+** Number of disabled docks
+#+begin_src shell
+jq '.data.stations[] | .num_docks_disabled' json/2.3/station_status.json | awk '{s+=$1} END {print s}'
+#+end_src
+
+#+RESULTS:
+: 42
+
+Station IDs with disabled docks:
+#+begin_src shell :results table
+jq --raw-output '.data.stations[] | select(.num_docks_disabled != 0) | [.station_id, .num_docks_disabled] | @tsv' json/2.3/station_status.json
+#+end_src
+
+#+RESULTS:
+| 7015 | 1 |
+| 7018 | 1 |
+| 7021 | 1 |
+| 7022 | 1 |
+| 7034 | 1 |
+| 7040 | 1 |
+| 7102 | 1 |
+| 7110 | 1 |
+| 7135 | 1 |
+| 7140 | 1 |
+| 7143 | 1 |
+| 7150 | 1 |
+| 7152 | 1 |
+| 7175 | 2 |
+| 7189 | 1 |
+| 7190 | 1 |
+| 7227 | 1 |
+| 7286 | 1 |
+| 7344 | 2 |
+| 7404 | 1 |
+| 7417 | 1 |
+| 7430 | 2 |
+| 7437 | 1 |
+| 7518 | 1 |
+| 7585 | 1 |
+| 7589 | 1 |
+| 7657 | 1 |
+| 7687 | 1 |
+| 7716 | 1 |
+| 7719 | 2 |
+| 7737 | 1 |
+| 7762 | 2 |
+| 7783 | 1 |
+| 7796 | 1 |
+| 7815 | 1 |
+| 7816 | 1 |
+| 7818 | 1 |
+
+Station IDs, names, charging:
+#+begin_src shell :results table
+jq --raw-output '.data.stations[] | [.station_id, .name, .is_charging_station] | @tsv' json/2.3/station_information.json
+#+end_src
+
+#+RESULTS:
+| 7000 | Fort York  Blvd / Capreol Ct                  | false |
+| 7001 | Wellesley Station Green P                     | true  |
+| 7002 | St. George St / Bloor St W                    | false |
+| 7003 | Madison Ave / Bloor St W                      | false |
+| 7004 | University Ave / Elm St                       | false |
+| 7005 | King St W / York St                           | false |
+| 7006 | Bay St / College St (East Side)               | false |
+| 7007 | College St / Huron St                         | false |
+| 7008 | Wellesley St W / Queen's Park Cres            | false |
+| 7009 | King St E / Jarvis St                         | false |
+| 7010 | King St W / Spadina Ave                       | false |
+| 7012 | Elizabeth St / Edward St (Bus Terminal)       | false |
+| 7014 | Sherbourne St / Carlton St (Allan Gardens)    | false |
+| 7015 | King St W / Bay St (West Side)                | false |
+| 7016 | Bay St / Queens Quay W (Ferry Terminal)       | false |
+| 7018 | Bremner Blvd / Rees St                        | false |
+| 7020 | Phoebe St / Spadina Ave                       | false |
+| 7021 | Bay St / Albert St                            | false |
+| 7022 | Simcoe St / Queen St W                        | false |
+| 7023 | College St / Borden St                        | false |
+| 7024 | Dundonald St / Church St                      | false |
+| 7025 | Ted Rogers Way / Bloor St E                   | false |
+| 7026 | Bay St / St. Joseph St                        | false |
+| 7027 | Beverley  St / Dundas St W                    | false |
+| 7028 | Gould St / Mutual St                          | false |
+| 7029 | Bay St / Bloor St W (East Side)               | false |
+| 7030 | Bay St / Wellesley St W                       | false |
+| 7031 | Jarvis St / Isabella St                       | false |
+| 7032 | Augusta Ave / Dundas St W                     | false |
+| 7033 | Union Station                                 | false |
+| 7034 | Church St / Bloor St E                        | false |
+| 7035 | Queen St W / Ossington Ave                    | false |
+| 7036 | Trinity St /Front St E                        | false |
+| 7037 | Bathurst St / Dundas St W                     | false |
+| 7038 | Dundas St W / Yonge St                        | false |
+| 7039 | Simcoe St / Michael Sweet Ave                 | false |
+| 7040 | Euclid Ave / Bloor St W                       | false |
+| 7041 | Edward St / Yonge St                          | false |
+| 7042 | Sherbourne St / Wellesley St E                | false |
+| 7043 | Queens Quay W / Lower Simcoe St               | false |
+| 7044 | Church St / Alexander St                      | false |
+| 7045 | Bond St / Queen St E                          | false |
+| 7046 | Niagara St / Richmond St W                    | false |
+| 7047 | University Ave / Gerrard St W (East Side)     | false |
+| 7048 | Front St W / Yonge St (Hockey Hall of Fame)   | false |
+| 7049 | Portland St / Queen St W                      | false |
+| 7050 | Richmond St E / Jarvis St Green P             | true  |
+| 7052 | Wellington St W / Bay St                      | false |
+| 7053 | Metro Hall Plaza                              | false |
+| 7054 | Navy Wharf Crt / Bremner Blvd                 | false |
+| 7055 | Jarvis St / Carlton St                        | false |
+| 7056 | Parliament St / Gerrard St E                  | false |
+| 7057 | Simcoe St / Wellington St W South             | false |
+| 7058 | Huron St / Harbord St                         | false |
+| 7059 | Front St W / Blue Jays Way                    | false |
+| 7061 | Dalton Rd / Bloor St W                        | false |
+| 7062 | University Ave / College St (West)            | false |
+| 7063 | Queen's Park / Bloor St W                     | false |
+| 7064 | 51 Parliament St                              | false |
+| 7065 | Dundas St E / Parliament St                   | false |
+| 7066 | Willcocks St / St. George St                  | false |
+| 7067 | Yonge St / Harbour St                         | false |
+| 7068 | Blantyre Park                                 | false |
+| 7069 | Queen St W / Spadina Ave                      | false |
+| 7070 | 25 York St – Union Station South              | false |
+| 7071 | 161 Bleecker St (South of Wellesley)          | false |
+| 7072 | Fleet St / Bathurst St                        | false |
+| 7073 | Spadina Ave / Fort York Blvd                  | false |
+| 7074 | King St E / Church St                         | false |
+| 7075 | Queens Quay W / Dan Leckie Way                | false |
+| 7076 | York St / Queens Quay W                       | false |
+| 7077 | College Park South                            | false |
+| 7078 | College St / Major St                         | false |
+| 7079 | McGill St / Church St                         | false |
+| 7083 | Danforth Ave / Barrington Ave                 | false |
+| 7084 | High Park - Grenadier Cafe                    | false |
+| 7085 | Danforth Ave / Westlake Ave                   | false |
+| 7086 | High Park - West Rd                           | false |
+| 7087 | Danforth Ave / Aldridge Ave                   | false |
+| 7088 | Danforth Ave / Coxwell Ave                    | false |
+| 7089 | Church St  / Wood St                          | false |
+| 7090 | Danforth Ave / Lamb Ave                       | false |
+| 7091 | Donlands Subway Station                       | false |
+| 7092 | Pape Subway Station (Green P)                 | false |
+| 7093 | Danforth Ave / Gough Ave                      | false |
+| 7094 | Chester Subway Station                        | false |
+| 7095 | Danforth Ave / Ellerbeck St                   | false |
+| 7096 | Lower Don River Trail and Taylor Creek Trail  | false |
+| 7097 | Riverdale Park North (Broadview Ave)          | false |
+| 7099 | Cherry St / Mill St                           | false |
+| 7100 | Dundas St E / Regent Park Blvd                | false |
+| 7101 | Lower Sherbourne St / The Esplanade           | false |
+| 7102 | Nelson St / Duncan St                         | false |
+| 7103 | Jimmie Simpson Park (Queen St E)              | false |
+| 7104 | King St E / River St                          | false |
+| 7105 | Queen St E / Sackville St                     | false |
+| 7106 | Mill St / Tannery Rd                          | false |
+| 7107 | Cherry St / Distillery Ln                     | false |
+| 7108 | Front St E / Cherry St                        | false |
+| 7109 | Seaton St / Dundas St E - SMART               | false |
+| 7110 | Queen St E / Berkeley St                      | false |
+| 7111 | King St W / Douro St                          | false |
+| 7112 | Liberty St / Fraser Ave Green P               | false |
+| 7114 | Carlton St / Parliament St                    | false |
+| 7115 | Howard St / Sherbourne St                     | false |
+| 7117 | 640 Bloor Street E                            | false |
+| 7118 | King St W / Bay St (East Side)                | false |
+| 7119 | Sumach St / Carlton St (Riverdale Farm)       | false |
+| 7120 | Gerrard St E / River St                       | false |
+| 7121 | Jarvis St / Dundas St E                       | false |
+| 7122 | Niagara St / Tecumseth St                     | false |
+| 7123 | 424 Wellington St W                           | false |
+| 7124 | Dundas St E / Broadview Ave                   | false |
+| 7126 | Yonge St / Yorkville Ave                      | false |
+| 7127 | Bay St / Scollard St                          | false |
+| 7128 | Yonge St / Aylmer Ave                         | false |
+| 7129 | Davenport Rd / Avenue Rd                      | false |
+| 7130 | Davenport Rd / Bedford Rd                     | false |
+| 7131 | Taddle Creek Park                             | false |
+| 7132 | Kendal Ave / Spadina Rd                       | false |
+| 7133 | Summerhill Subway Station                     | false |
+| 7135 | Hanna Ave / Liberty St                        | false |
+| 7136 | Queen St W / Close Ave                        | false |
+| 7137 | Davenport Rd / Bathurst St                    | false |
+| 7138 | Davenport Rd / Christie St                    | false |
+| 7139 | Glen Edyth Dr / Davenport Rd                  | false |
+| 7140 | Macpherson Ave / Spadina Rd                   | false |
+| 7141 | Bridgman Ave / Kendal Ave                     | false |
+| 7142 | Bridgman Ave / Bathurst St                    | false |
+| 7143 | Kendal Ave / Bernard Ave                      | false |
+| 7144 | Palmerston Ave / Vermont Ave                  | false |
+| 7146 | Christie St / Benson Ave (Wychwood Barns)     | false |
+| 7147 | King St W / Fraser Ave                        | false |
+| 7148 | King St W / Joe Shuster Way                   | false |
+| 7149 | Yarmouth Rd / Christie St                     | false |
+| 7150 | Dufferin St / Sylvan Av (Dufferin Grove Park) | false |
+| 7151 | Essex St / Christie St - SMART                | false |
+| 7152 | Ossington Ave / Bloor St W                    | false |
+| 7153 | Bloor St W / Christie St                      | false |
+| 7154 | Bathurst Subway Station                       | false |
+| 7155 | Bathurst St / Lennox St                       | false |
+| 7156 | Salem Ave / Bloor St W                        | false |
+| 7157 | Dufferin St / Bloor St W                      | false |
+| 7158 | King St W / Stafford St                       | false |
+| 7160 | King St W / Tecumseth St                      | false |
+| 7161 | Beverley St / College St                      | false |
+| 7162 | Hayter St / La Plante Ave                     | false |
+| 7163 | Yonge St / Wood St                            | false |
+| 7164 | Gould St / Yonge St (TMU)                     | false |
+| 7168 | Queens Quay / Yonge St                        | false |
+| 7169 | Front St W / Bay St (North Side)              | false |
+| 7170 | Spadina Ave / Willcocks St                    | false |
+| 7171 | Ontario Place Blvd / Lake Shore Blvd W        | false |
+| 7172 | Strachan Ave / Princes' Blvd                  | false |
+| 7173 | Cariboo Ave / Railpath Trail                  | false |
+| 7174 | Bloor St W / Dundas St W                      | false |
+| 7175 | HTO Park (Queens Quay W)                      | false |
+| 7176 | Bathurst St / Fort York Blvd                  | false |
+| 7178 | Dundas St W / Edna Ave                        | false |
+| 7180 | Lansdowne Subway Station                      | false |
+| 7181 | Lansdowne Ave / Whytock Ave                   | false |
+| 7182 | Sterling Rd / Dundas St W                     | false |
+| 7183 | St Clarens Ave / College St                   | false |
+| 7184 | Ossington Ave / College St                    | false |
+| 7188 | Exhibition GO (Atlantic Ave)                  | false |
+| 7189 | Augusta Ave / Denison Sq                      | false |
+| 7190 | St. George St / Hoskin Ave                    | false |
+| 7191 | Central Tech  (Harbord St)                    | false |
+| 7192 | Harbord St / Clinton St                       | false |
+| 7193 | Dufferin St / Queen St W                      | false |
+| 7194 | Mortimer Ave / Coxwell Ave                    | false |
+| 7195 | Ulster St / Bathurst St                       | false |
+| 7196 | Roxton Rd / Harbord St                        | false |
+| 7197 | Queen St W / Dovercourt Rd                    | false |
+| 7198 | Queen St W / Cowan Ave                        | false |
+| 7199 | College St / Markham St                       | false |
+| 7202 | Queen St W / Bay St (City Hall)               | false |
+| 7203 | Bathurst St/Queens Quay(Billy Bishop Airport) | false |
+| 7204 | College St / Crawford St                      | false |
+| 7205 | Rusholme Park Cres / College St               | false |
+| 7206 | Claremont St / Dundas St W                    | false |
+| 7207 | Dundas St W / Crawford St                     | false |
+| 7208 | 80 Clinton St                                 | false |
+| 7209 | Ossington Ave / Harrison St                   | false |
+| 7210 | Mary McCormick Rec Centre (Sheridan Ave)      | false |
+| 7211 | Fort York Blvd / Garrison Rd                  | false |
+| 7216 | Wellington St W / Stafford St                 | false |
+| 7217 | Soho St / Queen St W                          | false |
+| 7220 | Lake Shore Blvd W / Ellis Ave                 | false |
+| 7221 | High Park Subway Station                      | false |
+| 7222 | Sunnyside - Gus Ryder Pool                    | false |
+| 7223 | Parkside Dr / Bloor St W - SMART              | false |
+| 7224 | Bloor St W / High Park Ave (High Park)        | false |
+| 7225 | Lake Shore Blvd W / Windermere Ave            | false |
+| 7226 | Lake Shore Blvd W / The Boulevard Club        | false |
+| 7227 | Martin Goodman Trail (Marilyn Bell Park)      | false |
+| 7228 | Queen St W / Roncesvalles Ave                 | false |
+| 7229 | Dundas St W / Roncesvalles Ave Green P -SMART | false |
+| 7230 | Garden Ave / Roncesvalles Ave                 | false |
+| 7231 | Wright Ave / Sorauren Ave - SMART             | false |
+| 7232 | Queen St W  /  Fuller Ave - SMART             | false |
+| 7233 | King St W / Cowan Ave - SMART                 | false |
+| 7234 | Roncesvalles Ave / Marmaduke St               | false |
+| 7235 | Bay St / College St (West Side) - SMART       | false |
+| 7236 | Thompson St / Broadview Ave - SMART           | false |
+| 7237 | Ward St / Wallace Ave                         | false |
+| 7238 | Sorauren Ave / Geoffrey St - SMART            | false |
+| 7239 | Bloor St W / Manning Ave - SMART              | false |
+| 7240 | Bloor St W / Shaw St - SMART                  | false |
+| 7242 | Lake Shore Blvd W / Ontario Dr                | false |
+| 7244 | Dufferin Gate - SMART                         | false |
+| 7245 | Tecumseth St / Queen St W - SMART             | false |
+| 7246 | Yonge St / Bloor St                           | false |
+| 7247 | Howard Park Ave / Dundas St W - SMART         | false |
+| 7248 | Baldwin St / Spadina Ave - SMART              | false |
+| 7249 | Lakeview Ave / Harrison St (Green P) – SMART  | false |
+| 7250 | Ursula Franklin St / St. George St - SMART    | false |
+| 7252 | Robert St / Bloor St W - SMART                | false |
+| 7253 | John St  / Mercer St - SMART                  | false |
+| 7256 | Vanauley St / Queen St W - SMART              | false |
+| 7257 | Dundas St W / St. Patrick St                  | false |
+| 7258 | Queen St E / Rushbrooke Ave                   | false |
+| 7259 | Lower Spadina Ave / Lake Shore Blvd W         | false |
+| 7260 | Spadina Ave / Adelaide St W                   | false |
+| 7261 | Queens Quay E / Lower Sherbourne St           | false |
+| 7262 | Wychwood Ave / Benson Ave - SMART             | false |
+| 7263 | Walton St / Elizabeth St - SMART              | false |
+| 7264 | Bloor St E / Huntley St - SMART               | false |
+| 7265 | Wallace Ave / Symington Ave - SMART           | false |
+| 7266 | Victoria Park Subway Station - SMART          | false |
+| 7267 | Dundas St E / Pembroke St - SMART             | false |
+| 7268 | 111 Bond St (North of Dundas St E)  - SMART   | false |
+| 7269 | Toronto Eaton Centre (Yonge St) - SMART       | false |
+| 7270 | Church St / Dundas St E - SMART               | false |
+| 7271 | Yonge St / Alexander St - SMART               | false |
+| 7272 | Yonge St / Dundonald St - SMART               | false |
+| 7273 | Bay St / Charles St W - SMART                 | false |
+| 7274 | Queen's Park Cres E / Grosvenor St - SMART    | false |
+| 7276 | Bloor St W / Balmuto St                       | false |
+| 7277 | Chorley Park - SMART                          | false |
+| 7278 | Mallon Ave / Jones Ave -SMART                 | false |
+| 7279 | Rosehill Ave / Avoca Ave - SMART              | false |
+| 7280 | Charles St E / Jarvis St - SMART              | false |
+| 7281 | Charles St W / Balmuto St - SMART             | false |
+| 7283 | Front St W / Bay St (South Side)              | false |
+| 7284 | University Ave / King St W - SMART            | false |
+| 7285 | Spadina Ave / Harbord St - SMART              | false |
+| 7286 | Gerrard St E / Broadview Ave  - SMART         | false |
+| 7287 | Queen St E / Pape Ave - SMART                 | false |
+| 7288 | Humber Bay Shores Park West                   | false |
+| 7289 | Humber Bay Shores Park East                   | false |
+| 7291 | 190 Queens Quay E                             | false |
+| 7292 | Granby St / Church St - SMART                 | false |
+| 7296 | Westmoreland Ave / Fernbank Ave               | false |
+| 7297 | Havelock St / Dufferin Park                   | false |
+| 7298 | Bathurst St / Adelaide St W                   | false |
+| 7299 | Mill St / Parliament St                       | false |
+| 7301 | Primrose Ave / Davenport Rd                   | false |
+| 7302 | Winona Dr / Davenport Rd                      | false |
+| 7303 | Queen St E / Woodward Ave                     | false |
+| 7309 | Queen St. E / Rhodes Ave.                     | false |
+| 7311 | Sherbourne St / Isabella St                   | false |
+| 7312 | Amelia St. / Sumach St.                       | false |
+| 7313 | Lower Coxwell Ave /  Lake Shore Blvd E        | false |
+| 7314 | Queen St. E / Eastern Ave                     | false |
+| 7315 | Queen St E / Hammersmith Ave                  | false |
+| 7316 | Queen St. E / Spruce Hill Rd.                 | false |
+| 7317 | Hubbard Blvd / Balsam Av                      | false |
+| 7318 | Hubbard Blvd. / Glen Manor Dr.                | false |
+| 7319 | Lake Shore Blvd E / Knox Ave                  | false |
+| 7320 | Front St W / University Ave (1)               | false |
+| 7321 | Front St W / University Ave (2)               | false |
+| 7322 | East Liberty St / Western Battery Rd          | false |
+| 7323 | 457 King St W                                 | false |
+| 7324 | King St W / Charlotte St                      | false |
+| 7326 | Davenport Rd / Lansdowne Ave                  | false |
+| 7327 | Davenport Rd / Dovercourt Rd - SMART          | false |
+| 7328 | Roxborough St W / Yonge St                    | false |
+| 7329 | Crawford St / Queen St W                      | false |
+| 7331 | Coxwell Ave / Plains Rd                       | false |
+| 7332 | 200 Bloor St E                                | false |
+| 7333 | King St E / Victoria St                       | false |
+| 7334 | Simcoe St / Wellington St W North             | false |
+| 7335 | Bay St / Bloor St W (West Side)               | false |
+| 7336 | Queen St E / Alton Av                         | false |
+| 7337 | Gerrard Square Mall (1010 Gerrard St E)       | false |
+| 7338 | Logan Ave / Bain Ave                          | false |
+| 7339 | Carlaw Ave / Strathcona Ave                   | false |
+| 7340 | Blake St / Boultbee Ave                       | false |
+| 7341 | Eastern Ave / Winnifred Ave                   | false |
+| 7342 | Morse St / Eastern Ave                        | false |
+| 7343 | Alton Ave / Dundas St E (Greenwood Park)      | false |
+| 7344 | Cherry Beach                                  | false |
+| 7345 | Cherry Beach Sports Fields (55 Unwin Ave)     | false |
+| 7346 | Logan Av / Gerrard St E                       | false |
+| 7347 | Regal Rd / Dufferin St                        | false |
+| 7348 | Pape Ave / Gamble Ave                         | false |
+| 7349 | Gamble Ave / Broadview Ave                    | false |
+| 7350 | Broadview Ave / Westwood Ave                  | false |
+| 7351 | Pretoria Ave / Broadview Ave                  | false |
+| 7352 | Cosburn Ave / Donlands Ave                    | false |
+| 7353 | Fulton Ave / Pape Ave                         | false |
+| 7354 | Tommy Thompson Park (Leslie Street Spit)      | false |
+| 7355 | Beltline Trail / Chaplin Cres.                | false |
+| 7356 | King St E / Berkeley St                       | false |
+| 7357 | Lake Shore Blvd E / Leslie St                 | false |
+| 7359 | Rosedale Park (20 Scholfield Ave)             | false |
+| 7360 | Concord Ave / Dewson St                       | false |
+| 7361 | Hocken Ave / Vaughan Rd                       | false |
+| 7362 | St Clair Ave W / Bathurst St.                 | false |
+| 7363 | Wells Hill Ave / St Clair Ave W               | false |
+| 7364 | Queen St E / Nursewood Rd                     | false |
+| 7365 | Kewbeach Ave / Kenilworth Ave                 | false |
+| 7366 | Fort York Blvd / Bathurst St - SMART          | false |
+| 7367 | Alma Ave / Gladstone Ave SMART                | false |
+| 7368 | Lisgar St / Dundas St W - SMART               | false |
+| 7371 | Eglinton Ave W / Henning Ave SMART            | false |
+| 7373 | George St / King St E                         | false |
+| 7374 | Frederick St / The Esplanade                  | false |
+| 7375 | Front St E / Scott St                         | false |
+| 7376 | Frobisher Ave / Lascelles Blvd                | false |
+| 7377 | Balliol St / Yonge St  SMART                  | false |
+| 7378 | Yonge St / Davisville Ave                     | false |
+| 7379 | Lawton Blvd / Yonge St                        | false |
+| 7380 | Erskine Ave / Yonge St SMART                  | false |
+| 7381 | Yonge St / Orchard View Blvd                  | false |
+| 7383 | 12 Harbour St                                 | false |
+| 7384 | Cumberland St / Bay St SMART                  | false |
+| 7385 | 20 Charles St E                               | true  |
+| 7386 | D'Arcy St / McCaul St - SMART                 | false |
+| 7387 | Mortimer Ave / Carlaw Ave SMART               | false |
+| 7388 | Broadview Subway Station                      | false |
+| 7389 | College Park - Gerrard Entrance               | false |
+| 7391 | Yonge St / Dundas Sq                          | false |
+| 7395 | Dentonia Park                                 | false |
+| 7398 | York St / Lake Shore Blvd W                   | false |
+| 7399 | Lower Jarvis St / Queens Quay E               | false |
+| 7400 | Polson Pier                                   | false |
+| 7403 | Lascelles Blvd / Eglinton Ave W               | false |
+| 7404 | Roehampton Ave / Mount Pleasant Rd            | false |
+| 7406 | Victoria St / Queen St E                      | false |
+| 7408 | University Ave / Armoury St                   | false |
+| 7409 | Isabella St / Church St                       | false |
+| 7410 | Howard St / Rose Ave                          | false |
+| 7411 | Little Norway Park                            | false |
+| 7412 | King St W / Crawford St                       | false |
+| 7414 | Keele St / Annette St                         | false |
+| 7415 | Keele St / Vine Ave                           | false |
+| 7416 | Spadina Ave / Blue Jays Way                   | false |
+| 7417 | King St W / Jordan St                         | false |
+| 7418 | College Park - Yonge St Entrance              | false |
+| 7420 | Barton Ave / Howland Ave - SMART              | false |
+| 7422 | Tyndall Ave / King St W - SMART               | false |
+| 7424 | Merton St / Mount Pleasant Rd                 | false |
+| 7425 | The Queensway at South Kingsway               | false |
+| 7427 | Northern Dancer Blvd / Lake Shore Blvd E      | false |
+| 7428 | Woodbine Ave / Lake Shore Blvd E              | false |
+| 7429 | Woodbine Subway Station                       | false |
+| 7430 | Marilyn Bell Park Tennis Court                | false |
+| 7431 | Gerrard St E / Leslie St                      | false |
+| 7432 | Frederick St / King St E                      | false |
+| 7433 | Dundas St E / Boulton Ave - SMART             | false |
+| 7434 | Via Italia / Mackay Ave                       | false |
+| 7435 | Rushton Rd / St Clair Ave W                   | false |
+| 7437 | Concord Ave / Bloor St W                      | false |
+| 7438 | Gothic Ave / Quebec Ave                       | false |
+| 7440 | Martin Goodman Trail / Remembrance Dr         | false |
+| 7441 | Pacific Ave / Glenlake Ave                    | false |
+| 7443 | Dundas St E / George St                       | false |
+| 7444 | Clendenan Ave / Rowland St - SMART            | false |
+| 7445 | Eastwood Rd / Coxwell Ave                     | false |
+| 7446 | Orchard Park                                  | false |
+| 7447 | Trent Ave / Danforth Ave                      | false |
+| 7448 | Goodwood Park Crt / Dentonia Park             | false |
+| 7449 | Cosburn Ave / Cedarvale Ave                   | false |
+| 7450 | Carlaw Ave / Danforth Ave                     | false |
+| 7451 | Western Battery Rd / Pirandello St            | false |
+| 7452 | Bleecker St / St James Ave                    | false |
+| 7453 | Jarvis St / Maitland Pl                       | false |
+| 7454 | Pottery Rd / Lower Don River Trail            | false |
+| 7455 | E.T. Seton Park (Eglinton Ave E / Leslie St)  | false |
+| 7457 | Queen's Park Cres W / Hoskin Ave              | false |
+| 7458 | Church St / Lombard St                        | false |
+| 7459 | St Clair Ave W / Winona Dr                    | false |
+| 7460 | High Park Outdoor Pool                        | false |
+| 7461 | High Park Amphitheatre                        | false |
+| 7462 | Richmond St E / Yonge St                      | false |
+| 7463 | Adelaide St W / Brant St - SMART              | false |
+| 7465 | Russell Hill Rd / St Clair Ave W              | false |
+| 7466 | Glendonwynne Rd / Bloor St W                  | false |
+| 7467 | Lower Simcoe St / Bremner Blvd                | false |
+| 7468 | Front St W / Simcoe St                        | false |
+| 7469 | Wellington St W / York St                     | false |
+| 7471 | Lake Shore Blvd W / Louisa St                 | false |
+| 7473 | Adelaide St W / Strachan Ave                  | false |
+| 7474 | Clarence Square                               | false |
+| 7475 | Jarvis St / Richmond St E                     | false |
+| 7476 | Symington Ave / Dupont St                     | false |
+| 7477 | Antler St / Campbell Ave - SMART              | false |
+| 7478 | Ellis Ave / The Queensway                     | false |
+| 7479 | Jane St / Bloor St W (Jane Subway Station)    | false |
+| 7480 | Neil McLellan Park                            | false |
+| 7483 | Southwood Dr / Kingston Rd - SMART            | false |
+| 7484 | Briar Hill Ave / Yonge St - SMART             | false |
+| 7485 | Blythwood Rd / Yonge St - SMART               | false |
+| 7486 | Gerrard St E / Main St                        | false |
+| 7487 | Eastwood Rd / Woodbine Ave - SMART            | false |
+| 7488 | Summerhill Ave / Maclennan Ave                | false |
+| 7489 | Sumach St  / Queen St E                       | false |
+| 7492 | 324 Cherry St                                 | false |
+| 7493 | Sackville St / Eastern Ave - SMART            | false |
+| 7494 | Davenport Rd / McAlpine St - SMART            | false |
+| 7496 | Sunnyside Ave / The Queensway - SMART         | false |
+| 7497 | 128 Sterling Rd - SMART                       | false |
+| 7501 | Humberside Grounds - SMART                    | false |
+| 7502 | University Ave / College St (East)            | false |
+| 7503 | Gerrard St E / Malvern Ave - SMART            | false |
+| 7504 | Gerrard St E / Victoria Park Ave - SMART      | false |
+| 7505 | Ontario St / Adelaide St E -SMART             | false |
+| 7506 | Berkeley St / Adelaide St E - SMART           | false |
+| 7508 | Berkeley St / Dundas St E - SMART             | false |
+| 7514 | Humber Bay Shores Park / Marine Parade Dr     | false |
+| 7515 | Amos Waites Park                              | false |
+| 7516 | Superior Ave / Lake Shore Blvd W              | false |
+| 7517 | Ripley Ave / Ormskirk Ave                     | false |
+| 7518 | Lake Shore Blvd W / Colborne Lodge Dr         | false |
+| 7519 | 406 Oakwood Ave                               | false |
+| 7520 | St Clarens Ave / Shirley St                   | false |
+| 7521 | Emerson Ave / Bloor St W                      | false |
+| 7522 | Wallace Ave / Pauline Ave                     | false |
+| 7523 | Lynn Williams St / East Liberty St - SMART    | false |
+| 7524 | Lisgar Park                                   | false |
+| 7526 | Bartlett Parkette                             | false |
+| 7527 | Joseph J Piccininni Community Centre          | false |
+| 7528 | Spadina Rd / Austin Terrace                   | false |
+| 7529 | Symington Ave / Davenport Rd                  | false |
+| 7530 | Sherbourne St N / Elm Ave                     | false |
+| 7531 | 541 Huron St - SMART                          | false |
+| 7533 | Housey St / Dan Leckie Way                    | false |
+| 7534 | Walnut Ave / Queen St W                       | false |
+| 7536 | Palmerston Ave / Dundas St W                  | false |
+| 7537 | Euclid Ave / Herrick St - SMART               | false |
+| 7538 | Vaughan Rd /Wychwood Ave                      | false |
+| 7539 | Davisville Ave / Pailton Cres                 | false |
+| 7540 | Alvin Ave / St Clair Ave E                    | false |
+| 7541 | Bellwoods Ave / Treford Pl - SMART            | false |
+| 7542 | Queen St W / John St                          | false |
+| 7543 | Nassau St / Bellevue Ave                      | false |
+| 7545 | Baldwin St / Henry St                         | false |
+| 7546 | Ross St / Cecil St - SMART                    | false |
+| 7547 | Orde St / McCaul St                           | false |
+| 7548 | St. Joseph St / Bay St - SMART                | false |
+| 7549 | 439 Sherbourne St                             | false |
+| 7551 | The Esplanade / Hahn Pl                       | false |
+| 7552 | Lake Shore Blvd W / Thirty Ninth Street       | false |
+| 7553 | Lake Shore Blvd W / Twenty Fourth St          | false |
+| 7554 | Humber College                                | false |
+| 7555 | Royal York Rd / Mimico Ave                    | false |
+| 7556 | Windsor St / Newcastle St                     | false |
+| 7557 | The Queensway / High St                       | false |
+| 7558 | Berry Rd / Bell Manor Dr                      | false |
+| 7559 | Swansea Community Centre                      | false |
+| 7561 | Annette St / Jane St                          | false |
+| 7562 | Priscilla  Ave / Dundas St W                  | false |
+| 7563 | St Clair Ave W / Castleton Ave                | false |
+| 7564 | Durie St / Dundas St W                        | false |
+| 7565 | St Clair Ave W / Gunns Rd                     | false |
+| 7566 | Weston Rd / St Clair Ave W - SMART            | false |
+| 7567 | Weston Lions Park                             | false |
+| 7568 | Jameson Ave / Queen St W                      | false |
+| 7569 | Toronto Inukshuk Park                         | false |
+| 7570 | Carlaw Ave / Dundas St E                      | false |
+| 7571 | Highfield Rd / Gerrard St E                   | false |
+| 7572 | Cosburn Ave / Durant Ave                      | false |
+| 7575 | Bayview Ave / Lawren Harris Square            | false |
+| 7576 | Front St E / Bayview Avenue                   | false |
+| 7577 | Oak St / Sumach St                            | false |
+| 7579 | Glebe Rd W / Yonge St                         | false |
+| 7580 | Hillsdale Ave W / Yonge St                    | false |
+| 7581 | High Park Ave / Dundas St W                   | false |
+| 7582 | Alameda Ave / Vaughan Rd - SMART              | false |
+| 7583 | Eglinton Ave W / Scarlett Rd                  | false |
+| 7584 | The Pond Rd / Sentinel Rd                     | false |
+| 7585 | Sentinel Rd / Finch Corridor Trail            | false |
+| 7586 | Finch West Subway Station                     | false |
+| 7587 | Dufferin St / Finch Corridor Trail            | false |
+| 7588 | G Ross Lord Park                              | false |
+| 7589 | Torresdale Ave / Antibes Dr                   | false |
+| 7590 | Esther Shiner Stadium                         | false |
+| 7591 | Elwood Blvd / Avenue Rd                       | false |
+| 7593 | Roehampton Ave / Bayview Ave                  | false |
+| 7594 | Fleming Cres / Bayview Ave                    | false |
+| 7595 | Moore Park                                    | false |
+| 7596 | Langford Ave / Danforth Ave - SMART           | false |
+| 7597 | Yonge St / Golfdale Rd                        | false |
+| 7598 | Teddington Park Ave                           | false |
+| 7599 | Richmond St W / York St                       | false |
+| 7600 | Ursula Franklin St / Huron St - SMART         | false |
+| 7601 | Brick Works                                   | false |
+| 7602 | Woodbine Ave / O'Connor Dr                    | false |
+| 7604 | St Columba Pl / St Clair Ave E                | false |
+| 7605 | Lumsden Ave / Eastdale Ave                    | false |
+| 7606 | Dawes Rd / Taylor Creek Trl                   | false |
+| 7607 | Fairmount Park                                | false |
+| 7608 | Wilket Creek Park                             | false |
+| 7609 | Sunnybrook Park                               | false |
+| 7610 | Kingston Rd / Beech Ave                       | false |
+| 7611 | Victoria Park Ave / Danforth Ave              | false |
+| 7612 | Livingston Rd / Guildwood Pkwy                | false |
+| 7613 | Livingston Rd (Highland Creek Trail)          | false |
+| 7614 | Morningside Park (Highland Creek Trail)       | false |
+| 7615 | Colonel Danforth Park                         | false |
+| 7616 | Waterfront Trail (Rouge Hill)                 | false |
+| 7617 | Starspray Blvd / Lawrence Ave E               | false |
+| 7618 | Vaughan Rd / Oakwood Ave                      | false |
+| 7619 | Braemar Ave / Eglinton Ave W                  | false |
+| 7620 | Eglinton Ave E / Redpath Ave                  | false |
+| 7622 | Marie Curtis Park                             | false |
+| 7623 | Royal York Rd / Lake Shore Blvd W             | false |
+| 7624 | Guildwood GO Station (South)                  | false |
+| 7625 | Yonge St / Lawrence Ave E                     | false |
+| 7626 | Rouge Hill GO Station                         | false |
+| 7627 | Shaw St / Essex St - SMART                    | false |
+| 7629 | Lundy Ave / Étienne Brûlé Park                | false |
+| 7630 | Twelfth St / Thirteenth St                    | false |
+| 7631 | Florence Gell Park                            | false |
+| 7632 | Chiltern Hill Rd / Eglinton Ave W             | false |
+| 7633 | Noble St / Queen St W                         | false |
+| 7634 | University Ave / Gerrard St W (WEST) - SMART  | false |
+| 7635 | Runnymede Rd / Annette St                     | false |
+| 7636 | Bloor St W / Riverside Dr                     | false |
+| 7637 | Judson St / Royal York Rd                     | false |
+| 7639 | 135 Queens Wharf Rd - SMART                   | false |
+| 7640 | Spadina Rd / St.Clair Ave West                | false |
+| 7641 | Annette St / Dundas St W                      | false |
+| 7642 | Yonge St / St Clair Ave                       | false |
+| 7643 | Oriole Pkwy / Kilbarry Rd                     | false |
+| 7644 | East Lynn Ave / Danforth Ave                  | false |
+| 7645 | University of Toronto Scarborough             | false |
+| 7646 | University Ave / Richmond St W                | false |
+| 7647 | Elm St/ University Ave (East Side)            | false |
+| 7648 | 909 Yonge St                                  | false |
+| 7650 | St Clair West Subway Station - Heath Entrance | false |
+| 7654 | Bloor St W / Pacific Ave                      | false |
+| 7655 | Danforth Ave / Dewhurst Blvd                  | false |
+| 7656 | Bloor St W / Brock Ave                        | false |
+| 7657 | 1 Market St - SMART                           | true  |
+| 7658 | King's Mill Park                              | false |
+| 7659 | Amroth Ave / Danforth Ave                     | false |
+| 7660 | 285 Victoria St                               | false |
+| 7662 | Beaty Ave / Queen St W                        | false |
+| 7663 | Kilgour Rd / Rumsey Rd                        | false |
+| 7664 | Sunnybrook Health Centre - L Wing             | false |
+| 7665 | Sunnybrook Health Centre - S Wing             | false |
+| 7666 | Dundas St W / St Helen's Ave - SMART          | false |
+| 7667 | Spadina Ave / Sussex Ave - SMART              | false |
+| 7668 | Simcoe St / Dundas St W - SMART               | true  |
+| 7670 | Yonge St / Woburn Ave - SMART                 | false |
+| 7671 | Yonge St / Montgomery Ave - SMART             | false |
+| 7675 | 1525 Dundas St W                              | false |
+| 7676 | York University (Glendon Campus) - SMART      | false |
+| 7677 | 1303 Yonge St - SMART                         | false |
+| 7678 | York University Station (South) - SMART       | false |
+| 7679 | York University Station (North)               | false |
+| 7680 | Princes' Gates                                | false |
+| 7681 | 25 Booth Ave                                  | true  |
+| 7682 | Bathurst St / Front St W                      | false |
+| 7684 | Bay St / Harbour St (East)                    | false |
+| 7685 | King St W / Brant St                          | false |
+| 7686 | Lower Jarvis St / The Esplanade               | false |
+| 7687 | Bloor St W / Gladstone Ave - SMART            | false |
+| 7688 | High Park Blvd / Parkside Dr                  | false |
+| 7689 | 20 Eaton Ave                                  | true  |
+| 7691 | Christie St / Dupont St                       | false |
+| 7692 | 85 Lee Ave                                    | true  |
+| 7693 | Mutual St / Shuter St (Arena Gardens)         | false |
+| 7694 | Victoria Park Ave / Dawes Rd                  | false |
+| 7695 | Queen St E / Joseph Duggan Rd                 | false |
+| 7696 | Heyworth Cres / Kingston Rd                   | false |
+| 7698 | St Clair Ave W / Caledonia Rd                 | false |
+| 7699 | St Clair Ave W / Oakwood Ave                  | false |
+| 7700 | St Clair Ave W / Robina Ave                   | false |
+| 7701 | Roncesvalles Ave / Fermanagh Ave              | false |
+| 7702 | 111 Broadview Ave                             | true  |
+| 7703 | Oak St / Sackville St                         | false |
+| 7704 | 24 Mountjoy Ave                               | false |
+| 7705 | Colgate Ave / Carlaw Ave                      | false |
+| 7706 | Felstead Ave/Gillard Ave (Monarch Park)       | false |
+| 7707 | Coronation Park (Martin Goodman Trail)        | false |
+| 7708 | 101 Cedarvale Ave                             | true  |
+| 7709 | Beltline Trail / Yonge St                     | false |
+| 7710 | 11 Spadina Rd                                 | true  |
+| 7711 | Havelock St / Dewson St                       | false |
+| 7712 | Queen St W / Shaw St                          | false |
+| 7713 | Temperance St / Bay St                        | false |
+| 7715 | Lumsden Ave / Cedarvale Ave                   | false |
+| 7716 | Church St / The Esplanade                     | false |
+| 7717 | Niagara St / Portland St                      | false |
+| 7718 | St. Andrew's Playground Park                  | false |
+| 7719 | Wolseley St / Augusta Ave                     | false |
+| 7720 | King St W / Portland St                       | false |
+| 7721 | Widmer St / King St W                         | false |
+| 7724 | Wellesley St E / Parliament St                | false |
+| 7725 | Yonge St / Macpherson Ave                     | false |
+| 7728 | Randolph Ave / Perth Ave                      | false |
+| 7729 | 265 Armadale Ave                              | true  |
+| 7730 | 800 Fleet St                                  | true  |
+| 7731 | Victoria Park Ave / Kingston Rd               | false |
+| 7732 | Kingston Rd / Warden Ave                      | false |
+| 7733 | Pharmacy Ave / Danforth Ave                   | false |
+| 7734 | Danforth Ave / Warden Ave                     | false |
+| 7735 | Birchcliff Ave / Kingston Rd                  | false |
+| 7736 | Birchmount Rd / Kingston Rd                   | false |
+| 7737 | Kingston Rd / Glen Everest Rd                 | false |
+| 7738 | Highview Ave / Kennedy Rd                     | false |
+| 7739 | Kingston Rd / Ridgemoor Ave                   | false |
+| 7740 | Sharpe St / Park St (Sandown Park)            | false |
+| 7741 | Howard Park Ave / Parkside Dr                 | false |
+| 7742 | Eglinton Ave W / Prospect Cemetery            | false |
+| 7743 | Eglinton Ave W / Gilbert Ave                  | false |
+| 7744 | Rogers Rd / Prospect Cemetery                 | false |
+| 7745 | Bert Robinson Park                            | false |
+| 7746 | Marlee Ave / York Beltline Trail              | false |
+| 7747 | Eglinton Ave W / Ennerdale Rd                 | false |
+| 7748 | Bloor St W / Old Mill Trl                     | false |
+| 7749 | Wendover Rd / Bloor St W (Green P)            | false |
+| 7750 | Luttrell Ave / Danforth Ave                   | false |
+| 7751 | Willingdon Blvd / Bloor St W (Green P)        | false |
+| 7752 | 1926 Lake Shore Blvd W                        | false |
+| 7753 | 36 Park Lawn Rd                               | false |
+| 7754 | Walter Saunders Park                          | false |
+| 7755 | Park Lawn Rd / Berry Rd                       | false |
+| 7756 | Tobermory Dr / Finch Corridor Trail           | false |
+| 7757 | The Well                                      | true  |
+| 7758 | Driftwood Ave / Finch Corridor Trail          | false |
+| 7759 | The Pond Rd / Shoreham Dr                     | false |
+| 7760 | Grand Avenue Park                             | false |
+| 7761 | Moss Park                                     | false |
+| 7762 | College St / Henry St                         | false |
+| 7765 | St. John's Rd / Dundas St W                   | false |
+| 7766 | Albany Ave / Bloor St W                       | false |
+| 7767 | Pioneer Village Subway Station                | false |
+| 7768 | Armoury St / Chestnut St                      | false |
+| 7769 | Lake Shore Blvd W / Brow Dr                   | false |
+| 7770 | Spadina Ave / Sullivan St                     | false |
+| 7771 | St. Clair Ave W / Osler St                    | false |
+| 7772 | Simcoe St / King St W                         | false |
+| 7773 | Grenoble Dr / Gateway Blvd                    | false |
+| 7774 | Grenoble Dr / Deauville Ln                    | false |
+| 7775 | Grenoble Dr / Vendome Pl                      | false |
+| 7776 | Ferrand Dr / Rochefort Dr                     | false |
+| 7777 | Thorncliffe Park Dr / Leaside Park Trail      | false |
+| 7778 | 75 Thorncliffe Park Dr                        | false |
+| 7779 | 165 McRae Dr                                  | false |
+| 7780 | Mount Pleasant Rd / Davisville Ave - SMART    | false |
+| 7781 | St Clair Ave W / Avenue Rd                    | false |
+| 7782 | Downsview Park Subway Station - SMART         | false |
+| 7783 | 60 Carl Hall Rd - SMART                       | false |
+| 7784 | Downsview Park Blvd / Keele St  - SMART       | false |
+| 7785 | Keele St / Dovehouse Ave - SMART              | false |
+| 7787 | HTO Park West                                 | false |
+| 7788 | Queens Quay E / Lower Jarvis St               | false |
+| 7789 | 75 Holly St - Green P                         | true  |
+| 7790 | Lynn Williams St / Pirandello St              | false |
+| 7791 | Ossington Ave / Bruce St                      | false |
+| 7794 | York St / Harbour St (Love Park)              | false |
+| 7795 | 519 Church St  - SMART                        | false |
+| 7796 | Dundas St E / River St                        | false |
+| 7798 | Shuter St/River St                            | false |
+| 7799 | Danforth Ave / Danforth Rd                    | false |
+| 7800 | Brimley Rd / McCowan District Park            | false |
+| 7801 | Parkcrest Dr / Kingston Rd                    | false |
+| 7802 | King St W / Jameson Ave - SMART               | false |
+| 7803 | Scarborough Soccer Centre                     | false |
+| 7804 | Lansdowne Ave / Seaforth Ave                  | false |
+| 7805 | Pharmacy Ave / Teesdale Pl                    | false |
+| 7806 | Danforth Rd / Birchmount Rd                   | false |
+| 7807 | 552 Birchmount Rd                             | false |
+| 7808 | Eastgate Ct / Pharmacy Ave                    | false |
+| 7809 | Firvalley Ct / Warden Ave                     | false |
+| 7810 | Avenue Rd / Cumberland St                     | false |
+| 7811 | Midland Ave / Kingston Rd                     | false |
+| 7812 | Bellamy Rd S / Kingston Rd                    | false |
+| 7813 | Yonge St / Merton St                          | false |
+| 7814 | Fenwood Ht / Kingston Rd                      | false |
+| 7815 | Avenue Rd / Macpherson Ave                    | false |
+| 7816 | Bay St / Dundas St W                          | false |
+| 7817 | Shaw St / King St W                           | false |
+| 7818 | Soudan Ave / Yonge St                         | false |
+| 7819 | Avenue Rd / Oxton Ave                         | false |
+| 7820 | 1612 Danforth Ave                             | true  |
+| 7821 | Lisgar St / Queen St W - SMART                | false |
+| 7822 | Leslie St / Commissioners St                  | false |
+| 7823 | Greenwood Ave / Sammon Ave                    | false |
+| 7824 | Warden Subway Station                         | false |
+| 7825 | Kingston Rd / Scarborough Golf Club Rd        | false |
+| 7826 | Greenwood Ave / Gerrard St E                  | false |
+
+** Charging Stations
+
+#+begin_src shell :results table
+jq --raw-output '.data.stations[] | select(.is_charging_station) | [.station_id, .name] | @tsv' json/2.3/station_information.json
+#+end_src
+
+#+RESULTS:
+| 7001 | Wellesley Station Green P         |
+| 7050 | Richmond St E / Jarvis St Green P |
+| 7385 | 20 Charles St E                   |
+| 7657 | 1 Market St - SMART               |
+| 7668 | Simcoe St / Dundas St W - SMART   |
+| 7681 | 25 Booth Ave                      |
+| 7689 | 20 Eaton Ave                      |
+| 7692 | 85 Lee Ave                        |
+| 7702 | 111 Broadview Ave                 |
+| 7708 | 101 Cedarvale Ave                 |
+| 7710 | 11 Spadina Rd                     |
+| 7729 | 265 Armadale Ave                  |
+| 7730 | 800 Fleet St                      |
+| 7757 | The Well                          |
+| 7789 | 75 Holly St - Green P             |
+| 7820 | 1612 Danforth Ave                 |
+
+** Virtual Stations
+
+#+begin_src shell :results table
+jq --raw-output '.data.stations[] | select(.is_virtual_station) | [.station_id, .name] | @tsv' json/2.3/station_information.json
+#+end_src
+
+#+RESULTS:
+
+** Status
+
+#+begin_src shell :results table
+jq --raw-output '.data.stations[] | select(.status != "IN_SERVICE") | [.status] | @tsv' json/2.3/station_status.json
+#+end_src
+
+#+RESULTS:
+| END_OF_LIFE |
+| END_OF_LIFE |
+| END_OF_LIFE |
+| END_OF_LIFE |
+| END_OF_LIFE |
+
+** Status
+
+#+begin_src shell :results table
+jq --raw-output '.data.stations[] | select(.is_renting != true) | [.status] | @tsv' json/2.3/station_status.json
+#+end_src
+
+#+RESULTS:
+| END_OF_LIFE |
+| END_OF_LIFE |
+| END_OF_LIFE |
+| END_OF_LIFE |
+| END_OF_LIFE |
+
+** Number of disabled bikes
+#+begin_src shell
+jq '.data.stations[] | .num_bikes_disabled // 0' json/2.3/station_information.json | awk '{s+=$1} END {print s}'
+#+end_src
+
+#+RESULTS:
+: 0
+
+** Station configurations
+#+begin_src shell
+jq '.data.stations[] | .physical_configuration' json/2.3/station_information.json | sort | uniq -c
+#+end_src
+
+#+RESULTS:
+|  16 | ELECTRICBIKESTATION |
+| 515 | REGULAR             |
+|   2 | REGULARLITMAPFRAME  |
+|   1 | SMARTLITMAPFRAME    |
+|  99 | SMARTMAPFRAME       |
+|  64 | VAULT               |
