@@ -161,7 +161,7 @@ test-suite haskbike-test
     default-language: Haskell2010
 
     -- Modules included in this executable, other than Main.
-    other-modules:
+    other-modules:    TestDecoding
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
