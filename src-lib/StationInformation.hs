@@ -7,6 +7,8 @@
 module StationInformation
         ( Station (..)
         , StationInformationResponse (..)
+        , PhysicalConfiguration (..)
+        , RentalMethod (..)
         ) where
 
 import           Data.Aeson
