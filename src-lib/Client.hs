@@ -13,11 +13,10 @@ module Client
   , systemInformation
   , systemPricingPlans
   , run
-  )
-where
+  ) where
 
 import           Data.Proxy
-import           Network.HTTP.Client     (newManager)
+import           Network.HTTP.Client     (Manager, newManager)
 import           Network.HTTP.Client.TLS (tlsManagerSettings)
 import           Servant.API
 import           Servant.Client
@@ -26,6 +25,7 @@ import           Text.Pretty.Simple      (pPrintString)
 import           BikeShareAPI
 import           Data.Aeson              (Object)
 
+import           Control.Exception       (Exception (displayException))
 import qualified StationInformation      as SI
 import qualified StationStatus           as SS
 
@@ -50,6 +50,17 @@ systemPricingPlans  :: ClientM Object
   :<|> systemPricingPlans
   ) = client bikeShareAPIClient
 
+runQuery :: Manager-> ClientM a -> IO (Either ClientError a)
+runQuery clientManager endpoint = runClientM endpoint (mkClientEnv clientManager bikeshareBaseUrl)
+  where
+    bikeshareBaseUrl :: BaseUrl
+    bikeshareBaseUrl = BaseUrl Https "toronto.publicbikesystem.net" 443 "customer/gbfs/v2"
+
+handleResponse :: (Exception e, Show a) => String -> Either e a -> IO ()
+handleResponse name response = case response of
+    Left err -> print $ displayException err
+    Right a  -> pPrintString $ name ++ show a
+
 -- | A simple example of using the BikeShare API client.
 run :: IO ()
 run = do
@@ -58,49 +69,10 @@ run = do
     --
     -- Example usage of API client functions.
     --
-
-    -- Get versions of the API.
-    versionsRes <- runClientM versions (mkClientEnv clientManager bikeshareBaseUrl)
-    case versionsRes of
-        Left err           -> print err
-        Right versionsList -> pPrintString $ "Versions" ++ show versionsList
-
-    -- Get vehicle types.
-    vehicleTypesRes <- runClientM vehicleTypes (mkClientEnv clientManager bikeshareBaseUrl)
-    case vehicleTypesRes of
-        Left err -> print err
-        Right vehicleTypesList -> pPrintString $ "Vehicle Types" ++ show vehicleTypesList
-
-    -- Get station information.
-    stationInformationRes <- runClientM stationInformation (mkClientEnv clientManager bikeshareBaseUrl)
-    case stationInformationRes of
-        Left err -> print err
-        Right stationInformationList -> pPrintString $ "Station Information" ++ show stationInformationList
-
-    -- Get station status.
-    stationStatusRes <- runClientM stationStatus (mkClientEnv clientManager bikeshareBaseUrl)
-    case stationStatusRes of
-        Left err -> print err
-        Right stationStatusList -> pPrintString $ "Station Status" ++ show stationStatusList
-
-    -- Get system regions.
-    systemRegionsRes <- runClientM systemRegions (mkClientEnv clientManager bikeshareBaseUrl)
-    case systemRegionsRes of
-        Left err -> print err
-        Right systemRegionsList -> pPrintString $ "System Regions" ++ show systemRegionsList
-
-    -- Get system information.
-    systemInformationRes <- runClientM systemInformation (mkClientEnv clientManager bikeshareBaseUrl)
-    case systemInformationRes of
-        Left err -> print err
-        Right systemInformationList -> pPrintString $ "System Information" ++ show systemInformationList
-
-    -- Get system pricing plans.
-    systemPricingPlansRes <- runClientM systemPricingPlans (mkClientEnv clientManager bikeshareBaseUrl)
-    case systemPricingPlansRes of
-        Left err -> print err
-        Right systemPricingPlansList -> pPrintString $ "System Pricing Plans" ++ show systemPricingPlansList
-
-  where
-    bikeshareBaseUrl :: BaseUrl
-    bikeshareBaseUrl = BaseUrl Https "toronto.publicbikesystem.net" 443 "customer/gbfs/v2"
+    runQuery clientManager versions           >>= handleResponse "Versions"
+    runQuery clientManager vehicleTypes       >>= handleResponse "Vehicle Types"
+    runQuery clientManager stationInformation >>= handleResponse "Station Information"
+    runQuery clientManager stationStatus      >>= handleResponse "Station Status"
+    runQuery clientManager systemRegions      >>= handleResponse "System Regions"
+    runQuery clientManager systemInformation  >>= handleResponse "System Information"
+    runQuery clientManager systemPricingPlans >>= handleResponse "System Pricing Plans"
