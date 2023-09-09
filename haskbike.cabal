@@ -122,6 +122,7 @@ library
                     , StationInformation
                     , StationStatus
                     , Database.BikeShare
+                    , Database.Migrations
                     , Database.StationInformation
 
     -- Modules included in this library but not exported.

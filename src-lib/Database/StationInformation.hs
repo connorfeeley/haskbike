@@ -20,7 +20,6 @@ module Database.StationInformation
         , PrimaryKey(StationInformationId)
         , fromJSONToBeamStationInformation
         , fromBeamStationInformationToJSON
-        , createStationInformationTable
         ) where
 
 import           Control.Lens
@@ -29,7 +28,6 @@ import           Data.Int
 import qualified Data.Text                  as Text
 
 import           Database.Beam
-import           Database.PostgreSQL.Simple
 
 import qualified StationInformation         as SI
 
@@ -173,7 +171,3 @@ fromBeamStationInformationToJSON (StationInformation
                         , SI.information_ride_code_support         = ride_code_support
                         -- , SI.information_rental_uris               = SI.RentalURIs { SI.rental_uris_android = "", SI.rental_uris_ios = "", SI.rental_uris_web = "" }
                         }
-
--- | SQL query to create the agencies table.
-createStationInformationTable :: Query
-createStationInformationTable = "CREATE TABLE IF NOT EXISTS stationInformation (id SERIAL PRIMARY KEY, tag TEXT, title TEXT, short_title TEXT, region_title TEXT)"
