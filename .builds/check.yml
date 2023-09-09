@@ -1,0 +1,52 @@
+---
+image: nixos/unstable
+arch: null # aarch64 emulation available for "debian/unstable"
+shell: true
+oauth: ''
+secrets:
+  - 11097f83-8e5a-46c9-be7f-d4c746730000
+  - 47b60264-ce7e-46c6-a041-286c4346d2a2
+  - 47005b27-ef6a-42c2-a1f3-3424cf1e0098
+  - 20509cc9-2877-478f-8e59-4cde913ff21c
+sources: []
+repositories: {}
+packages:
+  - nixos.cachix
+  - nixos.nixUnstable
+environment:
+  BUILD_SUBMITTER: git.sr.ht
+  NIX: cachix watch-exec cfeeley nix -- --print-build-logs --show-trace --verbose
+  NIX_CONFIG: |
+    experimental-features = nix-command flakes
+    accept-flake-config = true
+    keep-going = true
+    allow-import-from-derivation = true
+artifacts: []
+tasks:
+  # TODO: not mirrored to GitHub yet
+  # mirror-to-github: |
+  #     cd haskbike
+  #     git remote add github git@github.com:connorfeeley/haskbike.git
+  #     git push --prune github +refs/remotes/origin/*:refs/heads/* +refs/tags/*:refs/tags/*
+  - show: |
+      cd haskbike
+      $NIX --print-build-logs flake show
+  - devshell: |
+      cd haskbike
+      $NIX --print-build-logs build .#devShells.x86_64-linux.default
+  # TODO: no README yet
+  # readme: |
+  #     cd haskbike
+  #     echo "Updating README"
+  #     $NIX --print-build-logs develop .#devShell.x86_64-linux -c haskbike-docs
+  #     echo "Updated README"
+  - check: |
+      cd haskbike
+      $NIX --print-build-logs flake check
+  - check-hls: |
+      cd haskbike
+      $NIX --print-build-logs run .#checks.aarch64-darwin.default-hls
+triggers:
+  - action: email
+    condition: failure
+    to: builds@git.cfeeley.org
