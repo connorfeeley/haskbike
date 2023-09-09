@@ -121,6 +121,8 @@ library
                     , Client
                     , StationInformation
                     , StationStatus
+                    , Database.BikeShare
+                    , Database.StationInformation
 
     -- Modules included in this library but not exported.
     -- other-modules:

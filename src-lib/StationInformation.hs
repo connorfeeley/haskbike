@@ -85,7 +85,7 @@ data StationInformation where
                         , information_nearby_distance           :: Double
                         , information_bluetooth_id              :: String
                         , information_ride_code_support         :: Bool
-                        , information_rental_uris               :: Object
+                        , information_rental_uris               :: [String]
                         } -> StationInformation
   deriving (Show, Eq, Generic)
 
