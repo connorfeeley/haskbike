@@ -69,7 +69,7 @@ instance FromJSON RentalMethod where
 
 -- | A type representing a BikeShare station.
 data StationInformation where
-  StationInformation :: { information_station_id                :: String
+  StationInformation :: { information_station_id                :: Int
                         , information_name                      :: String
                         , information_physical_configuration    :: PhysicalConfiguration
                         , information_lat                       :: Double
@@ -112,7 +112,7 @@ instance ToJSON StationInformation where
 
 instance FromJSON StationInformation where
   parseJSON = withObject "StationInformation" $ \v -> StationInformation
-    <$> v .: "station_id"
+    <$> fmap read (v .: "station_id")
     <*> v .: "name"
     <*> v .: "physical_configuration"
     <*> v .: "lat"

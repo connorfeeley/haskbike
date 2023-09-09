@@ -32,7 +32,7 @@ instance FromJSON StationStatusString where
 
 -- | Type representing a BikeShare station's status.
 data StationStatus where
-  StationStatus :: { status_station_id                  :: String
+  StationStatus :: { status_station_id                  :: Int
                    , status_num_bikes_available         :: Int
                    , status_num_bikes_disabled          :: Int
                    , status_num_docks_available         :: Int
@@ -43,7 +43,7 @@ data StationStatus where
                    , status_is_installed                :: Bool
                    , status_is_renting                  :: Bool
                    , status_is_returning                :: Bool
-                   , status_traffic                     :: Maybe String
+                   , status_traffic                     :: Maybe String -- PBSC doesn't seem to set this field
                    , status_vehicle_docks_available     :: [VehicleDock]
                    , status_vehicle_types_available     :: [VehicleType]
                    } -> StationStatus
@@ -51,9 +51,38 @@ data StationStatus where
 
 -- drop the "status_" prefix
 instance ToJSON StationStatus where
-  toJSON        = genericToJSON defaultOptions          { fieldLabelModifier = drop 7 }
+  toJSON station =
+    object [ "station_id"               .= show (status_station_id              station)
+           , "num_bikes_available"      .= status_num_bikes_available           station
+           , "num_bikes_disabled"       .= status_num_bikes_disabled            station
+           , "num_docks_available"      .= status_num_docks_available           station
+           , "num_docks_disabled"       .= status_num_docks_disabled            station
+           , "last_reported"            .= status_last_reported                 station
+           , "is_charging_station"      .= status_is_charging_station           station
+           , "status"                   .= status_status                        station
+           , "is_installed"             .= status_is_installed                  station
+           , "is_renting"               .= status_is_renting                    station
+           , "is_returning"             .= status_is_returning                  station
+           , "traffic"                  .= status_traffic                       station
+           , "vehicle_docks_available" .= status_vehicle_docks_available        station
+           , "vehicle_types_available" .= status_vehicle_types_available        station
+           ]
 instance FromJSON StationStatus where
-  parseJSON     = genericParseJSON defaultOptions       { fieldLabelModifier = drop 7 }
+  parseJSON = withObject "StationStatus" $ \v -> StationStatus
+    <$> fmap read (v .: "station_id")
+    <*> v .: "num_bikes_available"
+    <*> v .: "num_bikes_disabled"
+    <*> v .: "num_docks_available"
+    <*> v .: "num_docks_disabled"
+    <*> v .:? "last_reported"
+    <*> v .: "is_charging_station"
+    <*> v .: "status"
+    <*> v .: "is_installed"
+    <*> v .: "is_renting"
+    <*> v .: "is_returning"
+    <*> v .:? "traffic"
+    <*> v .: "vehicle_docks_available"
+    <*> v .: "vehicle_types_available"
 
 -- | A type representing a BikeShare station's vehicle dock status.
 data VehicleDock where
