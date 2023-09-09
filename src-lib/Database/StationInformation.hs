@@ -25,8 +25,6 @@ module Database.StationInformation
 
 import           Control.Lens
 
-import           Data.Aeson                 (FromJSON, ToJSON, decode, encode,
-                                             fromJSON, toJSON, Value (Object))
 import           Data.Int
 import qualified Data.Text                  as Text
 
@@ -34,28 +32,26 @@ import           Database.Beam
 import           Database.PostgreSQL.Simple
 
 import qualified StationInformation         as SI
-import Data.Aeson.Encoding (pairs)
-import Data.Aeson.Types (object)
 
 
 -- | Declare a (Beam) table for the 'StationInformation' type.
 data StationInformationT f where
   StationInformation :: { _information_id                        :: Columnar f Int32
                         , _information_station_id                :: Columnar f Int32
-                        , _information_name                      :: Columnar f String
-                        , _information_physical_configuration    :: Columnar f String
+                        , _information_name                      :: Columnar f Text.Text
+                        , _information_physical_configuration    :: Columnar f Text.Text
                         , _information_lat                       :: Columnar f Double
                         , _information_lon                       :: Columnar f Double
                         , _information_altitude                  :: Columnar f Double
-                        , _information_address                   :: Columnar f String
+                        , _information_address                   :: Columnar f Text.Text
                         , _information_capacity                  :: Columnar f Int32
                         , _information_is_charging_station       :: Columnar f Bool
-                        , _information_rental_methods            :: Columnar f [String]
+                        , _information_rental_methods            :: Columnar f Text.Text
                         , _information_is_virtual_station        :: Columnar f Bool
-                        , _information_groups                    :: Columnar f [String]
-                        , _information_obcn                      :: Columnar f String
+                        , _information_groups                    :: Columnar f Text.Text
+                        , _information_obcn                      :: Columnar f Text.Text
                         , _information_nearby_distance           :: Columnar f Double
-                        , _information_bluetooth_id              :: Columnar f String
+                        , _information_bluetooth_id              :: Columnar f Text.Text
                         , _information_ride_code_support         :: Columnar f Bool
                         -- , _information_rental_uris               :: Columnar f SI.RentalURIs
                         } -> StationInformationT f
@@ -127,7 +123,7 @@ fromJSONToBeamStationInformation (SI.StationInformation
                      , _information_address                   = val_ $ Text.pack address
                      , _information_capacity                  = fromIntegral capacity
                      , _information_is_charging_station       = val_ is_charging_station
-                     , _information_rental_methods            = val_ $ Text.pack []
+                     , _information_rental_methods            = val_ $ Text.pack ""
                      , _information_is_virtual_station        = val_ is_virtual_station
                      , _information_groups                    = val_ ""
                      , _information_obcn                      = val_ $ Text.pack obcn
@@ -171,9 +167,9 @@ fromBeamStationInformationToJSON (StationInformation
                         , SI.information_rental_methods            = []
                         , SI.information_is_virtual_station        = is_virtual_station
                         , SI.information_groups                    = []
-                        , SI.information_obcn                      = obcn
+                        , SI.information_obcn                      = Text.unpack obcn
                         , SI.information_nearby_distance           = nearby_distance
-                        , SI.information_bluetooth_id              = bluetooth_id
+                        , SI.information_bluetooth_id              = Text.unpack bluetooth_id
                         , SI.information_ride_code_support         = ride_code_support
                         -- , SI.information_rental_uris               = SI.RentalURIs { SI.rental_uris_android = "", SI.rental_uris_ios = "", SI.rental_uris_web = "" }
                         }
