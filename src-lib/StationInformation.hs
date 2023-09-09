@@ -9,6 +9,7 @@ module StationInformation
         , StationInformationResponse (..)
         , PhysicalConfiguration (..)
         , RentalMethod (..)
+        , RentalURIs (..)
         ) where
 
 import           Data.Aeson
@@ -67,6 +68,25 @@ instance FromJSON RentalMethod where
       "PHONE"       -> return Phone
       _             -> fail $ "Invalid RentalMethod: " ++ Text.unpack t
 
+data RentalURIs where
+  RentalURIs :: { rental_uris_android :: String
+                , rental_uris_ios     :: String
+                , rental_uris_web     :: String
+                } -> RentalURIs
+  deriving (Show, Eq, Generic)
+
+instance ToJSON RentalURIs where
+  toJSON rentalURIs =
+    object [ "android" .= rental_uris_android rentalURIs
+           , "ios"     .= rental_uris_ios     rentalURIs
+           , "web"     .= rental_uris_web     rentalURIs
+           ]
+instance FromJSON RentalURIs where
+  parseJSON = withObject "RentalURIs" $ \v -> RentalURIs
+    <$> v .: "android"
+    <*> v .: "ios"
+    <*> v .: "web"
+
 -- | A type representing a BikeShare station.
 data StationInformation where
   StationInformation :: { information_station_id                :: Int
@@ -85,7 +105,7 @@ data StationInformation where
                         , information_nearby_distance           :: Double
                         , information_bluetooth_id              :: String
                         , information_ride_code_support         :: Bool
-                        , information_rental_uris               :: [String]
+                        -- , information_rental_uris               :: RentalURIs
                         } -> StationInformation
   deriving (Show, Eq, Generic)
 
@@ -107,7 +127,7 @@ instance ToJSON StationInformation where
            , "nearby_distance"          .= information_nearby_distance          station
            , "_bluetooth_id"            .= information_bluetooth_id             station
            , "_ride_code_support"       .= information_ride_code_support        station
-           , "rental_uris"              .= information_rental_uris              station
+           -- , "rental_uris"              .= information_rental_uris              station
            ]
 
 instance FromJSON StationInformation where
@@ -128,7 +148,7 @@ instance FromJSON StationInformation where
     <*> v .: "nearby_distance"
     <*> v .: "_bluetooth_id"
     <*> v .: "_ride_code_support"
-    <*> v .: "rental_uris"
+    -- <*> v .: "rental_uris"
 
 -- | A wrapper type for the station information response.
 newtype StationInformationResponse where

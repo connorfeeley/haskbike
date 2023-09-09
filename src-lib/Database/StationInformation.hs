@@ -57,7 +57,7 @@ data StationInformationT f where
                         , _information_nearby_distance           :: Columnar f Double
                         , _information_bluetooth_id              :: Columnar f String
                         , _information_ride_code_support         :: Columnar f Bool
-                        , _information_rental_uris               :: Columnar f String
+                        -- , _information_rental_uris               :: Columnar f SI.RentalURIs
                         } -> StationInformationT f
   deriving (Generic, Beamable)
 
@@ -94,7 +94,7 @@ StationInformation
   (LensFor information_nearby_distance)
   (LensFor information_bluetooth_id)
   (LensFor information_ride_code_support)
-  (LensFor information_rental_uris)
+  -- (LensFor information_rental_uris)
   = tableLenses
 
 -- | Convert from the JSON StationInformation to the Beam StationInformation type
@@ -115,7 +115,8 @@ fromJSONToBeamStationInformation (SI.StationInformation
                                   nearby_distance
                                   bluetooth_id
                                   ride_code_support
-                                  rental_uris) =
+                                  -- rental_uris
+                                 ) =
   StationInformation { _information_id                        = default_
                      , _information_station_id                = fromIntegral station_id
                      , _information_name                      = val_ $ Text.pack name
@@ -133,12 +134,31 @@ fromJSONToBeamStationInformation (SI.StationInformation
                      , _information_nearby_distance           = nearby_distance
                      , _information_bluetooth_id              = val_ $ Text.pack bluetooth_id
                      , _information_ride_code_support         = val_ ride_code_support
-                     , _information_rental_uris               = val_ ""
+                     -- , _information_rental_uris               = val_ ""
                      }
 
 -- | Convert from the Beam StationInformation type to the JSON StationInformation
 fromBeamStationInformationToJSON :: StationInformation -> SI.StationInformation
-fromBeamStationInformationToJSON (StationInformation _ station_id name physical_configuration lat lon altitude address capacity is_charging_station rental_methods is_virtual_station groups obcn nearby_distance bluetooth_id ride_code_support rental_uris) =
+fromBeamStationInformationToJSON (StationInformation
+                                  _
+                                  station_id
+                                  name
+                                  physical_configuration
+                                  lat
+                                  lon
+                                  altitude
+                                  address
+                                  capacity
+                                  is_charging_station
+                                  rental_methods
+                                  is_virtual_station
+                                  groups
+                                  obcn
+                                  nearby_distance
+                                  bluetooth_id
+                                  ride_code_support
+                                  -- rental_uris
+                                 ) =
   SI.StationInformation { SI.information_station_id                = fromIntegral station_id
                         , SI.information_name                      = show name
                         , SI.information_physical_configuration    = SI.Regular
@@ -155,7 +175,7 @@ fromBeamStationInformationToJSON (StationInformation _ station_id name physical_
                         , SI.information_nearby_distance           = nearby_distance
                         , SI.information_bluetooth_id              = bluetooth_id
                         , SI.information_ride_code_support         = ride_code_support
-                        , SI.information_rental_uris               = []
+                        -- , SI.information_rental_uris               = SI.RentalURIs { SI.rental_uris_android = "", SI.rental_uris_ios = "", SI.rental_uris_web = "" }
                         }
 
 -- | SQL query to create the agencies table.
