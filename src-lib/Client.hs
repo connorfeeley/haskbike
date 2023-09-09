@@ -3,7 +3,18 @@
 {-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Client where
+module Client
+  ( bikeShareAPIClient
+  , versions
+  , vehicleTypes
+  , stationInformation
+  , stationStatus
+  , systemRegions
+  , systemInformation
+  , systemPricingPlans
+  , run
+  )
+where
 
 import           Data.Proxy
 import           Network.HTTP.Client     (newManager)

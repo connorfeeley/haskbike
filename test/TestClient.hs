@@ -39,7 +39,27 @@ runQuery query = do
 test_Client :: Test
 test_Client = testGroup "Client tests"
   [ testCase "parse versions" test_parseVersions
+  , testCase "parse vehicle types" test_parseVehicleTypes
+  , testCase "parse station information" test_parseStationInformation
+  , testCase "parse station status" test_parseStationStatus
+  , testCase "parse system regions" test_parseSystemRegions
+  , testCase "parse system pricing plans" test_parseSystemPricingPlans
   ]
 
-test_parseVersions :: IO ()
-test_parseVersions = runQuery versions
+test_parseVersions            :: IO ()
+test_parseVersions            = runQuery versions
+
+test_parseVehicleTypes        :: IO ()
+test_parseVehicleTypes        = runQuery vehicleTypes
+
+test_parseStationInformation  :: IO ()
+test_parseStationInformation  = runQuery stationInformation
+
+test_parseStationStatus       :: IO ()
+test_parseStationStatus       = runQuery stationStatus
+
+test_parseSystemRegions       :: IO ()
+test_parseSystemRegions       = runQuery systemRegions
+
+test_parseSystemPricingPlans  :: IO ()
+test_parseSystemPricingPlans  = runQuery systemPricingPlans
