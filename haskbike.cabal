@@ -118,9 +118,9 @@ library
 
     -- Modules exported by the library.
     exposed-modules:  BikeShareAPI
-                   ,  Client
-                   ,  StationInformation
-                   ,  StationStatus
+                    , Client
+                    , StationInformation
+                    , StationStatus
 
     -- Modules included in this library but not exported.
     -- other-modules:
@@ -164,6 +164,7 @@ test-suite haskbike-test
 
     -- Modules included in this executable, other than Main.
     other-modules:    TestDecoding
+                    , TestClient
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:

@@ -22,4 +22,4 @@ type BikeShareAPI =
   :<|> "en" :> "station_status"               :> Get '[JSON] SS.StationStatusResponse
   :<|> "en" :> "system_regions"               :> Get '[JSON] Object
   :<|> "en" :> "system_information"           :> Get '[JSON] Object
-  :<|> "en" :> "system_system_pricing_plans"  :> Get '[JSON] Object
+  :<|> "en" :> "system_pricing_plans"  :> Get '[JSON] Object
