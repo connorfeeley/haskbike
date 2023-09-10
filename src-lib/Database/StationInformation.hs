@@ -19,7 +19,10 @@ module Database.StationInformation
         , StationInformation
         , StationInformationId
         , PrimaryKey(StationInformationId)
+        , BeamRentalMethod(..)
         , rentalMethod
+        , BeamPhysicalConfiguration(..)
+        , physicalConfiguration
         , fromJSONToBeamStationInformation
         , fromBeamStationInformationToJSON
         ) where
@@ -56,7 +59,7 @@ data StationInformationT f where
   StationInformation :: { _information_id                        :: Columnar f (SqlSerial Int32)
                         , _information_station_id                :: Columnar f Int32
                         , _information_name                      :: Columnar f Text.Text
-                        , _information_physical_configuration    :: Columnar f Text.Text
+                        , _information_physical_configuration    :: Columnar f BeamPhysicalConfiguration
                         , _information_lat                       :: Columnar f Double
                         , _information_lon                       :: Columnar f Double
                         , _information_altitude                  :: Columnar f Double
@@ -146,11 +149,49 @@ instance ToField BeamRentalMethod where
 rentalMethod :: DataType Postgres BeamRentalMethod
 rentalMethod = DataType pgTextType
 
+-- | Newtype wrapper for PhysicalConfiguration to allow us to define a custom FromBackendRow instance.
+-- Don't want to implement database-specific code for the underlying PhysicalConfiguration type.
+newtype BeamPhysicalConfiguration where
+  BeamPhysicalConfiguration :: SI.PhysicalConfiguration -> BeamPhysicalConfiguration
+  deriving (Eq, Generic, Show, Read) via SI.PhysicalConfiguration
+
+instance (BeamBackend be, FromBackendRow be Text.Text) => FromBackendRow be BeamPhysicalConfiguration where
+  fromBackendRow = do
+    val <- fromBackendRow
+    case val :: Text.Text of
+      "ELECTRICBIKESTATION" -> pure $ BeamPhysicalConfiguration SI.ElectricBikeStation
+      "REGULAR"             -> pure $ BeamPhysicalConfiguration SI.Regular
+      "REGULARLITMAPFRAME"  -> pure $ BeamPhysicalConfiguration SI.RegularLitMapFrame
+      "SMARTLITMAPFRAME"    -> pure $ BeamPhysicalConfiguration SI.SmartLitMapFrame
+      "SMARTMAPFRAME"       -> pure $ BeamPhysicalConfiguration SI.SmartMapFrame
+      "VAULT"               -> pure $ BeamPhysicalConfiguration SI.Vault
+      _ -> fail ("Invalid value for BeamPhysicalConfiguration: " ++ Text.unpack val)
+
+instance (HasSqlValueSyntax be String, Show BeamPhysicalConfiguration) => HasSqlValueSyntax be BeamPhysicalConfiguration where
+  sqlValueSyntax = sqlValueSyntax . show
+
+instance FromField BeamPhysicalConfiguration where
+   fromField f mdata = do
+     if typeOid f /= typoid text -- TODO: any way to determine this automatically?
+        then returnError Incompatible f ""
+        else case B.unpack `fmap` mdata of
+               Nothing  -> returnError UnexpectedNull f ""
+               Just dat ->
+                  case [ x | (x,t) <- reads dat, ("","") <- lex t ] of
+                    [x] -> return x
+                    _   -> returnError ConversionFailed f dat
+
+instance ToField BeamPhysicalConfiguration where
+  toField = toField . show
+
+physicalConfiguration :: DataType Postgres BeamPhysicalConfiguration
+physicalConfiguration = DataType pgTextType
+
 -- | Convert from the JSON StationInformation to the Beam StationInformation type
 fromJSONToBeamStationInformation (SI.StationInformation
                                   station_id
                                   name
-                                  _physical_configuration
+                                  physical_configuration
                                   lat
                                   lon
                                   altitude
@@ -169,7 +210,7 @@ fromJSONToBeamStationInformation (SI.StationInformation
   StationInformation { _information_id                        = default_
                      , _information_station_id                = fromIntegral station_id
                      , _information_name                      = val_ $ Text.pack name
-                     , _information_physical_configuration    = val_ $ Text.pack ""
+                     , _information_physical_configuration    = val_ (coerce physical_configuration :: BeamPhysicalConfiguration)
                      , _information_lat                       = val_ lat
                      , _information_lon                       = val_ lon
                      , _information_altitude                  = val_ altitude
@@ -210,7 +251,7 @@ fromBeamStationInformationToJSON (StationInformation
                                  ) =
   SI.StationInformation { SI.information_station_id                = fromIntegral station_id
                         , SI.information_name                      = show name
-                        , SI.information_physical_configuration    = SI.Regular
+                        , SI.information_physical_configuration    = coerce physical_configuration :: SI.PhysicalConfiguration
                         , SI.information_lat                       = lat
                         , SI.information_lon                       = lon
                         , SI.information_altitude                  = altitude

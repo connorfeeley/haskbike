@@ -30,7 +30,7 @@ initialSetup = BikeshareDb
         , DSI._information_name = field "name"
             (varchar (Just 100)) notNull
         , DSI._information_physical_configuration = field "physical_configuration"
-            (varchar (Just 100)) notNull
+            DSI.physicalConfiguration
         , DSI._information_lat = field "lat"
             double notNull
         , DSI._information_lon = field "lon"
