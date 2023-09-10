@@ -142,6 +142,7 @@ library
                     -- API access
                     , servant
                     , aeson >= 2.1.2.0
+                    , attoparsec
                     , servant-client
                     , http-client
                     , http-client-tls

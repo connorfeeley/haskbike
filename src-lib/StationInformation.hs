@@ -20,6 +20,11 @@ import           Data.Aeson
 import qualified Data.Text                     as Text
 import           GHC.Generics
 
+import           Data.Attoparsec.Text          (Parser, choice, parseOnly,
+                                                string)
+import           Data.Either                   (fromRight)
+import           Data.Functor                  (($>))
+import           Data.Text                     (pack)
 import           Database.Beam.Backend         (BeamBackend)
 import           Database.Beam.Backend.SQL     (FromBackendRow (fromBackendRow),
                                                 HasSqlValueSyntax (sqlValueSyntax),
@@ -70,6 +75,17 @@ instance Show RentalMethod where
   show TransitCard = "TRANSITCARD"
   show CreditCard  = "CREDITCARD"
   show Phone       = "PHONE"
+
+instance Read RentalMethod where
+  readsPrec _ = fromRight [] . parseOnly parser . pack
+
+parser :: Parser [(RentalMethod, String)]
+parser = choice
+  [ string "KEY"                $> [(Key,         "")]
+  , string "TRANSITCARD"        $> [(TransitCard, "")]
+  , string "CREDITCARD"         $> [(CreditCard,  "")]
+  , string "PHONE"              $> [(Phone,       "")]
+  ]
 
 instance ToJSON RentalMethod where
   toJSON Key         = String "KEY"
@@ -132,7 +148,7 @@ data StationInformation where
                         , information_address                   :: String
                         , information_capacity                  :: Int
                         , information_is_charging_station       :: Bool
-                        , information_rental_methods            :: RentalMethod
+                        , information_rental_methods            :: [RentalMethod]
                         , information_is_virtual_station        :: Bool
                         , information_groups                    :: [String]
                         , information_obcn                      :: String

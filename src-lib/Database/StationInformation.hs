@@ -24,14 +24,16 @@ module Database.StationInformation
 
 import           Control.Lens
 
+import           Database.Beam
+
 import           Data.Int
 import qualified Data.Text          as Text
 import qualified Data.Vector        as Vector
-
-import           Database.Beam
-
 import           Data.Vector        (toList)
+
 import qualified StationInformation as SI
+import Database.PostgreSQL.Simple.FromField (FromField (..), typename, ResultError (..), returnError, Field (typeOid), typoid)
+import qualified Data.ByteString.Char8 as B
 
 
 -- | Declare a (Beam) table for the 'StationInformation' type.
@@ -46,7 +48,7 @@ data StationInformationT f where
                         , _information_address                   :: Columnar f Text.Text
                         , _information_capacity                  :: Columnar f Int32
                         , _information_is_charging_station       :: Columnar f Bool
-                        , _information_rental_methods            :: Columnar f SI.RentalMethod
+                        , _information_rental_methods            :: Columnar f (Vector.Vector SI.RentalMethod)
                         , _information_is_virtual_station        :: Columnar f Bool
                         , _information_groups                    :: Columnar f (Vector.Vector Text.Text)
                         , _information_obcn                      :: Columnar f Text.Text
@@ -93,6 +95,18 @@ StationInformation
   -- (LensFor information_rental_uris)
   = tableLenses
 
+instance FromField SI.RentalMethod where
+   fromField f mdata = do
+     typ <- typename f
+     if typ /= "RentalMethod"
+        then returnError Incompatible f ""
+        else case B.unpack `fmap` mdata of
+               Nothing  -> returnError UnexpectedNull f ""
+               Just dat ->
+                  case [ x | (x,t) <- reads dat, ("","") <- lex t ] of
+                    [x] -> return x
+                    _   -> returnError ConversionFailed f dat
+
 -- | Convert from the JSON StationInformation to the Beam StationInformation type
 fromJSONToBeamStationInformation (SI.StationInformation
                                   station_id
@@ -123,7 +137,7 @@ fromJSONToBeamStationInformation (SI.StationInformation
                      , _information_address                   = val_ $ Text.pack address
                      , _information_capacity                  = fromIntegral capacity
                      , _information_is_charging_station       = val_ is_charging_station
-                     , _information_rental_methods            = val_ rental_methods
+                     , _information_rental_methods            = val_ $ Text.pack $ show rental_methods
                      , _information_is_virtual_station        = val_ is_virtual_station
                      , _information_groups                    = val_ $ Text.pack $ show groups
                      , _information_obcn                      = val_ $ Text.pack obcn
@@ -164,7 +178,7 @@ fromBeamStationInformationToJSON (StationInformation
                         , SI.information_address                   = ""
                         , SI.information_capacity                  = fromIntegral capacity
                         , SI.information_is_charging_station       = is_charging_station
-                        , SI.information_rental_methods            = rental_methods -- rental_methods
+                        , SI.information_rental_methods            = toList rental_methods
                         , SI.information_is_virtual_station        = is_virtual_station
                         , SI.information_groups                    = Text.unpack <$> toList groups
                         , SI.information_obcn                      = Text.unpack obcn

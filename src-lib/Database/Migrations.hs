@@ -45,7 +45,7 @@ initialSetup = BikeshareDb
         , DSI._information_is_charging_station = field "is_charging_station"
             boolean notNull
         , DSI._information_rental_methods = field "rental_methods"
-            SI.rentalMethod
+            (unboundedArray SI.rentalMethod)
         , DSI._information_is_virtual_station = field "is_virtual_station"
             boolean notNull
         , DSI._information_groups = field "groups"
