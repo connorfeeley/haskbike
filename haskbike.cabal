@@ -53,12 +53,52 @@ extra-doc-files:    CHANGELOG.md
 -- Extra source files to be distributed with the package, such as examples, or a tutorial module.
 extra-source-files: test/json/*.json
 
+-- Common warning flags.
 common warnings
     ghc-options: -Wall
 
+-- Common dependencies shared by all targets.
+common common-depends
+    build-depends:    base
+                    , bytestring
+                    , pretty-simple
+                    , text
+
+-- Dependencies needed by targets excercising the API.
+common api-depends
+    build-depends:    servant
+                    , aeson
+                    , servant-server
+                    , servant-client
+                    , servant-docs
+                    , http-client
+                    , http-client-tls
+
+-- Dependencies needed by targets excercising the database.
+common database-depends
+    build-depends:    beam-core
+                    , beam-migrate
+                    , beam-sqlite
+                    , sqlite-simple
+                    , postgresql-simple
+                    , beam-postgres
+                    , lens
+
+-- Dependencies needed by testing targets.
+common test-depends
+    build-depends:    QuickCheck
+                    , test-framework
+                    , test-framework-hunit
+                    , HUnit
+                    , file-embed
+                    , aeson-better-errors
+
+-- Executable target.
 executable haskbike
-    -- Import common warning flags.
     import:           warnings
+                    , common-depends
+                    , api-depends
+                    , database-depends
 
     -- .hs or .lhs file containing the Main module.
     main-is:          Main.hs
@@ -70,41 +110,7 @@ executable haskbike
     -- other-extensions:
 
     -- Other library packages from which modules are imported.
-    build-depends:    base
-                    , text
-                    , time
-                    , servant
-                    , servant-server
-                    , servant-client
-                    , servant-docs
-                    , http-media
-                    , http-client
-                    , http-client-tls
-                    , xmlgen
-                    , bytestring
-                    , xml-conduit
-                    , base-compat
-                    , mtl
-                    , aeson
-                    , attoparsec
-                    , string-conversions
-                    , wai
-                    , blaze-html
-                    , blaze-markup
-                    , http-api-data
-                    , pretty-simple
-                    , warp
-                    , lucid
-                    , directory
-                    , haskbike
-                    -- Beam (database)
-                    , beam-core
-                    , beam-migrate
-                    , beam-sqlite
-                    , sqlite-simple
-                    , postgresql-simple
-                    , beam-postgres
-                    , lens
+    build-depends:    haskbike
 
     -- Directories containing source files.
     hs-source-dirs:   src-exe
@@ -112,9 +118,12 @@ executable haskbike
     -- Base language which the package is written in.
     default-language: Haskell2010
 
+-- Library target.
 library
-    -- Import common warning flags.
     import:           warnings
+                    , common-depends
+                    , api-depends
+                    , database-depends
 
     -- Modules exported by the library.
     exposed-modules:  BikeShareAPI
@@ -132,28 +141,10 @@ library
     -- other-extensions:
 
     -- Other library packages from which modules are imported.
-    build-depends:    base
-                    , bytestring
-                    , pretty-simple
-                    , text
+    build-depends:    vector
                     , colour
                     , text-show
-                    , vector
-                    -- API access
-                    , servant
-                    , aeson
                     , attoparsec
-                    , servant-client
-                    , http-client
-                    , http-client-tls
-                    -- Beam (database)
-                    , beam-core
-                    , beam-migrate
-                    , beam-sqlite
-                    , sqlite-simple
-                    , postgresql-simple
-                    , beam-postgres
-                    , lens
 
     -- Directories containing source files.
     hs-source-dirs:   src-lib
@@ -161,9 +152,13 @@ library
     -- Base language which the package is written in.
     default-language: Haskell2010
 
+-- Testing target.
 test-suite haskbike-test
-    -- Import common warning flags.
     import:           warnings
+                    , common-depends
+                    , api-depends
+                    , database-depends
+                    , test-depends
 
     -- Base language which the package is written in.
     default-language: Haskell2010
@@ -186,29 +181,4 @@ test-suite haskbike-test
     main-is:          Main.hs
 
     -- Test dependencies.
-    build-depends:    base
-                    , haskbike
-                    , bytestring
-                    , pretty-simple
-                    , text
-                    -- Testing
-                    , QuickCheck
-                    , test-framework
-                    , test-framework-hunit
-                    , HUnit
-                    , file-embed
-                    -- API access
-                    , servant
-                    , aeson
-                    , aeson-better-errors
-                    , servant-client
-                    , http-client
-                    , http-client-tls
-                    -- Beam (database)
-                    , beam-core
-                    , beam-migrate
-                    , beam-sqlite
-                    , sqlite-simple
-                    , postgresql-simple
-                    , beam-postgres
-                    , lens
+    build-depends:    haskbike
