@@ -4,6 +4,12 @@
 * Useful Commands
 ** Update Dependencies
 
-#+begin_src shell
+#+begin_src shell :noeval
 cabal freeze --enable-tests --upgrade-dependencies --allow-newer=aeson
+#+end_src
+
+** Query Database
+
+#+begin_src shell :noeval
+psql -d haskbike -c "SELECT * FROM station_information"
 #+end_src
