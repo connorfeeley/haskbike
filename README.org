@@ -1,0 +1,9 @@
+#+title: README
+#+author: Connor Feeley
+#+date: 2023-09-10
+* Useful Commands
+** Update Dependencies
+
+#+begin_src shell
+cabal freeze --enable-tests --upgrade-dependencies --allow-newer=aeson
+#+end_src

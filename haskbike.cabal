@@ -203,10 +203,6 @@ test-suite haskbike-test
                     , servant-client
                     , http-client
                     , http-client-tls
-                    -- Persistent (database)
-                    , persistent
-                    , persistent-sqlite
-                    , persistent-template
                     -- Beam (database)
                     , beam-core
                     , beam-migrate
