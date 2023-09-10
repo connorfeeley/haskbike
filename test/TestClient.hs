@@ -15,6 +15,11 @@ import           Servant.Client
 
 import           Client
 
+
+-- | All tests defined in this module.
+tests :: [Test]
+tests = [ test_Client ]
+
 -- | Mark a test as expected to fail.
 markAsExpectedFailure :: IO () -> IO ()
 markAsExpectedFailure testFunc = do

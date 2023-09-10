@@ -55,6 +55,10 @@ import qualified Database.StationInformation              as DSI
 import           Text.Printf                              (printf)
 
 
+-- | All tests defined in this module.
+tests :: [Test]
+tests = [ test_Database ]
+
 -- Test case using Beam
 test_Database :: Test
 test_Database = testGroup "Database tests"

@@ -31,6 +31,10 @@ import qualified Data.Maybe                     as Maybe
 import qualified StationInformation             as SI
 import qualified StationStatus                  as SS
 
+-- | All tests defined in this module.
+tests :: [Test]
+tests = [ test_Decoding ]
+
 -- | Decode a ByteString into a value.
 decodeByteString :: FromJSON a => BL.ByteString -> Either String a
 decodeByteString = eitherDecode
