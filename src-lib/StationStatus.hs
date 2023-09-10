@@ -8,17 +8,35 @@ module StationStatus
         ( StationStatus (..)
         , StationStatusResponse (..)
         , StationStatusString (..)
+        , VehicleDock (..)
+        , VehicleType (..)
         ) where
 
 import           Data.Aeson
-import qualified Data.Text    as Text
+import           Data.Attoparsec.Text (Parser, choice, parseOnly, string)
+import           Data.Either          (fromRight)
+import           Data.Functor         (($>))
+import qualified Data.Text            as Text
 import           GHC.Generics
 
 -- | Enumeration representing a BikeShare station status string.
 data StationStatusString where
   InService :: StationStatusString
   EndOfLife :: StationStatusString
-  deriving (Show, Eq, Generic)
+  deriving (Eq, Generic)
+
+instance Show StationStatusString where
+  show InService = "IN_SERVICE"
+  show EndOfLife = "END_OF_LIFE"
+
+instance Read StationStatusString where
+  readsPrec _ = fromRight [] . parseOnly parser . Text.pack
+    where
+    parser :: Parser [(StationStatusString, String)]
+    parser = choice
+      [ string "IN_SERVICE"  $> [(InService, "")]
+      , string "END_OF_LIFE" $> [(EndOfLife, "")]
+      ]
 
 instance ToJSON StationStatusString where
   toJSON InService = String (Text.pack "IN_SERVICE")
