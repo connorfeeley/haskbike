@@ -85,7 +85,7 @@ executable haskbike
                     , xml-conduit
                     , base-compat
                     , mtl
-                    , aeson
+                    , aeson >= 2.1.2.0
                     , attoparsec
                     , string-conversions
                     , wai
@@ -137,9 +137,11 @@ library
                     , pretty-simple
                     , text
                     , colour
+                    , text-show
+                    , vector
                     -- API access
                     , servant
-                    , aeson
+                    , aeson >= 2.1.2.0
                     , servant-client
                     , http-client
                     , http-client-tls
@@ -195,7 +197,7 @@ test-suite haskbike-test
                     , file-embed
                     -- API access
                     , servant
-                    , aeson
+                    , aeson >= 2.1.2.0
                     , aeson-better-errors
                     , servant-client
                     , http-client

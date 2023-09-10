@@ -25,11 +25,13 @@ module Database.StationInformation
 import           Control.Lens
 
 import           Data.Int
-import qualified Data.Text                  as Text
+import qualified Data.Text          as Text
+import qualified Data.Vector        as Vector
 
 import           Database.Beam
 
-import qualified StationInformation         as SI
+import           Data.Vector        (toList)
+import qualified StationInformation as SI
 
 
 -- | Declare a (Beam) table for the 'StationInformation' type.
@@ -44,9 +46,9 @@ data StationInformationT f where
                         , _information_address                   :: Columnar f Text.Text
                         , _information_capacity                  :: Columnar f Int32
                         , _information_is_charging_station       :: Columnar f Bool
-                        , _information_rental_methods            :: Columnar f Text.Text
+                        , _information_rental_methods            :: Columnar f SI.RentalMethod
                         , _information_is_virtual_station        :: Columnar f Bool
-                        , _information_groups                    :: Columnar f Text.Text
+                        , _information_groups                    :: Columnar f (Vector.Vector Text.Text)
                         , _information_obcn                      :: Columnar f Text.Text
                         , _information_nearby_distance           :: Columnar f Double
                         , _information_bluetooth_id              :: Columnar f Text.Text
@@ -121,9 +123,9 @@ fromJSONToBeamStationInformation (SI.StationInformation
                      , _information_address                   = val_ $ Text.pack address
                      , _information_capacity                  = fromIntegral capacity
                      , _information_is_charging_station       = val_ is_charging_station
-                     , _information_rental_methods            = val_ $ Text.pack ""
+                     , _information_rental_methods            = val_ rental_methods
                      , _information_is_virtual_station        = val_ is_virtual_station
-                     , _information_groups                    = val_ ""
+                     , _information_groups                    = val_ $ Text.pack $ show groups
                      , _information_obcn                      = val_ $ Text.pack obcn
                      , _information_nearby_distance           = nearby_distance
                      , _information_bluetooth_id              = val_ $ Text.pack bluetooth_id
@@ -162,9 +164,9 @@ fromBeamStationInformationToJSON (StationInformation
                         , SI.information_address                   = ""
                         , SI.information_capacity                  = fromIntegral capacity
                         , SI.information_is_charging_station       = is_charging_station
-                        , SI.information_rental_methods            = []
+                        , SI.information_rental_methods            = rental_methods -- rental_methods
                         , SI.information_is_virtual_station        = is_virtual_station
-                        , SI.information_groups                    = []
+                        , SI.information_groups                    = Text.unpack <$> toList groups
                         , SI.information_obcn                      = Text.unpack obcn
                         , SI.information_nearby_distance           = nearby_distance
                         , SI.information_bluetooth_id              = Text.unpack bluetooth_id

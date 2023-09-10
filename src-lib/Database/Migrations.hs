@@ -2,23 +2,18 @@
 
 module Database.Migrations where
 
-import           Database.Beam                    (DataType)
-import           Database.Beam.Backend
-import           Database.Beam.Migrate
-import           Database.Beam.Migrate.SQL.Tables
-import           Database.Beam.Postgres
-
 import           Database.BikeShare
-import qualified Database.StationInformation               as DSI
+import qualified Database.StationInformation    as DSI
 
-import Database.Beam.Query.DataTypes
-import Data.Int (Int64)
-import Database.Beam
-import Database.Beam.Migrate
-import Database.Beam.Migrate.Simple
-import Database.Beam.Sqlite
-import Database.Beam.Sqlite.Migrate
-import Database.SQLite.Simple hiding (field)
+import qualified StationInformation             as SI
+
+import           Data.String                    (fromString)
+
+import           Database.Beam
+import           Database.Beam.Migrate
+import           Database.Beam.Migrate.Simple
+import           Database.Beam.Postgres
+import qualified Database.Beam.Postgres.Migrate as PG
 
 
 -- It's unfortunate that we have to define this ourselves.
@@ -36,7 +31,7 @@ initialSetup = BikeshareDb
         , DSI._information_name = field "name"
             (varchar (Just 100)) notNull
         , DSI._information_physical_configuration = field "physical_configuration"
-            (nationalVarchar (Just 100)) notNull
+            (varchar (Just 100)) notNull
         , DSI._information_lat = field "lat"
             double notNull
         , DSI._information_lon = field "lon"
@@ -44,23 +39,23 @@ initialSetup = BikeshareDb
         , DSI._information_altitude = field "altitude"
             double notNull
         , DSI._information_address = field "address"
-            (nationalVarchar (Just 100)) notNull
+            (varchar (Just 100)) notNull
         , DSI._information_capacity = field "capacity"
             int notNull
         , DSI._information_is_charging_station = field "is_charging_station"
             boolean notNull
         , DSI._information_rental_methods = field "rental_methods"
-            (nationalVarchar (Just 100)) notNull
+            SI.rentalMethod
         , DSI._information_is_virtual_station = field "is_virtual_station"
             boolean notNull
         , DSI._information_groups = field "groups"
-            (nationalVarchar (Just 100)) notNull
+            (unboundedArray (varchar (Just 100)))
         , DSI._information_obcn = field "obcn"
-            (nationalVarchar (Just 100)) notNull
+            (varchar (Just 100)) notNull
         ,  DSI._information_nearby_distance = field "nearby_distance"
             double notNull
         , DSI._information_bluetooth_id = field "bluetooth_id"
-            (nationalVarchar (Just 100)) notNull
+            (varchar (Just 100)) notNull
         ,  DSI._information_ride_code_support = field "ride_code_support"
             boolean notNull
         })
@@ -71,3 +66,29 @@ initialSetupStep :: MigrationSteps Postgres
 initialSetupStep = migrationStep
   "initial_setup"
   (const initialSetup)
+
+-- Beam's simple runner doesn't run destructive migrations
+-- by default, so we have to override that.
+allowDestructive :: (Monad m, MonadFail m) => BringUpToDateHooks m
+allowDestructive = defaultUpToDateHooks
+  { runIrreversibleHook = pure True }
+
+migrateDB :: Database.Beam.Postgres.Connection -> IO (Maybe (CheckedDatabaseSettings Postgres BikeshareDb))
+migrateDB conn = runBeamPostgresDebug putStrLn conn $
+  bringUpToDateWithHooks
+    allowDestructive
+    PG.migrationBackend
+    initialSetupStep
+
+bikeshareDB :: DatabaseSettings Postgres BikeshareDb
+bikeshareDB = unCheckDatabase $ evaluateDatabase initialSetupStep
+
+exampleQuery :: Database.Beam.Postgres.Connection -> IO [DSI.StationInformationT Identity]
+exampleQuery conn = runBeamPostgres conn $
+  runSelectReturningList $
+    select (all_ (_bikeshareStationInformation bikeshareDB))
+
+-- | Establish a connection to the database.
+connectDb :: IO Connection
+connectDb =
+  connectPostgreSQL $ fromString "host=localhost port=5432 dbname=haskbike connect_timeout=10"

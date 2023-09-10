@@ -1,20 +1,32 @@
 -- | This module contains the data types for the BikeShare station_information API.
 
-{-# LANGUAGE DeriveGeneric     #-}
-{-# LANGUAGE GADTs             #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE GADTs                 #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE UndecidableInstances  #-}
 
 module StationInformation
         ( StationInformation (..)
         , StationInformationResponse (..)
         , PhysicalConfiguration (..)
         , RentalMethod (..)
+        , rentalMethod
         , RentalURIs (..)
         ) where
 
 import           Data.Aeson
-import qualified Data.Text    as Text
+import qualified Data.Text                     as Text
 import           GHC.Generics
+
+import           Database.Beam.Backend         (BeamBackend)
+import           Database.Beam.Backend.SQL     (FromBackendRow (fromBackendRow),
+                                                HasSqlValueSyntax (sqlValueSyntax),
+                                                autoSqlValueSyntax)
+import           Database.Beam.Postgres        (Postgres)
+import           Database.Beam.Postgres.Syntax (pgTextType)
+import           Database.Beam.Query.DataTypes (DataType (DataType))
 
 
 -- | Enumeration representing a BikeShare station physical configuration.
@@ -51,7 +63,13 @@ data RentalMethod where
   TransitCard   :: RentalMethod
   CreditCard    :: RentalMethod
   Phone         :: RentalMethod
-  deriving (Show, Eq, Generic)
+  deriving (Eq, Generic)
+
+instance Show RentalMethod where
+  show Key         = "KEY"
+  show TransitCard = "TRANSITCARD"
+  show CreditCard  = "CREDITCARD"
+  show Phone       = "PHONE"
 
 instance ToJSON RentalMethod where
   toJSON Key         = String "KEY"
@@ -68,6 +86,22 @@ instance FromJSON RentalMethod where
       "PHONE"       -> return Phone
       _             -> fail $ "Invalid RentalMethod: " ++ Text.unpack t
 
+rentalMethod :: DataType Postgres RentalMethod
+rentalMethod = DataType pgTextType
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be RentalMethod where
+  sqlValueSyntax = autoSqlValueSyntax
+instance (BeamBackend be, FromBackendRow be Text.Text) => FromBackendRow be RentalMethod where
+    fromBackendRow = do
+      val <- fromBackendRow
+      case val :: Text.Text of
+        "KEY"           -> pure Key
+        "TRANSITCARD"   -> pure TransitCard
+        "CREDITCARD"    -> pure CreditCard
+        "PHONE"         -> pure Phone
+        _ -> fail ("Invalid value for RentalMethod: " ++ Text.unpack val)
+
+-- | A type representing a BikeShare rental_uris record.
 data RentalURIs where
   RentalURIs :: { rental_uris_android :: String
                 , rental_uris_ios     :: String
@@ -98,7 +132,7 @@ data StationInformation where
                         , information_address                   :: String
                         , information_capacity                  :: Int
                         , information_is_charging_station       :: Bool
-                        , information_rental_methods            :: [RentalMethod]
+                        , information_rental_methods            :: RentalMethod
                         , information_is_virtual_station        :: Bool
                         , information_groups                    :: [String]
                         , information_obcn                      :: String
