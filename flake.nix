@@ -20,18 +20,10 @@
           # automatically. Otherwise, specify all your local packages here.
           projectRoot = ./.;
 
-          # Disable default packages; haskell-flake fails to parse cabal.project to build default package set.
-          defaults.packages = { };
+          defaults.packages = { }; # Disable default packages
           packages = {
-            # Manually specify project package:
             haskbike.source = ./.;
             aeson.source = "2.1.2.0";
-          };
-          settings = {
-            # aeson-better-errors requires aeson < 2.1, but works just fine with <= 2.1.
-            # Relax aeson version constraint:
-            aeson.jailbreak = true;
-            aeson-better-errors.jailbreak = true;
           };
 
           # The base package set representing a specific GHC version.
