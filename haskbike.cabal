@@ -86,9 +86,12 @@ common database-depends
 
 -- Dependencies needed by testing targets.
 common test-depends
-    build-depends:    QuickCheck
-                    , test-framework
-                    , test-framework-hunit
+    build-depends:    tasty
+                    , tasty-hunit
+                    , tasty-quickcheck
+                    , tasty-discover
+                    , tasty-expected-failure
+                    , QuickCheck
                     , HUnit
                     , file-embed
                     , aeson-better-errors
@@ -178,7 +181,10 @@ test-suite haskbike-test
     hs-source-dirs:   test
 
     -- The entrypoint to the test suite.
-    main-is:          Main.hs
+    main-is:          Driver.hs
 
     -- Test dependencies.
     build-depends:    haskbike
+
+    build-tool-depends:
+      tasty-discover:tasty-discover

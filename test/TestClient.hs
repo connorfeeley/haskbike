@@ -3,22 +3,16 @@
 
 module TestClient where
 
-import           Control.Exception              (Exception (displayException),
-                                                 SomeException, try)
-import           Test.Framework                 (Test, testGroup)
-import           Test.Framework.Providers.HUnit (testCase)
-import           Test.HUnit                     (assertFailure)
+import           Control.Exception       (Exception (displayException),
+                                          SomeException, try)
+import           Test.Tasty.HUnit
 
-import           Network.HTTP.Client            (newManager)
-import           Network.HTTP.Client.TLS        (tlsManagerSettings)
+import           Network.HTTP.Client     (newManager)
+import           Network.HTTP.Client.TLS (tlsManagerSettings)
 import           Servant.Client
 
 import           Client
 
-
--- | All tests defined in this module.
-tests :: [Test]
-tests = [ test_Client ]
 
 -- | Mark a test as expected to fail.
 markAsExpectedFailure :: IO () -> IO ()
@@ -41,30 +35,20 @@ runQuery query = do
   where
   clientBaseUrl = BaseUrl Https "toronto.publicbikesystem.net" 443 "customer/gbfs/v2"
 
-test_Client :: Test
-test_Client = testGroup "Client tests"
-  [ testCase "parse versions" test_parseVersions
-  , testCase "parse vehicle types" test_parseVehicleTypes
-  , testCase "parse station information" test_parseStationInformation
-  , testCase "parse station status" test_parseStationStatus
-  , testCase "parse system regions" test_parseSystemRegions
-  , testCase "parse system pricing plans" test_parseSystemPricingPlans
-  ]
+unit_parseVersions            :: IO ()
+unit_parseVersions            = runQuery versions
 
-test_parseVersions            :: IO ()
-test_parseVersions            = runQuery versions
+unit_parseVehicleTypes        :: IO ()
+unit_parseVehicleTypes        = runQuery vehicleTypes
 
-test_parseVehicleTypes        :: IO ()
-test_parseVehicleTypes        = runQuery vehicleTypes
+unit_parseStationInformation  :: IO ()
+unit_parseStationInformation  = runQuery stationInformation
 
-test_parseStationInformation  :: IO ()
-test_parseStationInformation  = runQuery stationInformation
+unit_parseStationStatus       :: IO ()
+unit_parseStationStatus       = runQuery stationStatus
 
-test_parseStationStatus       :: IO ()
-test_parseStationStatus       = runQuery stationStatus
+unit_parseSystemRegions       :: IO ()
+unit_parseSystemRegions       = runQuery systemRegions
 
-test_parseSystemRegions       :: IO ()
-test_parseSystemRegions       = runQuery systemRegions
-
-test_parseSystemPricingPlans  :: IO ()
-test_parseSystemPricingPlans  = runQuery systemPricingPlans
+unit_parseSystemPricingPlans  :: IO ()
+unit_parseSystemPricingPlans  = runQuery systemPricingPlans

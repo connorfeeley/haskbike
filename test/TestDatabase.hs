@@ -23,13 +23,13 @@ module TestDatabase where
 
 import qualified Database.BikeShare                       as DBS
 import           Database.Migrations                      (migrateDB)
+import qualified Database.StationInformation              as DSI
 import qualified StationInformation                       as SI
 
-import           Test.Framework                           (Test, testGroup)
-import           Test.Framework.Providers.HUnit           (testCase)
-import           Test.HUnit                               (assertEqual,
-                                                           assertFailure)
-import           Test.QuickCheck
+import           Test.Tasty
+import           Test.Tasty.ExpectedFailure
+import           Test.Tasty.HUnit
+import           Test.Tasty.QuickCheck                    as QC
 
 import           Database.Beam
 import           Database.Beam.Backend.SQL.BeamExtensions
@@ -39,36 +39,13 @@ import           Database.PostgreSQL.Simple
 import           Text.Pretty.Simple                       (pPrintString)
 
 import           Control.Lens
-import           Data.Aeson                               (decode,
-                                                           eitherDecode')
+import           Data.Aeson                               (eitherDecode')
 import qualified Data.ByteString                          as B
 import           Data.ByteString.Lazy                     (fromStrict)
 import           Data.FileEmbed                           (embedDir, embedFile)
-import           Data.List                                (find, sortOn, (\\))
-import           Data.Maybe                               (catMaybes, isJust,
-                                                           mapMaybe)
+import           Data.List                                (sortOn)
 import           Data.String                              (fromString)
-import qualified Data.Text                                as T
 
-import           Control.Monad                            (liftM)
-import qualified Database.StationInformation              as DSI
-import           Text.Printf                              (printf)
-
-
--- | All tests defined in this module.
-tests :: [Test]
-tests = [ test_Database ]
-
--- Test case using Beam
-test_Database :: Test
-test_Database = testGroup "Database tests"
-  [ testCase "Setup" setupDatabase
-
-  , testCase "Insert stations" insertStations
-
-  -- Uncomment to force failure
-  -- , testCase "Forced failure" $ assertFailure "Forced failure"
-  ]
 
 -- | Embedded test JSON data.
 testJson :: [(FilePath, B.ByteString)]
@@ -87,7 +64,7 @@ connectDb :: IO Connection
 connectDb =
   connectPostgreSQL $ fromString "host=localhost port=5432 dbname=haskbike connect_timeout=10"
 
-setupDatabase :: IO ()
+setupDatabase :: IO Connection
 setupDatabase = do
   -- Connect to the database.
   conn <- connectDb
@@ -102,10 +79,12 @@ setupDatabase = do
 
   pPrintString "Database reinitialization complete."
 
-insertStations :: IO ()
-insertStations = do
+  pure conn
+
+unit_insertStations :: IO ()
+unit_insertStations = do
   -- Connect to the database.
-  conn <- connectDb
+  conn <- setupDatabase
 
   let stationsJson = fromStrict $(embedFile "test/json/station_information.json")
   let mStations = eitherDecode' stationsJson :: Either String SI.StationInformationResponse
@@ -164,7 +143,7 @@ Producing a list of tuples, where:
                      ]
 )]
 -}
-flattenPairs :: (Foldable t, Eq a1) => t (a1, a2) -> [(a1, [a2])]
+flattenPairs :: (Foldable t, Eq a, Eq b) => t (a, b) -> [(a, [b])]
 flattenPairs = foldl accumulateTuple2 []
 
 
@@ -182,17 +161,17 @@ This is the inverse of 'flattenPairs'.
 >>> unflattenPairs [(1,["value1-2","value1-1"]),(2,["value2-3"])]
 [(1,"value1-1"),(1,"value1-2"),(2,"value2-3")]
 -}
-unflattenPairs :: Foldable t => t (a, [b]) -> [(a, b)]
+unflattenPairs :: (Foldable t, Eq a, Eq b) => t (a, [b]) -> [(a, b)]
 unflattenPairs = concatMap unflattenPair
   where unflattenPair (key, values) = map (key, ) (reverse values)
 
 
 -- | QuickCheck generative tests.
-test_QuickCheck :: Test
+test_QuickCheck :: TestTree
 test_QuickCheck = testGroup "QuickCheck tests"
-  [ testCase "prop_flattenPairs"  $ quickCheck $ prop_flattenPairs pairs
+  [ testProperty "flattenPairs" $ propertyFlattenPairs pairs
   -- FIXME: This test fails.
-  -- , testCase "prop_flattenPairs" $ quickCheck (prop_flattenPairs :: [(Int, String)] -> Bool)
+  , expectFail $ testProperty "flattenPairs" (propertyFlattenPairs :: [(Int, String)] -> Property)
   ]
   where
     pairs :: [(Int, String)]
@@ -206,7 +185,13 @@ test_QuickCheck = testGroup "QuickCheck tests"
     unflattened = unflattenPairs . flattenPairs <$> pairsIO
 
 -- | QuickCheck 'flattenPairs'.
-prop_flattenPairs :: (Eq a, Eq b, Ord a, Ord b) => [(a, b)] -> Bool
-prop_flattenPairs list = unflattenPairs (flattenPairs sorted) == sorted
+testFlattenPairs :: (Eq a, Eq b, Ord a, Ord b) => [(a, b)] -> Bool
+testFlattenPairs list = unflattenPairs (flattenPairs sorted) == sorted
+  where
+    sorted = sortOn fst $ sortOn snd list
+
+-- | Tasty property for QuickCheck 'flattenPairs'.
+propertyFlattenPairs :: (Eq a, Eq b, Ord a, Ord b) => [(a, b)] -> Property
+propertyFlattenPairs list = True ==> unflattenPairs (flattenPairs sorted) == sorted
   where
     sorted = sortOn fst $ sortOn snd list
