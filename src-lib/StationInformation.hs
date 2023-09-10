@@ -41,7 +41,28 @@ data PhysicalConfiguration where
   SmartLitMapFrame      :: PhysicalConfiguration
   SmartMapFrame         :: PhysicalConfiguration
   Vault                 :: PhysicalConfiguration
-  deriving (Show, Eq, Generic)
+  deriving (Eq, Generic)
+
+instance Show PhysicalConfiguration where
+  show ElectricBikeStation   = "ELECTRICBIKESTATION"
+  show Regular               = "REGULAR"
+  show RegularLitMapFrame    = "REGULARLITMAPFRAME"
+  show SmartLitMapFrame      = "SMARTLITMAPFRAME"
+  show SmartMapFrame         = "SMARTMAPFRAME"
+  show Vault                 = "VAULT"
+
+instance Read PhysicalConfiguration where
+  readsPrec _ = fromRight [] . parseOnly parser . pack
+    where
+    parser :: Parser [(PhysicalConfiguration, String)]
+    parser = choice
+      [ string "ELECTRICBIKESTATION" $> [(ElectricBikeStation, "")]
+      , string "REGULAR"             $> [(Regular,             "")]
+      , string "REGULARLITMAPFRAME"  $> [(RegularLitMapFrame,  "")]
+      , string "SMARTLITMAPFRAME"    $> [(SmartLitMapFrame,    "")]
+      , string "SMARTMAPFRAME"       $> [(SmartMapFrame,       "")]
+      , string "VAULT"               $> [(Vault,               "")]
+      ]
 
 instance ToJSON PhysicalConfiguration where
   toJSON ElectricBikeStation = String (Text.pack "ELECTRICBIKESTATION")
