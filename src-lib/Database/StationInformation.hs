@@ -41,15 +41,14 @@ import qualified Data.ByteString.Char8                      as B
 import           Data.Coerce                                (coerce)
 import           Database.Beam.Backend                      (BeamBackend,
                                                              HasSqlValueSyntax (sqlValueSyntax),
-                                                             SqlSerial,
-                                                             autoSqlValueSyntax)
+                                                             SqlSerial)
 import           Database.Beam.Postgres                     (Postgres)
 import           Database.Beam.Postgres.Syntax              (pgTextType)
 import           Database.PostgreSQL.Simple.FromField       (Field (typeOid),
                                                              FromField (..),
                                                              ResultError (..),
                                                              returnError,
-                                                             typename, typoid)
+                                                             typoid)
 import           Database.PostgreSQL.Simple.ToField         (ToField (..))
 import           Database.PostgreSQL.Simple.TypeInfo.Static (text)
 

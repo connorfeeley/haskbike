@@ -5,15 +5,13 @@ module Database.Migrations where
 import           Database.BikeShare
 import qualified Database.StationInformation    as DSI
 
-import qualified StationInformation             as SI
-
-import           Data.String                    (fromString)
-
 import           Database.Beam
 import           Database.Beam.Migrate
 import           Database.Beam.Migrate.Simple
 import           Database.Beam.Postgres
 import qualified Database.Beam.Postgres.Migrate as PG
+
+import           Data.String                    (fromString)
 
 -- It's unfortunate that we have to define this ourselves.
 -- utctime :: BeamSqlBackend be => DataType be UTCTime

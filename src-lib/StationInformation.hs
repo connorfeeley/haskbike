@@ -16,21 +16,13 @@ module StationInformation
         ) where
 
 import           Data.Aeson
-import qualified Data.Text                     as Text
+import qualified Data.Text            as Text
 import           GHC.Generics
 
-import           Data.Attoparsec.Text          (Parser, choice, parseOnly,
-                                                string)
-import           Data.Either                   (fromRight)
-import           Data.Functor                  (($>))
-import           Data.Text                     (pack)
-import           Database.Beam.Backend         (BeamBackend)
-import           Database.Beam.Backend.SQL     (FromBackendRow (fromBackendRow),
-                                                HasSqlValueSyntax (sqlValueSyntax),
-                                                autoSqlValueSyntax)
-import           Database.Beam.Postgres        (Postgres)
-import           Database.Beam.Postgres.Syntax (pgTextType)
-import           Database.Beam.Query.DataTypes (DataType (DataType))
+import           Data.Attoparsec.Text (Parser, choice, parseOnly, string)
+import           Data.Either          (fromRight)
+import           Data.Functor         (($>))
+import           Data.Text            (pack)
 
 
 -- | Enumeration representing a BikeShare station physical configuration.
@@ -44,12 +36,12 @@ data PhysicalConfiguration where
   deriving (Eq, Generic)
 
 instance Show PhysicalConfiguration where
-  show ElectricBikeStation   = "ELECTRICBIKESTATION"
-  show Regular               = "REGULAR"
-  show RegularLitMapFrame    = "REGULARLITMAPFRAME"
-  show SmartLitMapFrame      = "SMARTLITMAPFRAME"
-  show SmartMapFrame         = "SMARTMAPFRAME"
-  show Vault                 = "VAULT"
+  show ElectricBikeStation = "ELECTRICBIKESTATION"
+  show Regular             = "REGULAR"
+  show RegularLitMapFrame  = "REGULARLITMAPFRAME"
+  show SmartLitMapFrame    = "SMARTLITMAPFRAME"
+  show SmartMapFrame       = "SMARTMAPFRAME"
+  show Vault               = "VAULT"
 
 instance Read PhysicalConfiguration where
   readsPrec _ = fromRight [] . parseOnly parser . pack

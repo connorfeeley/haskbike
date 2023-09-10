@@ -181,8 +181,8 @@ test_QuickCheck = testGroup "QuickCheck tests"
             ]
     pairsIO :: IO [(Int, String)]
     pairsIO = pure pairs
-    flattened = flattenPairs <$> pairsIO
-    unflattened = unflattenPairs . flattenPairs <$> pairsIO
+    _flattened = flattenPairs <$> pairsIO
+    _unflattened = unflattenPairs . flattenPairs <$> pairsIO
 
 -- | QuickCheck 'flattenPairs'.
 testFlattenPairs :: (Eq a, Eq b, Ord a, Ord b) => [(a, b)] -> Bool
