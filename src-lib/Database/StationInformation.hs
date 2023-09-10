@@ -255,7 +255,7 @@ fromBeamStationInformationToJSON (StationInformation
                         , SI.information_lat                       = lat
                         , SI.information_lon                       = lon
                         , SI.information_altitude                  = altitude
-                        , SI.information_address                   = ""
+                        , SI.information_address                   = Text.unpack address
                         , SI.information_capacity                  = fromIntegral capacity
                         , SI.information_is_charging_station       = is_charging_station
                         , SI.information_rental_methods            = coerce (toList rental_methods) :: [SI.RentalMethod]
