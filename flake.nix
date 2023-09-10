@@ -20,6 +20,12 @@
           # automatically. Otherwise, specify all your local packages here.
           projectRoot = ./.;
 
+          defaults.packages = { }; # Disable default packages
+          packages = {
+            haskbike.source = ./.;
+            aeson.source = "2.1.2.0";
+          };
+
           # The base package set representing a specific GHC version.
           # By default, this is pkgs.haskellPackages.
           # You may also create your own. See https://haskell.flake.page/package-set

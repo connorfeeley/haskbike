@@ -1,4 +1,0 @@
-packages: haskbike.cabal
-
--- Relax upper bounds on aeson-better-errors
-allow-newer: aeson-better-errors:aeson
