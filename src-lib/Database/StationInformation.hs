@@ -2,6 +2,7 @@
 
 {-# LANGUAGE DeriveAnyClass            #-}
 {-# LANGUAGE DeriveGeneric             #-}
+{-# LANGUAGE DerivingVia               #-}
 {-# LANGUAGE FlexibleContexts          #-}
 {-# LANGUAGE FlexibleInstances         #-}
 {-# LANGUAGE GADTs                     #-}
@@ -18,27 +19,41 @@ module Database.StationInformation
         , StationInformation
         , StationInformationId
         , PrimaryKey(StationInformationId)
+        , rentalMethod
         , fromJSONToBeamStationInformation
         , fromBeamStationInformationToJSON
         ) where
 
 import           Control.Lens
+import qualified StationInformation                         as SI
 
 import           Database.Beam
 
 import           Data.Int
-import qualified Data.Text          as Text
-import qualified Data.Vector        as Vector
-import           Data.Vector        (toList)
+import qualified Data.Text                                  as Text
+import           Data.Vector                                (fromList, toList)
+import qualified Data.Vector                                as Vector
 
-import qualified StationInformation as SI
-import Database.PostgreSQL.Simple.FromField (FromField (..), typename, ResultError (..), returnError, Field (typeOid), typoid)
-import qualified Data.ByteString.Char8 as B
+import qualified Data.ByteString.Char8                      as B
+import           Data.Coerce                                (coerce)
+import           Database.Beam.Backend                      (BeamBackend,
+                                                             HasSqlValueSyntax (sqlValueSyntax),
+                                                             SqlSerial,
+                                                             autoSqlValueSyntax)
+import           Database.Beam.Postgres                     (Postgres)
+import           Database.Beam.Postgres.Syntax              (pgTextType)
+import           Database.PostgreSQL.Simple.FromField       (Field (typeOid),
+                                                             FromField (..),
+                                                             ResultError (..),
+                                                             returnError,
+                                                             typename, typoid)
+import           Database.PostgreSQL.Simple.ToField         (ToField (..))
+import           Database.PostgreSQL.Simple.TypeInfo.Static (text)
 
 
 -- | Declare a (Beam) table for the 'StationInformation' type.
 data StationInformationT f where
-  StationInformation :: { _information_id                        :: Columnar f Int32
+  StationInformation :: { _information_id                        :: Columnar f (SqlSerial Int32)
                         , _information_station_id                :: Columnar f Int32
                         , _information_name                      :: Columnar f Text.Text
                         , _information_physical_configuration    :: Columnar f Text.Text
@@ -48,7 +63,7 @@ data StationInformationT f where
                         , _information_address                   :: Columnar f Text.Text
                         , _information_capacity                  :: Columnar f Int32
                         , _information_is_charging_station       :: Columnar f Bool
-                        , _information_rental_methods            :: Columnar f (Vector.Vector SI.RentalMethod)
+                        , _information_rental_methods            :: Columnar f (Vector.Vector BeamRentalMethod)
                         , _information_is_virtual_station        :: Columnar f Bool
                         , _information_groups                    :: Columnar f (Vector.Vector Text.Text)
                         , _information_obcn                      :: Columnar f Text.Text
@@ -69,7 +84,7 @@ deriving instance Eq StationInformation
 
 -- | Inform Beam about the table.
 instance Table StationInformationT where
-  data PrimaryKey StationInformationT f = StationInformationId (Columnar f Int32)
+  data PrimaryKey StationInformationT f = StationInformationId (Columnar f (SqlSerial Int32))
     deriving (Generic, Beamable)
   primaryKey = StationInformationId . _information_id
 
@@ -95,10 +110,28 @@ StationInformation
   -- (LensFor information_rental_uris)
   = tableLenses
 
-instance FromField SI.RentalMethod where
+-- | Newtype wrapper for RentalMethod to allow us to define a custom FromBackendRow instance.
+-- Don't want to implement database-specific code for the underlying RentalMethod type.
+newtype BeamRentalMethod where
+  BeamRentalMethod :: SI.RentalMethod -> BeamRentalMethod
+  deriving (Eq, Generic, Show, Read) via SI.RentalMethod
+
+instance (BeamBackend be, FromBackendRow be Text.Text) => FromBackendRow be BeamRentalMethod where
+  fromBackendRow = do
+    val <- fromBackendRow
+    case val :: Text.Text of
+      "KEY"           -> pure $ BeamRentalMethod SI.Key
+      "TRANSITCARD"   -> pure $ BeamRentalMethod SI.TransitCard
+      "CREDITCARD"    -> pure $ BeamRentalMethod SI.CreditCard
+      "PHONE"         -> pure $ BeamRentalMethod SI.Phone
+      _ -> fail ("Invalid value for BeamRentalMethod: " ++ Text.unpack val)
+
+instance (HasSqlValueSyntax be String, Show BeamRentalMethod) => HasSqlValueSyntax be BeamRentalMethod where
+  sqlValueSyntax = sqlValueSyntax . show
+
+instance FromField BeamRentalMethod where
    fromField f mdata = do
-     typ <- typename f
-     if typ /= "RentalMethod"
+     if typeOid f /= typoid text -- TODO: any way to determine this automatically?
         then returnError Incompatible f ""
         else case B.unpack `fmap` mdata of
                Nothing  -> returnError UnexpectedNull f ""
@@ -107,11 +140,17 @@ instance FromField SI.RentalMethod where
                     [x] -> return x
                     _   -> returnError ConversionFailed f dat
 
+instance ToField BeamRentalMethod where
+  toField = toField . show
+
+rentalMethod :: DataType Postgres BeamRentalMethod
+rentalMethod = DataType pgTextType
+
 -- | Convert from the JSON StationInformation to the Beam StationInformation type
 fromJSONToBeamStationInformation (SI.StationInformation
                                   station_id
                                   name
-                                  physical_configuration
+                                  _physical_configuration
                                   lat
                                   lon
                                   altitude
@@ -131,17 +170,17 @@ fromJSONToBeamStationInformation (SI.StationInformation
                      , _information_station_id                = fromIntegral station_id
                      , _information_name                      = val_ $ Text.pack name
                      , _information_physical_configuration    = val_ $ Text.pack ""
-                     , _information_lat                       = lat
-                     , _information_lon                       = lon
-                     , _information_altitude                  = altitude
+                     , _information_lat                       = val_ lat
+                     , _information_lon                       = val_ lon
+                     , _information_altitude                  = val_ altitude
                      , _information_address                   = val_ $ Text.pack address
                      , _information_capacity                  = fromIntegral capacity
                      , _information_is_charging_station       = val_ is_charging_station
-                     , _information_rental_methods            = val_ $ Text.pack $ show rental_methods
+                     , _information_rental_methods            = val_ $ fromList (coerce rental_methods :: [BeamRentalMethod])
                      , _information_is_virtual_station        = val_ is_virtual_station
-                     , _information_groups                    = val_ $ Text.pack $ show groups
+                     , _information_groups                    = val_ $ fromList $ fmap Text.pack groups
                      , _information_obcn                      = val_ $ Text.pack obcn
-                     , _information_nearby_distance           = nearby_distance
+                     , _information_nearby_distance           = val_ nearby_distance
                      , _information_bluetooth_id              = val_ $ Text.pack bluetooth_id
                      , _information_ride_code_support         = val_ ride_code_support
                      -- , _information_rental_uris               = val_ ""
@@ -178,7 +217,7 @@ fromBeamStationInformationToJSON (StationInformation
                         , SI.information_address                   = ""
                         , SI.information_capacity                  = fromIntegral capacity
                         , SI.information_is_charging_station       = is_charging_station
-                        , SI.information_rental_methods            = toList rental_methods
+                        , SI.information_rental_methods            = coerce (toList rental_methods) :: [SI.RentalMethod]
                         , SI.information_is_virtual_station        = is_virtual_station
                         , SI.information_groups                    = Text.unpack <$> toList groups
                         , SI.information_obcn                      = Text.unpack obcn

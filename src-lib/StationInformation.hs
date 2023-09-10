@@ -12,7 +12,6 @@ module StationInformation
         , StationInformationResponse (..)
         , PhysicalConfiguration (..)
         , RentalMethod (..)
-        , rentalMethod
         , RentalURIs (..)
         ) where
 
@@ -78,14 +77,14 @@ instance Show RentalMethod where
 
 instance Read RentalMethod where
   readsPrec _ = fromRight [] . parseOnly parser . pack
-
-parser :: Parser [(RentalMethod, String)]
-parser = choice
-  [ string "KEY"                $> [(Key,         "")]
-  , string "TRANSITCARD"        $> [(TransitCard, "")]
-  , string "CREDITCARD"         $> [(CreditCard,  "")]
-  , string "PHONE"              $> [(Phone,       "")]
-  ]
+    where
+    parser :: Parser [(RentalMethod, String)]
+    parser = choice
+      [ string "KEY"                $> [(Key,         "")]
+      , string "TRANSITCARD"        $> [(TransitCard, "")]
+      , string "CREDITCARD"         $> [(CreditCard,  "")]
+      , string "PHONE"              $> [(Phone,       "")]
+      ]
 
 instance ToJSON RentalMethod where
   toJSON Key         = String "KEY"
@@ -101,21 +100,6 @@ instance FromJSON RentalMethod where
       "CREDITCARD"  -> return CreditCard
       "PHONE"       -> return Phone
       _             -> fail $ "Invalid RentalMethod: " ++ Text.unpack t
-
-rentalMethod :: DataType Postgres RentalMethod
-rentalMethod = DataType pgTextType
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be RentalMethod where
-  sqlValueSyntax = autoSqlValueSyntax
-instance (BeamBackend be, FromBackendRow be Text.Text) => FromBackendRow be RentalMethod where
-    fromBackendRow = do
-      val <- fromBackendRow
-      case val :: Text.Text of
-        "KEY"           -> pure Key
-        "TRANSITCARD"   -> pure TransitCard
-        "CREDITCARD"    -> pure CreditCard
-        "PHONE"         -> pure Phone
-        _ -> fail ("Invalid value for RentalMethod: " ++ Text.unpack val)
 
 -- | A type representing a BikeShare rental_uris record.
 data RentalURIs where

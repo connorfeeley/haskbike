@@ -15,7 +15,6 @@ import           Database.Beam.Migrate.Simple
 import           Database.Beam.Postgres
 import qualified Database.Beam.Postgres.Migrate as PG
 
-
 -- It's unfortunate that we have to define this ourselves.
 -- utctime :: BeamSqlBackend be => DataType be UTCTime
 -- utctime = DataType (timestampType Nothing True)
@@ -25,7 +24,7 @@ initialSetup :: Migration Postgres
 initialSetup = BikeshareDb
   <$> (createTable "station_information" $ DSI.StationInformation
         { DSI._information_id = field "id"
-            int notNull unique
+                                PG.serial notNull unique
         , DSI._information_station_id = field "station_id"
             int notNull unique
         , DSI._information_name = field "name"
@@ -45,7 +44,7 @@ initialSetup = BikeshareDb
         , DSI._information_is_charging_station = field "is_charging_station"
             boolean notNull
         , DSI._information_rental_methods = field "rental_methods"
-            (unboundedArray SI.rentalMethod)
+            (unboundedArray DSI.rentalMethod)
         , DSI._information_is_virtual_station = field "is_virtual_station"
             boolean notNull
         , DSI._information_groups = field "groups"
