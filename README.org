@@ -13,8 +13,15 @@ cabal test --test-show-details=direct
 #+begin_src shell :noeval
 cabal freeze --enable-tests --upgrade-dependencies --allow-newer=aeson
 #+end_src
+
 ** Query Database
 
 #+begin_src shell :noeval
 psql -d haskbike -c "SELECT * FROM station_information"
+#+end_src
+
+** Create Database
+
+#+begin_src shell :noeval
+createdb haskbike
 #+end_src
