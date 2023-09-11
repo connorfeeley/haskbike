@@ -193,15 +193,18 @@ fromJSONToBeamStationStatus (SS.StationStatus
                 , _status_num_bikes_disabled        = fromIntegral num_bikes_disabled
                 , _status_num_docks_available       = fromIntegral num_docks_available
                 , _status_num_docks_disabled        = fromIntegral num_docks_disabled
-                , _status_last_reported             = fmap fromIntegral last_reported
+                , _status_last_reported             = val_ $ fmap fromIntegral last_reported
                 , _status_is_charging_station       = val_ is_charging_station
                 , _status_status                    = val_ (coerce status :: BeamStationStatusString)
                 , _status_is_installed              = val_ is_installed
                 , _status_is_renting                = val_ is_renting
                 , _status_is_returning              = val_ is_returning
                 , _status_traffic                   = val_ $ fmap Text.pack traffic
-                , _status_vehicle_docks_available   = val_ $ fmap SS.dock_count vehicle_docks_available
-                , _status_vehicle_types_available   = val_ $ VehicleType vehicle_types_available
+                , _status_vehicle_docks_available   = fromIntegral $ SS.dock_count $ head vehicle_docks_available
+                , _status_vehicle_types_available   = val_ $ VehicleType (fromIntegral $ SS.type_count $ vehicle_types_available!!0)
+                                                                         (fromIntegral $ SS.type_count $ vehicle_types_available!!1)
+                                                                         (fromIntegral $ SS.type_count $ vehicle_types_available!!2)
+                                                                         (fromIntegral $ SS.type_count $ vehicle_types_available!!3)
                 }
 
 -- | Convert from the Beam StationStatus type to the JSON StationStatus

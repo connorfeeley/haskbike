@@ -23,8 +23,11 @@ module TestDatabase where
 
 import qualified Database.BikeShare                       as DBS
 import           Database.Migrations                      (migrateDB)
+
 import qualified Database.StationInformation              as DSI
+import qualified Database.StationStatus                   as DSS
 import qualified StationInformation                       as SI
+import qualified StationStatus                            as SS
 
 import           Test.Tasty
 import           Test.Tasty.ExpectedFailure
@@ -70,6 +73,7 @@ setupDatabase = do
   conn <- connectDb
 
   -- Drop all tables.
+  _ <- execute_ conn $ dropCascade "station_status"
   _ <- execute_ conn $ dropCascade "station_information"
   _ <- execute_ conn $ dropCascade "beam_migration"
   _ <- execute_ conn $ dropCascade "beam_version"
@@ -81,8 +85,9 @@ setupDatabase = do
 
   pure conn
 
-unit_insertStations :: IO ()
-unit_insertStations = do
+-- | HUnit test for station information.
+unit_insertStationInformation :: IO ()
+unit_insertStationInformation = do
   -- Connect to the database.
   conn <- setupDatabase
 
@@ -94,8 +99,23 @@ unit_insertStations = do
         insert (DBS.bikeshareDb ^. DBS.bikeshareStationInformation) $
         insertExpressions $ map DSI.fromJSONToBeamStationInformation (SI.stations stations)
       pure ()
-    Left errorMsg -> assertFailure $ "Error decoding agencies" ++ errorMsg
+    Left errorMsg -> assertFailure $ "Error decoding station information" ++ errorMsg
 
+-- | HUnit test for station status.
+unit_insertStationStatus :: IO ()
+unit_insertStationStatus = do
+  -- Connect to the database.
+  conn <- setupDatabase
+
+  let stationsJson = fromStrict $(embedFile "test/json/station_status.json")
+  let mStations = eitherDecode' stationsJson :: Either String SS.StationStatusResponse
+  case mStations of
+    Right stations -> do
+      _insertedStations <- runBeamPostgresDebug pPrintString conn $ runInsertReturningList $
+        insert (DBS.bikeshareDb ^. DBS.bikeshareStationStatus) $
+        insertExpressions $ map DSS.fromJSONToBeamStationStatus (SS.stations stations)
+      pure ()
+    Left errorMsg -> assertFailure $ "Error decoding station status" ++ errorMsg
 
 {- |
 Binary operator to accumulate a list of tuples, where:
