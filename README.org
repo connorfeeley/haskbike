@@ -2,12 +2,17 @@
 #+author: Connor Feeley
 #+date: 2023-09-10
 * Useful Commands
+** Run Tests (Showing all Output)
+
+#+begin_src shell :noeval
+cabal test --test-show-details=direct
+#+end_src
+
 ** Update Dependencies
 
 #+begin_src shell :noeval
 cabal freeze --enable-tests --upgrade-dependencies --allow-newer=aeson
 #+end_src
-
 ** Query Database
 
 #+begin_src shell :noeval
