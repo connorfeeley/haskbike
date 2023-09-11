@@ -55,24 +55,24 @@ import           Database.PostgreSQL.Simple.TypeInfo.Static (text)
 
 -- | Declare a (Beam) table for the 'StationInformation' type.
 data StationInformationT f where
-  StationInformation :: { _information_id                        :: Columnar f (SqlSerial Int32)
-                        , _information_station_id                :: Columnar f Int32
-                        , _information_name                      :: Columnar f Text.Text
-                        , _information_physical_configuration    :: Columnar f BeamPhysicalConfiguration
-                        , _information_lat                       :: Columnar f Double
-                        , _information_lon                       :: Columnar f Double
-                        , _information_altitude                  :: Columnar f Double
-                        , _information_address                   :: Columnar f Text.Text
-                        , _information_capacity                  :: Columnar f Int32
-                        , _information_is_charging_station       :: Columnar f Bool
-                        , _information_rental_methods            :: Columnar f (Vector.Vector BeamRentalMethod)
-                        , _information_is_virtual_station        :: Columnar f Bool
-                        , _information_groups                    :: Columnar f (Vector.Vector Text.Text)
-                        , _information_obcn                      :: Columnar f Text.Text
-                        , _information_nearby_distance           :: Columnar f Double
-                        , _information_bluetooth_id              :: Columnar f Text.Text
-                        , _information_ride_code_support         :: Columnar f Bool
-                        -- , _information_rental_uris               :: Columnar f SI.RentalURIs
+  StationInformation :: { _id                        :: Columnar f (SqlSerial Int32)
+                        , _station_id                :: Columnar f Int32
+                        , _name                      :: Columnar f Text.Text
+                        , _physical_configuration    :: Columnar f BeamPhysicalConfiguration
+                        , _lat                       :: Columnar f Double
+                        , _lon                       :: Columnar f Double
+                        , _altitude                  :: Columnar f Double
+                        , _address                   :: Columnar f Text.Text
+                        , _capacity                  :: Columnar f Int32
+                        , _is_charging_station       :: Columnar f Bool
+                        , _rental_methods            :: Columnar f (Vector.Vector BeamRentalMethod)
+                        , _is_virtual_station        :: Columnar f Bool
+                        , _groups                    :: Columnar f (Vector.Vector Text.Text)
+                        , _obcn                      :: Columnar f Text.Text
+                        , _nearby_distance           :: Columnar f Double
+                        , _bluetooth_id              :: Columnar f Text.Text
+                        , _ride_code_support         :: Columnar f Bool
+                        -- , _rental_uris               :: Columnar f SI.RentalURIs
                         } -> StationInformationT f
   deriving (Generic, Beamable)
 
@@ -88,28 +88,28 @@ deriving instance Eq StationInformation
 instance Table StationInformationT where
   data PrimaryKey StationInformationT f = StationInformationId (Columnar f (SqlSerial Int32))
     deriving (Generic, Beamable)
-  primaryKey = StationInformationId . _information_id
+  primaryKey = StationInformationId . _id
 
 -- | Lenses
 StationInformation
-  (LensFor information_id)
-  (LensFor information_station_id)
-  (LensFor information_name)
-  (LensFor information_physical_configuration)
-  (LensFor information_lat)
-  (LensFor information_lon)
-  (LensFor information_altitude)
-  (LensFor information_address)
-  (LensFor information_capacity)
-  (LensFor information_is_charging_station)
-  (LensFor information_rental_methods)
-  (LensFor information_is_virtual_station)
-  (LensFor information_groups)
-  (LensFor information_obcn)
-  (LensFor information_nearby_distance)
-  (LensFor information_bluetooth_id)
-  (LensFor information_ride_code_support)
-  -- (LensFor information_rental_uris)
+  (LensFor id)
+  (LensFor station_id)
+  (LensFor name)
+  (LensFor physical_configuration)
+  (LensFor lat)
+  (LensFor lon)
+  (LensFor altitude)
+  (LensFor address)
+  (LensFor capacity)
+  (LensFor is_charging_station)
+  (LensFor rental_methods)
+  (LensFor is_virtual_station)
+  (LensFor groups)
+  (LensFor obcn)
+  (LensFor nearby_distance)
+  (LensFor bluetooth_id)
+  (LensFor ride_code_support)
+  -- (LensFor rental_uris)
   = tableLenses
 
 -- | Newtype wrapper for RentalMethod to allow us to define a custom FromBackendRow instance.
@@ -206,30 +206,30 @@ fromJSONToBeamStationInformation (SI.StationInformation
                                   ride_code_support
                                   -- rental_uris
                                  ) =
-  StationInformation { _information_id                        = default_
-                     , _information_station_id                = fromIntegral station_id
-                     , _information_name                      = val_ $ Text.pack name
-                     , _information_physical_configuration    = val_ (coerce physical_configuration :: BeamPhysicalConfiguration)
-                     , _information_lat                       = val_ lat
-                     , _information_lon                       = val_ lon
-                     , _information_altitude                  = val_ altitude
-                     , _information_address                   = val_ $ Text.pack address
-                     , _information_capacity                  = fromIntegral capacity
-                     , _information_is_charging_station       = val_ is_charging_station
-                     , _information_rental_methods            = val_ $ fromList (coerce rental_methods :: [BeamRentalMethod])
-                     , _information_is_virtual_station        = val_ is_virtual_station
-                     , _information_groups                    = val_ $ fromList $ fmap Text.pack groups
-                     , _information_obcn                      = val_ $ Text.pack obcn
-                     , _information_nearby_distance           = val_ nearby_distance
-                     , _information_bluetooth_id              = val_ $ Text.pack bluetooth_id
-                     , _information_ride_code_support         = val_ ride_code_support
-                     -- , _information_rental_uris               = val_ ""
+  StationInformation { _id                        = default_
+                     , _station_id                = fromIntegral station_id
+                     , _name                      = val_ $ Text.pack name
+                     , _physical_configuration    = val_ (coerce physical_configuration :: BeamPhysicalConfiguration)
+                     , _lat                       = val_ lat
+                     , _lon                       = val_ lon
+                     , _altitude                  = val_ altitude
+                     , _address                   = val_ $ Text.pack address
+                     , _capacity                  = fromIntegral capacity
+                     , _is_charging_station       = val_ is_charging_station
+                     , _rental_methods            = val_ $ fromList (coerce rental_methods :: [BeamRentalMethod])
+                     , _is_virtual_station        = val_ is_virtual_station
+                     , _groups                    = val_ $ fromList $ fmap Text.pack groups
+                     , _obcn                      = val_ $ Text.pack obcn
+                     , _nearby_distance           = val_ nearby_distance
+                     , _bluetooth_id              = val_ $ Text.pack bluetooth_id
+                     , _ride_code_support         = val_ ride_code_support
+                     -- , _rental_uris               = val_ ""
                      }
 
 -- | Convert from the Beam StationInformation type to the JSON StationInformation
 fromBeamStationInformationToJSON :: StationInformation -> SI.StationInformation
 fromBeamStationInformationToJSON (StationInformation
-                                  _
+                                  _id
                                   station_id
                                   name
                                   physical_configuration
@@ -248,21 +248,21 @@ fromBeamStationInformationToJSON (StationInformation
                                   ride_code_support
                                   -- rental_uris
                                  ) =
-  SI.StationInformation { SI.information_station_id                = fromIntegral station_id
-                        , SI.information_name                      = show name
-                        , SI.information_physical_configuration    = coerce physical_configuration :: SI.PhysicalConfiguration
-                        , SI.information_lat                       = lat
-                        , SI.information_lon                       = lon
-                        , SI.information_altitude                  = altitude
-                        , SI.information_address                   = Text.unpack address
-                        , SI.information_capacity                  = fromIntegral capacity
-                        , SI.information_is_charging_station       = is_charging_station
-                        , SI.information_rental_methods            = coerce (toList rental_methods) :: [SI.RentalMethod]
-                        , SI.information_is_virtual_station        = is_virtual_station
-                        , SI.information_groups                    = Text.unpack <$> toList groups
-                        , SI.information_obcn                      = Text.unpack obcn
-                        , SI.information_nearby_distance           = nearby_distance
-                        , SI.information_bluetooth_id              = Text.unpack bluetooth_id
-                        , SI.information_ride_code_support         = ride_code_support
-                        -- , SI.information_rental_uris               = SI.RentalURIs { SI.rental_uris_android = "", SI.rental_uris_ios = "", SI.rental_uris_web = "" }
+  SI.StationInformation { SI.station_id                = fromIntegral station_id
+                        , SI.name                      = show name
+                        , SI.physical_configuration    = coerce physical_configuration :: SI.PhysicalConfiguration
+                        , SI.lat                       = lat
+                        , SI.lon                       = lon
+                        , SI.altitude                  = altitude
+                        , SI.address                   = Text.unpack address
+                        , SI.capacity                  = fromIntegral capacity
+                        , SI.is_charging_station       = is_charging_station
+                        , SI.rental_methods            = coerce (toList rental_methods) :: [SI.RentalMethod]
+                        , SI.is_virtual_station        = is_virtual_station
+                        , SI.groups                    = Text.unpack <$> toList groups
+                        , SI.obcn                      = Text.unpack obcn
+                        , SI.nearby_distance           = nearby_distance
+                        , SI.bluetooth_id              = Text.unpack bluetooth_id
+                        , SI.ride_code_support         = ride_code_support
+                        -- , SI.rental_uris               = SI.RentalURIs { SI.rental_uris_android = "", SI.rental_uris_ios = "", SI.rental_uris_web = "" }
                         }

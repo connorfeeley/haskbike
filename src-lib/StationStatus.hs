@@ -50,40 +50,39 @@ instance FromJSON StationStatusString where
 
 -- | Type representing a BikeShare station's status.
 data StationStatus where
-  StationStatus :: { status_station_id                  :: Int
-                   , status_num_bikes_available         :: Int
-                   , status_num_bikes_disabled          :: Int
-                   , status_num_docks_available         :: Int
-                   , status_num_docks_disabled          :: Int
-                   , status_last_reported               :: Maybe Int
-                   , status_is_charging_station         :: Bool
-                   , status_status                      :: StationStatusString
-                   , status_is_installed                :: Bool
-                   , status_is_renting                  :: Bool
-                   , status_is_returning                :: Bool
-                   , status_traffic                     :: Maybe String -- PBSC doesn't seem to set this field
-                   , status_vehicle_docks_available     :: [VehicleDock]
-                   , status_vehicle_types_available     :: [VehicleType]
+  StationStatus :: { station_id                  :: Int
+                   , num_bikes_available         :: Int
+                   , num_bikes_disabled          :: Int
+                   , num_docks_available         :: Int
+                   , num_docks_disabled          :: Int
+                   , last_reported               :: Maybe Int
+                   , is_charging_station         :: Bool
+                   , status                      :: StationStatusString
+                   , is_installed                :: Bool
+                   , is_renting                  :: Bool
+                   , is_returning                :: Bool
+                   , traffic                     :: Maybe String -- PBSC doesn't seem to set this field
+                   , vehicle_docks_available     :: [VehicleDock]
+                   , vehicle_types_available     :: [VehicleType]
                    } -> StationStatus
   deriving (Show, Generic)
 
--- drop the "status_" prefix
 instance ToJSON StationStatus where
   toJSON station =
-    object [ "station_id"               .= show (status_station_id              station)
-           , "num_bikes_available"      .= status_num_bikes_available           station
-           , "num_bikes_disabled"       .= status_num_bikes_disabled            station
-           , "num_docks_available"      .= status_num_docks_available           station
-           , "num_docks_disabled"       .= status_num_docks_disabled            station
-           , "last_reported"            .= status_last_reported                 station
-           , "is_charging_station"      .= status_is_charging_station           station
-           , "status"                   .= status_status                        station
-           , "is_installed"             .= status_is_installed                  station
-           , "is_renting"               .= status_is_renting                    station
-           , "is_returning"             .= status_is_returning                  station
-           , "traffic"                  .= status_traffic                       station
-           , "vehicle_docks_available" .= status_vehicle_docks_available        station
-           , "vehicle_types_available" .= status_vehicle_types_available        station
+    object [ "station_id"               .= show (station_id              station)
+           , "num_bikes_available"      .= num_bikes_available           station
+           , "num_bikes_disabled"       .= num_bikes_disabled            station
+           , "num_docks_available"      .= num_docks_available           station
+           , "num_docks_disabled"       .= num_docks_disabled            station
+           , "last_reported"            .= last_reported                 station
+           , "is_charging_station"      .= is_charging_station           station
+           , "status"                   .= status                        station
+           , "is_installed"             .= is_installed                  station
+           , "is_renting"               .= is_renting                    station
+           , "is_returning"             .= is_returning                  station
+           , "traffic"                  .= traffic                       station
+           , "vehicle_docks_available"  .= vehicle_docks_available       station
+           , "vehicle_types_available"  .= vehicle_types_available       station
            ]
 instance FromJSON StationStatus where
   parseJSON = withObject "StationStatus" $ \v -> StationStatus
@@ -104,29 +103,37 @@ instance FromJSON StationStatus where
 
 -- | A type representing a BikeShare station's vehicle dock status.
 data VehicleDock where
-  VehicleDock :: { dock_vehicle_type_ids :: [String]
+  VehicleDock :: { vehicle_type_ids :: [String]
                  , dock_count :: Int
                  } -> VehicleDock
   deriving (Show, Generic)
 
--- drop the "dock_" prefix
 instance ToJSON VehicleDock where
-  toJSON        = genericToJSON defaultOptions          { fieldLabelModifier = drop 5 }
+  toJSON docks_available =
+    object [ "vehicle_type_ids" .= show (vehicle_type_ids docks_available)
+            , "count"           .= dock_count             docks_available
+            ]
 instance FromJSON VehicleDock where
-  parseJSON     = genericParseJSON defaultOptions       { fieldLabelModifier = drop 5 }
+  parseJSON = withObject "VehicleDock" $ \v -> VehicleDock
+    <$> v .: "vehicle_type_ids"
+    <*> v .: "count"
 
 -- | A type representing a BikeShare station's vehicle type status.
 data VehicleType where
-  VehicleType :: { type_vehicle_type_id :: String
+  VehicleType :: { vehicle_type_id :: String
                  , type_count :: Int
                  } -> VehicleType
   deriving (Show, Generic)
 
--- drop the "type_" prefix
 instance ToJSON VehicleType where
-  toJSON        = genericToJSON defaultOptions          { fieldLabelModifier = drop 5 }
+  toJSON types_available =
+    object [ "vehicle_type_id" .= show (vehicle_type_id types_available)
+            , "count"          .= type_count            types_available
+            ]
 instance FromJSON VehicleType where
-  parseJSON     = genericParseJSON defaultOptions       { fieldLabelModifier = drop 5 }
+  parseJSON = withObject "VehicleType" $ \v -> VehicleType
+    <$> v .: "vehicle_type_id"
+    <*> v .: "count"
 
 -- | A wrapper type for the station information response.
 newtype StationStatusResponse where

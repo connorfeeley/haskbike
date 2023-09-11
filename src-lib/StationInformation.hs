@@ -136,45 +136,45 @@ instance FromJSON RentalURIs where
 
 -- | A type representing a BikeShare station.
 data StationInformation where
-  StationInformation :: { information_station_id                :: Int
-                        , information_name                      :: String
-                        , information_physical_configuration    :: PhysicalConfiguration
-                        , information_lat                       :: Double
-                        , information_lon                       :: Double
-                        , information_altitude                  :: Double
-                        , information_address                   :: String
-                        , information_capacity                  :: Int
-                        , information_is_charging_station       :: Bool
-                        , information_rental_methods            :: [RentalMethod]
-                        , information_is_virtual_station        :: Bool
-                        , information_groups                    :: [String]
-                        , information_obcn                      :: String
-                        , information_nearby_distance           :: Double
-                        , information_bluetooth_id              :: String
-                        , information_ride_code_support         :: Bool
-                        -- , information_rental_uris               :: RentalURIs
+  StationInformation :: { station_id                :: Int
+                        , name                      :: String
+                        , physical_configuration    :: PhysicalConfiguration
+                        , lat                       :: Double
+                        , lon                       :: Double
+                        , altitude                  :: Double
+                        , address                   :: String
+                        , capacity                  :: Int
+                        , is_charging_station       :: Bool
+                        , rental_methods            :: [RentalMethod]
+                        , is_virtual_station        :: Bool
+                        , groups                    :: [String]
+                        , obcn                      :: String
+                        , nearby_distance           :: Double
+                        , bluetooth_id              :: String
+                        , ride_code_support         :: Bool
+                        -- , rental_uris               :: RentalURIs
                         } -> StationInformation
   deriving (Show, Eq, Generic)
 
 instance ToJSON StationInformation where
   toJSON station =
-    object [ "station_id"               .= information_station_id               station
-           , "name"                     .= information_name                     station
-           , "physical_configuration"   .= information_physical_configuration   station
-           , "lat"                      .= information_lat                      station
-           , "lon"                      .= information_lon                      station
-           , "altitude"                 .= information_altitude                 station
-           , "address"                  .= information_address                  station
-           , "capacity"                 .= information_capacity                 station
-           , "is_charging_station"      .= information_is_charging_station      station
-           , "rental_methods"           .= information_rental_methods           station
-           , "is_virtual_station"       .= information_is_virtual_station       station
-           , "groups"                   .= information_groups                   station
-           , "obcn"                     .= information_obcn                     station
-           , "nearby_distance"          .= information_nearby_distance          station
-           , "_bluetooth_id"            .= information_bluetooth_id             station
-           , "_ride_code_support"       .= information_ride_code_support        station
-           -- , "rental_uris"              .= information_rental_uris              station
+    object [ "station_id"               .= station_id               station
+           , "name"                     .= name                     station
+           , "physical_configuration"   .= physical_configuration   station
+           , "lat"                      .= lat                      station
+           , "lon"                      .= lon                      station
+           , "altitude"                 .= altitude                 station
+           , "address"                  .= address                  station
+           , "capacity"                 .= capacity                 station
+           , "is_charging_station"      .= is_charging_station      station
+           , "rental_methods"           .= rental_methods           station
+           , "is_virtual_station"       .= is_virtual_station       station
+           , "groups"                   .= groups                   station
+           , "obcn"                     .= obcn                     station
+           , "nearby_distance"          .= nearby_distance          station
+           , "_bluetooth_id"            .= bluetooth_id             station
+           , "_ride_code_support"       .= ride_code_support        station
+           -- , "rental_uris"              .= rental_uris              station
            ]
 
 instance FromJSON StationInformation where

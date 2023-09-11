@@ -23,8 +23,8 @@ markAsExpectedFailure testFunc = do
     Right _ -> assertFailure "Expected failure, but test passed"
 
 -- | Run a query and assert that it succeeds.
-runQuery :: ClientM a -> IO ()
-runQuery query = do
+queryApi :: ClientM a -> IO ()
+queryApi query = do
   clientManager <- newManager tlsManagerSettings
   result  <- runClientM query (mkClientEnv clientManager clientBaseUrl)
   case result of
@@ -36,19 +36,19 @@ runQuery query = do
   clientBaseUrl = BaseUrl Https "toronto.publicbikesystem.net" 443 "customer/gbfs/v2"
 
 unit_parseVersions            :: IO ()
-unit_parseVersions            = runQuery versions
+unit_parseVersions            = queryApi versions
 
 unit_parseVehicleTypes        :: IO ()
-unit_parseVehicleTypes        = runQuery vehicleTypes
+unit_parseVehicleTypes        = queryApi vehicleTypes
 
 unit_parseStationInformation  :: IO ()
-unit_parseStationInformation  = runQuery stationInformation
+unit_parseStationInformation  = queryApi stationInformation
 
 unit_parseStationStatus       :: IO ()
-unit_parseStationStatus       = runQuery stationStatus
+unit_parseStationStatus       = queryApi stationStatus
 
 unit_parseSystemRegions       :: IO ()
-unit_parseSystemRegions       = runQuery systemRegions
+unit_parseSystemRegions       = queryApi systemRegions
 
 unit_parseSystemPricingPlans  :: IO ()
-unit_parseSystemPricingPlans  = runQuery systemPricingPlans
+unit_parseSystemPricingPlans  = queryApi systemPricingPlans
