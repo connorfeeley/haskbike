@@ -31,13 +31,14 @@ module Database.StationStatus
 import           Control.Lens
 import qualified StationStatus                              as SS
 
-import           Database.Beam
-
 import qualified Data.ByteString.Char8                      as B
 import           Data.Coerce                                (coerce)
 import           Data.Int
+import           Data.List                                  (find)
 import           Data.String                                (IsString (fromString))
 import qualified Data.Text                                  as Text
+
+import           Database.Beam
 import           Database.Beam.Backend                      (BeamBackend,
                                                              HasSqlValueSyntax (sqlValueSyntax),
                                                              SqlSerial)
@@ -201,16 +202,21 @@ fromJSONToBeamStationStatus (SS.StationStatus
                 , _status_is_returning              = val_ is_returning
                 , _status_traffic                   = val_ $ fmap Text.pack traffic
                 , _status_vehicle_docks_available   = fromIntegral $ SS.dock_count $ head vehicle_docks_available
-                , _status_vehicle_types_available   = val_ $ VehicleType (fromIntegral $ SS.type_count $ vehicle_types_available!!0)
-                                                                         (fromIntegral $ SS.type_count $ vehicle_types_available!!1)
-                                                                         (fromIntegral $ SS.type_count $ vehicle_types_available!!2)
-                                                                         (fromIntegral $ SS.type_count $ vehicle_types_available!!3)
+                , _status_vehicle_types_available   = val_ $ VehicleType num_boost num_iconic num_efit num_efit_g5
                 }
+  where
+    -- | Find the vehicle type in the list of vehicle types available; default to 0 if not found.
+    findByType' vehicle_type = find (\x -> SS.type_vehicle_type_id x == vehicle_type) vehicle_types_available
+    findByType  vehicle_type = fromIntegral $ maybe 0 SS.type_count (findByType' vehicle_type)
+    num_boost   = findByType "BOOST"
+    num_iconic  = findByType "ICONIC"
+    num_efit    = findByType "EFIT"
+    num_efit_g5 = findByType "EFIT G5"
 
 -- | Convert from the Beam StationStatus type to the JSON StationStatus
 fromBeamStationStatusToJSON :: StationStatus -> SS.StationStatus
 fromBeamStationStatusToJSON (StationStatus
-                            record_id
+                            _record_id
                             station_id
                             num_bikes_available
                             num_bikes_disabled
