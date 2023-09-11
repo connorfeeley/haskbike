@@ -232,7 +232,7 @@ fromBeamStationStatusToJSON (StationStatus
                             vehicle_docks_available
                             vehicle_types_available
                             ) =
-  SS.StationStatus { SS.station_id                 = fromIntegral station_id
+  SS.StationStatus { SS.station_id                = fromIntegral station_id
                    , SS.num_bikes_available       = fromIntegral num_bikes_available
                    , SS.num_bikes_disabled        = fromIntegral num_bikes_disabled
                    , SS.num_docks_available       = fromIntegral num_docks_available
