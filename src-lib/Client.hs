@@ -13,6 +13,8 @@ module Client
   , systemInformation
   , systemPricingPlans
   , run
+  , runQuery
+  , handleResponse
   ) where
 
 import           Data.Proxy

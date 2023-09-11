@@ -3,6 +3,8 @@
 
 module TestClient where
 
+import           Client
+
 import           Control.Exception       (Exception (displayException),
                                           SomeException, try)
 import           Test.Tasty.HUnit
@@ -10,8 +12,6 @@ import           Test.Tasty.HUnit
 import           Network.HTTP.Client     (newManager)
 import           Network.HTTP.Client.TLS (tlsManagerSettings)
 import           Servant.Client
-
-import           Client
 
 
 -- | Mark a test as expected to fail.
@@ -35,20 +35,20 @@ queryApi query = do
   where
   clientBaseUrl = BaseUrl Https "toronto.publicbikesystem.net" 443 "customer/gbfs/v2"
 
-unit_parseVersions            :: IO ()
-unit_parseVersions            = queryApi versions
+unit_parseVersions           :: IO ()
+unit_parseVersions           = queryApi versions
 
-unit_parseVehicleTypes        :: IO ()
-unit_parseVehicleTypes        = queryApi vehicleTypes
+unit_parseVehicleTypes       :: IO ()
+unit_parseVehicleTypes       = queryApi vehicleTypes
 
-unit_parseStationInformation  :: IO ()
-unit_parseStationInformation  = queryApi stationInformation
+unit_parseStationInformation :: IO ()
+unit_parseStationInformation = queryApi stationInformation
 
-unit_parseStationStatus       :: IO ()
-unit_parseStationStatus       = queryApi stationStatus
+unit_parseStationStatus      :: IO ()
+unit_parseStationStatus      = queryApi stationStatus
 
-unit_parseSystemRegions       :: IO ()
-unit_parseSystemRegions       = queryApi systemRegions
+unit_parseSystemRegions      :: IO ()
+unit_parseSystemRegions      = queryApi systemRegions
 
-unit_parseSystemPricingPlans  :: IO ()
-unit_parseSystemPricingPlans  = queryApi systemPricingPlans
+unit_parseSystemPricingPlans :: IO ()
+unit_parseSystemPricingPlans = queryApi systemPricingPlans
