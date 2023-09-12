@@ -1,9 +1,24 @@
+:PROPERTIES:
+:header-args: sql
+:END:
 #+title: README
 #+author: Connor Feeley
 #+date: 2023-09-10
+#+PROPERTY: header-args:sql+ :engine postgres :database haskbike
 * Tasks
 ** TODO Add function to ~Operations~ to query and order by ~last_reported~
-#+begin_src sql :engine postgres :database haskbike
+#+name: joined-stations
+#+begin_src sql
+select
+       station_information.name,
+       station_status.*
+from station_status
+inner join station_information
+on station_status.station_id = station_information.station_id
+order by last_reported asc;
+#+end_src
+
+#+begin_src sql
 select
        station_information.name,
        station_status.*
@@ -23,6 +38,97 @@ limit 6;
 | Lake Shore Blvd E / Knox Ave     | 274 |       7319 |                   9 |                  0 |                   2 |                  0 | 2023-09-12 19:03:13 | f                   | IN_SERVICE | t            | t          | t            |         |                       2 |                             0 |                              8 |                            0 |                               1 |
 | Rosehill Ave / Avoca Ave - SMART | 245 |       7279 |                   0 |                  0 |                  16 |                  0 | 2023-09-12 19:03:51 | f                   | IN_SERVICE | t            | t          | t            |         |                      16 |                             0 |                              0 |                            0 |                               0 |
 | Widmer St / King St W            | 609 |       7721 |                   4 |                  0 |                   7 |                  0 | 2023-09-12 19:03:51 | f                   | IN_SERVICE | t            | t          | t            |         |                       7 |                             0 |                              4 |                            0 |                               0 |
+
+** TODO View
+
+#+name: select-view
+#+begin_src sql :noeval
+station_information.name,
+station_status.id, station_status.station_id,
+num_bikes_available, num_bikes_disabled, num_docks_available, num_docks_disabled,
+last_reported, station_status.is_charging_station, status,
+is_installed, is_renting, is_returning,
+-- traffic, vehicle_docks_available,
+vehicle_types_available_boost, vehicle_types_available_iconic, vehicle_types_available_efit, vehicle_types_available_efit_g5
+#+end_src
+
+#+name: columns-view
+#+begin_src sql :noeval
+name,
+id, s_id,
+"#bk_avl", "#bk_dis", "#dk_avl", "#d_dis",
+"last_reported", "chrg", "status",
+"inst", "rent", "retr",
+-- "traf", "d_a",
+"boost", "iconic", "efit", "efit_5g"
+
+#+end_src
+
+Create view:
+#+begin_src sql :results none
+DROP VIEW IF EXISTS station_view;
+CREATE VIEW station_view (
+        <<columns-view>>
+)
+AS
+        SELECT
+                <<select-view>>
+        FROM station_status
+        INNER JOIN station_information
+        ON station_status.station_id = station_information.station_id
+        ;
+#+end_src
+
+Create view:
+#+begin_src sql
+SELECT *
+FROM
+        station_view
+WHERE
+        chrg = TRUE
+        -- "#d_a" != "d_a"
+ORDER BY last_reported ASC
+LIMIT 100
+;
+#+end_src
+
+#+RESULTS:
+| name                              |  id | s_id | #bk_avl | #bk_dis | #dk_avl | #d_dis | last_reported       | chrg | status     | inst | rent | retr | boost | iconic | efit | efit_5g |
+|-----------------------------------+-----+------+---------+---------+---------+--------+---------------------+------+------------+------+------+------+-------+--------+------+---------|
+| The Well                          | 641 | 7757 |      17 |       0 |       2 |      0 | 2023-09-12 19:42:24 | t    | IN_SERVICE | t    | t    | t    |     0 |     17 |    0 |       0 |
+| 75 Holly St - Green P             | 670 | 7789 |       3 |       0 |      20 |      0 | 2023-09-12 19:42:31 | t    | IN_SERVICE | t    | t    | t    |     0 |      2 |    1 |       0 |
+| 25 Booth Ave                      | 573 | 7681 |       9 |       4 |      11 |      0 | 2023-09-12 19:42:43 | t    | IN_SERVICE | t    | t    | t    |     0 |      7 |    2 |       0 |
+| Richmond St E / Jarvis St Green P |  48 | 7050 |       3 |       5 |       8 |      0 | 2023-09-12 19:43:05 | t    | IN_SERVICE | t    | t    | t    |     0 |      1 |    1 |       1 |
+| 101 Cedarvale Ave                 | 597 | 7708 |       1 |       5 |      14 |      0 | 2023-09-12 19:43:18 | t    | IN_SERVICE | t    | t    | t    |     0 |      0 |    1 |       0 |
+| 1 Market St - SMART               | 554 | 7657 |       0 |       5 |      13 |      1 | 2023-09-12 19:44:32 | t    | IN_SERVICE | t    | t    | t    |     0 |      0 |    0 |       0 |
+| 111 Broadview Ave                 | 591 | 7702 |      11 |       5 |       2 |      0 | 2023-09-12 19:44:36 | t    | IN_SERVICE | t    | t    | t    |     0 |     11 |    0 |       0 |
+| Wellesley Station Green P         |   2 | 7001 |       9 |      13 |       1 |      0 | 2023-09-12 19:44:39 | t    | IN_SERVICE | t    | t    | t    |     0 |      8 |    0 |       1 |
+| 20 Charles St E                   | 334 | 7385 |       1 |       9 |      14 |      0 | 2023-09-12 19:44:40 | t    | IN_SERVICE | t    | t    | t    |     0 |      1 |    0 |       0 |
+| 800 Fleet St                      | 614 | 7730 |      11 |      26 |       6 |      0 | 2023-09-12 19:44:46 | t    | IN_SERVICE | t    | t    | t    |     0 |     11 |    0 |       0 |
+| 1612 Danforth Ave                 | 698 | 7820 |       2 |       2 |      11 |      0 | 2023-09-12 19:45:05 | t    | IN_SERVICE | t    | t    | t    |     0 |      2 |    0 |       0 |
+| 265 Armadale Ave                  | 613 | 7729 |       1 |      18 |      12 |      0 | 2023-09-12 19:45:19 | t    | IN_SERVICE | t    | t    | t    |     0 |      0 |    0 |       1 |
+| 85 Lee Ave                        | 582 | 7692 |      19 |       6 |       1 |      0 | 2023-09-12 19:45:20 | t    | IN_SERVICE | t    | t    | t    |     0 |     10 |    4 |       5 |
+| 20 Eaton Ave                      | 580 | 7689 |      13 |       2 |      11 |      0 | 2023-09-12 19:45:28 | t    | IN_SERVICE | t    | t    | t    |     0 |      0 |    3 |      10 |
+| Simcoe St / Dundas St W - SMART   | 564 | 7668 |       2 |       7 |      11 |      0 | 2023-09-12 19:45:57 | t    | IN_SERVICE | t    | t    | t    |     0 |      1 |    0 |       1 |
+| 11 Spadina Rd                     | 599 | 7710 |       4 |       7 |       7 |      0 | 2023-09-12 19:45:58 | t    | IN_SERVICE | t    | t    | t    |     0 |      4 |    0 |       0 |
+* Views
+
+Create view:
+#+begin_src sql :results none
+DROP VIEW IF EXISTS station_view;
+CREATE VIEW station_view (
+        <<columns-view>>
+)
+AS
+        SELECT
+                <<select-view>>
+        FROM station_status
+        INNER JOIN station_information
+        ON station_status.station_id = station_information.station_id
+        WHERE (vehicle_types_available_boost + vehicle_types_available_iconic + vehicle_types_available_efit + vehicle_types_available_efit_g5 != num_bikes_available)
+        ;
+#+end_src
+
 
 * Useful Commands
 ** Run Tests (Showing all Output)
