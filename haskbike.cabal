@@ -135,6 +135,7 @@ library
     -- Modules exported by the library.
     exposed-modules:  BikeShareAPI
                     , Client
+                    , API.Types
                     , StationInformation
                     , StationStatus
                     , Database.BikeShare
