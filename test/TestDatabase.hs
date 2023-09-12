@@ -28,7 +28,7 @@ import           Database.Utils
 
 import           API.Types                                (StationInformationResponse (..),
                                                            StationStatusResponse (..))
-import qualified Client
+import           Client
 
 import           Database.Beam
 import           Database.Beam.Backend.SQL.BeamExtensions
@@ -106,11 +106,11 @@ unit_insertStationInformationApi = do
   conn <- setupDatabase
 
   -- Query API for station information.
-  stationInformationResponse <- Client.runQueryWithEnv Client.stationInformation
+  stationInformationResponse <- runQueryWithEnv stationInformation
 
   case stationInformationResponse of
-    (Left err)              -> assertFailure $ "Error querying API: " ++ show err
-    (Right info) -> do
+    (Left err)    -> assertFailure $ "Error querying API: " ++ show err
+    (Right info)  -> do
       -- Insert station information into database.
       void $ -- Suppress return value.
         runBeamPostgresDebug pPrintString conn $ runInsertReturningList $
@@ -123,11 +123,11 @@ unit_insertStationStatusApi = do
   conn <- setupDatabase
 
   -- Query API for station status.
-  stationStatusResponse <- Client.runQueryWithEnv Client.stationStatus
+  stationStatusResponse <- runQueryWithEnv stationStatus
 
   case stationStatusResponse of
-    (Left err)              -> assertFailure $ "Error querying API: " ++ show err
-    (Right status)      -> do
+    (Left err)      -> assertFailure $ "Error querying API: " ++ show err
+    (Right status)  -> do
       -- Insert station status into database.
       void $ -- Suppress return value.
         runBeamPostgresDebug pPrintString conn $ runInsertReturningList $
@@ -140,14 +140,14 @@ unit_insertStationBothApi = do
   conn <- setupDatabase
 
   -- Query API.
-  stationInformationResponse  <- Client.runQueryWithEnv Client.stationInformation
-  stationStatusResponse       <- Client.runQueryWithEnv Client.stationStatus
+  stationInformationResponse  <- runQueryWithEnv stationInformation
+  stationStatusResponse       <- runQueryWithEnv stationStatus
 
   case (stationInformationResponse, stationStatusResponse) of
-    (Left err_info, Left err_status) -> assertFailure $ "Error querying API: " ++ show err_info ++ " " ++ show err_status
-    (Left err_info, _)              -> assertFailure $ "Error querying API: " ++ show err_info
-    (_, Left err_status)            -> assertFailure $ "Error querying API: " ++ show err_status
-    (Right info, Right status)      -> do
+    (Left err_info, Left err_status)  -> assertFailure $ "Error querying API: " ++ show err_info ++ " " ++ show err_status
+    (Left err_info, _)                -> assertFailure $ "Error querying API: " ++ show err_info
+    (_, Left err_status)              -> assertFailure $ "Error querying API: " ++ show err_status
+    (Right info, Right status)        -> do
       -- Insert station information into database.
       void $ -- Suppress return value.
         runBeamPostgresDebug pPrintString conn $ runInsertReturningList $
