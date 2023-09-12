@@ -21,11 +21,11 @@ module Database.StationStatus
         , PrimaryKey(StationStatusId)
         , BeamStationStatusString(..)
         , VehicleTypeMixin(..)
-        , station_id
-        , num_bikes_available
-        , num_bikes_disabled
-        , num_docks_available
-        , num_docks_disabled
+        , status_station_id
+        , status_num_bikes_available
+        , status_num_bikes_disabled
+        , status_num_docks_available
+        , status_num_docks_disabled
         , stationStatus
         , vehicleTypeFields
         , vehicleTypesAvailable
@@ -61,21 +61,21 @@ import           Database.PostgreSQL.Simple.TypeInfo.Static (text)
 
 -- | Declare a (Beam) table for the 'StationStatus' type.
 data StationStatusT f where
-  StationStatus :: { _id                      :: Columnar f (SqlSerial Int32)
-                   , _station_id              :: PrimaryKey DSI.StationInformationT f
-                   , _num_bikes_available     :: Columnar f Int32
-                   , _num_bikes_disabled      :: Columnar f Int32
-                   , _num_docks_available     :: Columnar f Int32
-                   , _num_docks_disabled      :: Columnar f Int32
-                   , _last_reported           :: Columnar f (Maybe Int32)
-                   , _is_charging_station     :: Columnar f Bool
-                   , _status                  :: Columnar f BeamStationStatusString
-                   , _is_installed            :: Columnar f Bool
-                   , _is_renting              :: Columnar f Bool
-                   , _is_returning            :: Columnar f Bool
-                   , _traffic                 :: Columnar f (Maybe Text.Text) -- PBSC doesn't seem to set this field
-                   , _vehicle_docks_available :: Columnar f Int32
-                   , _vehicle_types_available :: VehicleTypeMixin f
+  StationStatus :: { _status_id                      :: Columnar f (SqlSerial Int32)
+                   , _status_station_id              :: PrimaryKey DSI.StationInformationT f
+                   , _status_num_bikes_available     :: Columnar f Int32
+                   , _status_num_bikes_disabled      :: Columnar f Int32
+                   , _status_num_docks_available     :: Columnar f Int32
+                   , _status_num_docks_disabled      :: Columnar f Int32
+                   , _status_last_reported           :: Columnar f (Maybe Int32)
+                   , _status_is_charging_station     :: Columnar f Bool
+                   , _status_status                  :: Columnar f BeamStationStatusString
+                   , _status_is_installed            :: Columnar f Bool
+                   , _status_is_renting              :: Columnar f Bool
+                   , _status_is_returning            :: Columnar f Bool
+                   , _status_traffic                 :: Columnar f (Maybe Text.Text) -- PBSC doesn't seem to set this field
+                   , _status_vehicle_docks_available :: Columnar f Int32
+                   , _status_vehicle_types_available :: VehicleTypeMixin f
                    } -> StationStatusT f
   deriving (Generic, Beamable)
 
@@ -91,7 +91,7 @@ deriving instance Eq StationStatus
 instance Table StationStatusT where
   data PrimaryKey StationStatusT f = StationStatusId (Columnar f (SqlSerial Int32))
     deriving (Generic, Beamable)
-  primaryKey = StationStatusId . _id
+  primaryKey = StationStatusId . _status_id
 
 data VehicleTypeMixin f =
   VehicleType { _available_boost   :: Columnar f Int32
@@ -122,20 +122,20 @@ VehicleType
 
 -- | Lenses
 StationStatus
-  (LensFor id)
-  (DSI.StationInformationId (LensFor station_id))
-  (LensFor num_bikes_available)
-  (LensFor num_bikes_disabled)
-  (LensFor num_docks_available)
-  (LensFor num_docks_disabled)
-  (LensFor last_reported)
-  (LensFor is_charging_station)
-  (LensFor status)
-  (LensFor is_installed)
-  (LensFor is_renting)
-  (LensFor is_returning)
-  (LensFor traffic)
-  (LensFor vehicle_docks_available)
+  (LensFor status_id)
+  (DSI.StationInformationId (LensFor status_station_id))
+  (LensFor status_num_bikes_available)
+  (LensFor status_num_bikes_disabled)
+  (LensFor status_num_docks_available)
+  (LensFor status_num_docks_disabled)
+  (LensFor status_last_reported)
+  (LensFor status_is_charging_station)
+  (LensFor status_status)
+  (LensFor status_is_installed)
+  (LensFor status_is_renting)
+  (LensFor status_is_returning)
+  (LensFor status_traffic)
+  (LensFor status_vehicle_docks_available)
   (VehicleType
     (LensFor vehicle_types_available_boost)
     (LensFor vehicle_types_available_iconic)
@@ -194,21 +194,21 @@ fromJSONToBeamStationStatus (SS.StationStatus
                              vehicle_docks_available
                              vehicle_types_available
                             ) =
-  StationStatus { _id                       = default_
-                , _station_id               = DSI.StationInformationId $ fromIntegral station_id
-                , _num_bikes_available      = fromIntegral num_bikes_available
-                , _num_bikes_disabled       = fromIntegral num_bikes_disabled
-                , _num_docks_available      = fromIntegral num_docks_available
-                , _num_docks_disabled       = fromIntegral num_docks_disabled
-                , _last_reported            = val_ $ fmap fromIntegral last_reported
-                , _is_charging_station      = val_ is_charging_station
-                , _status                   = val_ (coerce status :: BeamStationStatusString)
-                , _is_installed             = val_ is_installed
-                , _is_renting               = val_ is_renting
-                , _is_returning             = val_ is_returning
-                , _traffic                  = val_ $ fmap Text.pack traffic
-                , _vehicle_docks_available  = fromIntegral $ SS.dock_count $ head vehicle_docks_available
-                , _vehicle_types_available  = val_ $ VehicleType num_boost num_iconic num_efit num_efit_g5
+  StationStatus { _status_id                       = default_
+                , _status_station_id               = DSI.StationInformationId $ fromIntegral station_id
+                , _status_num_bikes_available      = fromIntegral num_bikes_available
+                , _status_num_bikes_disabled       = fromIntegral num_bikes_disabled
+                , _status_num_docks_available      = fromIntegral num_docks_available
+                , _status_num_docks_disabled       = fromIntegral num_docks_disabled
+                , _status_last_reported            = val_ $ fmap fromIntegral last_reported
+                , _status_is_charging_station      = val_ is_charging_station
+                , _status_status                   = val_ (coerce status :: BeamStationStatusString)
+                , _status_is_installed             = val_ is_installed
+                , _status_is_renting               = val_ is_renting
+                , _status_is_returning             = val_ is_returning
+                , _status_traffic                  = val_ $ fmap Text.pack traffic
+                , _status_vehicle_docks_available  = fromIntegral $ SS.dock_count $ head vehicle_docks_available
+                , _status_vehicle_types_available  = val_ $ VehicleType num_boost num_iconic num_efit num_efit_g5
                 }
   where
     -- | Find the vehicle type in the list of vehicle types available; default to 0 if not found.
@@ -238,22 +238,22 @@ fromBeamStationStatusToJSON (StationStatus
                              vehicle_docks_available
                              vehicle_types_available
                              ) =
-  SS.StationStatus { SS.station_id               = fromIntegral station_id :: Int
-                   , SS.num_bikes_available      = fromIntegral num_bikes_available
-                   , SS.num_bikes_disabled       = fromIntegral num_bikes_disabled
-                   , SS.num_docks_available      = fromIntegral num_docks_available
-                   , SS.num_docks_disabled       = fromIntegral num_docks_disabled
-                   , SS.last_reported            = fmap fromIntegral last_reported
-                   , SS.is_charging_station      = is_charging_station
-                   , SS.status                   = coerce status
-                   , SS.is_installed             = is_installed
-                   , SS.is_renting               = is_renting
-                   , SS.is_returning             = is_returning
-                   , SS.traffic                  = fmap Text.unpack traffic
-                   , SS.vehicle_docks_available  = [SS.VehicleDock ["FIXME"] (fromIntegral vehicle_docks_available)]
-                   , SS.vehicle_types_available  = [ SS.VehicleType "" (fromIntegral (vehicle_types_available ^. available_boost))
-                                                   , SS.VehicleType "" (fromIntegral (vehicle_types_available ^. available_iconic))
-                                                   , SS.VehicleType "" (fromIntegral (vehicle_types_available ^. available_efit))
-                                                   , SS.VehicleType "" (fromIntegral (vehicle_types_available ^. available_efit_g5))
-                                                   ]
+  SS.StationStatus { SS.status_station_id               = fromIntegral station_id :: Int
+                   , SS.status_num_bikes_available      = fromIntegral num_bikes_available
+                   , SS.status_num_bikes_disabled       = fromIntegral num_bikes_disabled
+                   , SS.status_num_docks_available      = fromIntegral num_docks_available
+                   , SS.status_num_docks_disabled       = fromIntegral num_docks_disabled
+                   , SS.status_last_reported            = fmap fromIntegral last_reported
+                   , SS.status_is_charging_station      = is_charging_station
+                   , SS.status_status                   = coerce status
+                   , SS.status_is_installed             = is_installed
+                   , SS.status_is_renting               = is_renting
+                   , SS.status_is_returning             = is_returning
+                   , SS.status_traffic                  = fmap Text.unpack traffic
+                   , SS.status_vehicle_docks_available  = [SS.VehicleDock ["FIXME"] (fromIntegral vehicle_docks_available)]
+                   , SS.status_vehicle_types_available  = [ SS.VehicleType "" (fromIntegral (vehicle_types_available ^. available_boost))
+                                                          , SS.VehicleType "" (fromIntegral (vehicle_types_available ^. available_iconic))
+                                                          , SS.VehicleType "" (fromIntegral (vehicle_types_available ^. available_efit))
+                                                          , SS.VehicleType "" (fromIntegral (vehicle_types_available ^. available_efit_g5))
+                                                          ]
                    }

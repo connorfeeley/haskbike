@@ -50,39 +50,39 @@ instance FromJSON StationStatusString where
 
 -- | Type representing a BikeShare station's status.
 data StationStatus where
-  StationStatus :: { station_id                  :: Int
-                   , num_bikes_available         :: Int
-                   , num_bikes_disabled          :: Int
-                   , num_docks_available         :: Int
-                   , num_docks_disabled          :: Int
-                   , last_reported               :: Maybe Int
-                   , is_charging_station         :: Bool
-                   , status                      :: StationStatusString
-                   , is_installed                :: Bool
-                   , is_renting                  :: Bool
-                   , is_returning                :: Bool
-                   , traffic                     :: Maybe String -- PBSC doesn't seem to set this field
-                   , vehicle_docks_available     :: [VehicleDock]
-                   , vehicle_types_available     :: [VehicleType]
+  StationStatus :: { status_station_id                  :: Int
+                   , status_num_bikes_available         :: Int
+                   , status_num_bikes_disabled          :: Int
+                   , status_num_docks_available         :: Int
+                   , status_num_docks_disabled          :: Int
+                   , status_last_reported               :: Maybe Int
+                   , status_is_charging_station         :: Bool
+                   , status_status                      :: StationStatusString
+                   , status_is_installed                :: Bool
+                   , status_is_renting                  :: Bool
+                   , status_is_returning                :: Bool
+                   , status_traffic                     :: Maybe String -- PBSC doesn't seem to set this field
+                   , status_vehicle_docks_available     :: [VehicleDock]
+                   , status_vehicle_types_available     :: [VehicleType]
                    } -> StationStatus
   deriving (Show, Generic)
 
 instance ToJSON StationStatus where
   toJSON station =
-    object [ "station_id"               .= show (station_id              station)
-           , "num_bikes_available"      .= num_bikes_available           station
-           , "num_bikes_disabled"       .= num_bikes_disabled            station
-           , "num_docks_available"      .= num_docks_available           station
-           , "num_docks_disabled"       .= num_docks_disabled            station
-           , "last_reported"            .= last_reported                 station
-           , "is_charging_station"      .= is_charging_station           station
-           , "status"                   .= status                        station
-           , "is_installed"             .= is_installed                  station
-           , "is_renting"               .= is_renting                    station
-           , "is_returning"             .= is_returning                  station
-           , "traffic"                  .= traffic                       station
-           , "vehicle_docks_available"  .= vehicle_docks_available       station
-           , "vehicle_types_available"  .= vehicle_types_available       station
+    object [ "station_id"               .= show (status_station_id              station)
+           , "num_bikes_available"      .= status_num_bikes_available           station
+           , "num_bikes_disabled"       .= status_num_bikes_disabled            station
+           , "num_docks_available"      .= status_num_docks_available           station
+           , "num_docks_disabled"       .= status_num_docks_disabled            station
+           , "last_reported"            .= status_last_reported                 station
+           , "is_charging_station"      .= status_is_charging_station           station
+           , "status"                   .= status_status                        station
+           , "is_installed"             .= status_is_installed                  station
+           , "is_renting"               .= status_is_renting                    station
+           , "is_returning"             .= status_is_returning                  station
+           , "traffic"                  .= status_traffic                       station
+           , "vehicle_docks_available"  .= status_vehicle_docks_available       station
+           , "vehicle_types_available"  .= status_vehicle_types_available       station
            ]
 instance FromJSON StationStatus where
   parseJSON = withObject "StationStatus" $ \v -> StationStatus
