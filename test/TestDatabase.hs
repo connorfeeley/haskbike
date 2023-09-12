@@ -85,21 +85,38 @@ setupDatabase = do
 
   pure conn
 
+insertStationInformation :: Connection -> IO [DSI.StationInformation]
+insertStationInformation conn = do
+  let stationsJson = fromStrict $(embedFile "test/json/station_information.json")
+  let mStations = eitherDecode' stationsJson :: Either String SI.StationInformationResponse
+  case mStations of
+    Right stations -> do
+      insertedStations <- runBeamPostgresDebug pPrintString conn $ runInsertReturningList $
+        insert (DBS.bikeshareDb ^. DBS.bikeshareStationInformation) $
+        insertExpressions $ map DSI.fromJSONToBeamStationInformation (SI.stations stations)
+      pure insertedStations
+    Left errorMsg -> assertFailure $ "Error decoding station information" ++ errorMsg
+
 -- | HUnit test for station information.
 unit_insertStationInformation :: IO ()
 unit_insertStationInformation = do
   -- Connect to the database.
   conn <- setupDatabase
 
-  let stationsJson = fromStrict $(embedFile "test/json/station_information.json")
-  let mStations = eitherDecode' stationsJson :: Either String SI.StationInformationResponse
+  _stationInformation <- insertStationInformation conn
+  pure ()
+
+insertStationStatus :: Connection -> IO [DSS.StationStatus]
+insertStationStatus conn = do
+  let stationsJson = fromStrict $(embedFile "test/json/station_status.json")
+  let mStations = eitherDecode' stationsJson :: Either String SS.StationStatusResponse
   case mStations of
     Right stations -> do
-      _insertedStations <- runBeamPostgresDebug pPrintString conn $ runInsertReturningList $
-        insert (DBS.bikeshareDb ^. DBS.bikeshareStationInformation) $
-        insertExpressions $ map DSI.fromJSONToBeamStationInformation (SI.stations stations)
-      pure ()
-    Left errorMsg -> assertFailure $ "Error decoding station information" ++ errorMsg
+      insertedStations <- runBeamPostgresDebug pPrintString conn $ runInsertReturningList $
+        insert (DBS.bikeshareDb ^. DBS.bikeshareStationStatus) $
+        insertExpressions $ map DSS.fromJSONToBeamStationStatus (SS.stations stations)
+      pure insertedStations
+    Left errorMsg -> assertFailure $ "Error decoding station status" ++ errorMsg
 
 -- | HUnit test for station status.
 unit_insertStationStatus :: IO ()
@@ -107,15 +124,9 @@ unit_insertStationStatus = do
   -- Connect to the database.
   conn <- setupDatabase
 
-  let stationsJson = fromStrict $(embedFile "test/json/station_status.json")
-  let mStations = eitherDecode' stationsJson :: Either String SS.StationStatusResponse
-  case mStations of
-    Right stations -> do
-      _insertedStations <- runBeamPostgresDebug pPrintString conn $ runInsertReturningList $
-        insert (DBS.bikeshareDb ^. DBS.bikeshareStationStatus) $
-        insertExpressions $ map DSS.fromJSONToBeamStationStatus (SS.stations stations)
-      pure ()
-    Left errorMsg -> assertFailure $ "Error decoding station status" ++ errorMsg
+  _stationInformation <- insertStationInformation conn
+  _stationStatus <- insertStationStatus conn
+  pure ()
 
 {- |
 Binary operator to accumulate a list of tuples, where:
