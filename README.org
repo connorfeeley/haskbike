@@ -1,6 +1,19 @@
 #+title: README
 #+author: Connor Feeley
 #+date: 2023-09-10
+* Tasks
+** TODO Add function to ~Operations~ to query and order by ~last_reported~
+#+begin_src sql
+select
+       station_information.name,
+       station_status.*
+from station_status
+inner join station_information
+on station_status.station_id = station_information.station_id
+order by last_reported asc
+limit 6;
+#+end_src
+
 * Useful Commands
 ** Run Tests (Showing all Output)
 
