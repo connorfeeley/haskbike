@@ -264,18 +264,19 @@ fromBeamStationStatusToJSON (StationStatus
                                                                 ]
                       }
 
+-- | Newtype wrapper for the last_reported field, which is a POSIX timestamp in the JSON API.
 newtype BeamReportTime where
   BeamReportTime :: LocalTime -> BeamReportTime
   deriving (Eq, Ord, Show, Read, FromField, ToField) via LocalTime
   deriving (HasSqlValueSyntax PgValueSyntax) via LocalTime
   deriving (FromBackendRow Postgres) via LocalTime
 
-instance (HasSqlValueSyntax BeamReportTime x, HasSqlValueSyntax BeamReportTime SqlNull) => HasSqlValueSyntax BeamReportTime (Maybe x) where
-  sqlValueSyntax (Just x) = sqlValueSyntax x
-  sqlValueSyntax Nothing  = sqlValueSyntax SqlNull
+-- | TimeZone used to convert the API.T.StationStatus.last_reported field to a local time (effectively UTC).
+reportTimeZone :: TimeZone
+reportTimeZone = TimeZone (-5 * 50) False "UTC"
 
 instance Num BeamReportTime where
-    fromInteger i = BeamReportTime $ utcToLocalTime reportTimezone . posixSecondsToUTCTime . secondsToNominalDiffTime . fromIntegral $ i
+    fromInteger i = BeamReportTime $ utcToLocalTime reportTimeZone . posixSecondsToUTCTime . secondsToNominalDiffTime . fromIntegral $ i
     abs           = error "BeamReportTime: abs not implemented"
     signum        = error "BeamReportTime: signum not implemented"
     negate        = error "BeamReportTime: negate not implemented"
@@ -284,27 +285,20 @@ instance Num BeamReportTime where
     (*)           = error "BeamReportTime: (*) not implemented"
 
 instance Real BeamReportTime where
-  toRational (BeamReportTime t) = toRational . toModifiedJulianDay . localDay $ t
+  toRational (BeamReportTime t) = toRational . utcTimeToPOSIXSeconds . localTimeToUTC reportTimeZone $ t
 
-instance Enum BeamReportTime where
-  toEnum = BeamReportTime . reportTimeToLocal . toInteger
+instance Integral BeamReportTime => Enum BeamReportTime where
+  toEnum = fromIntegral :: Int -> BeamReportTime
   fromEnum a = fromIntegral a :: Int
 
 instance Enum BeamReportTime => Integral BeamReportTime where
-  toInteger (BeamReportTime t) = floor . utcTimeToPOSIXSeconds . localTimeToUTC reportTimezone $ t
+  toInteger (BeamReportTime t) = floor . utcTimeToPOSIXSeconds . localTimeToUTC reportTimeZone $ t
   quotRem a _ = (a, a)
 
+instance (HasSqlValueSyntax BeamReportTime x, HasSqlValueSyntax BeamReportTime SqlNull) => HasSqlValueSyntax BeamReportTime (Maybe x) where
+  sqlValueSyntax (Just x) = sqlValueSyntax x
+  sqlValueSyntax Nothing  = sqlValueSyntax SqlNull
+
+-- | Beam (migrate) datatype for the last_reported field in the StationStatus table.
 reportTimeType :: DataType Postgres BeamReportTime
 reportTimeType = DataType (timestampType Nothing False)
-
--- | Timezone used to convert the API.T.StationStatus.last_reported field to a local time (effectively UTC).
-reportTimezone :: TimeZone
-reportTimezone = TimeZone 0 False "UTC"
-
--- | Convert from the API.T.StationStatus.last_reported field to a local time (effectively UTC).
-reportTimeToLocal :: Integral a => a -> LocalTime
-reportTimeToLocal = utcToLocalTime reportTimezone . posixSecondsToUTCTime . secondsToNominalDiffTime . fromIntegral
-
--- | Convert from a local time (effectively UTC) to the API.T.StationStatus.last_reported field.
-localToReportTime :: Integral c => LocalTime -> c
-localToReportTime = floor . utcTimeToPOSIXSeconds . localTimeToUTC reportTimezone
