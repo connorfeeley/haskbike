@@ -36,7 +36,7 @@ import           Database.Beam.Backend.SQL.BeamExtensions
 import           Database.Beam.Postgres
 import           Database.PostgreSQL.Simple
 
-import           Text.Pretty.Simple                       (pPrintString)
+import           Text.Pretty.Simple                       (pPrint, pPrintString)
 
 import           Control.Lens
 import           Data.Aeson                               (eitherDecode')
@@ -81,6 +81,16 @@ setupDatabase = do
 
   pure conn
 
+
+-- | HUnit test for inserting station information.
+unit_insertStationInformation :: IO ()
+unit_insertStationInformation = do
+  -- Connect to the database.
+  conn <- setupDatabase
+
+  _stationInformation <- insertStationInformation conn
+  pure ()
+
 insertStationInformation :: Connection -> IO [DSI.StationInformation]
 insertStationInformation conn = do
   let stationsJson = fromStrict $(embedFile "test/json/station_information.json")
@@ -93,13 +103,15 @@ insertStationInformation conn = do
       pure insertedStations
     Left errorMsg -> assertFailure $ "Error decoding station information" ++ errorMsg
 
--- | HUnit test for station information.
-unit_insertStationInformation :: IO ()
-unit_insertStationInformation = do
+
+-- | HUnit test for inserting station status.
+unit_insertStationStatus :: IO ()
+unit_insertStationStatus = do
   -- Connect to the database.
   conn <- setupDatabase
 
   _stationInformation <- insertStationInformation conn
+  _stationStatus      <- insertStationStatus conn
   pure ()
 
 insertStationStatus :: Connection -> IO [DSS.StationStatus]
@@ -114,13 +126,36 @@ insertStationStatus conn = do
       pure insertedStations
     Left errorMsg -> assertFailure $ "Error decoding station status" ++ errorMsg
 
--- | HUnit test for station status.
-unit_insertStationStatus :: IO ()
-unit_insertStationStatus = do
+
+-- | HUnit test for querying station status.
+unit_queryStationStatus :: IO ()
+unit_queryStationStatus = do
   -- Connect to the database.
   conn <- setupDatabase
 
   _stationInformation <- insertStationInformation conn
-  _stationStatus <- insertStationStatus conn
-  pure ()
+  _stationStatus      <- insertStationStatus conn
+  queryStationStatus conn >>= pPrint
 
+-- queryStationStatus :: Connection -> IO [DSS.StationStatus]
+queryStationStatus conn = do
+  insertedStations <- runBeamPostgresDebug pPrintString conn $ runSelectReturningList $ select $ do
+    station_information <- all_ (DBS.bikeshareDb ^. DBS.bikeshareStationInformation)
+    station_status <- all_ (DBS.bikeshareDb ^. DBS.bikeshareStationStatus)
+    guard_ (DSS._station_id station_status `references_` station_information)
+    -- station_status <- leftJoin_ (all_(DBS.bikeshareDb ^. DBS.bikeshareStationStatus))
+    --   (\station_status -> DSS._station_id station_status `references_` station_information)
+    -- guard_ (isJust_ station_status)
+    pure ( DSI._name        station_information
+         , available_bikes  station_status
+         , available_docks  station_status
+         , disabled_bikes   station_status
+         , disabled_docks   station_status
+         )
+  pure insertedStations
+  where
+    name = DSI._name . fst
+    available_bikes = DSS._num_bikes_available 
+    available_docks = DSS._num_docks_available 
+    disabled_bikes  = DSS._num_bikes_disabled  
+    disabled_docks  = DSS._num_docks_disabled  
