@@ -35,10 +35,9 @@ import           Database.StationStatus                   (status_num_bikes_avai
 import qualified Database.StationStatus                   as DSS
 
 import qualified Client
-import qualified StationInformation                       as SI
-import qualified StationStatus                            as SS
 import qualified TestClient
--- import           Types.API
+import           API.Types                                (StationInformationResponse (..),
+                                                           StationStatusResponse (..))
 
 import           Test.Tasty.HUnit
 
@@ -69,9 +68,9 @@ testJson = $(embedDir "test/json")
 lookupJson :: String -> Maybe B.ByteString
 lookupJson fileName = lookup fileName testJson
 
-testValuesInformation :: Maybe SI.StationInformationResponse
+testValuesInformation :: Maybe StationInformationResponse
 testValuesInformation = getTestValues "station_information.json"
-testValuesStatus      :: Maybe SS.StationStatusResponse
+testValuesStatus      :: Maybe StationStatusResponse
 testValuesStatus      = getTestValues "station_status.json"
 
 getTestValues :: FromJSON a => String -> Maybe a
@@ -116,11 +115,11 @@ unit_insertStationInformation = do
     Nothing       -> assertFailure "Error decoding station information JSON"
   pure ()
 
-insertStationInformation :: Connection -> SI.StationInformationResponse -> IO [DSI.StationInformation]
+insertStationInformation :: Connection -> StationInformationResponse -> IO [DSI.StationInformation]
 insertStationInformation conn stations = do
   runBeamPostgresDebug pPrintString conn $ runInsertReturningList $
     insert (DBS.bikeshareDb ^. DBS.bikeshareStationInformation) $
-    insertExpressions $ map DSI.fromJSONToBeamStationInformation (SI.info_stations stations)
+    insertExpressions $ map DSI.fromJSONToBeamStationInformation (info_stations stations)
 
 -- | HUnit test for inserting station status.
 unit_insertStationStatus :: IO ()
@@ -136,11 +135,11 @@ unit_insertStationStatus = do
     Nothing       -> assertFailure "Error decoding station status JSON"
   pure ()
 
-insertStationStatus :: Connection -> SS.StationStatusResponse -> IO [DSS.StationStatus]
+insertStationStatus :: Connection -> StationStatusResponse -> IO [DSS.StationStatus]
 insertStationStatus conn status = do
   runBeamPostgresDebug pPrintString conn $ runInsertReturningList $
     insert (DBS.bikeshareDb ^. DBS.bikeshareStationStatus) $
-    insertExpressions $ map DSS.fromJSONToBeamStationStatus (SS.status_stations status)
+    insertExpressions $ map DSS.fromJSONToBeamStationStatus (status_stations status)
 
 -- | HUnit test for querying station status.
 unit_queryStationStatus :: IO ()
@@ -191,7 +190,7 @@ unit_insertStationInformationApi = do
   void $ -- Suppress return value.
     runBeamPostgresDebug pPrintString conn $ runInsertReturningList $
     insert (DBS.bikeshareDb ^. DBS.bikeshareStationInformation) $
-    insertExpressions $ map DSI.fromJSONToBeamStationInformation (SI.info_stations stationInformationResponse)
+    insertExpressions $ map DSI.fromJSONToBeamStationInformation (info_stations stationInformationResponse)
 
 unit_insertStationStatusApi :: IO ()
 unit_insertStationStatusApi = do
@@ -205,7 +204,7 @@ unit_insertStationStatusApi = do
   void $ -- Suppress return value.
     runBeamPostgresDebug pPrintString conn $ runInsertReturningList $
     insert (DBS.bikeshareDb ^. DBS.bikeshareStationStatus) $
-    insertExpressions $ map DSS.fromJSONToBeamStationStatus (SS.status_stations stationStatusResponse)
+    insertExpressions $ map DSS.fromJSONToBeamStationStatus (status_stations stationStatusResponse)
 
 unit_insertStationBothApi :: IO ()
 unit_insertStationBothApi = do
@@ -220,12 +219,12 @@ unit_insertStationBothApi = do
   void $ -- Suppress return value.
     runBeamPostgresDebug pPrintString conn $ runInsertReturningList $
     insert (DBS.bikeshareDb ^. DBS.bikeshareStationInformation) $
-    insertExpressions $ map DSI.fromJSONToBeamStationInformation (SI.info_stations stationInformationResponse)
+    insertExpressions $ map DSI.fromJSONToBeamStationInformation (info_stations stationInformationResponse)
 
   void $ -- Suppress return value.
     runBeamPostgresDebug pPrintString conn $ runInsertReturningList $
     insert (DBS.bikeshareDb ^. DBS.bikeshareStationStatus) $
-    insertExpressions $ map DSS.fromJSONToBeamStationStatus (SS.status_stations stationStatusResponse)
+    insertExpressions $ map DSS.fromJSONToBeamStationStatus (status_stations stationStatusResponse)
 
 -- | pPrint with compact output.
 pPrintCompact :: (MonadIO m, Show a) => a -> m ()
