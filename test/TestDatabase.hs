@@ -21,22 +21,16 @@
 
 module TestDatabase where
 
-import qualified Database.BikeShare                       as DBS
 import           Database.Operations
-import           Database.Types
 import           Database.Utils
 
 import           API.Types                                (StationInformationResponse (..),
                                                            StationStatusResponse (..))
 import           API.Client
 
-import           Database.Beam
-import           Database.Beam.Backend.SQL.BeamExtensions
-import           Database.Beam.Postgres
 
 import           Text.Pretty.Simple
 
-import           Control.Lens
 import           Data.Aeson                               (decode)
 import           Data.Aeson.Types                         (FromJSON)
 import qualified Data.ByteString                          as B
@@ -98,8 +92,9 @@ unit_queryStationStatus = do
   case testValuesStatus of
     Just stations -> void $ insertStationStatus conn stations
     Nothing       -> assertFailure "Error decoding station status JSON"
-  queryStationStatus conn >>= pPrint
+  queryStationStatus conn >>= pPrintCompact
 
+-- | HUnit test for inserting station information, with data from the actual API.
 unit_insertStationInformationApi :: IO ()
 unit_insertStationInformationApi = do
   -- Connect to the database.
@@ -109,14 +104,11 @@ unit_insertStationInformationApi = do
   stationInformationResponse <- runQueryWithEnv stationInformation
 
   case stationInformationResponse of
-    (Left err)    -> assertFailure $ "Error querying API: " ++ show err
+    (Left err  )  -> assertFailure $ "Error querying API: " ++ show err
     (Right info)  -> do
-      -- Insert station information into database.
-      void $ -- Suppress return value.
-        runBeamPostgresDebug pPrintString conn $ runInsertReturningList $
-        insert (DBS.bikeshareDb ^. DBS.bikeshareStationInformation) $
-        insertExpressions $ map fromJSONToBeamStationInformation (info_stations info)
+      void $ insertStationInformation conn info
 
+-- | HUnit test for inserting station status, with data from the actual API.
 unit_insertStationStatusApi :: IO ()
 unit_insertStationStatusApi = do
   -- Connect to the database.
@@ -126,16 +118,13 @@ unit_insertStationStatusApi = do
   stationStatusResponse <- runQueryWithEnv stationStatus
 
   case stationStatusResponse of
-    (Left err)      -> assertFailure $ "Error querying API: " ++ show err
+    (Left err    )  -> assertFailure $ "Error querying API: " ++ show err
     (Right status)  -> do
-      -- Insert station status into database.
-      void $ -- Suppress return value.
-        runBeamPostgresDebug pPrintString conn $ runInsertReturningList $
-        insert (DBS.bikeshareDb ^. DBS.bikeshareStationStatus) $
-        insertExpressions $ map fromJSONToBeamStationStatus (status_stations status)
+      void $ insertStationStatus conn status
 
-unit_insertStationBothApi :: IO ()
-unit_insertStationBothApi = do
+-- | HUnit test for inserting station information and status, with data from the actual API.
+unit_insertStationApi :: IO ()
+unit_insertStationApi = do
   -- Connect to the database.
   conn <- setupDatabase
 
@@ -145,17 +134,8 @@ unit_insertStationBothApi = do
 
   case (stationInformationResponse, stationStatusResponse) of
     (Left err_info, Left err_status)  -> assertFailure $ "Error querying API: " ++ show err_info ++ " " ++ show err_status
-    (Left err_info, _)                -> assertFailure $ "Error querying API: " ++ show err_info
-    (_, Left err_status)              -> assertFailure $ "Error querying API: " ++ show err_status
-    (Right info, Right status)        -> do
-      -- Insert station information into database.
-      void $ -- Suppress return value.
-        runBeamPostgresDebug pPrintString conn $ runInsertReturningList $
-        insert (DBS.bikeshareDb ^. DBS.bikeshareStationInformation) $
-        insertExpressions $ map fromJSONToBeamStationInformation (info_stations info)
-
-      -- Insert station status into database.
-      void $ -- Suppress return value.
-        runBeamPostgresDebug pPrintString conn $ runInsertReturningList $
-        insert (DBS.bikeshareDb ^. DBS.bikeshareStationStatus) $
-        insertExpressions $ map fromJSONToBeamStationStatus (status_stations status)
+    (Left err_info, _              )  -> assertFailure $ "Error querying API: " ++ show err_info
+    (_            , Left err_status)  -> assertFailure $ "Error querying API: " ++ show err_status
+    (Right info   , Right status   )  -> do
+      void $ insertStationInformation conn info
+      void $ insertStationStatus      conn status
