@@ -18,7 +18,6 @@
 {-# LANGUAGE TypeApplications          #-}
 {-# LANGUAGE TypeFamilies              #-}
 {-# LANGUAGE UndecidableInstances      #-}
-{-# OPTIONS_GHC -Wno-overlapping-patterns #-}
 
 module TestDatabase where
 
