@@ -46,7 +46,7 @@ import           Database.Beam.Backend.SQL.BeamExtensions
 import           Database.Beam.Postgres
 import           Database.PostgreSQL.Simple
 
-import           Text.Pretty.Simple                       (pPrint, pPrintString)
+import           Text.Pretty.Simple
 
 import           Control.Lens
 import           Data.Aeson                               (decode)
@@ -225,3 +225,23 @@ unit_insertStationBothApi = do
     runBeamPostgresDebug pPrintString conn $ runInsertReturningList $
     insert (DBS.bikeshareDb ^. DBS.bikeshareStationStatus) $
     insertExpressions $ map DSS.fromJSONToBeamStationStatus (SS.stations stationStatusResponse)
+
+-- | pPrint with compact output.
+pPrintCompact :: (MonadIO m, Show a) => a -> m ()
+pPrintCompact = pPrintOpt CheckColorTty pPrintCompactOpt
+  where
+    pPrintCompactOpt = defaultOutputOptionsDarkBg { outputOptionsCompact = True }
+
+-- | Query database for disabled docks, returning tuples of (name, num_docks_disabled).
+queryDisabledDocks conn =
+  runBeamPostgresDebug pPrintString conn $ runSelectReturningList $ select $ do
+  info <- all_ (DBS.bikeshareDb ^. DBS.bikeshareStationInformation)
+  status <- all_ (DBS.bikeshareDb ^. DBS.bikeshareStationStatus)
+  guard_ (DSS._station_id status `references_` info &&. status^.num_docks_disabled >. 0)
+  pure ( info^.name
+       , status^.num_docks_disabled
+       )
+
+-- | Helper function to print disabled docks.
+printDisabledDocks :: IO ()
+printDisabledDocks = (connectDb >>= queryDisabledDocks) >>= pPrintCompact
