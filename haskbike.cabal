@@ -138,6 +138,7 @@ library
                     , API.Types
                     , StationInformation
                     , StationStatus
+                    , Database.Types
                     , Database.BikeShare
                     , Database.Migrations
                     , Database.StationInformation

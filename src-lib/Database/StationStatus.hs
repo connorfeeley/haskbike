@@ -33,9 +33,8 @@ module Database.StationStatus
         , fromBeamStationStatusToJSON
         ) where
 
-import qualified API.Types as API.T
-
-import qualified Database.StationInformation                as DSI
+import qualified API.Types                                  as API.T
+import           Database.StationInformation
 
 import           Control.Lens
 import qualified Data.ByteString.Char8                      as B
@@ -63,7 +62,7 @@ import           Database.PostgreSQL.Simple.TypeInfo.Static (text)
 -- | Declare a (Beam) table for the 'StationStatus' type.
 data StationStatusT f where
   StationStatus :: { _status_id                      :: Columnar f (SqlSerial Int32)
-                   , _status_station_id              :: PrimaryKey DSI.StationInformationT f
+                   , _status_station_id              :: PrimaryKey StationInformationT f
                    , _status_num_bikes_available     :: Columnar f Int32
                    , _status_num_bikes_disabled      :: Columnar f Int32
                    , _status_num_docks_available     :: Columnar f Int32
@@ -124,7 +123,7 @@ VehicleType
 -- | Lenses
 StationStatus
   (LensFor status_id)
-  (DSI.StationInformationId (LensFor status_station_id))
+  (StationInformationId (LensFor status_station_id))
   (LensFor status_num_bikes_available)
   (LensFor status_num_bikes_disabled)
   (LensFor status_num_docks_available)
@@ -196,7 +195,7 @@ fromJSONToBeamStationStatus (API.T.StationStatus
                              vehicle_types_available
                             ) =
   StationStatus { _status_id                       = default_
-                , _status_station_id               = DSI.StationInformationId $ fromIntegral station_id
+                , _status_station_id               = StationInformationId $ fromIntegral station_id
                 , _status_num_bikes_available      = fromIntegral num_bikes_available
                 , _status_num_bikes_disabled       = fromIntegral num_bikes_disabled
                 , _status_num_docks_available      = fromIntegral num_docks_available
@@ -224,7 +223,7 @@ fromJSONToBeamStationStatus (API.T.StationStatus
 fromBeamStationStatusToJSON :: StationStatus -> API.T.StationStatus
 fromBeamStationStatusToJSON (StationStatus
                              _record_id
-                             (DSI.StationInformationId station_id)
+                             (StationInformationId station_id)
                              num_bikes_available
                              num_bikes_disabled
                              num_docks_available
