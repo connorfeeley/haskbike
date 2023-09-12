@@ -7,7 +7,7 @@
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE UndecidableInstances  #-}
 
-module StationInformation
+module API.StationInformation
         ( StationInformation (..)
         , StationInformationResponse (..)
         , PhysicalConfiguration (..)

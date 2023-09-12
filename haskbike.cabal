@@ -136,16 +136,15 @@ library
     exposed-modules:  BikeShareAPI
                     , Client
                     , API.Types
-                    , StationInformation
-                    , StationStatus
                     , Database.Types
                     , Database.BikeShare
                     , Database.Migrations
-                    , Database.StationInformation
-                    , Database.StationStatus
 
     -- Modules included in this library but not exported.
-    -- other-modules:
+    other-modules:    API.StationInformation
+                    , API.StationStatus
+                    , Database.StationInformation
+                    , Database.StationStatus
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:

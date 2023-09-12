@@ -4,7 +4,7 @@
 {-# LANGUAGE GADTs             #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module StationStatus
+module API.StationStatus
         ( StationStatus (..)
         , StationStatusResponse (..)
         , StationStatusString (..)
