@@ -17,6 +17,9 @@ module Client
   , handleResponse
   ) where
 
+import           API.Types               (StationInformationResponse,
+                                          StationStatusResponse)
+
 import           Data.Proxy
 import           Network.HTTP.Client     (Manager, newManager)
 import           Network.HTTP.Client.TLS (tlsManagerSettings)
@@ -28,8 +31,6 @@ import           BikeShareAPI
 import           Data.Aeson              (Object)
 
 import           Control.Exception       (Exception (displayException))
-import qualified StationInformation      as SI
-import qualified StationStatus           as SS
 
 -- | The BikeShare API client.
 bikeShareAPIClient :: Proxy BikeShareAPI
@@ -38,8 +39,8 @@ bikeShareAPIClient = Proxy
 -- | The BikeShare API client functions.
 versions            :: ClientM Object
 vehicleTypes        :: ClientM Object
-stationInformation  :: ClientM SI.StationInformationResponse
-stationStatus       :: ClientM SS.StationStatusResponse
+stationInformation  :: ClientM StationInformationResponse
+stationStatus       :: ClientM StationStatusResponse
 systemRegions       :: ClientM Object
 systemInformation   :: ClientM Object
 systemPricingPlans  :: ClientM Object
