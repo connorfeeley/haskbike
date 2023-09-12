@@ -140,6 +140,7 @@ library
                     , Database.BikeShare
                     , Database.Migrations
                     , Database.Utils
+                    , Database.Operations
 
     -- Modules included in this library but not exported.
     other-modules:    API.StationInformation

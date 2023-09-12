@@ -22,6 +22,7 @@
 module TestDatabase where
 
 import qualified Database.BikeShare                       as DBS
+import           Database.Operations
 import           Database.Types
 import           Database.Utils
 
@@ -72,12 +73,6 @@ unit_insertStationInformation = do
     Nothing       -> assertFailure "Error decoding station information JSON"
   pure ()
 
-insertStationInformation :: Connection -> StationInformationResponse -> IO [StationInformation]
-insertStationInformation conn stations = do
-  runBeamPostgresDebug pPrintString conn $ runInsertReturningList $
-    insert (DBS.bikeshareDb ^. DBS.bikeshareStationInformation) $
-    insertExpressions $ map fromJSONToBeamStationInformation (info_stations stations)
-
 -- | HUnit test for inserting station status.
 unit_insertStationStatus :: IO ()
 unit_insertStationStatus = do
@@ -92,12 +87,6 @@ unit_insertStationStatus = do
     Nothing       -> assertFailure "Error decoding station status JSON"
   pure ()
 
-insertStationStatus :: Connection -> StationStatusResponse -> IO [StationStatus]
-insertStationStatus conn status = do
-  runBeamPostgresDebug pPrintString conn $ runInsertReturningList $
-    insert (DBS.bikeshareDb ^. DBS.bikeshareStationStatus) $
-    insertExpressions $ map fromJSONToBeamStationStatus (status_stations status)
-
 -- | HUnit test for querying station status.
 unit_queryStationStatus :: IO ()
 unit_queryStationStatus = do
@@ -111,29 +100,6 @@ unit_queryStationStatus = do
     Just stations -> void $ insertStationStatus conn stations
     Nothing       -> assertFailure "Error decoding station status JSON"
   queryStationStatus conn >>= pPrint
-
-queryStationStatus :: Connection -> IO [(StationInformation, StationStatus)]
-queryStationStatus conn = do
-  runBeamPostgresDebug pPrintString conn $ runSelectReturningList $ select $ do
-    info <- all_ (DBS.bikeshareDb ^. DBS.bikeshareStationInformation)
-    status <- all_ (DBS.bikeshareDb ^. DBS.bikeshareStationStatus)
-    guard_ (_status_station_id status `references_` info)
-    -- station_status <- leftJoin_ (all_(DBS.bikeshareDb ^. DBS.bikeshareStationStatus))
-    --   (\station_status -> _station_id station_status `references_` station_information)
-    -- guard_ (isJust_ station_status)
-    pure (info, status)
-
-queryStationStatusFields conn =
-  runBeamPostgresDebug pPrintString conn $ runSelectReturningList $ select $ do
-  info <- all_ (DBS.bikeshareDb ^. DBS.bikeshareStationInformation)
-  status <- all_ (DBS.bikeshareDb ^. DBS.bikeshareStationStatus)
-  guard_ (_status_station_id status `references_` info)
-  pure ( info^.info_name
-       , status^.status_num_bikes_available
-       , status^.status_num_bikes_disabled
-       , status^.status_num_docks_available
-       , status^.status_num_docks_disabled
-       )
 
 unit_insertStationInformationApi :: IO ()
 unit_insertStationInformationApi = do

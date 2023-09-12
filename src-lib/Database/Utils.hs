@@ -47,17 +47,3 @@ pPrintCompact :: (MonadIO m, Show a) => a -> m ()
 pPrintCompact = pPrintOpt CheckColorTty pPrintCompactOpt
   where
     pPrintCompactOpt = defaultOutputOptionsDarkBg { outputOptionsCompact = True }
-
--- | Query database for disabled docks, returning tuples of (name, num_docks_disabled).
-queryDisabledDocks conn =
-  runBeamPostgresDebug pPrintString conn $ runSelectReturningList $ select $ do
-  info <- all_ (DBS.bikeshareDb ^. DBS.bikeshareStationInformation)
-  status <- all_ (DBS.bikeshareDb ^. DBS.bikeshareStationStatus)
-  guard_ (_status_station_id status `references_` info &&. status^.status_num_docks_disabled >. 0)
-  pure ( info^.info_name
-       , status^.status_num_docks_disabled
-       )
-
--- | Helper function to print disabled docks.
-printDisabledDocks :: IO ()
-printDisabledDocks = (connectDb >>= queryDisabledDocks) >>= pPrintCompact
