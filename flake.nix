@@ -51,6 +51,7 @@
                 haskell-language-server
                 implicit-hie
                 floskell
+                hasktags
                 # stylish-haskell
                 ;
               # Disable ghcid.
