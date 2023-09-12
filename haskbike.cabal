@@ -55,7 +55,7 @@ extra-source-files: test/json/*.json
 
 -- Common warning flags.
 common warnings
-    ghc-options: -Wall
+    ghc-options: -Wall -Wno-missing-signatures
 
 -- Common dependencies shared by all targets.
 common common-depends
