@@ -6,8 +6,7 @@
 
 module TestDecoding where
 
-import qualified StationInformation   as SI
-import qualified StationStatus        as SS
+import API.Types (StationInformationResponse, StationStatusResponse)
 
 import           Test.Tasty.HUnit
 
@@ -49,7 +48,7 @@ buildTestCase (_ :: a) file = testParse (undefined :: a) (Maybe.fromMaybe "" $ l
 -- | Test decoding of JSON files.
 
 unit_stationInformation :: IO ()
-unit_stationInformation = buildTestCase (undefined :: SI.StationInformationResponse) "station_information.json"
+unit_stationInformation = buildTestCase (undefined :: StationInformationResponse) "station_information.json"
 
 unit_stationStatus :: IO ()
-unit_stationStatus = buildTestCase (undefined :: SS.StationStatusResponse) "station_status.json"
+unit_stationStatus = buildTestCase (undefined :: StationStatusResponse) "station_status.json"
