@@ -3,7 +3,7 @@
 
 module TestClient where
 
-import           Client
+import           API.Client
 
 import           Test.Tasty.HUnit
 

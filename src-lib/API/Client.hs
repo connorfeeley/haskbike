@@ -3,7 +3,7 @@
 {-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Client
+module API.Client
   ( bikeShareAPIClient
   , versions
   , vehicleTypes

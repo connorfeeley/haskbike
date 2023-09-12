@@ -28,7 +28,7 @@ import           Database.Utils
 
 import           API.Types                                (StationInformationResponse (..),
                                                            StationStatusResponse (..))
-import           Client
+import           API.Client
 
 import           Database.Beam
 import           Database.Beam.Backend.SQL.BeamExtensions

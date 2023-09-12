@@ -4,6 +4,7 @@ module Database.Operations where
 
 import           API.Types                                (StationInformationResponse (..),
                                                            StationStatusResponse (..))
+import           API.Client
 import qualified Database.BikeShare                       as DBS
 import           Database.Types
 import           Database.Utils
@@ -11,7 +12,6 @@ import           Database.Utils
 import           Control.Lens
 import           Text.Pretty.Simple
 
-import           Client
 import           Control.Exception                        (Exception (displayException))
 import           Control.Monad                            (void)
 import           Database.Beam
