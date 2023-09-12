@@ -28,9 +28,10 @@ module Database.StationStatus
         , fromBeamStationStatusToJSON
         ) where
 
-import           Control.Lens
+import qualified Database.StationInformation                as DSI
 import qualified StationStatus                              as SS
 
+import           Control.Lens
 import qualified Data.ByteString.Char8                      as B
 import           Data.Coerce                                (coerce)
 import           Data.Int
@@ -41,7 +42,7 @@ import qualified Data.Text                                  as Text
 import           Database.Beam
 import           Database.Beam.Backend                      (BeamBackend,
                                                              HasSqlValueSyntax (sqlValueSyntax),
-                                                             SqlSerial)
+                                                             SqlSerial (..))
 import           Database.Beam.Postgres                     (Postgres)
 import           Database.Beam.Postgres.Syntax              (pgTextType)
 import           Database.PostgreSQL.Simple.FromField       (Field (typeOid),
@@ -56,7 +57,7 @@ import           Database.PostgreSQL.Simple.TypeInfo.Static (text)
 -- | Declare a (Beam) table for the 'StationStatus' type.
 data StationStatusT f where
   StationStatus :: { _id                      :: Columnar f (SqlSerial Int32)
-                   , _station_id              :: Columnar f Int32
+                   , _station_id              :: PrimaryKey DSI.StationInformationT f
                    , _num_bikes_available     :: Columnar f Int32
                    , _num_bikes_disabled      :: Columnar f Int32
                    , _num_docks_available     :: Columnar f Int32
@@ -117,7 +118,7 @@ VehicleType
 -- | Lenses
 StationStatus
   (LensFor id)
-  (LensFor station_id)
+  (DSI.StationInformationId (LensFor station_id))
   (LensFor num_bikes_available)
   (LensFor num_bikes_disabled)
   (LensFor num_docks_available)
@@ -189,7 +190,7 @@ fromJSONToBeamStationStatus (SS.StationStatus
                              vehicle_types_available
                             ) =
   StationStatus { _id                       = default_
-                , _station_id               = fromIntegral station_id
+                , _station_id               = DSI.StationInformationId $ fromIntegral station_id
                 , _num_bikes_available      = fromIntegral num_bikes_available
                 , _num_bikes_disabled       = fromIntegral num_bikes_disabled
                 , _num_docks_available      = fromIntegral num_docks_available
@@ -217,7 +218,7 @@ fromJSONToBeamStationStatus (SS.StationStatus
 fromBeamStationStatusToJSON :: StationStatus -> SS.StationStatus
 fromBeamStationStatusToJSON (StationStatus
                              _record_id
-                             station_id
+                             (DSI.StationInformationId station_id)
                              num_bikes_available
                              num_bikes_disabled
                              num_docks_available
@@ -232,7 +233,7 @@ fromBeamStationStatusToJSON (StationStatus
                              vehicle_docks_available
                              vehicle_types_available
                              ) =
-  SS.StationStatus { SS.station_id               = fromIntegral station_id
+  SS.StationStatus { SS.station_id               = fromIntegral station_id :: Int
                    , SS.num_bikes_available      = fromIntegral num_bikes_available
                    , SS.num_bikes_disabled       = fromIntegral num_bikes_disabled
                    , SS.num_docks_available      = fromIntegral num_docks_available

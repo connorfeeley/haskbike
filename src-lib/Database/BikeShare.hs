@@ -25,6 +25,7 @@ import           Database.Beam
 
 import qualified Database.StationInformation as DSI
 import qualified Database.StationStatus      as DSS
+import Database.Beam.Migrate (field)
 
 -- | Define the database; only containing one table for now.
 data BikeshareDb f where
@@ -60,7 +61,7 @@ bikeshareDb = defaultDbSettings `withDbModification`
   , _bikeshareStationStatus =
     setEntityName "station_status" <> modifyTableFields tableModification
       { DSS._id                      = "id"
-      , DSS._station_id              = "station_id"
+      , DSS._station_id              = DSI.StationInformationId "station_id"
       , DSS._num_bikes_available     = "num_bikes_available"
       , DSS._num_bikes_disabled      = "num_bikes_disabled"
       , DSS._num_docks_available     = "num_docks_available"

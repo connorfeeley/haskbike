@@ -86,9 +86,9 @@ deriving instance Eq StationInformation
 
 -- | Inform Beam about the table.
 instance Table StationInformationT where
-  data PrimaryKey StationInformationT f = StationInformationId (Columnar f (SqlSerial Int32))
+  data PrimaryKey StationInformationT f = StationInformationId (Columnar f Int32)
     deriving (Generic, Beamable)
-  primaryKey = StationInformationId . _id
+  primaryKey = StationInformationId . _station_id
 
 -- | Lenses
 StationInformation
