@@ -137,7 +137,7 @@ instance FromJSON VehicleType where
 
 -- | A wrapper type for the station information response.
 newtype StationStatusResponse where
-  StationStatusResponse :: { stations :: [StationStatus] } -> StationStatusResponse
+  StationStatusResponse :: { status_stations :: [StationStatus] } -> StationStatusResponse
   deriving (Show, Generic)
 
 instance FromJSON StationStatusResponse where

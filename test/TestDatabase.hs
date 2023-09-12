@@ -120,7 +120,7 @@ insertStationInformation :: Connection -> SI.StationInformationResponse -> IO [D
 insertStationInformation conn stations = do
   runBeamPostgresDebug pPrintString conn $ runInsertReturningList $
     insert (DBS.bikeshareDb ^. DBS.bikeshareStationInformation) $
-    insertExpressions $ map DSI.fromJSONToBeamStationInformation (SI.stations stations)
+    insertExpressions $ map DSI.fromJSONToBeamStationInformation (SI.info_stations stations)
 
 -- | HUnit test for inserting station status.
 unit_insertStationStatus :: IO ()
@@ -140,7 +140,7 @@ insertStationStatus :: Connection -> SS.StationStatusResponse -> IO [DSS.Station
 insertStationStatus conn status = do
   runBeamPostgresDebug pPrintString conn $ runInsertReturningList $
     insert (DBS.bikeshareDb ^. DBS.bikeshareStationStatus) $
-    insertExpressions $ map DSS.fromJSONToBeamStationStatus (SS.stations status)
+    insertExpressions $ map DSS.fromJSONToBeamStationStatus (SS.status_stations status)
 
 -- | HUnit test for querying station status.
 unit_queryStationStatus :: IO ()
@@ -191,7 +191,7 @@ unit_insertStationInformationApi = do
   void $ -- Suppress return value.
     runBeamPostgresDebug pPrintString conn $ runInsertReturningList $
     insert (DBS.bikeshareDb ^. DBS.bikeshareStationInformation) $
-    insertExpressions $ map DSI.fromJSONToBeamStationInformation (SI.stations stationInformationResponse)
+    insertExpressions $ map DSI.fromJSONToBeamStationInformation (SI.info_stations stationInformationResponse)
 
 unit_insertStationStatusApi :: IO ()
 unit_insertStationStatusApi = do
@@ -205,7 +205,7 @@ unit_insertStationStatusApi = do
   void $ -- Suppress return value.
     runBeamPostgresDebug pPrintString conn $ runInsertReturningList $
     insert (DBS.bikeshareDb ^. DBS.bikeshareStationStatus) $
-    insertExpressions $ map DSS.fromJSONToBeamStationStatus (SS.stations stationStatusResponse)
+    insertExpressions $ map DSS.fromJSONToBeamStationStatus (SS.status_stations stationStatusResponse)
 
 unit_insertStationBothApi :: IO ()
 unit_insertStationBothApi = do
@@ -220,12 +220,12 @@ unit_insertStationBothApi = do
   void $ -- Suppress return value.
     runBeamPostgresDebug pPrintString conn $ runInsertReturningList $
     insert (DBS.bikeshareDb ^. DBS.bikeshareStationInformation) $
-    insertExpressions $ map DSI.fromJSONToBeamStationInformation (SI.stations stationInformationResponse)
+    insertExpressions $ map DSI.fromJSONToBeamStationInformation (SI.info_stations stationInformationResponse)
 
   void $ -- Suppress return value.
     runBeamPostgresDebug pPrintString conn $ runInsertReturningList $
     insert (DBS.bikeshareDb ^. DBS.bikeshareStationStatus) $
-    insertExpressions $ map DSS.fromJSONToBeamStationStatus (SS.stations stationStatusResponse)
+    insertExpressions $ map DSS.fromJSONToBeamStationStatus (SS.status_stations stationStatusResponse)
 
 -- | pPrint with compact output.
 pPrintCompact :: (MonadIO m, Show a) => a -> m ()

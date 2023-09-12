@@ -199,7 +199,7 @@ instance FromJSON StationInformation where
 
 -- | A wrapper type for the station information response.
 newtype StationInformationResponse where
-  StationInformationResponse :: {stations :: [StationInformation]} -> StationInformationResponse
+  StationInformationResponse :: {info_stations :: [StationInformation]} -> StationInformationResponse
   deriving (Show, Generic)
 
 instance FromJSON StationInformationResponse where
