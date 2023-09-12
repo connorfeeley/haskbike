@@ -29,8 +29,9 @@ module Database.StationInformation
         , fromBeamStationInformationToJSON
         ) where
 
+import qualified API.Types                                  as API.T
+
 import           Control.Lens
-import qualified StationInformation                         as SI
 
 import           Database.Beam
 
@@ -74,7 +75,7 @@ data StationInformationT f where
                         , _info_nearby_distance           :: Columnar f Double
                         , _info_bluetooth_id              :: Columnar f Text.Text
                         , _info_ride_code_support         :: Columnar f Bool
-                        -- , _station_rental_uris               :: Columnar f SI.RentalURIs
+                        -- , _station_rental_uris               :: Columnar f API.T.RentalURIs
                         } -> StationInformationT f
   deriving (Generic, Beamable)
 
@@ -117,17 +118,17 @@ StationInformation
 -- | Newtype wrapper for RentalMethod to allow us to define a custom FromBackendRow instance.
 -- Don't want to implement database-specific code for the underlying RentalMethod type.
 newtype BeamRentalMethod where
-  BeamRentalMethod :: SI.RentalMethod -> BeamRentalMethod
-  deriving (Eq, Generic, Show, Read) via SI.RentalMethod
+  BeamRentalMethod :: API.T.RentalMethod -> BeamRentalMethod
+  deriving (Eq, Generic, Show, Read) via API.T.RentalMethod
 
 instance (BeamBackend be, FromBackendRow be Text.Text) => FromBackendRow be BeamRentalMethod where
   fromBackendRow = do
     val <- fromBackendRow
     case val :: Text.Text of
-      "KEY"           -> pure $ BeamRentalMethod SI.Key
-      "TRANSITCARD"   -> pure $ BeamRentalMethod SI.TransitCard
-      "CREDITCARD"    -> pure $ BeamRentalMethod SI.CreditCard
-      "PHONE"         -> pure $ BeamRentalMethod SI.Phone
+      "KEY"           -> pure $ BeamRentalMethod API.T.Key
+      "TRANAPI.TTCARD"   -> pure $ BeamRentalMethod API.T.TransitCard
+      "CREDITCARD"    -> pure $ BeamRentalMethod API.T.CreditCard
+      "PHONE"         -> pure $ BeamRentalMethod API.T.Phone
       _ -> fail ("Invalid value for BeamRentalMethod: " ++ Text.unpack val)
 
 instance (HasSqlValueSyntax be String, Show BeamRentalMethod) => HasSqlValueSyntax be BeamRentalMethod where
@@ -153,19 +154,19 @@ rentalMethod = DataType pgTextType
 -- | Newtype wrapper for PhysicalConfiguration to allow us to define a custom FromBackendRow instance.
 -- Don't want to implement database-specific code for the underlying PhysicalConfiguration type.
 newtype BeamPhysicalConfiguration where
-  BeamPhysicalConfiguration :: SI.PhysicalConfiguration -> BeamPhysicalConfiguration
-  deriving (Eq, Generic, Show, Read) via SI.PhysicalConfiguration
+  BeamPhysicalConfiguration :: API.T.PhysicalConfiguration -> BeamPhysicalConfiguration
+  deriving (Eq, Generic, Show, Read) via API.T.PhysicalConfiguration
 
 instance (BeamBackend be, FromBackendRow be Text.Text) => FromBackendRow be BeamPhysicalConfiguration where
   fromBackendRow = do
     val <- fromBackendRow
     case val :: Text.Text of
-      "ELECTRICBIKESTATION" -> pure $ BeamPhysicalConfiguration SI.ElectricBikeStation
-      "REGULAR"             -> pure $ BeamPhysicalConfiguration SI.Regular
-      "REGULARLITMAPFRAME"  -> pure $ BeamPhysicalConfiguration SI.RegularLitMapFrame
-      "SMARTLITMAPFRAME"    -> pure $ BeamPhysicalConfiguration SI.SmartLitMapFrame
-      "SMARTMAPFRAME"       -> pure $ BeamPhysicalConfiguration SI.SmartMapFrame
-      "VAULT"               -> pure $ BeamPhysicalConfiguration SI.Vault
+      "ELECTRICBIKESTATION" -> pure $ BeamPhysicalConfiguration API.T.ElectricBikeStation
+      "REGULAR"             -> pure $ BeamPhysicalConfiguration API.T.Regular
+      "REGULARLITMAPFRAME"  -> pure $ BeamPhysicalConfiguration API.T.RegularLitMapFrame
+      "SMARTLITMAPFRAME"    -> pure $ BeamPhysicalConfiguration API.T.SmartLitMapFrame
+      "SMARTMAPFRAME"       -> pure $ BeamPhysicalConfiguration API.T.SmartMapFrame
+      "VAULT"               -> pure $ BeamPhysicalConfiguration API.T.Vault
       _ -> fail ("Invalid value for BeamPhysicalConfiguration: " ++ Text.unpack val)
 
 instance (HasSqlValueSyntax be String, Show BeamPhysicalConfiguration) => HasSqlValueSyntax be BeamPhysicalConfiguration where
@@ -189,7 +190,7 @@ physicalConfiguration :: DataType Postgres BeamPhysicalConfiguration
 physicalConfiguration = DataType pgTextType
 
 -- | Convert from the JSON StationInformation to the Beam StationInformation type
-fromJSONToBeamStationInformation (SI.StationInformation
+fromJSONToBeamStationInformation (API.T.StationInformation
                                   station_id
                                   name
                                   physical_configuration
@@ -229,7 +230,7 @@ fromJSONToBeamStationInformation (SI.StationInformation
                      }
 
 -- | Convert from the Beam StationInformation type to the JSON StationInformation
-fromBeamStationInformationToJSON :: StationInformation -> SI.StationInformation
+fromBeamStationInformationToJSON :: StationInformation -> API.T.StationInformation
 fromBeamStationInformationToJSON (StationInformation
                                   _id
                                   station_id
@@ -250,21 +251,21 @@ fromBeamStationInformationToJSON (StationInformation
                                   ride_code_support
                                   -- rental_uris
                                  ) =
-  SI.StationInformation { SI.info_station_id                = fromIntegral station_id
-                        , SI.info_name                      = show name
-                        , SI.info_physical_configuration    = coerce physical_configuration :: SI.PhysicalConfiguration
-                        , SI.info_lat                       = lat
-                        , SI.info_lon                       = lon
-                        , SI.info_altitude                  = altitude
-                        , SI.info_address                   = Text.unpack address
-                        , SI.info_capacity                  = fromIntegral capacity
-                        , SI.info_is_charging_station       = is_charging_station
-                        , SI.info_rental_methods            = coerce (toList rental_methods) :: [SI.RentalMethod]
-                        , SI.info_is_virtual_station        = is_virtual_station
-                        , SI.info_groups                    = Text.unpack <$> toList groups
-                        , SI.info_obcn                      = Text.unpack obcn
-                        , SI.info_nearby_distance           = nearby_distance
-                        , SI.info_bluetooth_id              = Text.unpack bluetooth_id
-                        , SI.info_ride_code_support         = ride_code_support
-                        -- , SI.info_rental_uris               = SI.RentalURIs { SI.rental_uris_android = "", SI.rental_uris_ios = "", SI.rental_uris_web = "" }
+  API.T.StationInformation { API.T.info_station_id                = fromIntegral station_id
+                        , API.T.info_name                      = show name
+                        , API.T.info_physical_configuration    = coerce physical_configuration :: API.T.PhysicalConfiguration
+                        , API.T.info_lat                       = lat
+                        , API.T.info_lon                       = lon
+                        , API.T.info_altitude                  = altitude
+                        , API.T.info_address                   = Text.unpack address
+                        , API.T.info_capacity                  = fromIntegral capacity
+                        , API.T.info_is_charging_station       = is_charging_station
+                        , API.T.info_rental_methods            = coerce (toList rental_methods) :: [API.T.RentalMethod]
+                        , API.T.info_is_virtual_station        = is_virtual_station
+                        , API.T.info_groups                    = Text.unpack <$> toList groups
+                        , API.T.info_obcn                      = Text.unpack obcn
+                        , API.T.info_nearby_distance           = nearby_distance
+                        , API.T.info_bluetooth_id              = Text.unpack bluetooth_id
+                        , API.T.info_ride_code_support         = ride_code_support
+                        -- , API.T.info_rental_uris               = API.T.RentalURIs { API.T.rental_uris_android = "", API.T.rental_uris_ios = "", API.T.rental_uris_web = "" }
                         }
