@@ -3,7 +3,7 @@
 #+date: 2023-09-10
 * Tasks
 ** TODO Add function to ~Operations~ to query and order by ~last_reported~
-#+begin_src sql
+#+begin_src sql :engine postgres :database haskbike
 select
        station_information.name,
        station_status.*
@@ -13,6 +13,16 @@ on station_status.station_id = station_information.station_id
 order by last_reported asc
 limit 6;
 #+end_src
+
+#+RESULTS:
+| name                             |  id | station_id | num_bikes_available | num_bikes_disabled | num_docks_available | num_docks_disabled | last_reported       | is_charging_station | status     | is_installed | is_renting | is_returning | traffic | vehicle_docks_available | vehicle_types_available_boost | vehicle_types_available_iconic | vehicle_types_available_efit | vehicle_types_available_efit_g5 |
+|----------------------------------+-----+------------+---------------------+--------------------+---------------------+--------------------+---------------------+---------------------+------------+--------------+------------+--------------+---------+-------------------------+-------------------------------+--------------------------------+------------------------------+---------------------------------|
+| St. Joseph St / Bay St - SMART   | 459 |       7548 |                  11 |                  0 |                   8 |                  0 | 2023-09-12 18:27:45 | f                   | IN_SERVICE | t            | t          | t            |         |                       8 |                             0 |                             10 |                            0 |                               1 |
+| Beverley St / College St         | 148 |       7161 |                   6 |                  0 |                  17 |                  0 | 2023-09-12 18:55:03 | f                   | IN_SERVICE | t            | t          | t            |         |                      17 |                             0 |                              6 |                            0 |                               0 |
+| Gerrard St E / Leslie St         | 366 |       7431 |                  20 |                  0 |                   5 |                  0 | 2023-09-12 19:02:56 | f                   | IN_SERVICE | t            | t          | t            |         |                       5 |                             0 |                             20 |                            0 |                               0 |
+| Lake Shore Blvd E / Knox Ave     | 274 |       7319 |                   9 |                  0 |                   2 |                  0 | 2023-09-12 19:03:13 | f                   | IN_SERVICE | t            | t          | t            |         |                       2 |                             0 |                              8 |                            0 |                               1 |
+| Rosehill Ave / Avoca Ave - SMART | 245 |       7279 |                   0 |                  0 |                  16 |                  0 | 2023-09-12 19:03:51 | f                   | IN_SERVICE | t            | t          | t            |         |                      16 |                             0 |                              0 |                            0 |                               0 |
+| Widmer St / King St W            | 609 |       7721 |                   4 |                  0 |                   7 |                  0 | 2023-09-12 19:03:51 | f                   | IN_SERVICE | t            | t          | t            |         |                       7 |                             0 |                              4 |                            0 |                               0 |
 
 * Useful Commands
 ** Run Tests (Showing all Output)
