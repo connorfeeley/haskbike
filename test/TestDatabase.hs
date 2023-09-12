@@ -25,19 +25,20 @@ module TestDatabase where
 import qualified Database.BikeShare                       as DBS
 import           Database.Migrations                      (migrateDB)
 
-import           Database.StationInformation              (name)
+import           Database.StationInformation              (info_name)
 import qualified Database.StationInformation              as DSI
-import           Database.StationStatus                   (num_bikes_available,
-                                                           num_bikes_disabled,
-                                                           num_docks_available,
-                                                           num_docks_disabled,
-                                                           station_id)
+import           Database.StationStatus                   (status_num_bikes_available,
+                                                           status_num_bikes_disabled,
+                                                           status_num_docks_available,
+                                                           status_num_docks_disabled,
+                                                           status_station_id)
 import qualified Database.StationStatus                   as DSS
 
+import qualified Client
 import qualified StationInformation                       as SI
 import qualified StationStatus                            as SS
 import qualified TestClient
-import qualified Client
+-- import           Types.API
 
 import           Test.Tasty.HUnit
 
@@ -160,7 +161,7 @@ queryStationStatus conn = do
   runBeamPostgresDebug pPrintString conn $ runSelectReturningList $ select $ do
     info <- all_ (DBS.bikeshareDb ^. DBS.bikeshareStationInformation)
     status <- all_ (DBS.bikeshareDb ^. DBS.bikeshareStationStatus)
-    guard_ (DSS._station_id status `references_` info)
+    guard_ (DSS._status_station_id status `references_` info)
     -- station_status <- leftJoin_ (all_(DBS.bikeshareDb ^. DBS.bikeshareStationStatus))
     --   (\station_status -> DSS._station_id station_status `references_` station_information)
     -- guard_ (isJust_ station_status)
@@ -170,12 +171,12 @@ queryStationStatusFields conn =
   runBeamPostgresDebug pPrintString conn $ runSelectReturningList $ select $ do
   info <- all_ (DBS.bikeshareDb ^. DBS.bikeshareStationInformation)
   status <- all_ (DBS.bikeshareDb ^. DBS.bikeshareStationStatus)
-  guard_ (DSS._station_id status `references_` info)
-  pure ( info^.name
-       , status^.num_bikes_available
-       , status^.num_bikes_disabled
-       , status^.num_docks_available
-       , status^.num_docks_disabled
+  guard_ (DSS._status_station_id status `references_` info)
+  pure ( info^.info_name
+       , status^.status_num_bikes_available
+       , status^.status_num_bikes_disabled
+       , status^.status_num_docks_available
+       , status^.status_num_docks_disabled
        )
 
 unit_insertStationInformationApi :: IO ()
@@ -237,9 +238,9 @@ queryDisabledDocks conn =
   runBeamPostgresDebug pPrintString conn $ runSelectReturningList $ select $ do
   info <- all_ (DBS.bikeshareDb ^. DBS.bikeshareStationInformation)
   status <- all_ (DBS.bikeshareDb ^. DBS.bikeshareStationStatus)
-  guard_ (DSS._station_id status `references_` info &&. status^.num_docks_disabled >. 0)
-  pure ( info^.name
-       , status^.num_docks_disabled
+  guard_ (DSS._status_station_id status `references_` info &&. status^.status_num_docks_disabled >. 0)
+  pure ( info^.info_name
+       , status^.status_num_docks_disabled
        )
 
 -- | Helper function to print disabled docks.
