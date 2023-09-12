@@ -63,7 +63,7 @@ data StationInformationT f where
                         , _physical_configuration    :: Columnar f BeamPhysicalConfiguration
                         , _lat                       :: Columnar f Double
                         , _lon                       :: Columnar f Double
-                        , _altitude                  :: Columnar f Double
+                        , _altitude                  :: Columnar f (Maybe Double)
                         , _address                   :: Columnar f Text.Text
                         , _capacity                  :: Columnar f Int32
                         , _is_charging_station       :: Columnar f Bool

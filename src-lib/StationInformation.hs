@@ -141,7 +141,7 @@ data StationInformation where
                         , physical_configuration    :: PhysicalConfiguration
                         , lat                       :: Double
                         , lon                       :: Double
-                        , altitude                  :: Double
+                        , altitude                  :: Maybe Double
                         , address                   :: String
                         , capacity                  :: Int
                         , is_charging_station       :: Bool
