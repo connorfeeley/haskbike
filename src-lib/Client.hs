@@ -15,22 +15,22 @@ module Client
   , run
   , runQuery
   , handleResponse
+  , mkClientManager
+  , runQueryWithEnv
   ) where
 
 import           API.Types               (StationInformationResponse,
                                           StationStatusResponse)
+import           BikeShareAPI
 
+import           Control.Exception       (Exception (displayException))
+import           Data.Aeson              (Object)
 import           Data.Proxy
 import           Network.HTTP.Client     (Manager, newManager)
 import           Network.HTTP.Client.TLS (tlsManagerSettings)
 import           Servant.API
 import           Servant.Client
 import           Text.Pretty.Simple      (pPrintString)
-
-import           BikeShareAPI
-import           Data.Aeson              (Object)
-
-import           Control.Exception       (Exception (displayException))
 
 -- | The BikeShare API client.
 bikeShareAPIClient :: Proxy BikeShareAPI
@@ -53,11 +53,19 @@ systemPricingPlans  :: ClientM Object
   :<|> systemPricingPlans
   ) = client bikeShareAPIClient
 
-runQuery :: Manager-> ClientM a -> IO (Either ClientError a)
+mkClientManager :: IO Manager
+mkClientManager = newManager tlsManagerSettings
+
+runQuery :: Manager -> ClientM a -> IO (Either ClientError a)
 runQuery clientManager endpoint = runClientM endpoint (mkClientEnv clientManager bikeshareBaseUrl)
   where
     bikeshareBaseUrl :: BaseUrl
     bikeshareBaseUrl = BaseUrl Https "toronto.publicbikesystem.net" 443 "customer/gbfs/v2"
+
+runQueryWithEnv :: ClientM a -> IO (Either ClientError a)
+runQueryWithEnv query = do
+  clientManager <- mkClientManager
+  runQuery clientManager query
 
 handleResponse :: (Exception e, Show a) => String -> Either e a -> IO ()
 handleResponse name response = case response of
@@ -67,7 +75,7 @@ handleResponse name response = case response of
 -- | A simple example of using the BikeShare API client.
 run :: IO ()
 run = do
-    clientManager <- newManager tlsManagerSettings
+    clientManager <- mkClientManager
 
     --
     -- Example usage of API client functions.

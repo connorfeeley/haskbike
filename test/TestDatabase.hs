@@ -29,7 +29,6 @@ import           Database.Utils
 import           API.Types                                (StationInformationResponse (..),
                                                            StationStatusResponse (..))
 import qualified Client
-import qualified TestClient
 
 import           Database.Beam
 import           Database.Beam.Backend.SQL.BeamExtensions
@@ -107,13 +106,16 @@ unit_insertStationInformationApi = do
   conn <- setupDatabase
 
   -- Query API for station information.
-  stationInformationResponse <- TestClient.queryApi Client.stationInformation
+  stationInformationResponse <- Client.runQueryWithEnv Client.stationInformation
 
-  -- Insert station information into database.
-  void $ -- Suppress return value.
-    runBeamPostgresDebug pPrintString conn $ runInsertReturningList $
-    insert (DBS.bikeshareDb ^. DBS.bikeshareStationInformation) $
-    insertExpressions $ map fromJSONToBeamStationInformation (info_stations stationInformationResponse)
+  case stationInformationResponse of
+    (Left err)              -> assertFailure $ "Error querying API: " ++ show err
+    (Right info) -> do
+      -- Insert station information into database.
+      void $ -- Suppress return value.
+        runBeamPostgresDebug pPrintString conn $ runInsertReturningList $
+        insert (DBS.bikeshareDb ^. DBS.bikeshareStationInformation) $
+        insertExpressions $ map fromJSONToBeamStationInformation (info_stations info)
 
 unit_insertStationStatusApi :: IO ()
 unit_insertStationStatusApi = do
@@ -121,13 +123,16 @@ unit_insertStationStatusApi = do
   conn <- setupDatabase
 
   -- Query API for station status.
-  stationStatusResponse <- TestClient.queryApi Client.stationStatus
+  stationStatusResponse <- Client.runQueryWithEnv Client.stationStatus
 
-  -- Insert station status into database.
-  void $ -- Suppress return value.
-    runBeamPostgresDebug pPrintString conn $ runInsertReturningList $
-    insert (DBS.bikeshareDb ^. DBS.bikeshareStationStatus) $
-    insertExpressions $ map fromJSONToBeamStationStatus (status_stations stationStatusResponse)
+  case stationStatusResponse of
+    (Left err)              -> assertFailure $ "Error querying API: " ++ show err
+    (Right status)      -> do
+      -- Insert station status into database.
+      void $ -- Suppress return value.
+        runBeamPostgresDebug pPrintString conn $ runInsertReturningList $
+        insert (DBS.bikeshareDb ^. DBS.bikeshareStationStatus) $
+        insertExpressions $ map fromJSONToBeamStationStatus (status_stations status)
 
 unit_insertStationBothApi :: IO ()
 unit_insertStationBothApi = do
@@ -135,16 +140,22 @@ unit_insertStationBothApi = do
   conn <- setupDatabase
 
   -- Query API.
-  stationInformationResponse <- TestClient.queryApi Client.stationInformation
-  stationStatusResponse <- TestClient.queryApi Client.stationStatus
+  stationInformationResponse  <- Client.runQueryWithEnv Client.stationInformation
+  stationStatusResponse       <- Client.runQueryWithEnv Client.stationStatus
 
-  -- Insert station status into database.
-  void $ -- Suppress return value.
-    runBeamPostgresDebug pPrintString conn $ runInsertReturningList $
-    insert (DBS.bikeshareDb ^. DBS.bikeshareStationInformation) $
-    insertExpressions $ map fromJSONToBeamStationInformation (info_stations stationInformationResponse)
+  case (stationInformationResponse, stationStatusResponse) of
+    (Left err_info, Left err_status) -> assertFailure $ "Error querying API: " ++ show err_info ++ " " ++ show err_status
+    (Left err_info, _)              -> assertFailure $ "Error querying API: " ++ show err_info
+    (_, Left err_status)            -> assertFailure $ "Error querying API: " ++ show err_status
+    (Right info, Right status)      -> do
+      -- Insert station information into database.
+      void $ -- Suppress return value.
+        runBeamPostgresDebug pPrintString conn $ runInsertReturningList $
+        insert (DBS.bikeshareDb ^. DBS.bikeshareStationInformation) $
+        insertExpressions $ map fromJSONToBeamStationInformation (info_stations info)
 
-  void $ -- Suppress return value.
-    runBeamPostgresDebug pPrintString conn $ runInsertReturningList $
-    insert (DBS.bikeshareDb ^. DBS.bikeshareStationStatus) $
-    insertExpressions $ map fromJSONToBeamStationStatus (status_stations stationStatusResponse)
+      -- Insert station status into database.
+      void $ -- Suppress return value.
+        runBeamPostgresDebug pPrintString conn $ runInsertReturningList $
+        insert (DBS.bikeshareDb ^. DBS.bikeshareStationStatus) $
+        insertExpressions $ map fromJSONToBeamStationStatus (status_stations status)

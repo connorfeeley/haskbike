@@ -11,9 +11,14 @@ import           Database.Utils
 import           Control.Lens
 import           Text.Pretty.Simple
 
+import           Client
+import           Control.Exception                        (Exception (displayException))
+import           Control.Monad                            (void)
 import           Database.Beam
 import           Database.Beam.Backend.SQL.BeamExtensions
 import           Database.Beam.Postgres
+import           Network.HTTP.Client                      (newManager)
+import           Network.HTTP.Client.TLS                  (tlsManagerSettings)
 
 -- | Query database for disabled docks, returning tuples of (name, num_docks_disabled).
 queryDisabledDocks conn =
@@ -67,3 +72,18 @@ insertStationStatus conn status = do
   runBeamPostgresDebug pPrintString conn $ runInsertReturningList $
     insert (DBS.bikeshareDb ^. DBS.bikeshareStationStatus) $
     insertExpressions $ map fromJSONToBeamStationStatus (status_stations status)
+
+insertStationInformationApi :: Connection -> IO ()
+insertStationInformationApi conn = do
+  clientManager <- newManager tlsManagerSettings
+  -- Query API for station information.
+  stationInformationResponse <- runQuery clientManager stationInformation
+
+  case stationInformationResponse of
+    Left err -> putStrLn $ "Error: " ++ displayException err
+    Right info -> do
+      -- Insert station information into database.
+      void $ -- Suppress return value.
+        runBeamPostgresDebug pPrintString conn $ runInsertReturningList $
+        insert (DBS.bikeshareDb ^. DBS.bikeshareStationInformation) $
+        insertExpressions $ map fromJSONToBeamStationInformation (info_stations info)
