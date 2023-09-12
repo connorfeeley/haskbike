@@ -3,7 +3,6 @@
 module Database.Migrations where
 
 import           Database.BikeShare
-import           Database.Types
 
 import           Database.Beam
 import           Database.Beam.Migrate
@@ -44,7 +43,7 @@ initialSetup = BikeshareDb
         , _status_num_docks_disabled      = field "num_docks_disabled"      int notNull
         , _status_last_reported           = field "last_reported"           (maybeType int)
         , _status_is_charging_station     = field "is_charging_station"     boolean notNull
-        , _status_status                  = field "status"                  stationStatus
+        , _status_status                  = field "status"                  stationStatusType
         , _status_is_installed            = field "is_installed"            boolean notNull
         , _status_is_renting              = field "is_renting"              boolean notNull
         , _status_is_returning            = field "is_returning"            boolean notNull

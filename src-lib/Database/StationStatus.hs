@@ -26,7 +26,7 @@ module Database.StationStatus
         , status_num_bikes_disabled
         , status_num_docks_available
         , status_num_docks_disabled
-        , stationStatus
+        , stationStatusType
         , vehicleTypeFields
         , vehicleTypesAvailable
         , fromJSONToBeamStationStatus
@@ -174,8 +174,8 @@ instance FromField BeamStationStatusString where
 instance ToField BeamStationStatusString where
   toField = toField . show
 
-stationStatus :: DataType Postgres BeamStationStatusString
-stationStatus = DataType pgTextType
+stationStatusType :: DataType Postgres BeamStationStatusString
+stationStatusType = DataType pgTextType
 
 -- | Convert from the JSON StationStatus to the Beam StationStatus type
 fromJSONToBeamStationStatus (API.T.StationStatus
