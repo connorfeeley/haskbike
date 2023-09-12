@@ -2,11 +2,10 @@
 
 module Database.Operations where
 
+import           API.Client
 import           API.Types                                (StationInformationResponse (..),
                                                            StationStatusResponse (..))
-import           API.Client
-import qualified Database.BikeShare                       as DBS
-import           Database.Types
+import           Database.BikeShare
 import           Database.Utils
 
 import           Control.Lens
@@ -23,8 +22,8 @@ import           Network.HTTP.Client.TLS                  (tlsManagerSettings)
 -- | Query database for disabled docks, returning tuples of (name, num_docks_disabled).
 queryDisabledDocks conn =
   runBeamPostgresDebug pPrintString conn $ runSelectReturningList $ select $ do
-  info   <- all_ (DBS.bikeshareDb ^. DBS.bikeshareStationInformation)
-  status <- all_ (DBS.bikeshareDb ^. DBS.bikeshareStationStatus)
+  info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
+  status <- all_ (bikeshareDb ^. bikeshareStationStatus)
   guard_ (_status_station_id status `references_` info &&. status^.status_num_docks_disabled >. 0)
   pure ( info^.info_name
        , status^.status_num_docks_disabled
@@ -38,10 +37,10 @@ printDisabledDocks = (connectDb >>= queryDisabledDocks) >>= pPrintCompact
 queryStationStatus :: Connection -> IO [(StationInformation, StationStatus)]
 queryStationStatus conn = do
   runBeamPostgresDebug pPrintString conn $ runSelectReturningList $ select $ do
-    info   <- all_ (DBS.bikeshareDb ^. DBS.bikeshareStationInformation)
-    status <- all_ (DBS.bikeshareDb ^. DBS.bikeshareStationStatus)
+    info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
+    status <- all_ (bikeshareDb ^. bikeshareStationStatus)
     guard_ (_status_station_id status `references_` info)
-    -- station_status <- leftJoin_ (all_(DBS.bikeshareDb ^. DBS.bikeshareStationStatus))
+    -- station_status <- leftJoin_ (all_(bikeshareDb ^. bikeshareStationStatus))
     --   (\station_status -> _station_id station_status `references_` station_information)
     -- guard_ (isJust_ station_status)
     pure (info, status)
@@ -49,8 +48,8 @@ queryStationStatus conn = do
 -- | Query database for station status, returning the number of bikes and docks available and disabled.
 queryStationStatusFields conn =
   runBeamPostgresDebug pPrintString conn $ runSelectReturningList $ select $ do
-  info   <- all_ (DBS.bikeshareDb ^. DBS.bikeshareStationInformation)
-  status <- all_ (DBS.bikeshareDb ^. DBS.bikeshareStationStatus)
+  info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
+  status <- all_ (bikeshareDb ^. bikeshareStationStatus)
   guard_ (_status_station_id status `references_` info)
   pure ( info^.info_name
        , status^.status_num_bikes_available
@@ -63,14 +62,14 @@ queryStationStatusFields conn =
 insertStationInformation :: Connection -> StationInformationResponse -> IO [StationInformation]
 insertStationInformation conn stations = do
   runBeamPostgresDebug pPrintString conn $ runInsertReturningList $
-    insert (DBS.bikeshareDb ^. DBS.bikeshareStationInformation) $
+    insert (bikeshareDb ^. bikeshareStationInformation) $
     insertExpressions $ map fromJSONToBeamStationInformation (info_stations stations)
 
 -- | Insert station status into the database.
 insertStationStatus :: Connection -> StationStatusResponse -> IO [StationStatus]
 insertStationStatus conn status = do
   runBeamPostgresDebug pPrintString conn $ runInsertReturningList $
-    insert (DBS.bikeshareDb ^. DBS.bikeshareStationStatus) $
+    insert (bikeshareDb ^. bikeshareStationStatus) $
     insertExpressions $ map fromJSONToBeamStationStatus (status_stations status)
 
 insertStationInformationApi :: Connection -> IO ()
@@ -85,5 +84,5 @@ insertStationInformationApi conn = do
       -- Insert station information into database.
       void $ -- Suppress return value.
         runBeamPostgresDebug pPrintString conn $ runInsertReturningList $
-        insert (DBS.bikeshareDb ^. DBS.bikeshareStationInformation) $
+        insert (bikeshareDb ^. bikeshareStationInformation) $
         insertExpressions $ map fromJSONToBeamStationInformation (info_stations info)
