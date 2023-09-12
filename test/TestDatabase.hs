@@ -24,8 +24,15 @@ module TestDatabase where
 import qualified Database.BikeShare                       as DBS
 import           Database.Migrations                      (migrateDB)
 
+import           Database.StationInformation              (name)
 import qualified Database.StationInformation              as DSI
+import           Database.StationStatus                   (num_bikes_available,
+                                                           num_bikes_disabled,
+                                                           num_docks_available,
+                                                           num_docks_disabled,
+                                                           station_id)
 import qualified Database.StationStatus                   as DSS
+
 import qualified StationInformation                       as SI
 import qualified StationStatus                            as SS
 
@@ -137,25 +144,26 @@ unit_queryStationStatus = do
   _stationStatus      <- insertStationStatus conn
   queryStationStatus conn >>= pPrint
 
--- queryStationStatus :: Connection -> IO [DSS.StationStatus]
+queryStationStatus :: Connection -> IO [(DSI.StationInformation, DSS.StationStatus)]
 queryStationStatus conn = do
   insertedStations <- runBeamPostgresDebug pPrintString conn $ runSelectReturningList $ select $ do
-    station_information <- all_ (DBS.bikeshareDb ^. DBS.bikeshareStationInformation)
-    station_status <- all_ (DBS.bikeshareDb ^. DBS.bikeshareStationStatus)
-    guard_ (DSS._station_id station_status `references_` station_information)
+    info <- all_ (DBS.bikeshareDb ^. DBS.bikeshareStationInformation)
+    status <- all_ (DBS.bikeshareDb ^. DBS.bikeshareStationStatus)
+    guard_ (DSS._station_id status `references_` info)
     -- station_status <- leftJoin_ (all_(DBS.bikeshareDb ^. DBS.bikeshareStationStatus))
     --   (\station_status -> DSS._station_id station_status `references_` station_information)
     -- guard_ (isJust_ station_status)
-    pure ( DSI._name        station_information
-         , available_bikes  station_status
-         , available_docks  station_status
-         , disabled_bikes   station_status
-         , disabled_docks   station_status
-         )
+    pure (info, status)
   pure insertedStations
-  where
-    name = DSI._name . fst
-    available_bikes = DSS._num_bikes_available 
-    available_docks = DSS._num_docks_available 
-    disabled_bikes  = DSS._num_bikes_disabled  
-    disabled_docks  = DSS._num_docks_disabled  
+
+queryStationStatusFields conn = do
+  runBeamPostgresDebug pPrintString conn $ runSelectReturningList $ select $ do
+    info <- all_ (DBS.bikeshareDb ^. DBS.bikeshareStationInformation)
+    status <- all_ (DBS.bikeshareDb ^. DBS.bikeshareStationStatus)
+    guard_ (DSS._station_id status `references_` info)
+    pure ( info^.name
+         , status^.num_bikes_available
+         , status^.num_bikes_disabled
+         , status^.num_docks_available
+         , status^.num_docks_disabled
+         )

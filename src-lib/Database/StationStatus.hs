@@ -21,6 +21,11 @@ module Database.StationStatus
         , PrimaryKey(StationStatusId)
         , BeamStationStatusString(..)
         , VehicleTypeMixin(..)
+        , station_id
+        , num_bikes_available
+        , num_bikes_disabled
+        , num_docks_available
+        , num_docks_disabled
         , stationStatus
         , vehicleTypeFields
         , vehicleTypesAvailable

@@ -21,6 +21,8 @@ module Database.StationInformation
         , PrimaryKey(StationInformationId)
         , BeamRentalMethod(..)
         , rentalMethod
+        , station_id
+        , name
         , BeamPhysicalConfiguration(..)
         , physicalConfiguration
         , fromJSONToBeamStationInformation
