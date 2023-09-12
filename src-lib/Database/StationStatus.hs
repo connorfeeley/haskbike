@@ -27,6 +27,7 @@ module Database.StationStatus
         , status_num_docks_available
         , status_num_docks_disabled
         , stationStatusType
+        , reportTimeType
         , vehicleTypeFields
         , vehicleTypesAvailable
         , fromJSONToBeamStationStatus
@@ -43,13 +44,18 @@ import           Data.Int
 import           Data.List                                  (find)
 import           Data.String                                (IsString (fromString))
 import qualified Data.Text                                  as Text
+import           Data.Time
+import           Data.Time.Clock.POSIX
 
 import           Database.Beam
 import           Database.Beam.Backend                      (BeamBackend,
                                                              HasSqlValueSyntax (sqlValueSyntax),
+                                                             IsSql92DataTypeSyntax (timestampType),
+                                                             SqlNull (SqlNull),
                                                              SqlSerial (..))
 import           Database.Beam.Postgres                     (Postgres)
-import           Database.Beam.Postgres.Syntax              (pgTextType)
+import           Database.Beam.Postgres.Syntax              (PgValueSyntax,
+                                                             pgTextType)
 import           Database.PostgreSQL.Simple.FromField       (Field (typeOid),
                                                              FromField (..),
                                                              ResultError (..),
@@ -67,7 +73,7 @@ data StationStatusT f where
                    , _status_num_bikes_disabled      :: Columnar f Int32
                    , _status_num_docks_available     :: Columnar f Int32
                    , _status_num_docks_disabled      :: Columnar f Int32
-                   , _status_last_reported           :: Columnar f (Maybe Int32)
+                   , _status_last_reported           :: Columnar f (Maybe BeamReportTime)
                    , _status_is_charging_station     :: Columnar f Bool
                    , _status_status                  :: Columnar f BeamStationStatusString
                    , _status_is_installed            :: Columnar f Bool
@@ -257,3 +263,48 @@ fromBeamStationStatusToJSON (StationStatus
                                                                 , API.T.VehicleType "" (fromIntegral (vehicle_types_available ^. available_efit_g5))
                                                                 ]
                       }
+
+newtype BeamReportTime where
+  BeamReportTime :: LocalTime -> BeamReportTime
+  deriving (Eq, Ord, Show, Read, FromField, ToField) via LocalTime
+  deriving (HasSqlValueSyntax PgValueSyntax) via LocalTime
+  deriving (FromBackendRow Postgres) via LocalTime
+
+instance (HasSqlValueSyntax BeamReportTime x, HasSqlValueSyntax BeamReportTime SqlNull) => HasSqlValueSyntax BeamReportTime (Maybe x) where
+  sqlValueSyntax (Just x) = sqlValueSyntax x
+  sqlValueSyntax Nothing  = sqlValueSyntax SqlNull
+
+instance Num BeamReportTime where
+    fromInteger i = BeamReportTime $ utcToLocalTime reportTimezone . posixSecondsToUTCTime . secondsToNominalDiffTime . fromIntegral $ i
+    abs           = error "BeamReportTime: abs not implemented"
+    signum        = error "BeamReportTime: signum not implemented"
+    negate        = error "BeamReportTime: negate not implemented"
+    (+)           = error "BeamReportTime: (+) not implemented"
+    (-)           = error "BeamReportTime: (-) not implemented"
+    (*)           = error "BeamReportTime: (*) not implemented"
+
+instance Real BeamReportTime where
+  toRational (BeamReportTime t) = toRational . toModifiedJulianDay . localDay $ t
+
+instance Enum BeamReportTime where
+  toEnum = BeamReportTime . reportTimeToLocal . toInteger
+  fromEnum a = fromIntegral a :: Int
+
+instance Enum BeamReportTime => Integral BeamReportTime where
+  toInteger (BeamReportTime t) = floor . utcTimeToPOSIXSeconds . localTimeToUTC reportTimezone $ t
+  quotRem a _ = (a, a)
+
+reportTimeType :: DataType Postgres BeamReportTime
+reportTimeType = DataType (timestampType Nothing False)
+
+-- | Timezone used to convert the API.T.StationStatus.last_reported field to a local time (effectively UTC).
+reportTimezone :: TimeZone
+reportTimezone = TimeZone 0 False "UTC"
+
+-- | Convert from the API.T.StationStatus.last_reported field to a local time (effectively UTC).
+reportTimeToLocal :: Integral a => a -> LocalTime
+reportTimeToLocal = utcToLocalTime reportTimezone . posixSecondsToUTCTime . secondsToNominalDiffTime . fromIntegral
+
+-- | Convert from a local time (effectively UTC) to the API.T.StationStatus.last_reported field.
+localToReportTime :: Integral c => LocalTime -> c
+localToReportTime = floor . utcTimeToPOSIXSeconds . localTimeToUTC reportTimezone

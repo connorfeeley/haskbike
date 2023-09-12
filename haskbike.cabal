@@ -156,6 +156,7 @@ library
                     , colour
                     , text-show
                     , attoparsec
+                    , time
 
     -- Directories containing source files.
     hs-source-dirs:   src-lib
