@@ -29,8 +29,6 @@ import           API.Types                                (StationInformationRes
 import           API.Client
 
 
-import           Text.Pretty.Simple
-
 import           Data.Aeson                               (decode)
 import           Data.Aeson.Types                         (FromJSON)
 import qualified Data.ByteString                          as B

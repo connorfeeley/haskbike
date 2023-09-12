@@ -301,4 +301,4 @@ instance (HasSqlValueSyntax BeamReportTime x, HasSqlValueSyntax BeamReportTime S
 
 -- | Beam (migrate) datatype for the last_reported field in the StationStatus table.
 reportTimeType :: DataType Postgres BeamReportTime
-reportTimeType = DataType (timestampType Nothing False)
+reportTimeType = DataType (timestampType Nothing True)
