@@ -18,6 +18,7 @@
 {-# LANGUAGE TypeApplications          #-}
 {-# LANGUAGE TypeFamilies              #-}
 {-# LANGUAGE UndecidableInstances      #-}
+{-# OPTIONS_GHC -Wno-overlapping-patterns #-}
 
 module TestDatabase where
 
@@ -35,6 +36,8 @@ import qualified Database.StationStatus                   as DSS
 
 import qualified StationInformation                       as SI
 import qualified StationStatus                            as SS
+import qualified TestClient
+import qualified Client
 
 import           Test.Tasty.HUnit
 
@@ -46,11 +49,15 @@ import           Database.PostgreSQL.Simple
 import           Text.Pretty.Simple                       (pPrint, pPrintString)
 
 import           Control.Lens
-import           Data.Aeson                               (eitherDecode')
+import           Data.Aeson                               (decode)
+import           Data.Aeson.Types                         (FromJSON)
 import qualified Data.ByteString                          as B
 import           Data.ByteString.Lazy                     (fromStrict)
-import           Data.FileEmbed                           (embedDir, embedFile)
+import           Data.FileEmbed                           (embedDir)
 import           Data.String                              (fromString)
+
+import           Data.Functor                             (void)
+
 
 
 -- | Embedded test JSON data.
@@ -60,6 +67,14 @@ testJson = $(embedDir "test/json")
 -- | Get test JSON corresponding to a file path.
 lookupJson :: String -> Maybe B.ByteString
 lookupJson fileName = lookup fileName testJson
+
+testValuesInformation :: Maybe SI.StationInformationResponse
+testValuesInformation = getTestValues "station_information.json"
+testValuesStatus      :: Maybe SS.StationStatusResponse
+testValuesStatus      = getTestValues "station_status.json"
+
+getTestValues :: FromJSON a => String -> Maybe a
+getTestValues fileName = (decode <$> fromStrict) =<< lookupJson fileName
 
 -- | Construct query to drop a table using cascade.
 dropCascade :: String -> Query
@@ -95,21 +110,16 @@ unit_insertStationInformation = do
   -- Connect to the database.
   conn <- setupDatabase
 
-  _stationInformation <- insertStationInformation conn
+  case testValuesInformation of
+    Just stations -> void $ insertStationInformation conn stations
+    Nothing       -> assertFailure "Error decoding station information JSON"
   pure ()
 
-insertStationInformation :: Connection -> IO [DSI.StationInformation]
-insertStationInformation conn = do
-  let stationsJson = fromStrict $(embedFile "test/json/station_information.json")
-  let mStations = eitherDecode' stationsJson :: Either String SI.StationInformationResponse
-  case mStations of
-    Right stations -> do
-      insertedStations <- runBeamPostgresDebug pPrintString conn $ runInsertReturningList $
-        insert (DBS.bikeshareDb ^. DBS.bikeshareStationInformation) $
-        insertExpressions $ map DSI.fromJSONToBeamStationInformation (SI.stations stations)
-      pure insertedStations
-    Left errorMsg -> assertFailure $ "Error decoding station information" ++ errorMsg
-
+insertStationInformation :: Connection -> SI.StationInformationResponse -> IO [DSI.StationInformation]
+insertStationInformation conn stations = do
+  runBeamPostgresDebug pPrintString conn $ runInsertReturningList $
+    insert (DBS.bikeshareDb ^. DBS.bikeshareStationInformation) $
+    insertExpressions $ map DSI.fromJSONToBeamStationInformation (SI.stations stations)
 
 -- | HUnit test for inserting station status.
 unit_insertStationStatus :: IO ()
@@ -117,22 +127,19 @@ unit_insertStationStatus = do
   -- Connect to the database.
   conn <- setupDatabase
 
-  _stationInformation <- insertStationInformation conn
-  _stationStatus      <- insertStationStatus conn
+  case testValuesInformation of
+    Just stations -> void $ insertStationInformation conn stations
+    Nothing       -> assertFailure "Error decoding station information JSON"
+  case testValuesStatus of
+    Just stations -> void $ insertStationStatus conn stations
+    Nothing       -> assertFailure "Error decoding station status JSON"
   pure ()
 
-insertStationStatus :: Connection -> IO [DSS.StationStatus]
-insertStationStatus conn = do
-  let stationsJson = fromStrict $(embedFile "test/json/station_status.json")
-  let mStations = eitherDecode' stationsJson :: Either String SS.StationStatusResponse
-  case mStations of
-    Right stations -> do
-      insertedStations <- runBeamPostgresDebug pPrintString conn $ runInsertReturningList $
-        insert (DBS.bikeshareDb ^. DBS.bikeshareStationStatus) $
-        insertExpressions $ map DSS.fromJSONToBeamStationStatus (SS.stations stations)
-      pure insertedStations
-    Left errorMsg -> assertFailure $ "Error decoding station status" ++ errorMsg
-
+insertStationStatus :: Connection -> SS.StationStatusResponse -> IO [DSS.StationStatus]
+insertStationStatus conn status = do
+  runBeamPostgresDebug pPrintString conn $ runInsertReturningList $
+    insert (DBS.bikeshareDb ^. DBS.bikeshareStationStatus) $
+    insertExpressions $ map DSS.fromJSONToBeamStationStatus (SS.stations status)
 
 -- | HUnit test for querying station status.
 unit_queryStationStatus :: IO ()
@@ -140,13 +147,17 @@ unit_queryStationStatus = do
   -- Connect to the database.
   conn <- setupDatabase
 
-  _stationInformation <- insertStationInformation conn
-  _stationStatus      <- insertStationStatus conn
+  case testValuesInformation of
+    Just stations -> void $ insertStationInformation conn stations
+    Nothing       -> assertFailure "Error decoding station information JSON"
+  case testValuesStatus of
+    Just stations -> void $ insertStationStatus conn stations
+    Nothing       -> assertFailure "Error decoding station status JSON"
   queryStationStatus conn >>= pPrint
 
 queryStationStatus :: Connection -> IO [(DSI.StationInformation, DSS.StationStatus)]
 queryStationStatus conn = do
-  insertedStations <- runBeamPostgresDebug pPrintString conn $ runSelectReturningList $ select $ do
+  runBeamPostgresDebug pPrintString conn $ runSelectReturningList $ select $ do
     info <- all_ (DBS.bikeshareDb ^. DBS.bikeshareStationInformation)
     status <- all_ (DBS.bikeshareDb ^. DBS.bikeshareStationStatus)
     guard_ (DSS._station_id status `references_` info)
@@ -154,16 +165,26 @@ queryStationStatus conn = do
     --   (\station_status -> DSS._station_id station_status `references_` station_information)
     -- guard_ (isJust_ station_status)
     pure (info, status)
-  pure insertedStations
 
-queryStationStatusFields conn = do
+queryStationStatusFields conn =
   runBeamPostgresDebug pPrintString conn $ runSelectReturningList $ select $ do
-    info <- all_ (DBS.bikeshareDb ^. DBS.bikeshareStationInformation)
-    status <- all_ (DBS.bikeshareDb ^. DBS.bikeshareStationStatus)
-    guard_ (DSS._station_id status `references_` info)
-    pure ( info^.name
-         , status^.num_bikes_available
-         , status^.num_bikes_disabled
-         , status^.num_docks_available
-         , status^.num_docks_disabled
-         )
+  info <- all_ (DBS.bikeshareDb ^. DBS.bikeshareStationInformation)
+  status <- all_ (DBS.bikeshareDb ^. DBS.bikeshareStationStatus)
+  guard_ (DSS._station_id status `references_` info)
+  pure ( info^.name
+       , status^.num_bikes_available
+       , status^.num_bikes_disabled
+       , status^.num_docks_available
+       , status^.num_docks_disabled
+       )
+
+insertStationInformationApi :: IO [DSI.StationInformation]
+insertStationInformationApi = do
+  -- Connect to the database.
+  conn <- connectDb
+
+  stationInformationResponse <- TestClient.queryApi Client.stationInformation
+
+  runBeamPostgresDebug pPrintString conn $ runInsertReturningList $
+    insert (DBS.bikeshareDb ^. DBS.bikeshareStationInformation) $
+    insertExpressions $ map DSI.fromJSONToBeamStationInformation (SI.stations stationInformationResponse)
