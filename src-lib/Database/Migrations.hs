@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE GADTs             #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Database.Migrations where
@@ -11,6 +13,12 @@ import           Database.Beam.Postgres
 import qualified Database.Beam.Postgres.Migrate as PG
 
 import           Data.String                    (fromString)
+
+referenceInformationTable :: BeamMigrateSqlBackend be => Constraint be
+referenceInformationTable = Constraint $ referencesConstraintSyntax "station_information" ["station_id"]
+                            Nothing
+                            (Just referentialActionCascadeSyntax)
+                            Nothing
 
 initialSetup :: Migration Postgres
   (CheckedDatabaseSettings Postgres BikeshareDb)
@@ -35,24 +43,25 @@ initialSetup = BikeshareDb
         , _info_ride_code_support      = field "ride_code_support"      boolean notNull
         })
   <*> (createTable "station_status" $ StationStatus
-        { _status_id                      = field "id"                      PG.serial notNull unique
-        , _status_station_id              = StationInformationId $ field "station_id" int notNull unique
-        , _status_num_bikes_available     = field "num_bikes_available"     int notNull
-        , _status_num_bikes_disabled      = field "num_bikes_disabled"      int notNull
-        , _status_num_docks_available     = field "num_docks_available"     int notNull
-        , _status_num_docks_disabled      = field "num_docks_disabled"      int notNull
-        , _status_last_reported           = field "last_reported"           (maybeType reportTimeType)
-        , _status_is_charging_station     = field "is_charging_station"     boolean notNull
-        , _status_status                  = field "status"                  stationStatusType
-        , _status_is_installed            = field "is_installed"            boolean notNull
-        , _status_is_renting              = field "is_renting"              boolean notNull
-        , _status_is_returning            = field "is_returning"            boolean notNull
-        , _status_traffic                 = field "traffic"                 (maybeType (varchar (Just 100)))
-        , _status_vehicle_docks_available = field "vehicle_docks_available" int notNull
-        , _status_vehicle_types_available = VehicleType (field "vehicle_types_available_boost"   int)
-                                                        (field "vehicle_types_available_iconic"  int)
-                                                        (field "vehicle_types_available_efit"    int)
-                                                        (field "vehicle_types_available_efit_g5" int)
+        { _d_status_id                      = field "id"                      PG.serial notNull unique
+        , _d_status_info_id                 = StationInformationId $ field "info_id" int notNull unique referenceInformationTable
+        , _d_status_station_id              = field "station_id" int notNull
+        , _d_status_num_bikes_available     = field "num_bikes_available"     int notNull
+        , _d_status_num_bikes_disabled      = field "num_bikes_disabled"      int notNull
+        , _d_status_num_docks_available     = field "num_docks_available"     int notNull
+        , _d_status_num_docks_disabled      = field "num_docks_disabled"      int notNull
+        , _d_status_last_reported           = field "last_reported"           (maybeType reportTimeType)
+        , _d_status_is_charging_station     = field "is_charging_station"     boolean notNull
+        , _d_status_status                  = field "status"                  stationStatusType
+        , _d_status_is_installed            = field "is_installed"            boolean notNull
+        , _d_status_is_renting              = field "is_renting"              boolean notNull
+        , _d_status_is_returning            = field "is_returning"            boolean notNull
+        , _d_status_traffic                 = field "traffic"                 (maybeType (varchar (Just 100)))
+        , _d_status_vehicle_docks_available = field "vehicle_docks_available" int notNull
+        , _d_status_vehicle_types_available = VehicleType (field "vehicle_types_available_boost"   int)
+                                                          (field "vehicle_types_available_iconic"  int)
+                                                          (field "vehicle_types_available_efit"    int)
+                                                          (field "vehicle_types_available_efit_g5" int)
         })
 
 initialSetupStep :: MigrationSteps Postgres
@@ -69,7 +78,7 @@ allowDestructive = defaultUpToDateHooks
   { runIrreversibleHook = pure True }
 
 migrateDB :: Database.Beam.Postgres.Connection -> IO (Maybe (CheckedDatabaseSettings Postgres BikeshareDb))
-migrateDB conn = runBeamPostgresDebug putStrLn conn $
+migrateDB conn = runBeamPostgres conn $
   bringUpToDateWithHooks
     allowDestructive
     PG.migrationBackend

@@ -2,17 +2,14 @@
 
 module Database.Utils where
 
-import qualified Database.BikeShare         as DBS
-
-import           Control.Lens
-import           Data.String                (fromString)
+import           Data.String (fromString)
 import           Text.Pretty.Simple
 
 import           Database.Beam
 import           Database.Beam.Postgres
-import           Database.Migrations        (migrateDB)
+import           Database.Migrations (migrateDB)
 import           Database.PostgreSQL.Simple
-import           Database.Types
+
 
 -- | Construct query to drop a table using cascade.
 dropCascade :: String -> Query

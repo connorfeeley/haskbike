@@ -55,7 +55,7 @@
                 # stylish-haskell
                 ;
               # Disable ghcid.
-              ghcid = null;
+              # ghcid = null;
 
               ### Other tools.
               inherit (pkgs)

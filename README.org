@@ -6,6 +6,11 @@
 #+date: 2023-09-10
 #+PROPERTY: header-args:sql+ :engine postgres :database haskbike
 * Tasks
+** TODO [#A] Station status for ~station_id~ = ~7165~
+Station status API returns a station that isn't returned in the information API.
+
+
+** TODO [#B] Add test to check foreign key ~`references_`~ works correctly
 ** TODO Add function to ~Operations~ to query and order by ~last_reported~
 #+name: joined-stations
 #+begin_src sql
@@ -38,7 +43,6 @@ limit 6;
 | Lake Shore Blvd E / Knox Ave     | 274 |       7319 |                   9 |                  0 |                   2 |                  0 | 2023-09-12 19:03:13 | f                   | IN_SERVICE | t            | t          | t            |         |                       2 |                             0 |                              8 |                            0 |                               1 |
 | Rosehill Ave / Avoca Ave - SMART | 245 |       7279 |                   0 |                  0 |                  16 |                  0 | 2023-09-12 19:03:51 | f                   | IN_SERVICE | t            | t          | t            |         |                      16 |                             0 |                              0 |                            0 |                               0 |
 | Widmer St / King St W            | 609 |       7721 |                   4 |                  0 |                   7 |                  0 | 2023-09-12 19:03:51 | f                   | IN_SERVICE | t            | t          | t            |         |                       7 |                             0 |                              4 |                            0 |                               0 |
-
 ** TODO View
 
 #+name: select-view
@@ -113,7 +117,86 @@ AS
         WHERE (vehicle_types_available_boost + vehicle_types_available_iconic + vehicle_types_available_efit + vehicle_types_available_efit_g5 != num_bikes_available)
         ;
 #+end_src
+* Queries
+#+begin_src sql
+SELECT
+  "t0"."id" AS "res0",
+  "t0"."station_id" AS "res1",
+  "t0"."name" AS "res2",
+  "t0"."physical_configuration" AS "res3",
+  "t0"."lat" AS "res4",
+  "t0"."lon" AS "res5",
+  "t0"."altitude" AS "res6",
+  "t0"."address" AS "res7",
+  "t0"."capacity" AS "res8",
+  "t0"."is_charging_station" AS "res9",
+  "t0"."rental_methods" AS "res10",
+  "t0"."is_virtual_station" AS "res11",
+  "t0"."groups" AS "res12",
+  "t0"."obcn" AS "res13",
+  "t0"."nearby_distance" AS "res14",
+  "t0"."bluetooth_id" AS "res15",
+  "t0"."ride_code_support" AS "res16",
+  "t1"."id" AS "res17",
+  "t1"."station_id" AS "res18",
+  "t1"."num_bikes_available" AS "res19",
+  "t1"."num_bikes_disabled" AS "res20",
+  "t1"."num_docks_available" AS "res21",
+  "t1"."num_docks_disabled" AS "res22",
+  "t1"."last_reported" AS "res23",
+  "t1"."is_charging_station" AS "res24",
+  "t1"."status" AS "res25",
+  "t1"."is_installed" AS "res26",
+  "t1"."is_renting" AS "res27",
+  "t1"."is_returning" AS "res28",
+  "t1"."traffic" AS "res29",
+  "t1"."vehicle_docks_available" AS "res30",
+  "t1"."vehicle_types_available_boost" AS "res31",
+  "t1"."vehicle_types_available_iconic" AS "res32",
+  "t1"."vehicle_types_available_efit" AS "res33",
+  "t1"."vehicle_types_available_efit_g5" AS "res34"
+FROM
+  "station_information" AS "t0" CROSS
+  JOIN "station_status" AS "t1"
+WHERE
+  (
+    ("t1"."station_id") = ("t0"."id")
+  )
+  -- AND (
+  --   ("t0"."station_id") IN (
+  --     7502, 7109, 7546, 7437, 7148, 7000, 7165,
+  --     7001, 7015
+  --   )
+  -- )
+LIMIT 6
+#+end_src
 
+#+RESULTS:
+| res0 | res1 | res2 | res3 | res4 | res5 | res6 | res7 | res8 | res9 | res10 | res11 | res12 | res13 | res14 | res15 | res16 | res17 | res18 | res19 | res20 | res21 | res22 | res23 | res24 | res25 | res26 | res27 | res28 | res29 | res30 | res31 | res32 | res33 | res34 |
+|------+------+------+------+------+------+------+------+------+------+-------+-------+-------+-------+-------+-------+-------+-------+-------+-------+-------+-------+-------+-------+-------+-------+-------+-------+-------+-------+-------+-------+-------+-------+-------|
+
+* Lenses
+** Extract station IDs from ~[StationStatus]~
+#+begin_src haskell
+λ> ((mapped %~ (status_last_reported)) <$> stations)^.traverse
+[7502,7109,7546,7437,7148,7000,7165,7001,7015]
+#+end_src
+** Extract ~last_reported~ from ~[StationStatus]~
+#+begin_src haskell
+λ> catMaybes $ ((mapped %~ (status_last_reported)) <$> stations)^.traverse
+[1694211245,1694211368,1694211321,1694211210,1694211390,1694211379,1694211227,1694211346]
+#+end_src
+** Traversal
+#+begin_src haskell
+λ> ((mapped %~ (status_last_reported)) <$> (status_stations <$> testValuesStatus))^.traverse
+[Just 1694211245,Just 1694211368,Just 1694211321,Just 1694211210,Just 1694211390,Just 1694211379,Nothing,Just 1694211227,Just 1694211346]
+
+λ> ((mapped %~ status_last_reported) <$> (status_stations <$> testValuesStatus)) ^. traversed  & each %~ id
+[Just 1694211245,Just 1694211368,Just 1694211321,Just 1694211210,Just 1694211390,Just 1694211379,Nothing,Just 1694211227,Just 1694211346]
+
+λ> (((mapped %~ status_last_reported) <$> (status_stations <$> testValuesStatus)) ^. traversed) & catMaybes
+[1694211245,1694211368,1694211321,1694211210,1694211390,1694211379,1694211227,1694211346]
+#+end_src
 
 * Useful Commands
 ** Run Tests (Showing all Output)
@@ -121,6 +204,13 @@ AS
 #+begin_src shell :noeval
 cabal test --test-show-details=direct
 #+end_src
+** Specific Test
+
+#+begin_src shell
+cabal test --test-show-details=direct test:haskbu-test -- -p '$0=="test/Driver.hs.TestDatabase.insertStationStatus"'
+#+end_src
+
+#+RESULTS:
 
 ** Update Dependencies
 

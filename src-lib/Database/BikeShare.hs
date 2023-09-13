@@ -58,21 +58,22 @@ bikeshareDb = defaultDbSettings `withDbModification`
       }
   , _bikeshareStationStatus =
     setEntityName "station_status" <> modifyTableFields tableModification
-      { _status_id                      = "id"
-      , _status_station_id              = StationInformationId "station_id"
-      , _status_num_bikes_available     = "num_bikes_available"
-      , _status_num_bikes_disabled      = "num_bikes_disabled"
-      , _status_num_docks_available     = "num_docks_available"
-      , _status_num_docks_disabled      = "num_docks_disabled"
-      , _status_last_reported           = "last_reported"
-      , _status_is_charging_station     = "is_charging_station"
-      , _status_status                  = "status"
-      , _status_is_installed            = "is_installed"
-      , _status_is_renting              = "is_renting"
-      , _status_is_returning            = "is_returning"
-      , _status_traffic                 = "traffic"
-      , _status_vehicle_docks_available = "vehicle_docks_available"
-      , _status_vehicle_types_available = vehicleTypeFields "vehicle_types_available"
+      { _d_status_id                      = "id"
+      , _d_status_info_id                 = StationInformationId "info_id"
+      , _d_status_station_id              = "station_id"
+      , _d_status_num_bikes_available     = "num_bikes_available"
+      , _d_status_num_bikes_disabled      = "num_bikes_disabled"
+      , _d_status_num_docks_available     = "num_docks_available"
+      , _d_status_num_docks_disabled      = "num_docks_disabled"
+      , _d_status_last_reported           = "last_reported"
+      , _d_status_is_charging_station     = "is_charging_station"
+      , _d_status_status                  = "status"
+      , _d_status_is_installed            = "is_installed"
+      , _d_status_is_renting              = "is_renting"
+      , _d_status_is_returning            = "is_returning"
+      , _d_status_traffic                 = "traffic"
+      , _d_status_vehicle_docks_available = "vehicle_docks_available"
+      , _d_status_vehicle_types_available = vehicleTypeFields "vehicle_types_available"
       }
   }
 

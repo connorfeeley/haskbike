@@ -1,57 +1,41 @@
 -- | Test the database.
 
 {-# LANGUAGE BlockArguments            #-}
-{-# LANGUAGE DeriveAnyClass            #-}
-{-# LANGUAGE DeriveGeneric             #-}
 {-# LANGUAGE FlexibleContexts          #-}
 {-# LANGUAGE FlexibleInstances         #-}
 {-# LANGUAGE GADTs                     #-}
 {-# LANGUAGE ImpredicativeTypes        #-}
-{-# LANGUAGE LambdaCase                #-}
 {-# LANGUAGE MultiParamTypeClasses     #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE OverloadedStrings         #-}
 {-# LANGUAGE ScopedTypeVariables       #-}
-{-# LANGUAGE StandaloneDeriving        #-}
-{-# LANGUAGE TemplateHaskell           #-}
-{-# LANGUAGE TupleSections             #-}
-{-# LANGUAGE TypeApplications          #-}
 {-# LANGUAGE TypeFamilies              #-}
 {-# LANGUAGE UndecidableInstances      #-}
 
 module TestDatabase where
 
+import           Database.Beam
+
+import           Database.BikeShare
 import           Database.Operations
 import           Database.Utils
 
-import           API.Types                                (StationInformationResponse (..),
-                                                           StationStatusResponse (..))
-import           API.Client
+import           API.Types            (StationStatus (..), status_last_reported,
+                                       status_station_id)
 
-
-import           Data.Aeson                               (decode)
-import           Data.Aeson.Types                         (FromJSON)
-import qualified Data.ByteString                          as B
-import           Data.ByteString.Lazy                     (fromStrict)
-import           Data.FileEmbed                           (embedDir)
-import           Data.Functor                             (void)
 import           Test.Tasty.HUnit
 
--- | Embedded test JSON data.
-testJson :: [(FilePath, B.ByteString)]
-testJson = $(embedDir "test/json")
+import           Control.Lens
+import           Data.Aeson           (FromJSON, eitherDecode)
+import qualified Data.ByteString.Lazy as BL
+import           Data.Functor         (void)
+import           Data.Time
+import           Text.Pretty.Simple   (pPrintString)
 
--- | Get test JSON corresponding to a file path.
-lookupJson :: String -> Maybe B.ByteString
-lookupJson fileName = lookup fileName testJson
 
-testValuesInformation :: Maybe StationInformationResponse
-testValuesInformation = getTestValues "station_information.json"
-testValuesStatus      :: Maybe StationStatusResponse
-testValuesStatus      = getTestValues "station_status.json"
-
-getTestValues :: FromJSON a => String -> Maybe a
-getTestValues fileName = (decode <$> fromStrict) =<< lookupJson fileName
+-- | Helper function to decode a JSON file.
+decodeFile :: FromJSON a => FilePath -> IO (Either String a)
+decodeFile file = eitherDecode <$> BL.readFile file
 
 -- | HUnit test for inserting station information.
 unit_insertStationInformation :: IO ()
@@ -59,10 +43,12 @@ unit_insertStationInformation = do
   -- Connect to the database.
   conn <- setupDatabase
 
-  case testValuesInformation of
-    Just stations -> void $ insertStationInformation conn stations
-    Nothing       -> assertFailure "Error decoding station information JSON"
-  pure ()
+  stationInformationResponse <- decodeFile "test/json/station_information.json"
+
+  -- Insert test data.
+  case stationInformationResponse of
+    Right stations -> void $ insertStationInformation conn stations
+    Left  err      -> assertFailure $ "Error decoding station information JSON: " ++  err
 
 -- | HUnit test for inserting station status.
 unit_insertStationStatus :: IO ()
@@ -70,13 +56,15 @@ unit_insertStationStatus = do
   -- Connect to the database.
   conn <- setupDatabase
 
-  case testValuesInformation of
-    Just stations -> void $ insertStationInformation conn stations
-    Nothing       -> assertFailure "Error decoding station information JSON"
-  case testValuesStatus of
-    Just stations -> void $ insertStationStatus conn stations
-    Nothing       -> assertFailure "Error decoding station status JSON"
-  pure ()
+  stationInformationResponse  <- decodeFile "test/json/station_information.json"
+  stationStatusResponse       <- decodeFile "test/json/station_status.json"
+
+  -- Insert test data.
+  case (stationInformationResponse, stationStatusResponse) of
+    (Right info , Right status  ) -> do
+      void $ insertStationInformation conn info
+      void $ insertStationStatus      conn status
+    ( _        , _            ) -> assertFailure "Error loading test data"
 
 -- | HUnit test for querying station status.
 unit_queryStationStatus :: IO ()
@@ -84,13 +72,18 @@ unit_queryStationStatus = do
   -- Connect to the database.
   conn <- setupDatabase
 
-  case testValuesInformation of
-    Just stations -> void $ insertStationInformation conn stations
-    Nothing       -> assertFailure "Error decoding station information JSON"
-  case testValuesStatus of
-    Just stations -> void $ insertStationStatus conn stations
-    Nothing       -> assertFailure "Error decoding station status JSON"
-  queryStationStatus conn >>= pPrintCompact
+  stationInformationResponse  <- decodeFile "test/json/station_information.json"
+  stationStatusResponse       <- decodeFile "test/json/station_status.json"
+
+  -- Insert test data.
+  case (stationInformationResponse, stationStatusResponse) of
+    (Right info , Right status  ) -> do
+      void $ insertStationInformation conn info
+      void $ insertStationStatus      conn status
+    ( _        , _            ) -> assertFailure "Error loading test data"
+
+  -- Query station status.
+  void $ queryStationStatus conn -- >>= pPrintCompact
 
 -- | HUnit test for inserting station information, with data from the actual API.
 unit_insertStationInformationApi :: IO ()
@@ -99,12 +92,14 @@ unit_insertStationInformationApi = do
   conn <- setupDatabase
 
   -- Query API for station information.
-  stationInformationResponse <- runQueryWithEnv stationInformation
+  -- stationInformationResponse <- runQueryWithEnv stationInformation
+  stationInformationResponse <- decodeFile "docs/json/2.3/station_information-1.json"
 
   case stationInformationResponse of
-    (Left err  )  -> assertFailure $ "Error querying API: " ++ show err
-    (Right info)  -> do
+    (Left err)   -> assertFailure $ "Error loading test data: " ++ show err
+    (Right info) -> do
       void $ insertStationInformation conn info
+  -- pure stationInformationResponse
 
 -- | HUnit test for inserting station status, with data from the actual API.
 unit_insertStationStatusApi :: IO ()
@@ -113,7 +108,8 @@ unit_insertStationStatusApi = do
   conn <- setupDatabase
 
   -- Query API for station status.
-  stationStatusResponse <- runQueryWithEnv stationStatus
+  -- stationStatusResponse <- runQueryWithEnv stationStatus
+  stationStatusResponse <- decodeFile "docs/json/2.3/station_status-1.json"
 
   case stationStatusResponse of
     (Left err    )  -> assertFailure $ "Error querying API: " ++ show err
@@ -127,8 +123,10 @@ unit_insertStationApi = do
   conn <- setupDatabase
 
   -- Query API.
-  stationInformationResponse  <- runQueryWithEnv stationInformation
-  stationStatusResponse       <- runQueryWithEnv stationStatus
+  -- stationInformationResponse  <- runQueryWithEnv stationInformation
+  -- stationStatusResponse       <- runQueryWithEnv stationStatus
+  stationInformationResponse  <- decodeFile "docs/json/2.3/station_information-1.json"
+  stationStatusResponse       <- decodeFile "docs/json/2.3/station_status-1.json"
 
   case (stationInformationResponse, stationStatusResponse) of
     (Left err_info, Left err_status)  -> assertFailure $ "Error querying API: " ++ show err_info ++ " " ++ show err_status
@@ -137,3 +135,37 @@ unit_insertStationApi = do
     (Right info   , Right status   )  -> do
       void $ insertStationInformation conn info
       void $ insertStationStatus      conn status
+
+-- | Map station status to station id and last reported time.
+extractStatusIdReported :: [API.Types.StationStatus] -> [(Int, Maybe LocalTime)]
+extractStatusIdReported = map (\s -> (s ^. API.Types.status_station_id, s ^. API.Types.status_last_reported))
+
+-- | HUnit test for querying which station status have reported.
+unit_queryUpdatedStatus :: IO ()
+unit_queryUpdatedStatus = do
+  updated <- doQueryUpdatedStatus
+  case length updated of
+    expected_count@402  -> void $ pPrintString $ "\t\t\t\t " ++ "Found " ++ show expected_count ++ " stations that have reported since being inserted"
+    count               -> assertFailure $ show count ++ " stations have reported - expected 402"
+
+doQueryUpdatedStatus :: IO [StationStatusT Identity]
+doQueryUpdatedStatus = do
+  conn <- setupDatabase
+
+  stationInformationResponse    <- decodeFile "docs/json/2.3/station_information-1.json"
+  stationStatusResponse         <- decodeFile "docs/json/2.3/station_status-1.json"
+  updatedStationStatusResponse  <- decodeFile "docs/json/2.3/station_status-2.json"
+
+  case (stationInformationResponse, stationStatusResponse) of
+    (Right info, Right status) -> do
+      -- Insert test data.
+      void $ insertStationInformation conn info
+      void $ insertStationStatus      conn status
+    ( _        , _           ) -> assertFailure "Error loading test data"
+
+
+  case updatedStationStatusResponse of
+    Left  err      -> assertFailure $ "Error decoding station status JSON: " ++  err
+    (Right api_status) -> do
+      -- Return stations that have reported since being inserted.
+      queryUpdatedStatus conn api_status

@@ -3,27 +3,28 @@
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE GADTs             #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell   #-}
 
-module API.StationStatus
-        ( StationStatus (..)
-        , StationStatusResponse (..)
-        , StationStatusString (..)
-        , VehicleDock (..)
-        , VehicleType (..)
-        ) where
+module API.StationStatus where
 
-import           Data.Aeson
+import           Common
+
+import           Control.Lens         hiding ((.=))
+import           Data.Aeson           (FromJSON (parseJSON), KeyValue ((.=)),
+                                       ToJSON (toJSON), Value (String), object,
+                                       withObject, withText, (.:), (.:?))
 import           Data.Attoparsec.Text (Parser, choice, parseOnly, string)
 import           Data.Either          (fromRight)
 import           Data.Functor         (($>))
 import qualified Data.Text            as Text
-import           GHC.Generics
+import           Data.Time
+import           GHC.Generics         (Generic)
 
 -- | Enumeration representing a BikeShare station status string.
 data StationStatusString where
   InService :: StationStatusString
   EndOfLife :: StationStatusString
-  deriving (Eq, Generic)
+  deriving (Eq, Generic, Ord)
 
 instance Show StationStatusString where
   show InService = "IN_SERVICE"
@@ -50,39 +51,39 @@ instance FromJSON StationStatusString where
 
 -- | Type representing a BikeShare station's status.
 data StationStatus where
-  StationStatus :: { status_station_id                  :: Int
-                   , status_num_bikes_available         :: Int
-                   , status_num_bikes_disabled          :: Int
-                   , status_num_docks_available         :: Int
-                   , status_num_docks_disabled          :: Int
-                   , status_last_reported               :: Maybe Int
-                   , status_is_charging_station         :: Bool
-                   , status_status                      :: StationStatusString
-                   , status_is_installed                :: Bool
-                   , status_is_renting                  :: Bool
-                   , status_is_returning                :: Bool
-                   , status_traffic                     :: Maybe String -- PBSC doesn't seem to set this field
-                   , status_vehicle_docks_available     :: [VehicleDock]
-                   , status_vehicle_types_available     :: [VehicleType]
+  StationStatus :: { _status_station_id                  :: Int
+                   , _status_num_bikes_available         :: Int
+                   , _status_num_bikes_disabled          :: Int
+                   , _status_num_docks_available         :: Int
+                   , _status_num_docks_disabled          :: Int
+                   , _status_last_reported               :: Maybe LocalTime
+                   , _status_is_charging_station         :: Bool
+                   , _status_status                      :: StationStatusString
+                   , _status_is_installed                :: Bool
+                   , _status_is_renting                  :: Bool
+                   , _status_is_returning                :: Bool
+                   , _status_traffic                     :: Maybe String -- PBSC doesn't seem to set this field
+                   , _status_vehicle_docks_available     :: [VehicleDock]
+                   , _status_vehicle_types_available     :: [VehicleType]
                    } -> StationStatus
-  deriving (Show, Generic)
+  deriving (Show, Generic, Eq, Ord)
 
 instance ToJSON StationStatus where
   toJSON station =
-    object [ "station_id"               .= show (status_station_id              station)
-           , "num_bikes_available"      .= status_num_bikes_available           station
-           , "num_bikes_disabled"       .= status_num_bikes_disabled            station
-           , "num_docks_available"      .= status_num_docks_available           station
-           , "num_docks_disabled"       .= status_num_docks_disabled            station
-           , "last_reported"            .= status_last_reported                 station
-           , "is_charging_station"      .= status_is_charging_station           station
-           , "status"                   .= status_status                        station
-           , "is_installed"             .= status_is_installed                  station
-           , "is_renting"               .= status_is_renting                    station
-           , "is_returning"             .= status_is_returning                  station
-           , "traffic"                  .= status_traffic                       station
-           , "vehicle_docks_available"  .= status_vehicle_docks_available       station
-           , "vehicle_types_available"  .= status_vehicle_types_available       station
+    object [ "station_id"               .= show (_status_station_id              station)
+           , "num_bikes_available"      .= _status_num_bikes_available           station
+           , "num_bikes_disabled"       .= _status_num_bikes_disabled            station
+           , "num_docks_available"      .= _status_num_docks_available           station
+           , "num_docks_disabled"       .= _status_num_docks_disabled            station
+           , "last_reported"            .= fmap localToPosix (_status_last_reported   station)
+           , "is_charging_station"      .= _status_is_charging_station           station
+           , "status"                   .= _status_status                        station
+           , "is_installed"             .= _status_is_installed                  station
+           , "is_renting"               .= _status_is_renting                    station
+           , "is_returning"             .= _status_is_returning                  station
+           , "traffic"                  .= _status_traffic                       station
+           , "vehicle_docks_available"  .= _status_vehicle_docks_available       station
+           , "vehicle_types_available"  .= _status_vehicle_types_available       station
            ]
 instance FromJSON StationStatus where
   parseJSON = withObject "StationStatus" $ \v -> StationStatus
@@ -91,7 +92,7 @@ instance FromJSON StationStatus where
     <*> v .: "num_bikes_disabled"
     <*> v .: "num_docks_available"
     <*> v .: "num_docks_disabled"
-    <*> v .:? "last_reported"
+    <*> (fmap posixToLocal <$> (v .:? "last_reported"))
     <*> v .: "is_charging_station"
     <*> v .: "status"
     <*> v .: "is_installed"
@@ -106,7 +107,7 @@ data VehicleDock where
   VehicleDock :: { vehicle_type_ids :: [String]
                  , dock_count :: Int
                  } -> VehicleDock
-  deriving (Show, Generic)
+  deriving (Show, Generic, Eq, Ord)
 
 instance ToJSON VehicleDock where
   toJSON docks_available =
@@ -123,7 +124,7 @@ data VehicleType where
   VehicleType :: { vehicle_type_id :: String
                  , type_count :: Int
                  } -> VehicleType
-  deriving (Show, Generic)
+  deriving (Show, Generic, Eq, Ord)
 
 instance ToJSON VehicleType where
   toJSON types_available =
@@ -144,3 +145,6 @@ instance FromJSON StationStatusResponse where
   parseJSON = withObject "StationStatusResponse" $ \v -> do
     dataObject <- v .: "data"
     StationStatusResponse <$> dataObject .: "stations"
+
+-- | Lenses
+makeLenses ''StationStatus

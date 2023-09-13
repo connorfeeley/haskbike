@@ -4,7 +4,6 @@ module TestMisc where
 
 import           Test.Tasty
 import           Test.Tasty.ExpectedFailure
-import           Test.Tasty.HUnit
 import           Test.Tasty.QuickCheck      as QC
 
 import           Data.List                  (sortOn)

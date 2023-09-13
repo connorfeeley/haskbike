@@ -53,6 +53,12 @@ extra-doc-files:    CHANGELOG.md
 -- Extra source files to be distributed with the package, such as examples, or a tutorial module.
 extra-source-files: test/json/*.json
 
+-- Enable SQL debugging output.
+Flag DEBUG
+  Description: Enable debug support
+  Default:     False
+  Manual:      True
+
 -- Common warning flags.
 common warnings
     ghc-options: -Wall -Wno-missing-signatures
@@ -134,6 +140,7 @@ library
 
     -- Modules exported by the library.
     exposed-modules:  BikeShareAPI
+                    , Common
                     , API.Client
                     , API.Types
                     , Database.Types
@@ -195,6 +202,9 @@ test-suite haskbike-test
 
     -- Test dependencies.
     build-depends:    haskbike
+                    , time
+                    , extra
+                    , containers
 
 -- Pure testing target (for Nix flake checks).
 -- test-suite haskbike-test-pure
