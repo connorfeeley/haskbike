@@ -21,6 +21,7 @@ import           Database.Beam.Postgres
 
 import           Control.Lens                             hiding ((<.))
 import           Data.Int                                 (Int32)
+import qualified Data.Map                                 as Map
 
 
 -- | Enable SQL debug output if DEBUG flag is set.
@@ -133,3 +134,42 @@ queryUpdatedStatus conn api_status = do
       guard_ (_d_status_station_id    status ==. fst api_values &&.
               _d_status_last_reported status <.  snd api_values)
       pure status
+
+{- |
+Query database for updated statuses and return a tuple of maps representing the API statuses that have reported:
+First element:  map of API statuses that have reported since being inserted.
+Second element: map of API statuses that have not reported since being inserted.
+-}
+filterStatusBase :: Connection -> [AT.StationStatus] -> IO (Map.Map Int AT.StationStatus, Map.Map Int AT.StationStatus)
+filterStatusBase conn api_status = do
+  -- Query database for updated statuses
+  db_status_updated <- queryUpdatedStatus conn api_status
+
+  -- Construct map of all API statuses
+  let api_status'        = Map.fromList $ map (\ss -> (               ss ^. status_station_id,   ss)) api_status
+  -- Construct map of updated statuses from the database
+  let db_updated_status' = Map.fromList $ map (\ss -> (fromIntegral $ ss ^. d_status_station_id, ss)) db_status_updated
+
+  -- Construct map of intersection of both maps; only elements with keys in both are preserved.
+  let api_status_updated = Map.intersection api_status' db_updated_status'
+  let api_status_same    = Map.difference   api_status' db_updated_status'
+
+  pure (api_status_updated, api_status_same)
+
+-- | Query database for updated statuses and return a filtered list of API StationStatus which have reported since being inserted.
+filterStatusUpdated :: Connection -> [AT.StationStatus] -> IO [AT.StationStatus]
+filterStatusUpdated conn api_status = do
+  updated_map <- fst <$> filterStatusBase conn api_status
+
+  let updated_list = map snd $ Map.toAscList updated_map
+
+  pure updated_list
+
+-- | Query database for updated statuses and return a filtered list of API StationStatus which have not reported since being inserted.
+filterStatusSame :: Connection -> [AT.StationStatus] -> IO [AT.StationStatus]
+filterStatusSame conn api_status = do
+  same_map <- snd <$> filterStatusBase conn api_status
+
+  let same_list = map snd $ Map.toAscList same_map
+
+  pure same_list

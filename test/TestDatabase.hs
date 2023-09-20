@@ -15,12 +15,14 @@
 module TestDatabase where
 
 import           Database.Beam
+import           Database.Beam.Postgres
 
 import           Database.BikeShare
 import           Database.Operations
 import           Database.Utils
 
 import           API.Types            (status_stations, info_stations)
+import qualified API.Types            as AT
 
 import           Test.Tasty.HUnit
 
@@ -28,6 +30,7 @@ import           Data.Aeson           (FromJSON, eitherDecode)
 import qualified Data.ByteString.Lazy as BL
 import           Data.Functor         (void)
 import           Text.Pretty.Simple   (pPrintString)
+import qualified Data.Map             as Map
 
 
 -- | Helper function to decode a JSON file.
@@ -136,18 +139,17 @@ unit_insertStationApi = do
 -- | HUnit test for querying which station status have reported.
 unit_queryUpdatedStatus :: IO ()
 unit_queryUpdatedStatus = do
-  updated <- doQueryUpdatedStatus
-  case length updated of
-    expected_count@302  -> void $ pPrintString $ "\t\t\t\t " ++ "Found " ++ show expected_count ++ " stations that have reported since being inserted"
-    count               -> assertFailure $ show count ++ " stations have reported - expected 302"
-
-doQueryUpdatedStatus :: IO [StationStatusT Identity]
-doQueryUpdatedStatus = do
   conn <- setupDatabase
 
+  updated <- doQueryUpdatedStatus conn
+  assertEqual "Updated stations" 302 (length updated)
+
+-- | Query updated station status and return a list of database statuses.
+doQueryUpdatedStatus :: Connection -> IO [StationStatusT Identity]
+doQueryUpdatedStatus conn = do
   stationInformationResponse    <- decodeFile "docs/json/2.3/station_information-1.json"
   stationStatusResponse         <- decodeFile "docs/json/2.3/station_status-1.json"
-  
+
   -- updatedStationStatusResponse       <- runQueryWithEnv stationStatus
   updatedStationStatusResponse <- decodeFile "docs/json/2.3/station_status-2.json"
 
@@ -163,3 +165,38 @@ doQueryUpdatedStatus = do
     (Right api_status)  -> do
       -- Return stations that have reported since being inserted.
       queryUpdatedStatus conn $ status_stations api_status
+
+-- | HUnit test for querying which station status have reported.
+unit_queryUpdatedStatus' :: IO ()
+unit_queryUpdatedStatus' = do
+  conn <- setupDatabase
+
+  updated_base <- doQueryUpdatedStatus' conn
+
+  let updated = fst updated_base
+  let same    = snd updated_base
+
+  assertEqual "Updated stations" 302 (Map.size updated)
+  assertEqual "Same    stations" 407 (Map.size same)
+
+-- | Query updated station status and return a list of API statuses.
+doQueryUpdatedStatus' :: Connection -> IO (Map.Map Int AT.StationStatus, Map.Map Int AT.StationStatus)
+doQueryUpdatedStatus' conn = do
+  stationInformationResponse    <- decodeFile "docs/json/2.3/station_information-1.json"
+  stationStatusResponse         <- decodeFile "docs/json/2.3/station_status-1.json"
+
+  -- updatedStationStatusResponse       <- runQueryWithEnv stationStatus
+  updatedStationStatusResponse <- decodeFile "docs/json/2.3/station_status-2.json"
+
+  case (stationInformationResponse, stationStatusResponse) of
+    (Right info, Right status) -> do
+      -- Insert test data.
+      void $ insertStationInformation conn $ info_stations   info
+      void $ insertStationStatus      conn $ status_stations status
+    ( _        , _           ) -> assertFailure "Error loading test data"
+
+  case updatedStationStatusResponse of
+    Left   err          -> assertFailure $ "Error decoding station status JSON: " ++ err
+    (Right api_status)  -> do
+      -- Return maps of updated and same API statuses
+      filterStatusBase conn $ status_stations api_status

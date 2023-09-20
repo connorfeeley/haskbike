@@ -69,6 +69,7 @@ common common-depends
                     , bytestring
                     , pretty-simple
                     , text
+                    , containers
 
 -- Dependencies needed by targets excercising the API.
 common api-depends
@@ -204,7 +205,6 @@ test-suite haskbike-test
     build-depends:    haskbike
                     , time
                     , extra
-                    , containers
 
 -- Pure testing target (for Nix flake checks).
 -- test-suite haskbike-test-pure
