@@ -44,7 +44,7 @@ initialSetup = BikeshareDb
         })
   <*> (createTable "station_status" $ StationStatus
         { _d_status_id                      = field "id"                      PG.serial notNull unique
-        , _d_status_info_id                 = StationInformationId $ field "info_id" int notNull unique referenceInformationTable
+        , _d_status_info_id                 = StationInformationId $ field "info_id" int notNull referenceInformationTable
         , _d_status_station_id              = field "station_id" int notNull
         , _d_status_num_bikes_available     = field "num_bikes_available"     int notNull
         , _d_status_num_bikes_disabled      = field "num_bikes_disabled"      int notNull

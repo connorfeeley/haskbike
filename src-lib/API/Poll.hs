@@ -1,92 +1,82 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# OPTIONS_GHC -Wno-unused-local-binds #-}
 -- |
 
-module API.Poll where
+module API.Poll
+  ( main )
+  where
 
 import           API.Client
 import           API.ResponseWrapper
-import           API.Types                       (StationStatusResponse)
+import           API.Types                       (StationStatusResponse, status_status)
 import           Common
+import Database.Utils
 
 import           Servant.Client
-
 import           Control.Concurrent              (forkIO, threadDelay)
 import           Control.Concurrent.STM
 import           Control.Concurrent.STM.TBMQueue
 import           Control.Monad                   (forever, void)
 import           Data.Foldable                   (for_)
 import           UnliftIO.Async
+import           Database.Beam
+import           Database.Beam.Postgres
+import           Database.Migrations        (migrateDB)
+import           Database.PostgreSQL.Simple
+
+import API.Types (StationStatusResponseData(..))
+import Control.Lens
+import API.Types (status_stations)
 
 
 main :: IO ()
 main = do
   ttl <- newTVarIO (1 * 1000000)
-  queue <- newTBMQueueIO 4
   queue_resp <- newTBMQueueIO 4
 
   -- Request status every second.
-  void $ forkIO $ forever $ fillQueue queue ttl
+  -- void $ forkIO $ forever $ fillQueue queue ttl
 
   concurrently_
-    -- Drain request queue indefinitely.
-    (drainRequestQueue queue queue_resp)
-    -- Drain response queue indefinitely.
-    (drainResponseQueue queue_resp ttl)
+    (statusRequester queue_resp ttl)
+    (statusHandler queue_resp)
 
-
--- | Enqueue one query.
-fillQueue:: TBMQueue (ClientM StationStatusResponse) -> TVar Int -> IO ()
-fillQueue queue interval_var = do
-  -- Wait for the interval to pass.
-  interval <- readTVarIO interval_var
-  putStrLn $ "FILL: interval=" ++ show (interval `div` 1000000) ++ "s"
-  threadDelay interval
-
-  let queries = [stationStatus]
-  for_ queries $ \query ->
-    atomically $ writeTBMQueue queue query
-
-
--- | Drain request queue once.
-drainRequestQueue :: TBMQueue (ClientM StationStatusResponse) -> TBMQueue StationStatusResponse -> IO ()
-drainRequestQueue queue queue_resp =
-    loop
+statusRequester :: TBMQueue StationStatusResponse -> TVar Int -> IO ()
+statusRequester queue interval_var = loop'
   where
-    loop = do
-      mnext <- atomically $ readTBMQueue queue
+    loop' = do
+      interval <- readTVarIO interval_var
+      putStrLn $ "FILL: interval=" ++ show (interval `div` 1000000) ++ "s"
+      threadDelay interval
 
-      case mnext of
-        Nothing -> atomically retry
-        Just query -> do
-          response <- runQueryWithEnv query
-          case response of
-            Left  err  -> putStrLn $ "REQUEST: error: " ++ show err
-            Right result -> do
-              putStrLn "REQUEST: enqueing response"
+      response <- runQueryWithEnv stationStatus
+      case response of
+        Left  err  -> putStrLn $ "REQUEST: error: " ++ show err
+        Right result -> do
+          time  <- localToSystem $ result ^. response_last_updated
+          let ttl = result ^. response_ttl
+          putStrLn $ "REQUEST: TTL=" ++ show ttl ++ " | " ++ "last updated=" ++ show time
 
-              -- Enqueue the response.
-              atomically $ writeTBMQueue queue_resp result
+          -- Update the interval
+          atomically $ writeTVar interval_var (ttl * 1000000)
 
-              -- Restart loop
-              loop
+          -- Enqueue the response.
+          putStrLn "REQUEST: enqueing response"
+          atomically $ writeTBMQueue queue result
 
+          loop' -- Restart loop
 
--- | Drain response queue once.
-drainResponseQueue :: TBMQueue StationStatusResponse -> TVar Int -> IO ()
-drainResponseQueue queue interval_val =
-    loop
+statusHandler :: TBMQueue StationStatusResponse -> IO ()
+statusHandler queue = do
+  db <- connectDb
+  loop'
   where
-    loop = do
+    loop' = do
       mnext <- atomically $ readTBMQueue queue
-
       case mnext of
         Nothing -> atomically retry
         Just response -> do
-          time  <- localToSystem $ response_last_updated response
-          putStrLn $ "RESPONSE: TTL=" ++ show (response_ttl response) ++ " | " ++ "last updated=" ++ show time
+          let resp_data = response ^. response_data
+          let status = resp_data ^. status_stations
 
-          -- Update the interval
-          -- FIXME: this ends up updating the *next* interval, not the current one.
-          atomically $ writeTVar interval_val ((response_ttl response + 1) * 1000000)
-
-          -- Restart loop
-          loop
+          loop' -- Restart loop
