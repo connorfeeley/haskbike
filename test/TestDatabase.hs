@@ -21,17 +21,16 @@ import           Database.BikeShare
 import           Database.Operations
 import           Database.Utils
 
-import           API.Types            (status_stations, info_stations)
-import qualified API.Types            as AT
+import           API.Types              (info_stations, status_stations)
+import qualified API.Types              as AT
 
 import           Test.Tasty.HUnit
 
-import           Data.Aeson           (FromJSON, eitherDecode)
-import qualified Data.ByteString.Lazy as BL
-import           Data.Functor         (void)
-import           Text.Pretty.Simple   (pPrintString)
-import qualified Data.Map             as Map
-import API.ResponseWrapper
+import           API.ResponseWrapper
+import           Data.Aeson             (FromJSON, eitherDecode)
+import qualified Data.ByteString.Lazy   as BL
+import           Data.Functor           (void)
+import qualified Data.Map               as Map
 
 
 -- | Helper function to decode a JSON file.
