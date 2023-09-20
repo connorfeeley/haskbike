@@ -108,11 +108,14 @@ queryUpdatedStatus :: Connection -> StationStatusResponse -> IO [StationStatus]
 queryUpdatedStatus conn api_status = do
   let api_status' = status_stations api_status
 
+  -- Select using common table expressions (selectWith).
   runBeamPostgres' conn $ runSelectReturningList $ selectWith $ do
+    -- CTE for station information.
     common_info <- selecting $
         filter_ (\info -> _info_station_id info `in_` map (fromIntegral . _status_station_id) api_status')
         (all_ (bikeshareDb ^. bikeshareStationInformation))
 
+    -- CTE for station status.
     common_status <- selecting $ do
       info <- Database.Beam.reuse common_info
       status <-
@@ -120,10 +123,13 @@ queryUpdatedStatus conn api_status = do
       guard_ (_d_status_info_id status `references_` info)
       pure status
 
+    -- Select from station status.
     pure $ do
+      -- Construct rows containing station ID and last reported time, corresponding to the API response parameter.
       reported <- values_ $ map (\s -> (as_ @Int32 ( fromIntegral $ _status_station_id s)
-                                                    , cast_ (val_ $ _status_last_reported s) (maybeType reportTimeType))
+                                       , cast_ (val_ $ _status_last_reported s) (maybeType reportTimeType))
                                 ) api_status'
+      -- Select from station status, where the station ID and last reported time match the API response.
       status <- Database.Beam.reuse common_status
       guard_' (_d_status_station_id status ==?. fst reported &&?.
                 _d_status_last_reported status ==?. snd reported)
