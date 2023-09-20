@@ -151,7 +151,8 @@ library
                     , Database.Operations
 
     -- Modules included in this library but not exported.
-    other-modules:    API.StationInformation
+    other-modules:    API.ResponseWrapper
+                    , API.StationInformation
                     , API.StationStatus
                     , Database.StationInformation
                     , Database.StationStatus
