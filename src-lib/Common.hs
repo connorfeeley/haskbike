@@ -15,7 +15,7 @@ import           Data.Time.Clock.POSIX (posixSecondsToUTCTime,
 
 -- | TimeZone used to convert the API.T.StationStatus.last_reported field to a local time (effectively UTC).
 reportTimeZone :: TimeZone
-reportTimeZone = TimeZone (-5 * 60) False "UTC"
+reportTimeZone = TimeZone 0 False "UTC"
 
 posixToLocal :: Int -> LocalTime
 posixToLocal = utcToLocalTime reportTimeZone . posixSecondsToUTCTime . secondsToNominalDiffTime . fromIntegral
