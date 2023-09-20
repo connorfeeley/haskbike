@@ -5,8 +5,28 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
 
-module API.StationStatus where
-
+module API.StationStatus
+        ( StationStatus (..)
+        , StationStatusResponse
+        , StationStatusResponseData (..)
+        , StationStatusString (..)
+        , VehicleDock (..)
+        , VehicleType (..)
+        , status_station_id
+        , status_num_bikes_available
+        , status_num_bikes_disabled
+        , status_num_docks_available
+        , status_num_docks_disabled
+        , status_last_reported
+        , status_is_charging_station
+        , status_status
+        , status_is_installed
+        , status_is_renting
+        , status_is_returning
+        , status_traffic
+        , status_vehicle_docks_available
+        , status_vehicle_types_available
+        ) where
 import           Common
 
 import           Control.Lens         hiding ((.=))
@@ -19,6 +39,7 @@ import           Data.Functor         (($>))
 import qualified Data.Text            as Text
 import           Data.Time
 import           GHC.Generics         (Generic)
+import API.ResponseWrapper
 
 -- | Enumeration representing a BikeShare station status string.
 data StationStatusString where
@@ -137,14 +158,16 @@ instance FromJSON VehicleType where
     <*> v .: "count"
 
 -- | A wrapper type for the station information response.
-newtype StationStatusResponse where
-  StationStatusResponse :: { status_stations :: [StationStatus] } -> StationStatusResponse
+newtype StationStatusResponseData where
+  StationStatusResponseData :: { status_stations :: [StationStatus] } -> StationStatusResponseData
   deriving (Show, Generic)
 
-instance FromJSON StationStatusResponse where
-  parseJSON = withObject "StationStatusResponse" $ \v -> do
-    dataObject <- v .: "data"
-    StationStatusResponse <$> dataObject .: "stations"
+instance FromJSON StationStatusResponseData where
+  parseJSON = withObject "StationStatusResponseData" $ \v -> do
+    StationStatusResponseData <$> v .: "stations"
+
+-- | Type synonym for the wrapped station information response.
+type StationStatusResponse = ResponseWrapper StationStatusResponseData
 
 -- | Lenses
 makeLenses ''StationStatus

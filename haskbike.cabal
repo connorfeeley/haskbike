@@ -142,6 +142,7 @@ library
     -- Modules exported by the library.
     exposed-modules:  BikeShareAPI
                     , Common
+                    , API.ResponseWrapper
                     , API.Client
                     , API.Types
                     , Database.Types
@@ -151,8 +152,7 @@ library
                     , Database.Operations
 
     -- Modules included in this library but not exported.
-    other-modules:    API.ResponseWrapper
-                    , API.StationInformation
+    other-modules:    API.StationInformation
                     , API.StationStatus
                     , Database.StationInformation
                     , Database.StationStatus

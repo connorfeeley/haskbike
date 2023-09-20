@@ -9,7 +9,8 @@
 
 module API.StationInformation
         ( StationInformation (..)
-        , StationInformationResponse (..)
+        , StationInformationResponse
+        , StationInformationResponseData (..)
         , PhysicalConfiguration (..)
         , RentalMethod (..)
         , RentalURIs (..)
@@ -23,6 +24,7 @@ import           Data.Attoparsec.Text (Parser, choice, parseOnly, string)
 import           Data.Either          (fromRight)
 import           Data.Functor         (($>))
 import           Data.Text            (pack)
+import API.ResponseWrapper
 
 
 -- | Enumeration representing a BikeShare station physical configuration.
@@ -198,11 +200,13 @@ instance FromJSON StationInformation where
     -- <*> v .: "rental_uris"
 
 -- | A wrapper type for the station information response.
-newtype StationInformationResponse where
-  StationInformationResponse :: {info_stations :: [StationInformation]} -> StationInformationResponse
+newtype StationInformationResponseData where
+  StationInformationResponseData :: {info_stations :: [StationInformation]} -> StationInformationResponseData
   deriving (Show, Generic)
 
-instance FromJSON StationInformationResponse where
-  parseJSON = withObject "StationInformationResponse" $ \v -> do
-    dataObject <- v .: "data"
-    StationInformationResponse <$> dataObject .: "stations"
+instance FromJSON StationInformationResponseData where
+  parseJSON = withObject "StationInformationResponseData" $ \v -> do
+    StationInformationResponseData <$> v .: "stations"
+
+-- | Type synonym for the wrapped station information response.
+type StationInformationResponse = ResponseWrapper StationInformationResponseData

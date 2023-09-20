@@ -31,10 +31,11 @@ import qualified Data.ByteString.Lazy as BL
 import           Data.Functor         (void)
 import           Text.Pretty.Simple   (pPrintString)
 import qualified Data.Map             as Map
+import API.ResponseWrapper
 
 
 -- | Helper function to decode a JSON file.
-decodeFile :: FromJSON a => FilePath -> IO (Either String a)
+decodeFile :: FromJSON a => FilePath -> IO (Either String (ResponseWrapper a))
 decodeFile file = eitherDecode <$> BL.readFile file
 
 -- | HUnit test for inserting station information.
@@ -47,7 +48,7 @@ unit_insertStationInformation = do
 
   -- Insert test data.
   case stationInformationResponse of
-    Right stations -> void $ insertStationInformation conn $ info_stations stations
+    Right stations -> void $ insertStationInformation conn $ info_stations $ response_data stations
     Left  err      -> assertFailure $ "Error decoding station information JSON: " ++  err
 
 -- | HUnit test for inserting station status.
@@ -62,8 +63,8 @@ unit_insertStationStatus = do
   -- Insert test data.
   case (stationInformationResponse, stationStatusResponse) of
     (Right info , Right status  ) -> do
-      void $ insertStationInformation conn $ info_stations   info
-      void $ insertStationStatus      conn $ status_stations status
+      void $ insertStationInformation conn $ info_stations   $ response_data info
+      void $ insertStationStatus      conn $ status_stations $ response_data status
     ( _        , _            ) -> assertFailure "Error loading test data"
 
 -- | HUnit test for querying station status.
@@ -78,8 +79,8 @@ unit_queryStationStatus = do
   -- Insert test data.
   case (stationInformationResponse, stationStatusResponse) of
     (Right info , Right status  ) -> do
-      void $ insertStationInformation conn $ info_stations   info
-      void $ insertStationStatus      conn $ status_stations status
+      void $ insertStationInformation conn $ info_stations   $ response_data info
+      void $ insertStationStatus      conn $ status_stations $ response_data status
     ( _        , _            ) -> assertFailure "Error loading test data"
 
   -- Query station status.
@@ -98,7 +99,7 @@ unit_insertStationInformationApi = do
   case stationInformationResponse of
     (Left err)   -> assertFailure $ "Error loading test data: " ++ show err
     (Right info) -> do
-      void $ insertStationInformation conn $ info_stations info
+      void $ insertStationInformation conn $ info_stations $ response_data info
   -- pure stationInformationResponse
 
 -- | HUnit test for inserting station status, with data from the actual API.
@@ -114,7 +115,7 @@ unit_insertStationStatusApi = do
   case stationStatusResponse of
     (Left err    )  -> assertFailure $ "Error querying API: " ++ show err
     (Right status)  -> do
-      void $ insertStationStatus conn $ status_stations status
+      void $ insertStationStatus conn $ status_stations $ response_data status
 
 -- | HUnit test for inserting station information and status, with data from the actual API.
 unit_insertStationApi :: IO ()
@@ -133,8 +134,8 @@ unit_insertStationApi = do
     (Left err_info, _              )  -> assertFailure $ "Error querying API: " ++ show err_info
     (_            , Left err_status)  -> assertFailure $ "Error querying API: " ++ show err_status
     (Right info   , Right status   )  -> do
-      void $ insertStationInformation conn $ info_stations   info
-      void $ insertStationStatus      conn $ status_stations status
+      void $ insertStationInformation conn $ info_stations   $ response_data info
+      void $ insertStationStatus      conn $ status_stations $ response_data status
 
 -- | HUnit test for querying which station status have reported.
 unit_queryUpdatedStatus :: IO ()
@@ -156,15 +157,15 @@ doQueryUpdatedStatus conn = do
   case (stationInformationResponse, stationStatusResponse) of
     (Right info, Right status) -> do
       -- Insert test data.
-      void $ insertStationInformation conn $ info_stations   info
-      void $ insertStationStatus      conn $ status_stations status
+      void $ insertStationInformation conn $ info_stations   $ response_data info
+      void $ insertStationStatus      conn $ status_stations $ response_data status
     ( _        , _           ) -> assertFailure "Error loading test data"
 
   case updatedStationStatusResponse of
     Left   err          -> assertFailure $ "Error decoding station status JSON: " ++ err
     (Right api_status)  -> do
       -- Return stations that have reported since being inserted.
-      queryUpdatedStatus conn $ status_stations api_status
+      queryUpdatedStatus conn $ status_stations $ response_data api_status
 
 -- | HUnit test for querying which station status have reported.
 unit_queryUpdatedStatus' :: IO ()
@@ -191,12 +192,12 @@ doQueryUpdatedStatus' conn = do
   case (stationInformationResponse, stationStatusResponse) of
     (Right info, Right status) -> do
       -- Insert test data.
-      void $ insertStationInformation conn $ info_stations   info
-      void $ insertStationStatus      conn $ status_stations status
+      void $ insertStationInformation conn $ info_stations   $ response_data info
+      void $ insertStationStatus      conn $ status_stations $ response_data status
     ( _        , _           ) -> assertFailure "Error loading test data"
 
   case updatedStationStatusResponse of
     Left   err          -> assertFailure $ "Error decoding station status JSON: " ++ err
     (Right api_status)  -> do
       -- Return maps of updated and same API statuses
-      filterStatusBase conn $ status_stations api_status
+      filterStatusBase conn $ status_stations $ response_data api_status
