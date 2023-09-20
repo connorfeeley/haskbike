@@ -9,13 +9,14 @@ import           Common
 
 import           Servant.Client
 
+import           Control.Applicative             ((<|>))
 import           Control.Concurrent              (forkIO, threadDelay)
-import           Control.Concurrent.Async
 import           Control.Concurrent.STM
 import           Control.Concurrent.STM.TBMQueue
 import           Control.Exception               (finally)
 import           Control.Monad                   (forever, void)
 import           Data.Foldable                   (for_)
+import           UnliftIO.Async
 
 
 main :: IO ()
@@ -23,25 +24,23 @@ main = do
   queue <- newTBMQueueIO 4
   queue_resp <- newTBMQueueIO 4
 
-  -- Request status every second
+  -- Request status every second.
   fillQueueThread queue 1000000
 
-  -- Indefinitely service requests.
-  drainRequestQueueThread queue queue_resp
+  void $
+    -- Drain request queue indefinitely.
+    withAsync (drainRequestQueue queue queue_resp) $ \req_t ->
+    -- Drain response queue indefinitely.
+    withAsync (drainResponseQueue queue_resp) $ \resp_t ->
+    atomically $ waitSTM req_t <|> waitSTM resp_t
 
-  -- Indefinitely handle responses.
-  drainResponseQueue queue_resp
-
-  -- replicateConcurrently_ 8 (drainRequestQueue queue)
-  -- concurrently_
-  --   (fillQueue queue 1000000 `finally` atomically (closeTBMQueue queue))
-  --   (replicateConcurrently_ 8 (drainRequestQueue queue))
 
 -- | Enqueue queries forever.
 fillQueueThread:: TBMQueue (ClientM StationStatusResponse) -> Int -> IO ()
 fillQueueThread queue interval = void $ forkIO $ forever $ do
   threadDelay interval
   fillQueue queue
+
 
 -- | Enqueue one query.
 fillQueue:: TBMQueue (ClientM StationStatusResponse) -> IO ()
@@ -50,13 +49,15 @@ fillQueue queue = do
   for_ queries $ \query ->
     atomically $ writeTBMQueue queue query
 
--- | Drain queue forever.
+
+-- | Drain request queue forever.
 drainRequestQueueThread :: TBMQueue (ClientM StationStatusResponse) -> TBMQueue StationStatusResponse -> IO ()
 drainRequestQueueThread queue queue_resp = void $ forkIO $ forever $ do
-  putStrLn "Draining queue"
+  putStrLn "Draining request queue indefinitely"
   drainRequestQueue queue queue_resp
 
--- | Drain queue once.
+
+-- | Drain request queue once.
 drainRequestQueue :: TBMQueue (ClientM StationStatusResponse) -> TBMQueue StationStatusResponse -> IO ()
 drainRequestQueue queue queue_resp =
     loop
@@ -79,7 +80,15 @@ drainRequestQueue queue queue_resp =
               -- Restart loop
               loop
 
--- | Drain queue once.
+
+-- | Drain response queue indefinitely.
+drainResponseQueueThread :: TBMQueue StationStatusResponse -> IO ()
+drainResponseQueueThread queue = void $ forkIO $ forever $ do
+  putStrLn "Draining response queue indefinitely"
+  drainResponseQueue queue
+
+
+-- | Drain response queue once.
 drainResponseQueue :: TBMQueue StationStatusResponse -> IO ()
 drainResponseQueue queue =
     loop

@@ -12,6 +12,5 @@ import           Text.Pretty.Simple      (pPrintString)
 
 main :: IO ()
 main = do
-  putStrLn "Hello, Haskell!"
-
+  -- Run API poller main method.
   P.main
