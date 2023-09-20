@@ -2,12 +2,12 @@
 
 module Database.Utils where
 
-import           Data.String (fromString)
+import           Data.String                (fromString)
 import           Text.Pretty.Simple
 
 import           Database.Beam
 import           Database.Beam.Postgres
-import           Database.Migrations (migrateDB)
+import           Database.Migrations        (migrateDB)
 import           Database.PostgreSQL.Simple
 
 

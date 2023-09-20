@@ -18,7 +18,7 @@ import           Database.Beam
 import           Database.Beam.Backend.SQL.BeamExtensions
 import           Database.Beam.Postgres
 
-import           Control.Lens
+import           Control.Lens                             hiding ((<.))
 import           Data.Int                                 (Int32)
 
 
@@ -126,11 +126,11 @@ queryUpdatedStatus conn api_status = do
     -- Select from station status.
     pure $ do
       -- Construct rows containing station ID and last reported time, corresponding to the API response parameter.
-      reported <- values_ $ map (\s -> (as_ @Int32 ( fromIntegral $ _status_station_id s)
-                                       , cast_ (val_ $ _status_last_reported s) (maybeType reportTimeType))
-                                ) api_status'
+      api_values <- values_ $ map (\s -> ( as_ @Int32 ( fromIntegral $ _status_station_id s)
+                                         , cast_ (val_ $ _status_last_reported s) (maybeType reportTimeType))
+                                  ) api_status'
       -- Select from station status, where the station ID and last reported time match the API response.
       status <- Database.Beam.reuse common_status
-      guard_' (_d_status_station_id status ==?. fst reported &&?.
-                _d_status_last_reported status ==?. snd reported)
+      guard_ (_d_status_station_id    status ==. fst api_values &&.
+              _d_status_last_reported status <.  snd api_values)
       pure status

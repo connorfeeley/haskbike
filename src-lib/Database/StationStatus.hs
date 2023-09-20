@@ -280,14 +280,14 @@ instance Num BeamReportTime where
     (*)           = error "BeamReportTime: (*) not implemented"
 
 instance Real BeamReportTime where
-  toRational (BeamReportTime t) = toRational . utcTimeToPOSIXSeconds . localTimeToUTC reportTimeZone $ t
+  toRational (BeamReportTime t) = toRational . localToPosix $ t
 
 instance Integral BeamReportTime => Enum BeamReportTime where
   toEnum = fromIntegral :: Int -> BeamReportTime
   fromEnum a = fromIntegral a :: Int
 
 instance Enum BeamReportTime => Integral BeamReportTime where
-  toInteger (BeamReportTime t) = floor . utcTimeToPOSIXSeconds . localTimeToUTC reportTimeZone $ t
+  toInteger (BeamReportTime t) = fromIntegral $ localToPosix t
   quotRem a _ = (a, a)
 
 instance (HasSqlValueSyntax BeamReportTime x, HasSqlValueSyntax BeamReportTime SqlNull) => HasSqlValueSyntax BeamReportTime (Maybe x) where

@@ -145,8 +145,8 @@ unit_queryUpdatedStatus :: IO ()
 unit_queryUpdatedStatus = do
   updated <- doQueryUpdatedStatus
   case length updated of
-    expected_count@402  -> void $ pPrintString $ "\t\t\t\t " ++ "Found " ++ show expected_count ++ " stations that have reported since being inserted"
-    count               -> assertFailure $ show count ++ " stations have reported - expected 402"
+    expected_count@302  -> void $ pPrintString $ "\t\t\t\t " ++ "Found " ++ show expected_count ++ " stations that have reported since being inserted"
+    count               -> assertFailure $ show count ++ " stations have reported - expected 302"
 
 doQueryUpdatedStatus :: IO [StationStatusT Identity]
 doQueryUpdatedStatus = do
@@ -154,6 +154,8 @@ doQueryUpdatedStatus = do
 
   stationInformationResponse    <- decodeFile "docs/json/2.3/station_information-1.json"
   stationStatusResponse         <- decodeFile "docs/json/2.3/station_status-1.json"
+  
+  -- updatedStationStatusResponse       <- runQueryWithEnv stationStatus
   updatedStationStatusResponse  <- decodeFile "docs/json/2.3/station_status-2.json"
 
   case (stationInformationResponse, stationStatusResponse) of
@@ -165,7 +167,7 @@ doQueryUpdatedStatus = do
 
 
   case updatedStationStatusResponse of
-    Left  err      -> assertFailure $ "Error decoding station status JSON: " ++  err
-    (Right api_status) -> do
+    Left   err          -> assertFailure $ "Error decoding station status JSON: " ++ err
+    (Right api_status)  -> do
       -- Return stations that have reported since being inserted.
       queryUpdatedStatus conn api_status
