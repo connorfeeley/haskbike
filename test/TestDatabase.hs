@@ -20,16 +20,13 @@ import           Database.BikeShare
 import           Database.Operations
 import           Database.Utils
 
-import           API.Types            (StationStatus (..), status_last_reported,
-                                       status_station_id)
+import           API.Types            (status_stations, info_stations)
 
 import           Test.Tasty.HUnit
 
-import           Control.Lens
 import           Data.Aeson           (FromJSON, eitherDecode)
 import qualified Data.ByteString.Lazy as BL
 import           Data.Functor         (void)
-import           Data.Time
 import           Text.Pretty.Simple   (pPrintString)
 
 
@@ -47,7 +44,7 @@ unit_insertStationInformation = do
 
   -- Insert test data.
   case stationInformationResponse of
-    Right stations -> void $ insertStationInformation conn stations
+    Right stations -> void $ insertStationInformation conn $ info_stations stations
     Left  err      -> assertFailure $ "Error decoding station information JSON: " ++  err
 
 -- | HUnit test for inserting station status.
@@ -62,8 +59,8 @@ unit_insertStationStatus = do
   -- Insert test data.
   case (stationInformationResponse, stationStatusResponse) of
     (Right info , Right status  ) -> do
-      void $ insertStationInformation conn info
-      void $ insertStationStatus      conn status
+      void $ insertStationInformation conn $ info_stations   info
+      void $ insertStationStatus      conn $ status_stations status
     ( _        , _            ) -> assertFailure "Error loading test data"
 
 -- | HUnit test for querying station status.
@@ -78,8 +75,8 @@ unit_queryStationStatus = do
   -- Insert test data.
   case (stationInformationResponse, stationStatusResponse) of
     (Right info , Right status  ) -> do
-      void $ insertStationInformation conn info
-      void $ insertStationStatus      conn status
+      void $ insertStationInformation conn $ info_stations   info
+      void $ insertStationStatus      conn $ status_stations status
     ( _        , _            ) -> assertFailure "Error loading test data"
 
   -- Query station status.
@@ -98,7 +95,7 @@ unit_insertStationInformationApi = do
   case stationInformationResponse of
     (Left err)   -> assertFailure $ "Error loading test data: " ++ show err
     (Right info) -> do
-      void $ insertStationInformation conn info
+      void $ insertStationInformation conn $ info_stations info
   -- pure stationInformationResponse
 
 -- | HUnit test for inserting station status, with data from the actual API.
@@ -114,7 +111,7 @@ unit_insertStationStatusApi = do
   case stationStatusResponse of
     (Left err    )  -> assertFailure $ "Error querying API: " ++ show err
     (Right status)  -> do
-      void $ insertStationStatus conn status
+      void $ insertStationStatus conn $ status_stations status
 
 -- | HUnit test for inserting station information and status, with data from the actual API.
 unit_insertStationApi :: IO ()
@@ -133,12 +130,8 @@ unit_insertStationApi = do
     (Left err_info, _              )  -> assertFailure $ "Error querying API: " ++ show err_info
     (_            , Left err_status)  -> assertFailure $ "Error querying API: " ++ show err_status
     (Right info   , Right status   )  -> do
-      void $ insertStationInformation conn info
-      void $ insertStationStatus      conn status
-
--- | Map station status to station id and last reported time.
-extractStatusIdReported :: [API.Types.StationStatus] -> [(Int, Maybe LocalTime)]
-extractStatusIdReported = map (\s -> (s ^. API.Types.status_station_id, s ^. API.Types.status_last_reported))
+      void $ insertStationInformation conn $ info_stations   info
+      void $ insertStationStatus      conn $ status_stations status
 
 -- | HUnit test for querying which station status have reported.
 unit_queryUpdatedStatus :: IO ()
@@ -156,18 +149,17 @@ doQueryUpdatedStatus = do
   stationStatusResponse         <- decodeFile "docs/json/2.3/station_status-1.json"
   
   -- updatedStationStatusResponse       <- runQueryWithEnv stationStatus
-  updatedStationStatusResponse  <- decodeFile "docs/json/2.3/station_status-2.json"
+  updatedStationStatusResponse <- decodeFile "docs/json/2.3/station_status-2.json"
 
   case (stationInformationResponse, stationStatusResponse) of
     (Right info, Right status) -> do
       -- Insert test data.
-      void $ insertStationInformation conn info
-      void $ insertStationStatus      conn status
+      void $ insertStationInformation conn $ info_stations   info
+      void $ insertStationStatus      conn $ status_stations status
     ( _        , _           ) -> assertFailure "Error loading test data"
-
 
   case updatedStationStatusResponse of
     Left   err          -> assertFailure $ "Error decoding station status JSON: " ++ err
     (Right api_status)  -> do
       -- Return stations that have reported since being inserted.
-      queryUpdatedStatus conn api_status
+      queryUpdatedStatus conn $ status_stations api_status

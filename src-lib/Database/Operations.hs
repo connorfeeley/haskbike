@@ -11,6 +11,7 @@ import           API.Types                                (StationInformationRes
                                                            _status_last_reported,
                                                            _status_station_id,
                                                            status_station_id)
+import qualified API.Types                                as AT
 import           Database.BikeShare
 import           Database.Utils
 
@@ -81,38 +82,36 @@ queryStationInformation conn ids =
     ids' = fromIntegral <$> ids
 
 -- | Insert station information into the database.
-insertStationInformation :: Connection -> StationInformationResponse -> IO [StationInformation]
+insertStationInformation :: Connection -> [AT.StationInformation] -> IO [StationInformation]
 insertStationInformation conn stations = do
   runBeamPostgres' conn $ runInsertReturningList $
     insert (bikeshareDb ^. bikeshareStationInformation) $
-    insertExpressions $ map fromJSONToBeamStationInformation (info_stations stations)
+    insertExpressions $ map fromJSONToBeamStationInformation stations
 
 
 
 -- | Insert station status into the database.
-insertStationStatus :: Connection -> StationStatusResponse -> IO [StationStatus]
+insertStationStatus :: Connection -> [AT.StationStatus] -> IO [StationStatus]
 insertStationStatus conn status = do
   -- Get information for the stations that are in the status response.
   info_ids <- map _info_station_id <$> queryStationInformation conn status_ids
-  let filtered_status = filter (\ss -> fromIntegral (_status_station_id ss) `elem` info_ids) (status_stations status)
+  let filtered_status = filter (\ss -> fromIntegral (_status_station_id ss) `elem` info_ids) status
   runBeamPostgres' conn $ runInsertReturningList $
     insert (bikeshareDb ^. bikeshareStationStatus) $
-    insertExpressions $ map fromJSONToBeamStationStatus (status_stations status { status_stations = filtered_status })
+    insertExpressions $ map fromJSONToBeamStationStatus filtered_status
   where
     status_ids :: [Int]
-    status_ids = fromIntegral <$> status_stations status ^.. traverse . status_station_id
+    status_ids = fromIntegral <$> status ^.. traverse . status_station_id
 
 
 -- | Query database to determine which stations have reported since being inserted.
-queryUpdatedStatus :: Connection -> StationStatusResponse -> IO [StationStatus]
+queryUpdatedStatus :: Connection -> [AT.StationStatus] -> IO [StationStatus]
 queryUpdatedStatus conn api_status = do
-  let api_status' = status_stations api_status
-
   -- Select using common table expressions (selectWith).
   runBeamPostgres' conn $ runSelectReturningList $ selectWith $ do
     -- CTE for station information.
     common_info <- selecting $
-        filter_ (\info -> _info_station_id info `in_` map (fromIntegral . _status_station_id) api_status')
+        filter_ (\info -> _info_station_id info `in_` map (fromIntegral . _status_station_id) api_status)
         (all_ (bikeshareDb ^. bikeshareStationInformation))
 
     -- CTE for station status.
@@ -128,8 +127,8 @@ queryUpdatedStatus conn api_status = do
       -- Construct rows containing station ID and last reported time, corresponding to the API response parameter.
       api_values <- values_ $ map (\s -> ( as_ @Int32 ( fromIntegral $ _status_station_id s)
                                          , cast_ (val_ $ _status_last_reported s) (maybeType reportTimeType))
-                                  ) api_status'
-      -- Select from station status, where the station ID and last reported time match the API response.
+                                  ) api_status
+      -- Select from station status where the last reported time is older than in the API response.
       status <- Database.Beam.reuse common_status
       guard_ (_d_status_station_id    status ==. fst api_values &&.
               _d_status_last_reported status <.  snd api_values)
