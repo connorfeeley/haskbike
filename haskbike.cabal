@@ -73,7 +73,7 @@ common common-depends
                     , stm
                     , stm-chans
                     , mtl
-                    , async
+                    , unliftio
 
 -- Dependencies needed by targets excercising the API.
 common api-depends
