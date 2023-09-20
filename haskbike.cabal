@@ -70,6 +70,10 @@ common common-depends
                     , pretty-simple
                     , text
                     , containers
+                    , stm
+                    , stm-chans
+                    , mtl
+                    , async
 
 -- Dependencies needed by targets excercising the API.
 common api-depends
