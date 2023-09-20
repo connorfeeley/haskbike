@@ -2,6 +2,7 @@ module Main where
 
 import           API.Client              (stationStatus)
 import qualified API.Client              as C
+import qualified API.Poll                as P
 import           API.Types
 
 import           Control.Exception       (Exception (displayException))
@@ -13,9 +14,4 @@ main :: IO ()
 main = do
   putStrLn "Hello, Haskell!"
 
-  -- C.run
-  clientManager <- newManager tlsManagerSettings
-  status <- C.runQuery clientManager stationStatus
-  case status of
-    Left err       -> pPrintString $ displayException err
-    Right response -> pPrintString $ show $ head $ status_stations response
+  P.main

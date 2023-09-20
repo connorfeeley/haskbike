@@ -84,6 +84,7 @@ common api-depends
                     , servant-docs
                     , http-client
                     , http-client-tls
+                    , http-conduit
 
 -- Dependencies needed by targets excercising the database.
 common database-depends
