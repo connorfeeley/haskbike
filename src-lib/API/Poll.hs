@@ -8,25 +8,26 @@ module API.Poll
 
 import           API.Client
 import           API.ResponseWrapper
-import           API.Types                       (StationStatusResponse, status_status)
+import           API.Types                       (StationStatusResponse,
+                                                  StationStatusResponseData (..),
+                                                  status_stations,
+                                                  status_status)
 import           Common
-import Database.Utils
+import           Database.Operations
+import           Database.Utils
 
-import           Servant.Client
 import           Control.Concurrent              (forkIO, threadDelay)
 import           Control.Concurrent.STM
 import           Control.Concurrent.STM.TBMQueue
+import           Control.Lens
 import           Control.Monad                   (forever, void)
 import           Data.Foldable                   (for_)
-import           UnliftIO.Async
 import           Database.Beam
 import           Database.Beam.Postgres
-import           Database.Migrations        (migrateDB)
+import           Database.Migrations             (migrateDB)
 import           Database.PostgreSQL.Simple
-
-import API.Types (StationStatusResponseData(..))
-import Control.Lens
-import API.Types (status_stations)
+import           Servant.Client
+import           UnliftIO.Async
 
 
 main :: IO ()
@@ -46,16 +47,16 @@ statusRequester queue interval_var = loop'
   where
     loop' = do
       interval <- readTVarIO interval_var
-      putStrLn $ "FILL: interval=" ++ show (interval `div` 1000000) ++ "s"
+      putStrLn $ "REQUEST: interval=" ++ show (interval `div` 1000000) ++ "s"
       threadDelay interval
 
       response <- runQueryWithEnv stationStatus
       case response of
         Left  err  -> putStrLn $ "REQUEST: error: " ++ show err
         Right result -> do
-          time  <- localToSystem $ result ^. response_last_updated
+          time' <- localToSystem $ result ^. response_last_updated
           let ttl = result ^. response_ttl
-          putStrLn $ "REQUEST: TTL=" ++ show ttl ++ " | " ++ "last updated=" ++ show time
+          putStrLn $ "REQUEST: TTL=" ++ show ttl ++ " | " ++ "last updated=" ++ show time'
 
           -- Update the interval
           atomically $ writeTVar interval_var (ttl * 1000000)
@@ -68,15 +69,21 @@ statusRequester queue interval_var = loop'
 
 statusHandler :: TBMQueue StationStatusResponse -> IO ()
 statusHandler queue = do
-  db <- connectDb
   loop'
   where
     loop' = do
+      conn <- connectDb
       mnext <- atomically $ readTBMQueue queue
       case mnext of
         Nothing -> atomically retry
         Just response -> do
           let resp_data = response ^. response_data
           let status = resp_data ^. status_stations
+
+          updated <- filterStatusUpdated conn status
+          putStrLn $ "HANDLER: updated=" ++ show (length updated)
+
+          -- Insert the updated status.
+          _updated' <- insertStationStatus conn updated
 
           loop' -- Restart loop
