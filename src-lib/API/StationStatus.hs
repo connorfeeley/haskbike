@@ -26,8 +26,11 @@ module API.StationStatus
         , status_traffic
         , status_vehicle_docks_available
         , status_vehicle_types_available
+        , status_stations
         ) where
+
 import           Common
+import           API.ResponseWrapper
 
 import           Control.Lens         hiding ((.=))
 import           Data.Aeson           (FromJSON (parseJSON), KeyValue ((.=)),
@@ -39,7 +42,6 @@ import           Data.Functor         (($>))
 import qualified Data.Text            as Text
 import           Data.Time
 import           GHC.Generics         (Generic)
-import API.ResponseWrapper
 
 -- | Enumeration representing a BikeShare station status string.
 data StationStatusString where
@@ -159,7 +161,7 @@ instance FromJSON VehicleType where
 
 -- | A wrapper type for the station information response.
 newtype StationStatusResponseData where
-  StationStatusResponseData :: { status_stations :: [StationStatus] } -> StationStatusResponseData
+  StationStatusResponseData :: { _status_stations :: [StationStatus] } -> StationStatusResponseData
   deriving (Show, Generic)
 
 instance FromJSON StationStatusResponseData where
@@ -171,3 +173,4 @@ type StationStatusResponse = ResponseWrapper StationStatusResponseData
 
 -- | Lenses
 makeLenses ''StationStatus
+makeLenses ''StationStatusResponseData

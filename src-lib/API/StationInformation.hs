@@ -6,6 +6,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE UndecidableInstances  #-}
+{-# LANGUAGE TemplateHaskell   #-}
 
 module API.StationInformation
         ( StationInformation (..)
@@ -14,12 +15,14 @@ module API.StationInformation
         , PhysicalConfiguration (..)
         , RentalMethod (..)
         , RentalURIs (..)
+        , info_stations
         ) where
 
 import           Data.Aeson
 import qualified Data.Text            as Text
 import           GHC.Generics
 
+import           Control.Lens         hiding ((.=))
 import           Data.Attoparsec.Text (Parser, choice, parseOnly, string)
 import           Data.Either          (fromRight)
 import           Data.Functor         (($>))
@@ -201,7 +204,7 @@ instance FromJSON StationInformation where
 
 -- | A wrapper type for the station information response.
 newtype StationInformationResponseData where
-  StationInformationResponseData :: {info_stations :: [StationInformation]} -> StationInformationResponseData
+  StationInformationResponseData :: { _info_stations :: [StationInformation] } -> StationInformationResponseData
   deriving (Show, Generic)
 
 instance FromJSON StationInformationResponseData where
@@ -210,3 +213,7 @@ instance FromJSON StationInformationResponseData where
 
 -- | Type synonym for the wrapped station information response.
 type StationInformationResponse = ResponseWrapper StationInformationResponseData
+
+-- | Lenses
+makeLenses ''StationInformation
+makeLenses ''StationInformationResponseData
