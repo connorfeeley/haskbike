@@ -61,7 +61,7 @@ Flag DEBUG
 
 -- Common warning flags.
 common warnings
-    ghc-options: -Wall -Wno-missing-signatures
+    ghc-options: -Wall
 
 -- Common dependencies shared by all targets.
 common common-depends
