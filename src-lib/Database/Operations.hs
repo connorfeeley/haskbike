@@ -13,6 +13,8 @@ module Database.Operations
   , queryStationInformation
   , insertStationInformation
   -- , _insertStationStatus -- NOTE: use insertUpdatedStationStatus instead
+  , queryUpdatedStatus
+  , filterStatusBase
   , filterStatusUpdated
   , filterStatusSame
   , insertUpdatedStationStatus
