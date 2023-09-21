@@ -21,13 +21,12 @@ module Database.Operations
      , filter_same
      , filter_updated
      , insertUpdatedStationStatus
+     , insert_deactivated
      , insert_inserted
-     , insert_updated
      , queryUpdatedStatus
      ) where
 
-import           API.Types                                ( StationInformationResponse (..), StationStatusResponse (..),
-                                                            _status_last_reported, _status_station_id,
+import           API.Types                                ( _status_last_reported, _status_station_id,
                                                             status_station_id )
 import qualified API.Types                                as AT
 
@@ -62,9 +61,15 @@ data FilterStatusResult where
   deriving (Show)
 makeLenses ''FilterStatusResult
 
+{- | Data type representing the result of inserting updated station statuses.
+
+When inserting to an empty database, all statuses are inserted.
+When inserting to a non-empty database with the full 'AT.StationStatusResponse' data,
+'_insert_deactivated' and '_insert_inserted' will be the same length.
+-}
 data InsertStatusResult where
-  InsertStatusResult :: { _insert_updated  :: [StationStatus] -- ^ List of 'StationStatus' that were updated.
-                        , _insert_inserted :: [StationStatus] -- ^ List of station statuses that were inserted.
+  InsertStatusResult :: { _insert_deactivated  :: [StationStatus] -- ^ List of 'StationStatus' that were updated.
+                        , _insert_inserted     :: [StationStatus] -- ^ List of station statuses that were inserted.
                         } -> InsertStatusResult
   deriving (Show)
 makeLenses ''InsertStatusResult
@@ -241,7 +246,7 @@ insertUpdatedStationStatus conn status = do
       insert (bikeshareDb ^. bikeshareStationStatus) $
       insertExpressions $ map fromJSONToBeamStationStatus filtered_status
 
-  pure $ InsertStatusResult {_insert_updated = updated, _insert_inserted = inserted }
+  pure $ InsertStatusResult {_insert_deactivated = updated, _insert_inserted = inserted }
 
   where
     status_ids :: [Int]

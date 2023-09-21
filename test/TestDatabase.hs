@@ -140,7 +140,7 @@ unit_insertStationStatusApi = do
       inserted_info <- insertUpdatedStationStatus conn $ status ^. response_data . status_stations
 
       assertEqual "Inserted station information" [] $ inserted_info ^. insert_inserted
-      assertEqual "Updated station information"  [] $ inserted_info ^. insert_updated
+      assertEqual "Updated station information"  [] $ inserted_info ^. insert_deactivated
 
 -- | HUnit test for inserting station information and status, with data from the actual API.
 unit_insertStationApi :: IO ()

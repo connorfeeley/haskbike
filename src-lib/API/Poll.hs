@@ -96,12 +96,12 @@ statusHandler conn queue =
                                  , updated  ^.. d_status_last_reported
                                  , inserted ^.. d_status_last_reported
                                  ))
-                                 (inserted_result ^. insert_updated) (inserted_result ^. insert_inserted)
+                                 (inserted_result ^. insert_deactivated) (inserted_result ^. insert_inserted)
           let messages = map (\(sid, last_reported, last_reported') ->
                    "ID: [" ++ show sid ++ "] " ++ -- ID
                    show last_reported ++ "->" ++ show last_reported' -- [prev reported] -> [new reported]
                 ) message_data
           mapM_ putStrLn messages
-          putStrLn $ "HANDLER: updated=" ++ show (length $ inserted_result ^. insert_updated) ++ " inserted=" ++ show (length $ inserted_result ^. insert_inserted)
+          putStrLn $ "HANDLER: updated=" ++ show (length $ inserted_result ^. insert_deactivated) ++ " inserted=" ++ show (length $ inserted_result ^. insert_inserted)
 
           loop' -- Restart loop
