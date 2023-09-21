@@ -195,13 +195,12 @@ insertUpdatedStationStatus :: Connection -> [AT.StationStatus] -> IO ([StationSt
 insertUpdatedStationStatus conn status = do
   -- Query database for updated statuses
   db_status_updated <- case length status of
-    0 -> pure []
+    0 -> pure [] -- No need to query if there are no statuses to update.
     _ -> queryUpdatedStatus conn status
   let status_ids' =  map _d_status_id db_status_updated
 
   updated <- case length db_status_updated of
-    -- Can't update if there are no statuses to update (SQL restriction).
-    0 -> pure []
+    0 -> pure [] -- Can't update if there are no statuses to update (SQL restriction).
     -- Set returned station statuses as inactive.
     _ -> runBeamPostgres' conn $ runUpdateReturningList $
       update (bikeshareDb ^. bikeshareStationStatus)
@@ -211,8 +210,8 @@ insertUpdatedStationStatus conn status = do
   -- Get information for the stations that are in the status response.
   info_ids <- map _info_station_id <$> queryStationInformation conn status_ids
   let filtered_status = filter (\ss -> fromIntegral (_status_station_id ss) `elem` info_ids) status
-  inserted <- case length updated of
-    0 -> pure []
+  inserted <- case length status of
+    0 -> pure [] -- No need to insert if there are no statuses to insert.
     _ -> runBeamPostgres' conn $ runInsertReturningList $
       insert (bikeshareDb ^. bikeshareStationStatus) $
       insertExpressions $ map fromJSONToBeamStationStatus filtered_status
