@@ -86,8 +86,8 @@ statusHandler conn queue =
           putStrLn $ "HANDLER: status_stations=" ++ show (length status)
 
           updated_api <- filterStatus conn status
-          putStrLn $ "HANDLER: updated_api="  ++ show (length $ updated_api ^. filter_updated)
-          putStrLn $ "HANDLER: same_api=" ++ show (length $ updated_api ^. filter_same)
+          putStrLn $ "HANDLER: updated_api="  ++ show (length $ updated_api ^. filter_newer)
+          putStrLn $ "HANDLER: same_api=" ++ show (length $ updated_api ^. filter_unchanged)
 
           -- Insert the updated status.
           inserted_result <- insertUpdatedStationStatus conn status

@@ -204,8 +204,8 @@ unit_getRowsToDeactivate' = do
 
   updated <- doQueryUpdatedStatus' conn
 
-  assertEqual "Updated stations" 407 (length $ updated ^. filter_updated)
-  assertEqual "Same    stations" 302 (length $ updated ^. filter_same)
+  assertEqual "Updated stations" 407 (length $ updated ^. filter_newer)
+  assertEqual "Same    stations" 302 (length $ updated ^. filter_unchanged)
 
 -- | Query updated station status and return a list of API statuses.
 doQueryUpdatedStatus' :: Connection -> IO FilterStatusResult
@@ -271,8 +271,8 @@ doQueryUpdatedStatusInsert conn = do
       updated <- filterStatus conn $ api_status ^. response_data . status_stations
 
       -- Insert second round of test data (some of which have reported since the first round was inserted).
-      foo <- insertUpdatedStationStatus conn $ updated ^. filter_updated
+      foo <- insertUpdatedStationStatus conn $ updated ^. filter_newer
 
       -- Insert second round of test data AGAIN.
-      bar <- insertUpdatedStationStatus conn $ updated ^. filter_updated
+      bar <- insertUpdatedStationStatus conn $ updated ^. filter_newer
       pure (foo, bar)

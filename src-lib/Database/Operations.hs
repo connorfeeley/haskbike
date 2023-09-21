@@ -15,15 +15,16 @@ module Database.Operations
      , queryStationStatus
      , queryStationStatusFields
        -- , _insertStationStatus -- NOTE: use insertUpdatedStationStatus instead
-     , FilterStatusResult (..)
      , InsertStatusResult (..)
      , filterStatus
-     , filter_same
-     , filter_updated
      , getRowsToDeactivate
      , insertUpdatedStationStatus
      , insert_deactivated
      , insert_inserted
+     -- For determining which API statuses are newer than the database statuses.
+     , FilterStatusResult (..)
+     , filter_unchanged
+     , filter_newer
      ) where
 
 import           API.Types                                ( _status_last_reported, _status_station_id,
@@ -55,8 +56,8 @@ runBeamPostgres' =
 #endif
 
 data FilterStatusResult where
-  FilterStatusResult :: { _filter_updated :: [AT.StationStatus] -- ^ List of 'AT.StationStatus' that were updated.
-                        , _filter_same    :: [AT.StationStatus] -- ^ List of 'AT.StationStatus' that were not updated.
+  FilterStatusResult :: { _filter_newer         :: [AT.StationStatus] -- ^ List of 'AT.StationStatus' that were updated.
+                        , _filter_unchanged     :: [AT.StationStatus] -- ^ List of 'AT.StationStatus' that were not updated.
                         } -> FilterStatusResult
   deriving (Show)
 makeLenses ''FilterStatusResult
@@ -193,26 +194,30 @@ getRowsToDeactivate conn api_status = do
               _d_status_last_reported status <.  snd api_values)    -- Last reported time is older than in the API response
       pure status
 
-{- | Query database for updated statuses and return a tuple of maps representing the API statuses that have reported:
+{- |
 -}
 
 filterStatus :: Connection         -- ^ Connection to the database.
              -> [AT.StationStatus] -- ^ List of 'AT.StationStatus' from the API response.
              -> IO FilterStatusResult
 filterStatus conn api_status = do
-  -- Query database for updated statuses
-  db_status_updated <- getRowsToDeactivate conn api_status
+  -- Find rows that would need to be deactivated if the statuses from the API were inserted.
+  statuses_would_deactivate <- getRowsToDeactivate conn api_status
 
-  -- Construct map of all API statuses
-  let api_status'        = Map.fromList $ map (\ss -> (               ss ^. status_station_id,   ss)) api_status
-  -- Construct map of updated statuses from the database
-  let db_updated_status' = Map.fromList $ map (\ss -> (fromIntegral $ ss ^. d_status_station_id, ss)) db_status_updated
+  -- Map of all API statuses, keyed on station ID.
+  let api_status_map                = Map.fromList $ map (\ss -> (               ss ^. status_station_id,   ss)) api_status
 
-  -- Construct map of intersection of both maps; only elements with keys in both are preserved.
-  let api_status_same    = Map.intersection api_status' db_updated_status'
-  let api_status_updated = Map.difference   api_status' db_updated_status'
+  -- Map of rows that would be deactivated, keyed on station ID.
+  let statuses_would_deactivate_map = Map.fromList $ map (\ss -> (fromIntegral $ ss ^. d_status_station_id, ss)) statuses_would_deactivate
 
-  pure $ FilterStatusResult {_filter_updated = map snd $ Map.toAscList api_status_updated, _filter_same = map snd $ Map.toAscList api_status_same}
+  -- Map of intersection of both maps (station ID key appears in both Maps).
+  let api_status_newer    = Map.intersection api_status_map statuses_would_deactivate_map
+  -- Map of difference of both maps (station ID key appears in API map but not in the statuses to deactivate Map).
+  let api_status_unchanged = Map.difference   api_status_map statuses_would_deactivate_map
+
+  pure $ FilterStatusResult { _filter_newer     = map snd $ Map.toAscList api_status_newer
+                            , _filter_unchanged = map snd $ Map.toAscList api_status_unchanged
+                            }
 
 
 {- |
@@ -228,27 +233,32 @@ insertUpdatedStationStatus conn api_status = do
   -- Filter out statuses that don't have corresponding information in the database.
   let status = filter (\ss -> fromIntegral (_status_station_id ss) `elem` info_ids) api_status
 
-  -- Query database for updated statuses
-  db_status_updated <- case length api_status of
-    0 -> pure [] -- No need to query if there are no statuses to update.
-    _ -> getRowsToDeactivate conn api_status
-  let status_ids' =  map _d_status_id db_status_updated
+  -- Determine which rows will be deactivated.
+  statuses_to_deactivate <- case length api_status of
+    0 -> pure []                             -- No need to query if there are no statuses to update.
+    _ -> getRowsToDeactivate conn api_status -- Get rows to deactivate.
+  let status_ids' =  map _d_status_id statuses_to_deactivate
 
-  updated <- case length db_status_updated of
+  -- Deactivate status rows which we have new data for.
+  updated_statuses <- case length statuses_to_deactivate of
     0 -> pure [] -- Can't update if there are no statuses to update (SQL restriction).
-    -- Set returned station statuses as inactive.
-    _ -> runBeamPostgres' conn $ runUpdateReturningList $
-      update (bikeshareDb ^. bikeshareStationStatus)
-             (\c -> _d_status_active c <-. val_ False)
-             (\c -> _d_status_id c `in_` map val_ status_ids')
+    _ ->         -- Set returned station statuses as inactive.
+      runBeamPostgres' conn $ runUpdateReturningList $
+        update (bikeshareDb ^. bikeshareStationStatus)
+        (\c -> _d_status_active c <-. val_ False)
+        (\c -> _d_status_id c `in_` map val_ status_ids')
 
-  inserted <- case length status of
+  -- Insert new status rows.
+  inserted_statuses <- case length status of
     0 -> pure [] -- No need to insert if there are no statuses to insert.
-    _ -> runBeamPostgres' conn $ runInsertReturningList $
-      insert (bikeshareDb ^. bikeshareStationStatus) $
-      insertExpressions $ map fromJSONToBeamStationStatus status
+    _ ->         -- Insert rows for each 'AT.StationStatus' that has newer data.
+      runBeamPostgres' conn $ runInsertReturningList $
+        insert (bikeshareDb ^. bikeshareStationStatus) $
+        insertExpressions $ map fromJSONToBeamStationStatus status
 
-  pure $ InsertStatusResult {_insert_deactivated = updated, _insert_inserted = inserted }
+  pure $ InsertStatusResult { _insert_deactivated = updated_statuses
+                            , _insert_inserted    = inserted_statuses
+                            }
 
   where
     status_ids :: [Int]
