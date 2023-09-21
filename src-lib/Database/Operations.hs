@@ -133,8 +133,8 @@ queryStationInformation conn ids =
 
 -- | Insert station information into the database.
 insertStationInformation :: Connection              -- ^ Connection to the database.
-                         -> [AT.StationInformation] -- ^ List of station information from the API response.
-                         -> IO [StationInformation] -- ^ List of station information that was inserted.
+                         -> [AT.StationInformation] -- ^ List of 'StationInformation' from the API response.
+                         -> IO [StationInformation] -- ^ List of 'StationInformation' that where inserted.
 insertStationInformation conn stations = do
   runBeamPostgres' conn $ runInsertReturningList $
     insert (bikeshareDb ^. bikeshareStationInformation) $
@@ -144,8 +144,8 @@ insertStationInformation conn stations = do
 
 -- | Insert station status into the database.
 _insertStationStatus :: Connection         -- ^ Connection to the database.
-                     -> [AT.StationStatus] -- ^ List of station statuses from the API response.
-                     -> IO [StationStatus] -- ^ List of station statuses that were inserted.
+                     -> [AT.StationStatus] -- ^ List of 'AT.StationStatus' from the API response.
+                     -> IO [StationStatus] -- ^ List of 'StationStatus' that were inserted.
 _insertStationStatus conn status = do
   -- Get information for the stations that are in the status response.
   info_ids <- map _info_station_id <$> queryStationInformation conn status_ids
@@ -160,17 +160,17 @@ _insertStationStatus conn status = do
 
 -- | Query database to determine which stations have reported since being inserted.
 queryUpdatedStatus :: Connection         -- ^ Connection to the database.
-                   -> [AT.StationStatus] -- ^ List of station statuses from the API response.
-                   -> IO [StationStatus] -- ^ List of station statuses that would need to be updated, if the statuses from the API were inserted.
+                   -> [AT.StationStatus] -- ^ List of 'AT.StationStatus' from the API response.
+                   -> IO [StationStatus] -- ^ List of 'StationStatus' from the database that would need to be deactivated, if the statuses from the API were inserted.
 queryUpdatedStatus conn api_status = do
   -- Select using common table expressions (selectWith).
   runBeamPostgres' conn $ runSelectReturningList $ selectWith $ do
-    -- CTE for station information.
+    -- Common table expression for 'StationInformation'.
     common_info <- selecting $
         filter_ (\info -> _info_station_id info `in_` map (fromIntegral . _status_station_id) api_status)
         (all_ (bikeshareDb ^. bikeshareStationInformation))
 
-    -- CTE for station status.
+    -- Common table expression for 'StationStatus'.
     common_status <- selecting $ do
       info <- Database.Beam.reuse common_info
       status <- orderBy_ (desc_ . _d_status_id) $
@@ -180,15 +180,15 @@ queryUpdatedStatus conn api_status = do
 
     -- Select from station status.
     pure $ do
-      -- Construct rows containing station ID and last reported time, corresponding to the API response parameter.
+      -- Transform each 'AT.StationStatus' into corresponding rows, containing '_status_station_id' and '_status_last_reported'.
       api_values <- values_ $ map (\s -> ( as_ @Int32 ( fromIntegral $ _status_station_id s)
                                          , cast_ (val_ $ _status_last_reported s) (maybeType reportTimeType))
                                   ) api_status
       -- Select from station status where the last reported time is older than in the API response.
       status <- Database.Beam.reuse common_status
-      guard_ (_d_status_station_id    status ==. fst api_values &&.
-              _d_status_active        status ==. val_ True      &&.
-              _d_status_last_reported status <.  snd api_values)
+      guard_ (_d_status_station_id    status ==. fst api_values &&. -- Station ID
+              _d_status_active        status ==. val_ True      &&. -- Status record is active
+              _d_status_last_reported status <.  snd api_values)    -- Last reported time is older than in the API response
       pure status
 
 {- |
@@ -198,7 +198,7 @@ Second element: map of API statuses that have not reported since being inserted.
 -}
 
 filterStatus :: Connection         -- ^ Connection to the database.
-             -> [AT.StationStatus] -- ^ List of station statuses from the API response.
+             -> [AT.StationStatus] -- ^ List of 'AT.StationStatus' from the API response.
              -> IO FilterStatusResult
 filterStatus conn api_status = do
   -- Query database for updated statuses
@@ -220,13 +220,19 @@ filterStatus conn api_status = do
 Insert updated station status into the database.
 -}
 insertUpdatedStationStatus :: Connection         -- ^ Connection to the database.
-                           -> [AT.StationStatus] -- ^ List of station statuses from the API response.
+                           -> [AT.StationStatus] -- ^ List of 'AT.StationStatus' from the API response.
                            -> IO InsertStatusResult
-insertUpdatedStationStatus conn status = do
+insertUpdatedStationStatus conn api_status = do
+  -- Get information for the stations that are in the status response.
+  info_ids <- map _info_station_id <$> queryStationInformation conn status_ids
+
+  -- Filter out statuses that don't have corresponding information in the database.
+  let status = filter (\ss -> fromIntegral (_status_station_id ss) `elem` info_ids) api_status
+
   -- Query database for updated statuses
-  db_status_updated <- case length status of
+  db_status_updated <- case length api_status of
     0 -> pure [] -- No need to query if there are no statuses to update.
-    _ -> queryUpdatedStatus conn status
+    _ -> queryUpdatedStatus conn api_status
   let status_ids' =  map _d_status_id db_status_updated
 
   updated <- case length db_status_updated of
@@ -237,17 +243,14 @@ insertUpdatedStationStatus conn status = do
              (\c -> _d_status_active c <-. val_ False)
              (\c -> _d_status_id c `in_` map val_ status_ids')
 
-  -- Get information for the stations that are in the status response.
-  info_ids <- map _info_station_id <$> queryStationInformation conn status_ids
-  let filtered_status = filter (\ss -> fromIntegral (_status_station_id ss) `elem` info_ids) status
-  inserted <- case length filtered_status of
+  inserted <- case length status of
     0 -> pure [] -- No need to insert if there are no statuses to insert.
     _ -> runBeamPostgres' conn $ runInsertReturningList $
       insert (bikeshareDb ^. bikeshareStationStatus) $
-      insertExpressions $ map fromJSONToBeamStationStatus filtered_status
+      insertExpressions $ map fromJSONToBeamStationStatus status
 
   pure $ InsertStatusResult {_insert_deactivated = updated, _insert_inserted = inserted }
 
   where
     status_ids :: [Int]
-    status_ids = fromIntegral <$> status ^.. traverse . status_station_id
+    status_ids = fromIntegral <$> api_status ^.. traverse . status_station_id

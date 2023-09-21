@@ -21,7 +21,7 @@ import           Control.Concurrent.STM.TBMQueue
 import           Control.Lens
 
 import           Database.Beam.Postgres          ( Connection )
-import           Database.BikeShare              ( BeamReportTime, d_status_last_reported, d_status_station_id )
+import           Database.BikeShare              ( d_status_last_reported, d_status_station_id )
 import           Database.Operations
 import           Database.Utils
 
