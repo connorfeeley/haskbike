@@ -4,12 +4,13 @@
 {-# LANGUAGE TypeOperators #-}
 
 module BikeShareAPI
-  ( BikeShareAPI
-  ) where
+     ( BikeShareAPI
+     ) where
 
-import           API.Types   (StationInformationResponse, StationStatusResponse)
+import           API.Types   ( StationInformationResponse, StationStatusResponse )
 
-import           Data.Aeson  (Object)
+import           Data.Aeson  ( Object )
+
 import           Servant.API
 
 

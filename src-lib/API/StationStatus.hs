@@ -6,42 +6,44 @@
 {-# LANGUAGE TemplateHaskell   #-}
 
 module API.StationStatus
-        ( StationStatus (..)
-        , StationStatusResponse
-        , StationStatusResponseData (..)
-        , StationStatusString (..)
-        , VehicleDock (..)
-        , VehicleType (..)
-        , status_station_id
-        , status_num_bikes_available
-        , status_num_bikes_disabled
-        , status_num_docks_available
-        , status_num_docks_disabled
-        , status_last_reported
-        , status_is_charging_station
-        , status_status
-        , status_is_installed
-        , status_is_renting
-        , status_is_returning
-        , status_traffic
-        , status_vehicle_docks_available
-        , status_vehicle_types_available
-        , status_stations
-        ) where
+     ( StationStatus (..)
+     , StationStatusResponse
+     , StationStatusResponseData (..)
+     , StationStatusString (..)
+     , VehicleDock (..)
+     , VehicleType (..)
+     , status_is_charging_station
+     , status_is_installed
+     , status_is_renting
+     , status_is_returning
+     , status_last_reported
+     , status_num_bikes_available
+     , status_num_bikes_disabled
+     , status_num_docks_available
+     , status_num_docks_disabled
+     , status_station_id
+     , status_stations
+     , status_status
+     , status_traffic
+     , status_vehicle_docks_available
+     , status_vehicle_types_available
+     ) where
 
-import           Common
 import           API.ResponseWrapper
 
-import           Control.Lens         hiding ((.=))
-import           Data.Aeson           (FromJSON (parseJSON), KeyValue ((.=)),
-                                       ToJSON (toJSON), Value (String), object,
-                                       withObject, withText, (.:), (.:?))
-import           Data.Attoparsec.Text (Parser, choice, parseOnly, string)
-import           Data.Either          (fromRight)
-import           Data.Functor         (($>))
+import           Common
+
+import           Control.Lens         hiding ( (.=) )
+
+import           Data.Aeson           ( FromJSON (parseJSON), KeyValue ((.=)), ToJSON (toJSON), Value (String), object,
+                                        withObject, withText, (.:), (.:?) )
+import           Data.Attoparsec.Text ( Parser, choice, parseOnly, string )
+import           Data.Either          ( fromRight )
+import           Data.Functor         ( ($>) )
 import qualified Data.Text            as Text
 import           Data.Time
-import           GHC.Generics         (Generic)
+
+import           GHC.Generics         ( Generic )
 
 -- | Enumeration representing a BikeShare station status string.
 data StationStatusString where

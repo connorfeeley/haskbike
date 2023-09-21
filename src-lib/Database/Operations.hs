@@ -2,46 +2,45 @@
 
 {-# LANGUAGE GADTs               #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TemplateHaskell     #-}
+{-# LANGUAGE TypeApplications    #-}
 
 -- | This module contains the operations that can be performed on the database.
 
 module Database.Operations
-  ( queryDisabledDocks
-  , printDisabledDocks
-  , queryStationStatus
-  , queryStationStatusFields
-  , queryStationInformation
-  , insertStationInformation
-  -- , _insertStationStatus -- NOTE: use insertUpdatedStationStatus instead
-  , queryUpdatedStatus
-  , filterStatus
-  , insertUpdatedStationStatus
-  , InsertStatusResult (..)
-  , FilterStatusResult (..)
-  , insert_updated
-  , insert_inserted
-  , filter_updated
-  , filter_same
-  ) where
+     ( insertStationInformation
+     , printDisabledDocks
+     , queryDisabledDocks
+     , queryStationInformation
+     , queryStationStatus
+     , queryStationStatusFields
+       -- , _insertStationStatus -- NOTE: use insertUpdatedStationStatus instead
+     , FilterStatusResult (..)
+     , InsertStatusResult (..)
+     , filterStatus
+     , filter_same
+     , filter_updated
+     , insertUpdatedStationStatus
+     , insert_inserted
+     , insert_updated
+     , queryUpdatedStatus
+     ) where
 
-import           API.Types                                (StationInformationResponse (..),
-                                                           StationStatusResponse (..),
-                                                           _status_last_reported,
-                                                           _status_station_id,
-                                                           status_station_id)
+import           API.Types                                ( StationInformationResponse (..), StationStatusResponse (..),
+                                                            _status_last_reported, _status_station_id,
+                                                            status_station_id )
 import qualified API.Types                                as AT
-import           Database.BikeShare
-import           Database.Utils
+
+import           Control.Lens                             hiding ( (<.) )
+
+import           Data.Int                                 ( Int32 )
+import qualified Data.Map                                 as Map
 
 import           Database.Beam
 import           Database.Beam.Backend.SQL.BeamExtensions
 import           Database.Beam.Postgres
-
-import           Control.Lens                             hiding ((<.))
-import           Data.Int                                 (Int32)
-import qualified Data.Map                                 as Map
+import           Database.BikeShare
+import           Database.Utils
 
 
 -- | Enable SQL debug output if DEBUG flag is set.

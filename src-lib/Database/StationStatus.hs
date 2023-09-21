@@ -15,65 +15,61 @@
 {-# LANGUAGE UndecidableInstances      #-}
 
 module Database.StationStatus
-        ( StationStatusT(..)
-        , StationStatus
-        , StationStatusId
-        , PrimaryKey(StationStatusId)
-        , BeamStationStatusString(..)
-        , VehicleTypeMixin(..)
-        , BeamReportTime(..)
-        , reportTimeType
-        , d_status_id
-        , d_status_info_id
-        , d_status_station_id
-        , d_status_last_reported
-        , d_status_num_bikes_available
-        , d_status_num_bikes_disabled
-        , d_status_num_docks_available
-        , d_status_num_docks_disabled
-        , d_status_active
-        , available_boost
-        , available_iconic
-        , available_efit
-        , available_efit_g5
-        , stationStatusType
-        , vehicleTypeFields
-        , vehicleTypesAvailable
-        , fromJSONToBeamStationStatus
-        , fromBeamStationStatusToJSON
-        ) where
+     ( BeamReportTime (..)
+     , BeamStationStatusString (..)
+     , PrimaryKey (StationStatusId)
+     , StationStatus
+     , StationStatusId
+     , StationStatusT (..)
+     , VehicleTypeMixin (..)
+     , available_boost
+     , available_efit
+     , available_efit_g5
+     , available_iconic
+     , d_status_active
+     , d_status_id
+     , d_status_info_id
+     , d_status_last_reported
+     , d_status_num_bikes_available
+     , d_status_num_bikes_disabled
+     , d_status_num_docks_available
+     , d_status_num_docks_disabled
+     , d_status_station_id
+     , fromBeamStationStatusToJSON
+     , fromJSONToBeamStationStatus
+     , reportTimeType
+     , stationStatusType
+     , vehicleTypeFields
+     , vehicleTypesAvailable
+     ) where
 
 import qualified API.Types                                  as API.T
+
 import           Common
-import           Database.StationInformation
 
 import           Control.Lens
+
 import qualified Data.ByteString.Char8                      as B
-import           Data.Coerce                                (coerce)
+import           Data.Coerce                                ( coerce )
 import           Data.Int
-import           Data.List                                  (find)
-import           Data.String                                (IsString (fromString))
+import           Data.List                                  ( find )
+import           Data.String                                ( IsString (fromString) )
 import qualified Data.Text                                  as Text
 import           Data.Time
 import           Data.Time.Clock.POSIX
 
 import           Database.Beam
-import           Database.Beam.Backend                      (BeamBackend,
-                                                             HasSqlValueSyntax (sqlValueSyntax),
-                                                             IsSql92DataTypeSyntax (timestampType),
-                                                             SqlNull (SqlNull),
-                                                             SqlSerial (..))
-import           Database.Beam.Migrate                      (HasDefaultSqlDataType)
-import           Database.Beam.Postgres                     (Postgres)
-import           Database.Beam.Postgres.Syntax              (PgValueSyntax,
-                                                             pgTextType)
-import           Database.PostgreSQL.Simple.FromField       (Field (typeOid),
-                                                             FromField (..),
-                                                             ResultError (..),
-                                                             returnError,
-                                                             typoid)
-import           Database.PostgreSQL.Simple.ToField         (ToField (..))
-import           Database.PostgreSQL.Simple.TypeInfo.Static (text)
+import           Database.Beam.Backend                      ( BeamBackend, HasSqlValueSyntax (sqlValueSyntax),
+                                                              IsSql92DataTypeSyntax (timestampType), SqlNull (SqlNull),
+                                                              SqlSerial (..) )
+import           Database.Beam.Migrate                      ( HasDefaultSqlDataType )
+import           Database.Beam.Postgres                     ( Postgres )
+import           Database.Beam.Postgres.Syntax              ( PgValueSyntax, pgTextType )
+import           Database.PostgreSQL.Simple.FromField       ( Field (typeOid), FromField (..), ResultError (..),
+                                                              returnError, typoid )
+import           Database.PostgreSQL.Simple.ToField         ( ToField (..) )
+import           Database.PostgreSQL.Simple.TypeInfo.Static ( text )
+import           Database.StationInformation
 
 
 -- | Declare a (Beam) table for the 'StationStatus' type.
@@ -176,7 +172,7 @@ instance (BeamBackend be, FromBackendRow be Text.Text) => FromBackendRow be Beam
     case val :: Text.Text of
       "IN_SERVICE"  -> pure $ BeamStationStatusString API.T.InService
       "END_OF_LIFE" -> pure $ BeamStationStatusString API.T.EndOfLife
-      _ -> fail ("Invalid value for BeamStationStatusString: " ++ Text.unpack val)
+      _             -> fail ("Invalid value for BeamStationStatusString: " ++ Text.unpack val)
 
 instance (HasSqlValueSyntax be String, Show BeamStationStatusString) => HasSqlValueSyntax be BeamStationStatusString where
   sqlValueSyntax = sqlValueSyntax . show

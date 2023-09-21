@@ -13,16 +13,15 @@
 {-# LANGUAGE UndecidableInstances      #-}
 
 module Database.BikeShare
-        ( module Database.Types
-        , BikeshareDb(..)
-        , bikeshareDb
-        , bikeshareStationInformation
-        , bikeshareStationStatus
-        ) where
-
-import           Database.Types
+     ( BikeshareDb (..)
+     , module Database.Types
+     , bikeshareDb
+     , bikeshareStationInformation
+     , bikeshareStationStatus
+     ) where
 
 import           Database.Beam
+import           Database.Types
 
 
 -- | Define the database; only containing one table for now.

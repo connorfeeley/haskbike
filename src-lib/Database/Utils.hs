@@ -1,22 +1,23 @@
 -- | Utility functions for database operations.
 
 module Database.Utils
-  ( connectProductionDb
-  , connectTestDb
-  , setupProductionDatabase
-  , setupDatabaseName
-  , dbnameProduction
-  , dbnameTest
-  , pPrintCompact
-  ) where
+     ( connectProductionDb
+     , connectTestDb
+     , dbnameProduction
+     , dbnameTest
+     , pPrintCompact
+     , setupDatabaseName
+     , setupProductionDatabase
+     ) where
 
-import           Data.String                (fromString)
-import           Text.Pretty.Simple
+import           Data.String                ( fromString )
 
 import           Database.Beam
 import           Database.Beam.Postgres
-import           Database.Migrations        (migrateDB)
+import           Database.Migrations        ( migrateDB )
 import           Database.PostgreSQL.Simple
+
+import           Text.Pretty.Simple
 
 
 -- | Construct query to drop a table using cascade.

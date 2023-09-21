@@ -1,19 +1,16 @@
 -- | Common functions and types for the project.
 
 module Common
-  ( reportTimeZone
-  , posixToLocal
-  , localToPosix
-  , localToSystem
-  ) where
+     ( localToPosix
+     , localToSystem
+     , posixToLocal
+     , reportTimeZone
+     ) where
 
-import           Data.Time             (LocalTime, TimeZone (..),
-                                        localTimeToUTC,
-                                        secondsToNominalDiffTime,
-                                        utcToLocalTime)
-import           Data.Time.Clock.POSIX (posixSecondsToUTCTime,
-                                        utcTimeToPOSIXSeconds)
-import Data.Time.LocalTime (getCurrentTimeZone)
+import           Data.Time             ( LocalTime, TimeZone (..), localTimeToUTC, secondsToNominalDiffTime,
+                                         utcToLocalTime )
+import           Data.Time.Clock.POSIX ( posixSecondsToUTCTime, utcTimeToPOSIXSeconds )
+import           Data.Time.LocalTime   ( getCurrentTimeZone )
 
 
 localToSystem :: LocalTime -> IO LocalTime

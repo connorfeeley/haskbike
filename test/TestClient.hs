@@ -5,15 +5,18 @@ module TestClient where
 
 import           API.Client
 import qualified API.Poll           as Poll
-import Database.Utils
+
+import           Control.Exception  ( SomeException, try )
+import           Control.Monad      ( void )
+
+import           Database.Utils
+
+import           System.IO          ( stdout )
+import           System.IO.Silently ( hSilence, silence )
 
 import           Test.Tasty.HUnit
 
-import           Control.Exception  (SomeException, try)
-import           Control.Monad      (void)
-import           System.IO          (stdout)
-import           System.IO.Silently (hSilence, silence)
-import           UnliftIO           (stderr, timeout)
+import           UnliftIO           ( stderr, timeout )
 
 
 -- | Mark a test as expected to fail.

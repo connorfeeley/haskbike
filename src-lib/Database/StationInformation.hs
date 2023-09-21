@@ -15,45 +15,40 @@
 {-# LANGUAGE UndecidableInstances      #-}
 
 module Database.StationInformation
-        ( StationInformationT(..)
-        , StationInformation
-        , StationInformationId
-        , PrimaryKey(StationInformationId)
-        , BeamRentalMethod(..)
-        , rentalMethod
-        , info_station_id
-        , info_name
-        , BeamPhysicalConfiguration(..)
-        , physicalConfiguration
-        , fromJSONToBeamStationInformation
-        , fromBeamStationInformationToJSON
-        ) where
+     ( BeamPhysicalConfiguration (..)
+     , BeamRentalMethod (..)
+     , PrimaryKey (StationInformationId)
+     , StationInformation
+     , StationInformationId
+     , StationInformationT (..)
+     , fromBeamStationInformationToJSON
+     , fromJSONToBeamStationInformation
+     , info_name
+     , info_station_id
+     , physicalConfiguration
+     , rentalMethod
+     ) where
 
 import qualified API.Types                                  as API.T
 
 import           Control.Lens
 
-import           Database.Beam
-
+import qualified Data.ByteString.Char8                      as B
+import           Data.Coerce                                ( coerce )
 import           Data.Int
 import qualified Data.Text                                  as Text
-import           Data.Vector                                (fromList, toList)
+import           Data.Vector                                ( fromList, toList )
 import qualified Data.Vector                                as Vector
 
-import qualified Data.ByteString.Char8                      as B
-import           Data.Coerce                                (coerce)
-import           Database.Beam.Backend                      (BeamBackend,
-                                                             HasSqlValueSyntax (sqlValueSyntax),
-                                                             SqlSerial)
-import           Database.Beam.Postgres                     (Postgres)
-import           Database.Beam.Postgres.Syntax              (pgTextType)
-import           Database.PostgreSQL.Simple.FromField       (Field (typeOid),
-                                                             FromField (..),
-                                                             ResultError (..),
-                                                             returnError,
-                                                             typoid)
-import           Database.PostgreSQL.Simple.ToField         (ToField (..))
-import           Database.PostgreSQL.Simple.TypeInfo.Static (text)
+import           Database.Beam
+import           Database.Beam.Backend                      ( BeamBackend, HasSqlValueSyntax (sqlValueSyntax),
+                                                              SqlSerial )
+import           Database.Beam.Postgres                     ( Postgres )
+import           Database.Beam.Postgres.Syntax              ( pgTextType )
+import           Database.PostgreSQL.Simple.FromField       ( Field (typeOid), FromField (..), ResultError (..),
+                                                              returnError, typoid )
+import           Database.PostgreSQL.Simple.ToField         ( ToField (..) )
+import           Database.PostgreSQL.Simple.TypeInfo.Static ( text )
 
 
 -- | Declare a (Beam) table for the 'StationInformation' type.
@@ -125,11 +120,11 @@ instance (BeamBackend be, FromBackendRow be Text.Text) => FromBackendRow be Beam
   fromBackendRow = do
     val <- fromBackendRow
     case val :: Text.Text of
-      "KEY"           -> pure $ BeamRentalMethod API.T.Key
-      "TRANAPI.TTCARD"   -> pure $ BeamRentalMethod API.T.TransitCard
-      "CREDITCARD"    -> pure $ BeamRentalMethod API.T.CreditCard
-      "PHONE"         -> pure $ BeamRentalMethod API.T.Phone
-      _ -> fail ("Invalid value for BeamRentalMethod: " ++ Text.unpack val)
+      "KEY"            -> pure $ BeamRentalMethod API.T.Key
+      "TRANAPI.TTCARD" -> pure $ BeamRentalMethod API.T.TransitCard
+      "CREDITCARD"     -> pure $ BeamRentalMethod API.T.CreditCard
+      "PHONE"          -> pure $ BeamRentalMethod API.T.Phone
+      _                -> fail ("Invalid value for BeamRentalMethod: " ++ Text.unpack val)
 
 instance (HasSqlValueSyntax be String, Show BeamRentalMethod) => HasSqlValueSyntax be BeamRentalMethod where
   sqlValueSyntax = sqlValueSyntax . show
@@ -167,7 +162,7 @@ instance (BeamBackend be, FromBackendRow be Text.Text) => FromBackendRow be Beam
       "SMARTLITMAPFRAME"    -> pure $ BeamPhysicalConfiguration API.T.SmartLitMapFrame
       "SMARTMAPFRAME"       -> pure $ BeamPhysicalConfiguration API.T.SmartMapFrame
       "VAULT"               -> pure $ BeamPhysicalConfiguration API.T.Vault
-      _ -> fail ("Invalid value for BeamPhysicalConfiguration: " ++ Text.unpack val)
+      _                     -> fail ("Invalid value for BeamPhysicalConfiguration: " ++ Text.unpack val)
 
 instance (HasSqlValueSyntax be String, Show BeamPhysicalConfiguration) => HasSqlValueSyntax be BeamPhysicalConfiguration where
   sqlValueSyntax = sqlValueSyntax . show

@@ -4,15 +4,14 @@
 
 module Database.Migrations where
 
-import           Database.BikeShare
+import           Data.String                    ( fromString )
 
 import           Database.Beam
 import           Database.Beam.Migrate
 import           Database.Beam.Migrate.Simple
 import           Database.Beam.Postgres
 import qualified Database.Beam.Postgres.Migrate as PG
-
-import           Data.String                    (fromString)
+import           Database.BikeShare
 
 referenceInformationTable :: BeamMigrateSqlBackend be => Constraint be
 referenceInformationTable = Constraint $ referencesConstraintSyntax "station_information" ["station_id"]

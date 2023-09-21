@@ -14,24 +14,24 @@
 
 module TestDatabase where
 
+import           API.ResponseWrapper    ( ResponseWrapper (..), response_data )
+import           API.Types              ( _info_stations, info_stations, status_stations )
+import qualified API.Types              as AT
+
+import           Control.Lens
+
+import           Data.Aeson             ( FromJSON, eitherDecode )
+import qualified Data.ByteString.Lazy   as BL
+import           Data.Functor           ( void )
+import qualified Data.Map               as Map
+
 import           Database.Beam
 import           Database.Beam.Postgres
-
 import           Database.BikeShare
 import           Database.Operations
 import           Database.Utils
 
-import           API.Types              (_info_stations, info_stations, status_stations)
-import qualified API.Types              as AT
-
 import           Test.Tasty.HUnit
-
-import           API.ResponseWrapper (ResponseWrapper (..), response_data)
-import           Data.Aeson             (FromJSON, eitherDecode)
-import qualified Data.ByteString.Lazy   as BL
-import           Data.Functor           (void)
-import qualified Data.Map               as Map
-import Control.Lens
 
 
 -- | Helper function to decode a JSON file.

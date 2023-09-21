@@ -4,33 +4,37 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module API.Client
-  ( bikeShareAPIClient
-  , versions
-  , vehicleTypes
-  , stationInformation
-  , stationStatus
-  , systemRegions
-  , systemInformation
-  , systemPricingPlans
-  , run
-  , runQuery
-  , handleResponse
-  , mkClientManager
-  , runQueryWithEnv
-  ) where
+     ( bikeShareAPIClient
+     , handleResponse
+     , mkClientManager
+     , run
+     , runQuery
+     , runQueryWithEnv
+     , stationInformation
+     , stationStatus
+     , systemInformation
+     , systemPricingPlans
+     , systemRegions
+     , vehicleTypes
+     , versions
+     ) where
 
-import           API.Types               (StationInformationResponse,
-                                          StationStatusResponse)
+import           API.Types               ( StationInformationResponse, StationStatusResponse )
+
 import           BikeShareAPI
 
-import           Control.Exception       (Exception (displayException))
-import           Data.Aeson              (Object)
+import           Control.Exception       ( Exception (displayException) )
+
+import           Data.Aeson              ( Object )
 import           Data.Proxy
-import           Network.HTTP.Client     (Manager, newManager)
-import           Network.HTTP.Client.TLS (tlsManagerSettings)
+
+import           Network.HTTP.Client     ( Manager, newManager )
+import           Network.HTTP.Client.TLS ( tlsManagerSettings )
+
 import           Servant.API
 import           Servant.Client
-import           Text.Pretty.Simple      (pPrintString)
+
+import           Text.Pretty.Simple      ( pPrintString )
 
 -- | The BikeShare API client.
 bikeShareAPIClient :: Proxy BikeShareAPI

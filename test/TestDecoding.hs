@@ -6,19 +6,16 @@
 
 module TestDecoding where
 
-import API.Types (StationInformationResponse, StationStatusResponse)
+import           API.Types            ( StationInformationResponse, StationStatusResponse )
+
+import           Data.Aeson           ( FromJSON, eitherDecode )
+import qualified Data.ByteString      as B
+import           Data.ByteString.Lazy ( fromStrict )
+import qualified Data.ByteString.Lazy as BL
+import           Data.FileEmbed       ( embedDir )
+import qualified Data.Maybe           as Maybe
 
 import           Test.Tasty.HUnit
-
-import           Data.Aeson           (FromJSON, eitherDecode)
-
-import qualified Data.ByteString      as B
-import           Data.ByteString.Lazy (fromStrict)
-import qualified Data.ByteString.Lazy as BL
-
-import           Data.FileEmbed       (embedDir)
-
-import qualified Data.Maybe           as Maybe
 
 
 -- | Decode a ByteString into a value.

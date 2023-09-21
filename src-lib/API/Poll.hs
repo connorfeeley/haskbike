@@ -5,25 +5,26 @@ Poll the API for status updates, inserting results in database as needed.
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module API.Poll
-  ( main
-  , pollClient
-  ) where
+     ( main
+     , pollClient
+     ) where
 
 import           API.Client
 import           API.ResponseWrapper
-import           API.Types                       (StationStatusResponse,
-                                                  status_stations)
-import           Common
-import           Database.BikeShare              (d_status_last_reported,
-                                                  d_status_station_id, BeamReportTime)
-import           Database.Operations
-import           Database.Utils
+import           API.Types                       ( StationStatusResponse, status_stations )
 
-import           Control.Concurrent              (threadDelay)
+import           Common
+
+import           Control.Concurrent              ( threadDelay )
 import           Control.Concurrent.STM
 import           Control.Concurrent.STM.TBMQueue
 import           Control.Lens
-import           Database.Beam.Postgres          (Connection)
+
+import           Database.Beam.Postgres          ( Connection )
+import           Database.BikeShare              ( BeamReportTime, d_status_last_reported, d_status_station_id )
+import           Database.Operations
+import           Database.Utils
+
 import           UnliftIO.Async
 
 

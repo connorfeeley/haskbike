@@ -10,20 +10,21 @@
 {-# LANGUAGE UndecidableInstances  #-}
 
 module API.ResponseWrapper
-        ( ResponseWrapper (..)
-        , response_last_updated
-        , response_ttl
-        , response_version
-        , response_data
-        ) where
+     ( ResponseWrapper (..)
+     , response_data
+     , response_last_updated
+     , response_ttl
+     , response_version
+     ) where
 
 import           Common
 
-import           Data.Aeson
-import           GHC.Generics
+import           Control.Lens hiding ( (.=) )
 
-import           Control.Lens hiding ((.=))
-import           Data.Time    (LocalTime)
+import           Data.Aeson
+import           Data.Time    ( LocalTime )
+
+import           GHC.Generics
 
 
 -- | A type representing a BikeShare response.

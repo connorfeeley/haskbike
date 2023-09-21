@@ -5,29 +5,31 @@
 {-# LANGUAGE GADTs                 #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE TemplateHaskell       #-}
 {-# LANGUAGE UndecidableInstances  #-}
-{-# LANGUAGE TemplateHaskell   #-}
 
 module API.StationInformation
-        ( StationInformation (..)
-        , StationInformationResponse
-        , StationInformationResponseData (..)
-        , PhysicalConfiguration (..)
-        , RentalMethod (..)
-        , RentalURIs (..)
-        , info_stations
-        ) where
+     ( PhysicalConfiguration (..)
+     , RentalMethod (..)
+     , RentalURIs (..)
+     , StationInformation (..)
+     , StationInformationResponse
+     , StationInformationResponseData (..)
+     , info_stations
+     ) where
+
+import           API.ResponseWrapper
+
+import           Control.Lens         hiding ( (.=) )
 
 import           Data.Aeson
+import           Data.Attoparsec.Text ( Parser, choice, parseOnly, string )
+import           Data.Either          ( fromRight )
+import           Data.Functor         ( ($>) )
+import           Data.Text            ( pack )
 import qualified Data.Text            as Text
-import           GHC.Generics
 
-import           Control.Lens         hiding ((.=))
-import           Data.Attoparsec.Text (Parser, choice, parseOnly, string)
-import           Data.Either          (fromRight)
-import           Data.Functor         (($>))
-import           Data.Text            (pack)
-import API.ResponseWrapper
+import           GHC.Generics
 
 
 -- | Enumeration representing a BikeShare station physical configuration.
