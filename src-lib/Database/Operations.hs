@@ -16,15 +16,17 @@ module Database.Operations
      , queryStationStatusFields
        -- , _insertStationStatus -- NOTE: use insertUpdatedStationStatus instead
      , InsertStatusResult (..)
-     , filterStatus
      , getRowsToDeactivate
      , insertUpdatedStationStatus
      , insert_deactivated
      , insert_inserted
-     -- For determining which API statuses are newer than the database statuses.
+       -- types
      , FilterStatusResult (..)
-     , filter_unchanged
+       -- lenses
      , filter_newer
+     , filter_unchanged
+       -- functions
+     , separateNewerStatusRecords
      ) where
 
 import           API.Types                                ( _status_last_reported, _status_station_id,
@@ -159,12 +161,12 @@ _insertStationStatus conn status = do
     status_ids = fromIntegral <$> status ^.. traverse . status_station_id
 
 
--- | Query database to determine which stations have reported since being inserted.
-{- | Given a list of 'AT.StationStatus', query database to determine which rows would need to be deactivated if said ['AT.StationStatus'] were inserted.
+{- |
+Find the corresponding active rows in the database corresponding to each element of a list of *newer* 'AT.StationStatus' records.
 -}
 getRowsToDeactivate :: Connection         -- ^ Connection to the database.
-                   -> [AT.StationStatus] -- ^ List of 'AT.StationStatus' from the API response.
-                   -> IO [StationStatus] -- ^ List of 'StationStatus' rows that would need to be deactivated, if the statuses from the API were inserted.
+                    -> [AT.StationStatus] -- ^ List of 'AT.StationStatus' from the API response.
+                    -> IO [StationStatus] -- ^ List of 'StationStatus' rows that would need to be deactivated, if the statuses from the API were inserted.
 getRowsToDeactivate conn api_status = do
   -- Select using common table expressions (selectWith).
   runBeamPostgres' conn $ runSelectReturningList $ selectWith $ do
@@ -195,12 +197,14 @@ getRowsToDeactivate conn api_status = do
       pure status
 
 {- |
+Separate API 'AT.StationStatus' into two lists:
+- one containing statuses that are newer than in the database statuses
+- one containing statuses that are the same as in the database statuses
 -}
-
-filterStatus :: Connection         -- ^ Connection to the database.
-             -> [AT.StationStatus] -- ^ List of 'AT.StationStatus' from the API response.
-             -> IO FilterStatusResult
-filterStatus conn api_status = do
+separateNewerStatusRecords :: Connection         -- ^ Connection to the database.
+                           -> [AT.StationStatus] -- ^ List of 'AT.StationStatus' from the API response.
+                           -> IO FilterStatusResult
+separateNewerStatusRecords conn api_status = do
   -- Find rows that would need to be deactivated if the statuses from the API were inserted.
   statuses_would_deactivate <- getRowsToDeactivate conn api_status
 

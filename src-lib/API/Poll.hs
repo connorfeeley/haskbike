@@ -85,7 +85,7 @@ statusHandler conn queue =
           let status = resp_data ^. status_stations
           putStrLn $ "HANDLER: status_stations=" ++ show (length status)
 
-          updated_api <- filterStatus conn status
+          updated_api <- separateNewerStatusRecords conn status
           putStrLn $ "HANDLER: updated_api="  ++ show (length $ updated_api ^. filter_newer)
           putStrLn $ "HANDLER: same_api=" ++ show (length $ updated_api ^. filter_unchanged)
 

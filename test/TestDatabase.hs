@@ -25,7 +25,7 @@ module TestDatabase
      ) where
 
 import           API.ResponseWrapper    ( ResponseWrapper (..), response_data )
-import           API.Types              ( _info_stations, info_stations, status_stations )
+import           API.Types              ( _info_stations, info_stations, status_stations, _status_station_id, status_station_id )
 import qualified API.Types              as AT
 
 import           Control.Lens
@@ -166,13 +166,33 @@ unit_insertStationApi = do
       assertEqual "Inserted station status"      704 (length $ inserted_status ^. insert_inserted)
 
 
--- | HUnit test for querying which station status have reported.
+{- | HUnit test for querying which station status have reported.
+
+Between /station_status-1/ and /station_status-2/, station 7000 reported new data but 7001 did not:
++---------+--------------------+--------------------+-----+
+| Station | last\_reported (1) | last\_reported (2) |   Δ |
++=========+====================+====================+=====+
+|    7000 |         1694798090 |         1694798350 | 260 |
++---------+--------------------+--------------------+-----+
+|    7001 |         1694798218 |         1694798218 |   0 |
++---------+--------------------+--------------------+-----+
+-}
 unit_getRowsToDeactivate :: IO ()
 unit_getRowsToDeactivate = do
   conn <- setupDatabaseName dbnameTest
 
-  updated <- doQueryUpdatedStatus conn
-  assertEqual "Updated stations" 302 (length updated)
+  -- Separate API status records into those that are newer than in the database entry and those that are unchanged.
+  api_update_plan <- doQueryUpdatedStatus' conn
+
+  assertEqual "API status records newer than database entry"      302 (length $ api_update_plan ^. filter_newer)
+  assertEqual "API status recrods unchanged from database entry"  407 (length $ api_update_plan ^. filter_unchanged)
+
+  -- Station 7000 should be the first record in the list of API records that would trigger a database update.
+  assertEqual "Station 7000 record is newer"      7000 (head (api_update_plan ^. filter_newer)     ^. status_station_id)
+
+  -- Station 7001 should be the first record in the list of API records that would /not/ trigger a database update.
+  assertEqual "Station 7001 record is unchanged"  7001 (head (api_update_plan ^. filter_unchanged) ^. status_station_id)
+
 
 -- | Query updated station status and return a list of database statuses.
 doQueryUpdatedStatus :: Connection -> IO [StationStatusT Identity]
@@ -197,15 +217,33 @@ doQueryUpdatedStatus conn = do
       getRowsToDeactivate conn $ api_status ^. response_data . status_stations
 
 
--- | HUnit test for querying which station status have reported.
+{- | HUnit test for querying which station status have reported.
+
+Between /station_status-1/ and /station_status-2/, station 7000 reported new data but 7001 did not:
++---------+--------------------+--------------------+-----+
+| Station | last\_reported (1) | last\_reported (2) |   Δ |
++=========+====================+====================+=====+
+|    7000 |         1694798090 |         1694798350 | 260 |
++---------+--------------------+--------------------+-----+
+|    7001 |         1694798218 |         1694798218 |   0 |
++---------+--------------------+--------------------+-----+
+-}
 unit_getRowsToDeactivate' :: IO ()
 unit_getRowsToDeactivate' = do
   conn <- setupDatabaseName dbnameTest
 
-  updated <- doQueryUpdatedStatus' conn
+  -- Separate API status records into those that are newer than in the database entry and those that are unchanged.
+  api_update_plan <- doQueryUpdatedStatus' conn
 
-  assertEqual "Updated stations" 407 (length $ updated ^. filter_newer)
-  assertEqual "Same    stations" 302 (length $ updated ^. filter_unchanged)
+  assertEqual "API status records newer than database entry"      302 (length $ api_update_plan ^. filter_newer)
+  assertEqual "API status recrods unchanged from database entry"  407 (length $ api_update_plan ^. filter_unchanged)
+
+  -- Station 7000 should be the first record in the list of API records that would trigger a database update.
+  assertEqual "Station 7000 record is newer"      7000 (head (api_update_plan ^. filter_newer)     ^. status_station_id)
+
+  -- Station 7001 should be the first record in the list of API records that would /not/ trigger a database update.
+  assertEqual "Station 7001 record is unchanged"  7001 (head (api_update_plan ^. filter_unchanged) ^. status_station_id)
+
 
 -- | Query updated station status and return a list of API statuses.
 doQueryUpdatedStatus' :: Connection -> IO FilterStatusResult
@@ -227,7 +265,7 @@ doQueryUpdatedStatus' conn = do
     Left   err          -> assertFailure $ "Error decoding station status JSON: " ++ err
     (Right api_status)  -> do
       -- Return maps of updated and same API statuses
-      filterStatus conn $ api_status ^. response_data . status_stations
+      separateNewerStatusRecords conn $ api_status ^. response_data . status_stations
 
 
 -- | HUnit test to assert that changed station status are inserted.
@@ -268,7 +306,7 @@ doQueryUpdatedStatusInsert conn = do
     Left   err          -> assertFailure $ "Error decoding station status JSON: " ++ err
     (Right api_status)  -> do
       -- Find statuses that need to be updated (second round of data vs. first).
-      updated <- filterStatus conn $ api_status ^. response_data . status_stations
+      updated <- separateNewerStatusRecords conn $ api_status ^. response_data . status_stations
 
       -- Insert second round of test data (some of which have reported since the first round was inserted).
       foo <- insertUpdatedStationStatus conn $ updated ^. filter_newer
