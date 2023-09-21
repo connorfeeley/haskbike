@@ -14,28 +14,25 @@
 
 module TestDatabase
      ( unit_getRowsToDeactivate
-     , unit_getRowsToDeactivate'
-     , unit_getRowsToDeactivateInsert
      , unit_insertStationApi
      , unit_insertStationInformation
      , unit_insertStationInformationApi
      , unit_insertStationStatus
      , unit_insertStationStatusApi
      , unit_queryStationStatus
+     , unit_separateNewerStatusRecords'
+     , unit_separateNewerStatusRecordsInsert
      ) where
 
 import           API.ResponseWrapper    ( ResponseWrapper (..), response_data )
-import           API.Types              ( _info_stations, info_stations, status_stations, _status_station_id, status_station_id )
-import qualified API.Types              as AT
+import           API.Types              ( _info_stations, info_stations, status_station_id, status_stations )
 
 import           Control.Lens
 
 import           Data.Aeson             ( FromJSON, eitherDecode )
 import qualified Data.ByteString.Lazy   as BL
 import           Data.Functor           ( void )
-import qualified Data.Map               as Map
 
-import           Database.Beam
 import           Database.Beam.Postgres
 import           Database.BikeShare
 import           Database.Operations
@@ -182,21 +179,19 @@ unit_getRowsToDeactivate = do
   conn <- setupDatabaseName dbnameTest
 
   -- Separate API status records into those that are newer than in the database entry and those that are unchanged.
-  api_update_plan <- doQueryUpdatedStatus' conn
+  rows_to_deactivate <- doGetRowsToDeactivate conn
 
-  assertEqual "API status records newer than database entry"      302 (length $ api_update_plan ^. filter_newer)
-  assertEqual "API status recrods unchanged from database entry"  407 (length $ api_update_plan ^. filter_unchanged)
+  assertEqual "Expected number of rows that would be deactivated" 302 (length rows_to_deactivate)
 
-  -- Station 7000 should be the first record in the list of API records that would trigger a database update.
-  assertEqual "Station 7000 record is newer"      7000 (head (api_update_plan ^. filter_newer)     ^. status_station_id)
-
-  -- Station 7001 should be the first record in the list of API records that would /not/ trigger a database update.
-  assertEqual "Station 7001 record is unchanged"  7001 (head (api_update_plan ^. filter_unchanged) ^. status_station_id)
+  -- Ensure station 7000 (has newer data between (1) and (2)) is in the list of rows that would be deactivated.
+  assertBool "Station 7000 would be deactivated"     (7000 `elem`     map _d_status_station_id rows_to_deactivate)
+  -- Ensure station 7001 (did not update between (1) and (2)) is not in the list of rows that would be deactivated.
+  assertBool "Station 7001 would not be deactivated" (7001 `notElem`  map _d_status_station_id rows_to_deactivate)
 
 
 -- | Query updated station status and return a list of database statuses.
-doQueryUpdatedStatus :: Connection -> IO [StationStatusT Identity]
-doQueryUpdatedStatus conn = do
+doGetRowsToDeactivate :: Connection -> IO [StationStatusT Identity]
+doGetRowsToDeactivate conn = do
   stationInformationResponse    <- decodeFile "docs/json/2.3/station_information-1.json"
   stationStatusResponse         <- decodeFile "docs/json/2.3/station_status-1.json"
 
@@ -228,8 +223,8 @@ Between /station_status-1/ and /station_status-2/, station 7000 reported new dat
 |    7001 |         1694798218 |         1694798218 |   0 |
 +---------+--------------------+--------------------+-----+
 -}
-unit_getRowsToDeactivate' :: IO ()
-unit_getRowsToDeactivate' = do
+unit_separateNewerStatusRecords' :: IO ()
+unit_separateNewerStatusRecords' = do
   conn <- setupDatabaseName dbnameTest
 
   -- Separate API status records into those that are newer than in the database entry and those that are unchanged.
@@ -238,11 +233,13 @@ unit_getRowsToDeactivate' = do
   assertEqual "API status records newer than database entry"      302 (length $ api_update_plan ^. filter_newer)
   assertEqual "API status recrods unchanged from database entry"  407 (length $ api_update_plan ^. filter_unchanged)
 
-  -- Station 7000 should be the first record in the list of API records that would trigger a database update.
-  assertEqual "Station 7000 record is newer"      7000 (head (api_update_plan ^. filter_newer)     ^. status_station_id)
+  -- Station 7000 should be in the list of API records that would trigger a database update, but not in the list of unchanged records.
+  assertBool "Station 7000 record is newer"                      (has (traverse . status_station_id . only 7000) (api_update_plan ^. filter_newer))
+  assertBool "Station 7000 record is not in unchanged list" (not (has (traverse . status_station_id . only 7000) (api_update_plan ^. filter_unchanged)))
 
-  -- Station 7001 should be the first record in the list of API records that would /not/ trigger a database update.
-  assertEqual "Station 7001 record is unchanged"  7001 (head (api_update_plan ^. filter_unchanged) ^. status_station_id)
+  -- Station 7001 should be in the list of API records that would /not/ trigger a database update, but not in the list of newer records.
+  assertBool "Station 7001 record is unchanged"                  (has (traverse . status_station_id . only 7001) (api_update_plan ^. filter_unchanged))
+  assertBool "Station 7001 record is not in newer list"     (not (has (traverse . status_station_id . only 7001) (api_update_plan ^. filter_newer)))
 
 
 -- | Query updated station status and return a list of API statuses.
@@ -269,8 +266,8 @@ doQueryUpdatedStatus' conn = do
 
 
 -- | HUnit test to assert that changed station status are inserted.
-unit_getRowsToDeactivateInsert :: IO ()
-unit_getRowsToDeactivateInsert = do
+unit_separateNewerStatusRecordsInsert :: IO ()
+unit_separateNewerStatusRecordsInsert = do
   conn <- setupDatabaseName dbnameTest
 
   {-
@@ -287,7 +284,7 @@ unit_getRowsToDeactivateInsert = do
   pure ()
 
 -- | Query updated station status and return a list of API statuses.
--- doQueryUpdatedStatusInsert :: Connection -> IO InsertStatusResult
+doQueryUpdatedStatusInsert :: Connection -> IO (InsertStatusResult, InsertStatusResult)
 doQueryUpdatedStatusInsert conn = do
   stationInformationResponse    <- decodeFile "docs/json/2.3/station_information-1.json"
   stationStatusResponse         <- decodeFile "docs/json/2.3/station_status-1.json"
