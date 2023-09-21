@@ -1,16 +1,15 @@
-module Main where
+module Main
+  ( main
+  ) where
 
-import           API.Client              (stationStatus)
-import qualified API.Client              as C
-import qualified API.Poll                as P
-import           API.Types
+import qualified API.Poll       as P
+import           Database.Utils
 
-import           Control.Exception       (Exception (displayException))
-import           Network.HTTP.Client     (newManager)
-import           Network.HTTP.Client.TLS (tlsManagerSettings)
-import           Text.Pretty.Simple      (pPrintString)
 
 main :: IO ()
 main = do
-  -- Run API poller main method.
-  P.main
+  -- Setup the database.
+  conn <- setupDatabaseName dbnameProduction
+
+  -- Run API poller method.
+  P.pollClient conn

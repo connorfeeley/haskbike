@@ -5,14 +5,17 @@ Poll the API for status updates, inserting results in database as needed.
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module API.Poll
-  ( main )
-  where
+  ( main
+  , pollClient
+  ) where
 
 import           API.Client
 import           API.ResponseWrapper
 import           API.Types                       (StationStatusResponse,
                                                   status_stations)
 import           Common
+import           Database.BikeShare              (d_status_last_reported,
+                                                  d_status_station_id)
 import           Database.Operations
 import           Database.Utils
 
@@ -20,13 +23,19 @@ import           Control.Concurrent              (threadDelay)
 import           Control.Concurrent.STM
 import           Control.Concurrent.STM.TBMQueue
 import           Control.Lens
-import           Database.BikeShare              (d_status_last_reported,
-                                                  d_status_station_id)
+import           Database.Beam.Postgres          (Connection)
 import           UnliftIO.Async
 
 
 main :: IO ()
 main = do
+  -- Setup the database.
+  conn <- setupDatabaseName dbnameTest
+
+  pollClient conn
+
+pollClient :: Connection -> IO ()
+pollClient conn = do
   ttl <- newTVarIO (0 * 1000000)
   queue_resp <- newTBMQueueIO 4
 
@@ -35,7 +44,7 @@ main = do
 
   concurrently_
     (statusRequester queue_resp ttl)
-    (statusHandler queue_resp)
+    (statusHandler conn queue_resp)
 
 statusRequester :: TBMQueue StationStatusResponse -> TVar Int -> IO ()
 statusRequester queue interval_var = loop'
@@ -62,12 +71,11 @@ statusRequester queue interval_var = loop'
 
           loop' -- Restart loop
 
-statusHandler :: TBMQueue StationStatusResponse -> IO ()
-statusHandler queue =
+statusHandler :: Connection -> TBMQueue StationStatusResponse -> IO ()
+statusHandler conn queue =
   loop'
   where
     loop' = do
-      conn <- connectDb
       mnext <- atomically $ readTBMQueue queue
       case mnext of
         Nothing -> atomically retry

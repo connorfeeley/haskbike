@@ -58,8 +58,8 @@ queryDisabledDocks conn =
        )
 
 -- | Helper function to print disabled docks.
-printDisabledDocks :: IO ()
-printDisabledDocks = (connectDb >>= queryDisabledDocks) >>= pPrintCompact
+printDisabledDocks :: Connection -> IO ()
+printDisabledDocks conn = queryDisabledDocks conn >>= pPrintCompact
 
 -- | Query database for station status.
 queryStationStatus :: Connection -> IO [(StationInformation, StationStatus)]

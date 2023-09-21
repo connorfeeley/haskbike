@@ -5,6 +5,7 @@ module TestClient where
 
 import           API.Client
 import qualified API.Poll           as Poll
+import Database.Utils
 
 import           Test.Tasty.HUnit
 
@@ -43,6 +44,6 @@ unit_parseSystemPricingPlans = void $ runQueryWithEnv systemPricingPlans
 
 unit_poll :: IO ()
 unit_poll = void $
-  timeout 1000000 $
-    -- silence Poll.main
-    hSilence [ {- stdout, stderr -} ] Poll.main
+  timeout 1000000 $ do
+    conn <- setupDatabaseName dbnameTest
+    hSilence [ {- stdout, stderr -} ] $ pure $ Poll.pollClient conn

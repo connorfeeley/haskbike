@@ -43,30 +43,35 @@ decodeFile file = eitherDecode <$> BL.readFile file
 unit_insertStationInformation :: IO ()
 unit_insertStationInformation = do
   -- Connect to the database.
-  conn <- setupDatabase
+  conn <- setupDatabaseName dbnameTest
 
   stationInformationResponse <- decodeFile "test/json/station_information.json"
 
   -- Insert test data.
   case stationInformationResponse of
-    Right stations -> void $ insertStationInformation conn $ _info_stations $ stations ^. response_data
     Left  err      -> assertFailure $ "Error decoding station information JSON: " ++  err
+    Right stations -> do
+      inserted_info <- insertStationInformation conn $ _info_stations $ stations ^. response_data
+      assertEqual "Inserted station information" 6 (length inserted_info)
 
 
 -- | HUnit test for inserting station status.
 unit_insertStationStatus :: IO ()
 unit_insertStationStatus = do
   -- Connect to the database.
-  conn <- setupDatabase
+  conn <- setupDatabaseName dbnameTest
 
-  stationInformationResponse  <- decodeFile "test/json/station_information.json"
+  stationInformationResponse  <- decodeFile "docs/json/2.3/station_information-1.json"
   stationStatusResponse       <- decodeFile "test/json/station_status.json"
 
   -- Insert test data.
   case (stationInformationResponse, stationStatusResponse) of
     (Right info , Right status  ) -> do
-      void $ insertStationInformation   conn $  info   ^. response_data . info_stations
-      void $ insertUpdatedStationStatus conn $ status ^. response_data . status_stations
+      inserted_info   <- insertStationInformation   conn $  info   ^. response_data . info_stations
+      inserted_status <- insertUpdatedStationStatus conn $ status ^. response_data . status_stations
+
+      assertEqual "Inserted station information" 704 (length inserted_info)
+      assertEqual "Inserted station status"        8 (length $ inserted_status ^. _2)
     ( _        , _            ) -> assertFailure "Error loading test data"
 
 
@@ -74,7 +79,7 @@ unit_insertStationStatus = do
 unit_queryStationStatus :: IO ()
 unit_queryStationStatus = do
   -- Connect to the database.
-  conn <- setupDatabase
+  conn <- setupDatabaseName dbnameTest
 
   stationInformationResponse  <- decodeFile "test/json/station_information.json"
   stationStatusResponse       <- decodeFile "test/json/station_status.json"
@@ -94,7 +99,7 @@ unit_queryStationStatus = do
 unit_insertStationInformationApi :: IO ()
 unit_insertStationInformationApi = do
   -- Connect to the database.
-  conn <- setupDatabase
+  conn <- setupDatabaseName dbnameTest
 
   -- Query API for station information.
   -- stationInformationResponse <- runQueryWithEnv stationInformation
@@ -110,7 +115,7 @@ unit_insertStationInformationApi = do
 unit_insertStationStatusApi :: IO ()
 unit_insertStationStatusApi = do
   -- Connect to the database.
-  conn <- setupDatabase
+  conn <- setupDatabaseName dbnameTest
 
   -- Query API for station status.
   -- stationStatusResponse <- runQueryWithEnv stationStatus
@@ -119,14 +124,16 @@ unit_insertStationStatusApi = do
   case stationStatusResponse of
     (Left err    )  -> assertFailure $ "Error querying API: " ++ show err
     (Right status)  -> do
-      void $ insertUpdatedStationStatus conn $ status ^. response_data . status_stations
+      -- Should fail because station information has not been inserted.
+      inserted_info <- insertUpdatedStationStatus conn $ status ^. response_data . status_stations
 
+      assertEqual "Inserted station information" ([], []) inserted_info
 
 -- | HUnit test for inserting station information and status, with data from the actual API.
 unit_insertStationApi :: IO ()
 unit_insertStationApi = do
   -- Connect to the database.
-  conn <- setupDatabase
+  conn <- setupDatabaseName dbnameTest
 
   -- Query API.
   -- stationInformationResponse  <- runQueryWithEnv stationInformation
@@ -139,14 +146,17 @@ unit_insertStationApi = do
     (Left err_info, _              )  -> assertFailure $ "Error querying API: " ++ show err_info
     (_            , Left err_status)  -> assertFailure $ "Error querying API: " ++ show err_status
     (Right info   , Right status   )  -> do
-      void $ insertStationInformation   conn $ info   ^. response_data . info_stations
-      void $ insertUpdatedStationStatus conn $ status ^. response_data . status_stations
+      inserted_info   <- insertStationInformation   conn $ info   ^. response_data . info_stations
+      inserted_status <- insertUpdatedStationStatus conn $ status ^. response_data . status_stations
+
+      assertEqual "Inserted station information" 704 (length inserted_info)
+      assertEqual "Inserted station status"      704 (length $ inserted_status ^. _2)
 
 
 -- | HUnit test for querying which station status have reported.
 unit_queryUpdatedStatus :: IO ()
 unit_queryUpdatedStatus = do
-  conn <- setupDatabase
+  conn <- setupDatabaseName dbnameTest
 
   updated <- doQueryUpdatedStatus conn
   assertEqual "Updated stations" 302 (length updated)
@@ -177,7 +187,7 @@ doQueryUpdatedStatus conn = do
 -- | HUnit test for querying which station status have reported.
 unit_queryUpdatedStatus' :: IO ()
 unit_queryUpdatedStatus' = do
-  conn <- setupDatabase
+  conn <- setupDatabaseName dbnameTest
 
   updated_base <- doQueryUpdatedStatus' conn
 
@@ -213,7 +223,7 @@ doQueryUpdatedStatus' conn = do
 -- | HUnit test to assert that changed station status are inserted.
 unit_queryUpdatedStatusInsert :: IO ()
 unit_queryUpdatedStatusInsert = do
-  conn <- setupDatabase
+  conn <- setupDatabaseName dbnameTest
 
   updated_base <- doQueryUpdatedStatusInsert conn
 
