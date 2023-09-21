@@ -276,16 +276,16 @@ unit_separateNewerStatusRecordsInsert = do
   - Check if inserting status data (2) would result in updates
   - Returns (updated, same)
   -}
-  updated <- doQueryUpdatedStatusInsert conn
+  updated <- doSeparateNewerStatusRecordsInsert conn
 
-  -- Assert no stations are updated.
-  -- assertEqual "Updated stations" 0 (length $ updated ^. insert_updated)
-  -- assertEqual "Inserted stations" 402 (length $ updated ^. insert_inserted)
-  pure ()
+  -- Assert that the same number of status rows are inserted as were updated.
+  assertEqual "Deactivated status rows"     302 (length $ updated ^. insert_deactivated)
+  assertEqual "Inserted status rows"        302 (length $ updated ^. insert_inserted)
+  assertEqual "Same number inserted as updated" (length $ updated ^. insert_inserted) (length $ updated ^. insert_deactivated)
 
 -- | Query updated station status and return a list of API statuses.
-doQueryUpdatedStatusInsert :: Connection -> IO (InsertStatusResult, InsertStatusResult)
-doQueryUpdatedStatusInsert conn = do
+doSeparateNewerStatusRecordsInsert :: Connection -> IO InsertStatusResult
+doSeparateNewerStatusRecordsInsert conn = do
   stationInformationResponse    <- decodeFile "docs/json/2.3/station_information-1.json"
   stationStatusResponse         <- decodeFile "docs/json/2.3/station_status-1.json"
 
@@ -306,8 +306,4 @@ doQueryUpdatedStatusInsert conn = do
       updated <- separateNewerStatusRecords conn $ api_status ^. response_data . status_stations
 
       -- Insert second round of test data (some of which have reported since the first round was inserted).
-      foo <- insertUpdatedStationStatus conn $ updated ^. filter_newer
-
-      -- Insert second round of test data AGAIN.
-      bar <- insertUpdatedStationStatus conn $ updated ^. filter_newer
-      pure (foo, bar)
+      insertUpdatedStationStatus conn $ updated ^. filter_newer
