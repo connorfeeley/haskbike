@@ -1,10 +1,22 @@
 {-# LANGUAGE CPP              #-}
 
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 -- | This module contains the operations that can be performed on the database.
 
-module Database.Operations where
+module Database.Operations
+  ( queryDisabledDocks
+  , printDisabledDocks
+  , queryStationStatus
+  , queryStationStatusFields
+  , queryStationInformation
+  , insertStationInformation
+  -- , _insertStationStatus -- NOTE: use insertUpdatedStationStatus instead
+  , filterStatusUpdated
+  , filterStatusSame
+  , insertUpdatedStationStatus
+  ) where
 
 import           API.Types                                (StationInformationResponse (..),
                                                            StationStatusResponse (..),
@@ -92,8 +104,8 @@ insertStationInformation conn stations = do
 
 
 -- | Insert station status into the database.
-insertStationStatus :: Connection -> [AT.StationStatus] -> IO [StationStatus]
-insertStationStatus conn status = do
+_insertStationStatus :: Connection -> [AT.StationStatus] -> IO [StationStatus]
+_insertStationStatus conn status = do
   -- Get information for the stations that are in the status response.
   info_ids <- map _info_station_id <$> queryStationInformation conn status_ids
   let filtered_status = filter (\ss -> fromIntegral (_status_station_id ss) `elem` info_ids) status
@@ -118,7 +130,7 @@ queryUpdatedStatus conn api_status = do
     -- CTE for station status.
     common_status <- selecting $ do
       info <- Database.Beam.reuse common_info
-      status <-
+      status <- orderBy_ (desc_ . _d_status_id) $
         all_ (bikeshareDb ^. bikeshareStationStatus)
       guard_ (_d_status_info_id status `references_` info)
       pure status
@@ -132,6 +144,7 @@ queryUpdatedStatus conn api_status = do
       -- Select from station status where the last reported time is older than in the API response.
       status <- Database.Beam.reuse common_status
       guard_ (_d_status_station_id    status ==. fst api_values &&.
+              _d_status_active        status ==. val_ True      &&.
               _d_status_last_reported status <.  snd api_values)
       pure status
 
@@ -173,3 +186,28 @@ filterStatusSame conn api_status = do
   let same_list = map snd $ Map.toAscList same_map
 
   pure same_list
+
+
+-- | Insert updated station status into the database.
+insertUpdatedStationStatus :: Connection -> [AT.StationStatus] -> IO [StationStatus]
+insertUpdatedStationStatus conn status = do
+  -- Query database for updated statuses
+  db_status_updated <- queryUpdatedStatus conn status
+  let status_ids' =  map _d_status_id db_status_updated
+
+  -- Set station statuses as inactive.
+  _updated <- runBeamPostgres' conn $ runUpdateReturningList $
+    update (bikeshareDb ^. bikeshareStationStatus)
+           (\c -> _d_status_active c <-. val_ False)
+           (\c -> _d_status_id c `in_` map val_ status_ids')
+
+  -- Get information for the stations that are in the status response.
+  info_ids <- map _info_station_id <$> queryStationInformation conn status_ids
+  let filtered_status = filter (\ss -> fromIntegral (_status_station_id ss) `elem` info_ids) status
+  runBeamPostgres' conn $ runInsertReturningList $
+    insert (bikeshareDb ^. bikeshareStationStatus) $
+    insertExpressions $ map fromJSONToBeamStationStatus filtered_status
+
+  where
+    status_ids :: [Int]
+    status_ids = fromIntegral <$> status ^.. traverse . status_station_id

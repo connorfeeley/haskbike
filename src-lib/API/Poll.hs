@@ -84,6 +84,6 @@ statusHandler queue = do
           putStrLn $ "HANDLER: updated=" ++ show (length updated)
 
           -- Insert the updated status.
-          _updated' <- insertStationStatus conn updated
+          _updated' <- insertUpdatedStationStatus conn updated
 
           loop' -- Restart loop

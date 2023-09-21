@@ -62,6 +62,7 @@ initialSetup = BikeshareDb
                                                           (field "vehicle_types_available_iconic"  int)
                                                           (field "vehicle_types_available_efit"    int)
                                                           (field "vehicle_types_available_efit_g5" int)
+        , _d_status_active                  = field "active"                  boolean notNull
         })
 
 initialSetupStep :: MigrationSteps Postgres

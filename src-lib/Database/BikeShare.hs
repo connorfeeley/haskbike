@@ -74,6 +74,7 @@ bikeshareDb = defaultDbSettings `withDbModification`
       , _d_status_traffic                 = "traffic"
       , _d_status_vehicle_docks_available = "vehicle_docks_available"
       , _d_status_vehicle_types_available = vehicleTypeFields "vehicle_types_available"
+      , _d_status_active                  = "active"
       }
   }
 

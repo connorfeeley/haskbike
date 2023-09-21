@@ -31,6 +31,7 @@ module Database.StationStatus
         , d_status_num_bikes_disabled
         , d_status_num_docks_available
         , d_status_num_docks_disabled
+        , d_status_active
         , available_boost
         , available_iconic
         , available_efit
@@ -93,6 +94,7 @@ data StationStatusT f where
                    , _d_status_traffic                 :: Columnar f (Maybe Text.Text) -- PBSC doesn't seem to set this field
                    , _d_status_vehicle_docks_available :: Columnar f Int32
                    , _d_status_vehicle_types_available :: VehicleTypeMixin f
+                   , _d_status_active                  :: Columnar f Bool -- Flag indicating if the record is active or not
                    } -> StationStatusT f
   deriving (Generic, Beamable)
 
@@ -158,8 +160,9 @@ StationStatus
     (LensFor vehicle_types_available_boost)
     (LensFor vehicle_types_available_iconic)
     (LensFor vehicle_types_available_efit)
-    (LensFor vehicle_types_available_efit_g5)
-  ) = tableLenses
+    (LensFor vehicle_types_available_efit_g5))
+  (LensFor d_status_active)
+  = tableLenses
 
 -- | Newtype wrapper for StationStatusString to allow us to define a custom FromBackendRow instance.
 -- Don't want to implement database-specific code for the underlying StationStatusString type.
@@ -228,6 +231,7 @@ fromJSONToBeamStationStatus (API.T.StationStatus
                 , _d_status_traffic                  = val_ $ fmap Text.pack traffic
                 , _d_status_vehicle_docks_available  = fromIntegral $ API.T.dock_count $ head vehicle_docks_available
                 , _d_status_vehicle_types_available  = val_ $ VehicleType num_boost num_iconic num_efit num_efit_g5
+                , _d_status_active                   = val_ True
                 }
   where
     -- | Find the vehicle type in the list of vehicle types available; default to 0 if not found.
