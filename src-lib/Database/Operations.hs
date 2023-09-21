@@ -20,10 +20,10 @@ module Database.Operations
      , filterStatus
      , filter_same
      , filter_updated
+     , getRowsToDeactivate
      , insertUpdatedStationStatus
      , insert_deactivated
      , insert_inserted
-     , queryUpdatedStatus
      ) where
 
 import           API.Types                                ( _status_last_reported, _status_station_id,
@@ -159,10 +159,12 @@ _insertStationStatus conn status = do
 
 
 -- | Query database to determine which stations have reported since being inserted.
-queryUpdatedStatus :: Connection         -- ^ Connection to the database.
+{- | Given a list of 'AT.StationStatus', query database to determine which rows would need to be deactivated if said ['AT.StationStatus'] were inserted.
+-}
+getRowsToDeactivate :: Connection         -- ^ Connection to the database.
                    -> [AT.StationStatus] -- ^ List of 'AT.StationStatus' from the API response.
-                   -> IO [StationStatus] -- ^ List of 'StationStatus' from the database that would need to be deactivated, if the statuses from the API were inserted.
-queryUpdatedStatus conn api_status = do
+                   -> IO [StationStatus] -- ^ List of 'StationStatus' rows that would need to be deactivated, if the statuses from the API were inserted.
+getRowsToDeactivate conn api_status = do
   -- Select using common table expressions (selectWith).
   runBeamPostgres' conn $ runSelectReturningList $ selectWith $ do
     -- Common table expression for 'StationInformation'.
@@ -191,10 +193,7 @@ queryUpdatedStatus conn api_status = do
               _d_status_last_reported status <.  snd api_values)    -- Last reported time is older than in the API response
       pure status
 
-{- |
-Query database for updated statuses and return a tuple of maps representing the API statuses that have reported:
-First element:  map of API statuses that have reported since being inserted.
-Second element: map of API statuses that have not reported since being inserted.
+{- | Query database for updated statuses and return a tuple of maps representing the API statuses that have reported:
 -}
 
 filterStatus :: Connection         -- ^ Connection to the database.
@@ -202,7 +201,7 @@ filterStatus :: Connection         -- ^ Connection to the database.
              -> IO FilterStatusResult
 filterStatus conn api_status = do
   -- Query database for updated statuses
-  db_status_updated <- queryUpdatedStatus conn api_status
+  db_status_updated <- getRowsToDeactivate conn api_status
 
   -- Construct map of all API statuses
   let api_status'        = Map.fromList $ map (\ss -> (               ss ^. status_station_id,   ss)) api_status
@@ -232,7 +231,7 @@ insertUpdatedStationStatus conn api_status = do
   -- Query database for updated statuses
   db_status_updated <- case length api_status of
     0 -> pure [] -- No need to query if there are no statuses to update.
-    _ -> queryUpdatedStatus conn api_status
+    _ -> getRowsToDeactivate conn api_status
   let status_ids' =  map _d_status_id db_status_updated
 
   updated <- case length db_status_updated of

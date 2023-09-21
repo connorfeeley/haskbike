@@ -13,15 +13,15 @@
 {-# LANGUAGE UndecidableInstances      #-}
 
 module TestDatabase
-     ( unit_insertStationApi
+     ( unit_getRowsToDeactivate
+     , unit_getRowsToDeactivate'
+     , unit_getRowsToDeactivateInsert
+     , unit_insertStationApi
      , unit_insertStationInformation
      , unit_insertStationInformationApi
      , unit_insertStationStatus
      , unit_insertStationStatusApi
      , unit_queryStationStatus
-     , unit_queryUpdatedStatus
-     , unit_queryUpdatedStatus'
-     , unit_queryUpdatedStatusInsert
      ) where
 
 import           API.ResponseWrapper    ( ResponseWrapper (..), response_data )
@@ -167,8 +167,8 @@ unit_insertStationApi = do
 
 
 -- | HUnit test for querying which station status have reported.
-unit_queryUpdatedStatus :: IO ()
-unit_queryUpdatedStatus = do
+unit_getRowsToDeactivate :: IO ()
+unit_getRowsToDeactivate = do
   conn <- setupDatabaseName dbnameTest
 
   updated <- doQueryUpdatedStatus conn
@@ -194,12 +194,12 @@ doQueryUpdatedStatus conn = do
     Left   err          -> assertFailure $ "Error decoding station status JSON: " ++ err
     (Right api_status)  -> do
       -- Return stations that have reported since being inserted.
-      queryUpdatedStatus conn $ api_status ^. response_data . status_stations
+      getRowsToDeactivate conn $ api_status ^. response_data . status_stations
 
 
 -- | HUnit test for querying which station status have reported.
-unit_queryUpdatedStatus' :: IO ()
-unit_queryUpdatedStatus' = do
+unit_getRowsToDeactivate' :: IO ()
+unit_getRowsToDeactivate' = do
   conn <- setupDatabaseName dbnameTest
 
   updated <- doQueryUpdatedStatus' conn
@@ -231,8 +231,8 @@ doQueryUpdatedStatus' conn = do
 
 
 -- | HUnit test to assert that changed station status are inserted.
-unit_queryUpdatedStatusInsert :: IO ()
-unit_queryUpdatedStatusInsert = do
+unit_getRowsToDeactivateInsert :: IO ()
+unit_getRowsToDeactivateInsert = do
   conn <- setupDatabaseName dbnameTest
 
   {-
