@@ -191,24 +191,33 @@ filterStatusSame conn api_status = do
 
 
 -- | Insert updated station status into the database.
-insertUpdatedStationStatus :: Connection -> [AT.StationStatus] -> IO [StationStatus]
+insertUpdatedStationStatus :: Connection -> [AT.StationStatus] -> IO ([StationStatus], [StationStatus])
 insertUpdatedStationStatus conn status = do
   -- Query database for updated statuses
-  db_status_updated <- queryUpdatedStatus conn status
+  db_status_updated <- case length status of
+    0 -> pure []
+    _ -> queryUpdatedStatus conn status
   let status_ids' =  map _d_status_id db_status_updated
 
-  -- Set station statuses as inactive.
-  _updated <- runBeamPostgres' conn $ runUpdateReturningList $
-    update (bikeshareDb ^. bikeshareStationStatus)
-           (\c -> _d_status_active c <-. val_ False)
-           (\c -> _d_status_id c `in_` map val_ status_ids')
+  updated <- case length db_status_updated of
+    -- Can't update if there are no statuses to update (SQL restriction).
+    0 -> pure []
+    -- Set returned station statuses as inactive.
+    _ -> runBeamPostgres' conn $ runUpdateReturningList $
+      update (bikeshareDb ^. bikeshareStationStatus)
+             (\c -> _d_status_active c <-. val_ False)
+             (\c -> _d_status_id c `in_` map val_ status_ids')
 
   -- Get information for the stations that are in the status response.
   info_ids <- map _info_station_id <$> queryStationInformation conn status_ids
   let filtered_status = filter (\ss -> fromIntegral (_status_station_id ss) `elem` info_ids) status
-  runBeamPostgres' conn $ runInsertReturningList $
-    insert (bikeshareDb ^. bikeshareStationStatus) $
-    insertExpressions $ map fromJSONToBeamStationStatus filtered_status
+  inserted <- case length updated of
+    0 -> pure []
+    _ -> runBeamPostgres' conn $ runInsertReturningList $
+      insert (bikeshareDb ^. bikeshareStationStatus) $
+      insertExpressions $ map fromJSONToBeamStationStatus filtered_status
+
+  pure (updated, inserted)
 
   where
     status_ids :: [Int]

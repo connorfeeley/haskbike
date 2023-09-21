@@ -9,30 +9,23 @@ module API.Poll
 import           API.Client
 import           API.ResponseWrapper
 import           API.Types                       (StationStatusResponse,
-                                                  StationStatusResponseData (..),
-                                                  status_stations,
-                                                  status_status)
+                                                  status_stations)
 import           Common
 import           Database.Operations
 import           Database.Utils
 
-import           Control.Concurrent              (forkIO, threadDelay)
+import           Control.Concurrent              (threadDelay)
 import           Control.Concurrent.STM
 import           Control.Concurrent.STM.TBMQueue
 import           Control.Lens
-import           Control.Monad                   (forever, void)
-import           Data.Foldable                   (for_)
-import           Database.Beam
-import           Database.Beam.Postgres
-import           Database.Migrations             (migrateDB)
-import           Database.PostgreSQL.Simple
-import           Servant.Client
+import           Database.BikeShare              (d_status_last_reported,
+                                                  d_status_station_id)
 import           UnliftIO.Async
 
 
 main :: IO ()
 main = do
-  ttl <- newTVarIO (1 * 1000000)
+  ttl <- newTVarIO (0 * 1000000)
   queue_resp <- newTBMQueueIO 4
 
   -- Request status every second.
@@ -68,7 +61,7 @@ statusRequester queue interval_var = loop'
           loop' -- Restart loop
 
 statusHandler :: TBMQueue StationStatusResponse -> IO ()
-statusHandler queue = do
+statusHandler queue =
   loop'
   where
     loop' = do
@@ -84,6 +77,17 @@ statusHandler queue = do
           putStrLn $ "HANDLER: updated=" ++ show (length updated)
 
           -- Insert the updated status.
-          _updated' <- insertUpdatedStationStatus conn updated
+          inserted <- insertUpdatedStationStatus conn updated
+          let message_data = zipWith (curry
+                                      (\s -> ( s ^. _2 . d_status_station_id
+                                             , s ^. _1 . d_status_last_reported ^.. _Just
+                                             , s ^. _2 . d_status_last_reported ^.. _Just
+                                             ))) (inserted ^. _1) (inserted ^. _2)
+          let messages = map (\(sid, last_reported, last_reported') ->
+                   "ID: [" ++ show sid ++ "] " ++ -- ID
+                   show last_reported ++ "->" ++ show last_reported' -- [prev reported] -> [new reported]
+                ) message_data
+          mapM_ putStrLn messages
+          putStrLn $ "HANDLER: updated+inserted=" ++ show (length $ inserted ^. _2)
 
           loop' -- Restart loop
