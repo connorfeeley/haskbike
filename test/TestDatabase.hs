@@ -228,7 +228,7 @@ unit_separateNewerStatusRecords = do
   conn <- setupDatabaseName dbnameTest
 
   -- Separate API status records into those that are newer than in the database entry and those that are unchanged.
-  api_update_plan <- doQueryUpdatedStatus' conn
+  api_update_plan <- doSeparateNewerStatusRecords conn
 
   assertEqual "API status records newer than database entry"      302 (length $ api_update_plan ^. filter_newer)
   assertEqual "API status recrods unchanged from database entry"  407 (length $ api_update_plan ^. filter_unchanged)
@@ -243,8 +243,8 @@ unit_separateNewerStatusRecords = do
 
 
 -- | Query updated station status and return a list of API statuses.
-doQueryUpdatedStatus' :: Connection -> IO FilterStatusResult
-doQueryUpdatedStatus' conn = do
+doSeparateNewerStatusRecords :: Connection -> IO FilterStatusResult
+doSeparateNewerStatusRecords conn = do
   stationInformationResponse    <- decodeFile "docs/json/2.3/station_information-1.json"
   stationStatusResponse         <- decodeFile "docs/json/2.3/station_status-1.json"
 
