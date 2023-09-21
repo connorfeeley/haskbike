@@ -20,7 +20,7 @@ module TestDatabase
      , unit_insertStationStatus
      , unit_insertStationStatusApi
      , unit_queryStationStatus
-     , unit_separateNewerStatusRecords'
+     , unit_separateNewerStatusRecords
      , unit_separateNewerStatusRecordsInsert
      ) where
 
@@ -223,8 +223,8 @@ Between /station_status-1/ and /station_status-2/, station 7000 reported new dat
 |    7001 |         1694798218 |         1694798218 |   0 |
 +---------+--------------------+--------------------+-----+
 -}
-unit_separateNewerStatusRecords' :: IO ()
-unit_separateNewerStatusRecords' = do
+unit_separateNewerStatusRecords :: IO ()
+unit_separateNewerStatusRecords = do
   conn <- setupDatabaseName dbnameTest
 
   -- Separate API status records into those that are newer than in the database entry and those that are unchanged.
