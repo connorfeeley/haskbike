@@ -28,10 +28,10 @@ import           Data.Time    (LocalTime)
 
 -- | A type representing a BikeShare response.
 data ResponseWrapper a where
-  ResponseWrapper :: { _response_last_updated :: LocalTime
-                     , _response_ttl          :: Int
-                     , _response_version      :: String
-                     , _response_data         :: a
+  ResponseWrapper :: { _response_last_updated :: LocalTime -- POSIX timestamp of the last time the data was updated.
+                     , _response_ttl          :: Int       -- Time to live of the data in seconds.
+                     , _response_version      :: String    -- GBFS version of the response.
+                     , _response_data         :: a         -- The data contained in the response.
                      } -> ResponseWrapper a
   deriving (Show, Eq, Generic)
 
