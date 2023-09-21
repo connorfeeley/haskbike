@@ -12,7 +12,17 @@
 {-# LANGUAGE TypeFamilies              #-}
 {-# LANGUAGE UndecidableInstances      #-}
 
-module TestDatabase where
+module TestDatabase
+     ( unit_insertStationApi
+     , unit_insertStationInformation
+     , unit_insertStationInformationApi
+     , unit_insertStationStatus
+     , unit_insertStationStatusApi
+     , unit_queryStationStatus
+     , unit_queryUpdatedStatus
+     , unit_queryUpdatedStatus'
+     , unit_queryUpdatedStatusInsert
+     ) where
 
 import           API.ResponseWrapper    ( ResponseWrapper (..), response_data )
 import           API.Types              ( _info_stations, info_stations, status_stations )
