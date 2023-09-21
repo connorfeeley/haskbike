@@ -240,4 +240,5 @@ psql -d haskbike -c "SELECT * FROM station_information"
 
 #+begin_src shell :noeval
 createdb haskbike
+createdb haskbike-test
 #+end_src
