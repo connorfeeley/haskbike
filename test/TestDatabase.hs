@@ -25,8 +25,8 @@ module TestDatabase
      , unit_separateNewerStatusRecordsInsertTwice
      ) where
 
-import           API.ResponseWrapper    ( ResponseWrapper (..), response_data )
-import           API.Types              ( _info_stations, info_stations, status_station_id, status_stations )
+import           API.ResponseWrapper    ( response_data )
+import           API.Types              ( _info_stations, info_stations, status_station_id, status_stations, StationInformationResponse, StationStatusResponse )
 
 import           Control.Lens
 
@@ -43,9 +43,19 @@ import           Test.Tasty.HUnit
 
 
 -- | Helper function to decode a JSON file.
-decodeFile :: FromJSON a => FilePath -> IO (Either String (ResponseWrapper a))
+decodeFile :: FromJSON a => FilePath -- ^ Path to the JSON file.
+           -> IO (Either String a)   -- ^ Decoded value.
 decodeFile file = eitherDecode <$> BL.readFile file
 
+{- | Read a file as JSON and decode it into a data type.
+
+The file is located at the given 'FilePath'. If the decoding is successful,
+the decoded value is returned. If there is an error decoding the JSON, an
+assertion failure with the error message is thrown.
+-}
+getDecodedFile :: FromJSON a => FilePath -- ^ Path to the JSON file.
+                             -> IO a     -- ^ Decoded value.
+getDecodedFile filePath = either (assertFailure . ("Error decoding JSON: " ++)) return =<< decodeFile filePath
 
 -- | HUnit test for inserting station information.
 unit_insertStationInformation :: IO ()
@@ -53,14 +63,13 @@ unit_insertStationInformation = do
   -- Connect to the database.
   conn <- setupDatabaseName dbnameTest
 
-  stationInformationResponse <- decodeFile "test/json/station_information.json"
+  stationInformationResponse <- getDecodedFile "test/json/station_information.json"
+                              :: IO StationInformationResponse
 
   -- Insert test data.
-  case stationInformationResponse of
-    Left  err      -> assertFailure $ "Error decoding station information JSON: " ++  err
-    Right stations -> do
-      inserted_info <- insertStationInformation conn $ _info_stations $ stations ^. response_data
-      assertEqual "Inserted station information" 6 (length inserted_info)
+  inserted_info <- insertStationInformation conn $ _info_stations $ stationInformationResponse ^. response_data
+
+  assertEqual "Inserted station information" 6 (length inserted_info)
 
 
 -- | HUnit test for inserting station status.
@@ -69,18 +78,17 @@ unit_insertStationStatus = do
   -- Connect to the database.
   conn <- setupDatabaseName dbnameTest
 
-  stationInformationResponse  <- decodeFile "docs/json/2.3/station_information-1.json"
-  stationStatusResponse       <- decodeFile "test/json/station_status.json"
+  info    <- getDecodedFile "docs/json/2.3/station_information-1.json"
+          :: IO StationInformationResponse
+  status  <- getDecodedFile "test/json/station_status.json"
+          :: IO StationStatusResponse
 
   -- Insert test data.
-  case (stationInformationResponse, stationStatusResponse) of
-    (Right info , Right status  ) -> do
-      inserted_info   <- insertStationInformation   conn $  info   ^. response_data . info_stations
-      inserted_status <- insertUpdatedStationStatus conn $ status ^. response_data . status_stations
+  inserted_info   <- insertStationInformation   conn $ info   ^. response_data . info_stations
+  inserted_status <- insertUpdatedStationStatus conn $ status ^. response_data . status_stations
 
-      assertEqual "Inserted station information" 704 (length inserted_info)
-      assertEqual "Inserted station status"        8 (length $ inserted_status ^. insert_inserted)
-    ( _        , _            ) -> assertFailure "Error loading test data"
+  assertEqual "Inserted station information" 704 (length inserted_info)
+  assertEqual "Inserted station status"        8 (length $ inserted_status ^. insert_inserted)
 
 
 -- | HUnit test for querying station status.
@@ -89,20 +97,20 @@ unit_queryStationStatus = do
   -- Connect to the database.
   conn <- setupDatabaseName dbnameTest
 
-  stationInformationResponse  <- decodeFile "test/json/station_information.json"
-  stationStatusResponse       <- decodeFile "test/json/station_status.json"
+  info    <- getDecodedFile "test/json/station_information.json"
+          :: IO StationInformationResponse
+  status  <- getDecodedFile "test/json/station_status.json"
+          :: IO StationStatusResponse
 
   -- Insert test data.
-  case (stationInformationResponse, stationStatusResponse) of
-    (Right info , Right status  ) -> do
-      inserted_info   <- insertStationInformation   conn $ info   ^. response_data . info_stations
-      inserted_status <- insertUpdatedStationStatus conn $ status ^. response_data . status_stations
-      assertEqual "Inserted station information" 6 (length inserted_info)
-      assertEqual "Inserted station information" 5 (length $ inserted_status ^. insert_inserted)
-    ( _        , _            ) -> assertFailure "Error loading test data"
+  inserted_info   <- insertStationInformation   conn $ info   ^. response_data . info_stations
+  inserted_status <- insertUpdatedStationStatus conn $ status ^. response_data . status_stations
+
+  assertEqual "Inserted station information" 6 (length inserted_info)
+  assertEqual "Inserted station information" 5 (length $ inserted_status ^. insert_inserted)
 
   -- Query station status.
-  void $ queryStationStatus conn -- >>= pPrintCompact
+  void $ queryStationStatus conn
 
 
 -- | HUnit test for inserting station information, with data from the actual API.
@@ -111,14 +119,11 @@ unit_insertStationInformationApi = do
   -- Connect to the database.
   conn <- setupDatabaseName dbnameTest
 
-  -- Query API for station information.
-  -- stationInformationResponse <- runQueryWithEnv stationInformation
-  stationInformationResponse <- decodeFile "docs/json/2.3/station_information-1.json"
+  info    <- getDecodedFile "docs/json/2.3/station_information-1.json"
+          :: IO StationInformationResponse
 
-  case stationInformationResponse of
-    (Left err)   -> assertFailure $ "Error loading test data: " ++ show err
-    (Right info) -> do
-      void $ insertStationInformation conn $ info ^. response_data . info_stations
+  -- Insert test data.
+  void $ insertStationInformation conn $ info ^. response_data . info_stations
 
 
 -- | HUnit test for inserting station status, with data from the actual API.
@@ -127,18 +132,17 @@ unit_insertStationStatusApi = do
   -- Connect to the database.
   conn <- setupDatabaseName dbnameTest
 
-  -- Query API for station status.
-  -- stationStatusResponse <- runQueryWithEnv stationStatus
-  stationStatusResponse <- decodeFile "docs/json/2.3/station_status-1.json"
+  status  <- getDecodedFile "docs/json/2.3/station_status-1.json"
+          :: IO StationStatusResponse
 
-  case stationStatusResponse of
-    (Left err    )  -> assertFailure $ "Error querying API: " ++ show err
-    (Right status)  -> do
-      -- Should fail because station information has not been inserted.
-      inserted_info <- insertUpdatedStationStatus conn $ status ^. response_data . status_stations
+  -- Insert test data.
+  void $ insertUpdatedStationStatus conn $ status ^. response_data . status_stations
 
-      assertEqual "Inserted station information" [] $ inserted_info ^. insert_inserted
-      assertEqual "Updated station information"  [] $ inserted_info ^. insert_deactivated
+  -- Should fail because station information has not been inserted.
+  inserted_info <- insertUpdatedStationStatus conn $ status ^. response_data . status_stations
+
+  assertEqual "Inserted station status" [] $ inserted_info ^. insert_inserted
+  assertEqual "Updated station status"  [] $ inserted_info ^. insert_deactivated
 
 -- | HUnit test for inserting station information and status, with data from the actual API.
 unit_insertStationApi :: IO ()
@@ -146,22 +150,17 @@ unit_insertStationApi = do
   -- Connect to the database.
   conn <- setupDatabaseName dbnameTest
 
-  -- Query API.
-  -- stationInformationResponse  <- runQueryWithEnv stationInformation
-  -- stationStatusResponse       <- runQueryWithEnv stationStatus
-  stationInformationResponse  <- decodeFile "docs/json/2.3/station_information-1.json"
-  stationStatusResponse       <- decodeFile "docs/json/2.3/station_status-1.json"
+  info    <- getDecodedFile "docs/json/2.3/station_information-1.json"
+          :: IO StationInformationResponse
+  status  <- getDecodedFile "docs/json/2.3/station_status-1.json"
+          :: IO StationStatusResponse
 
-  case (stationInformationResponse, stationStatusResponse) of
-    (Left err_info, Left err_status)  -> assertFailure $ "Error querying API: " ++ show err_info ++ " " ++ show err_status
-    (Left err_info, _              )  -> assertFailure $ "Error querying API: " ++ show err_info
-    (_            , Left err_status)  -> assertFailure $ "Error querying API: " ++ show err_status
-    (Right info   , Right status   )  -> do
-      inserted_info   <- insertStationInformation   conn $ info   ^. response_data . info_stations
-      inserted_status <- insertUpdatedStationStatus conn $ status ^. response_data . status_stations
+  -- Insert test data.
+  inserted_info   <- insertStationInformation   conn $ info   ^. response_data . info_stations
+  inserted_status <- insertUpdatedStationStatus conn $ status ^. response_data . status_stations
 
-      assertEqual "Inserted station information" 704 (length inserted_info)
-      assertEqual "Inserted station status"      704 (length $ inserted_status ^. insert_inserted)
+  assertEqual "Inserted station information" 704 (length inserted_info)
+  assertEqual "Inserted station status"      704 (length $ inserted_status ^. insert_inserted)
 
 
 {- | HUnit test for querying which station status have reported.
@@ -193,24 +192,19 @@ unit_getRowsToDeactivate = do
 -- | Query updated station status and return a list of database statuses.
 doGetRowsToDeactivate :: Connection -> IO [StationStatusT Identity]
 doGetRowsToDeactivate conn = do
-  stationInformationResponse    <- decodeFile "docs/json/2.3/station_information-1.json"
-  stationStatusResponse         <- decodeFile "docs/json/2.3/station_status-1.json"
+  info      <- getDecodedFile "docs/json/2.3/station_information-1.json"
+            :: IO StationInformationResponse
+  status_1  <- getDecodedFile "docs/json/2.3/station_status-1.json"
+            :: IO StationStatusResponse
+  status_2  <- getDecodedFile "docs/json/2.3/station_status-2.json"
+            :: IO StationStatusResponse
 
-  -- updatedStationStatusResponse       <- runQueryWithEnv stationStatus
-  updatedStationStatusResponse <- decodeFile "docs/json/2.3/station_status-2.json"
+  -- Insert test data.
+  void $ insertStationInformation   conn $ info   ^. response_data . info_stations
+  void $ insertUpdatedStationStatus conn $ status_1 ^. response_data . status_stations
 
-  case (stationInformationResponse, stationStatusResponse) of
-    (Right info, Right status) -> do
-      -- Insert test data.
-      void $ insertStationInformation   conn $ info   ^. response_data . info_stations
-      void $ insertUpdatedStationStatus conn $ status ^. response_data . status_stations
-    ( _        , _           ) -> assertFailure "Error loading test data"
-
-  case updatedStationStatusResponse of
-    Left   err          -> assertFailure $ "Error decoding station status JSON: " ++ err
-    (Right api_status)  -> do
-      -- Return stations that have reported since being inserted.
-      getRowsToDeactivate conn $ api_status ^. response_data . status_stations
+  -- Return stations that have reported since being inserted.
+  getRowsToDeactivate conn $ status_2 ^. response_data . status_stations
 
 
 {- | HUnit test for querying which station status have reported.
@@ -246,24 +240,19 @@ unit_separateNewerStatusRecords = do
 -- | Query updated station status and return a list of API statuses.
 doSeparateNewerStatusRecords :: Connection -> IO FilterStatusResult
 doSeparateNewerStatusRecords conn = do
-  stationInformationResponse    <- decodeFile "docs/json/2.3/station_information-1.json"
-  stationStatusResponse         <- decodeFile "docs/json/2.3/station_status-1.json"
+  info      <- getDecodedFile "docs/json/2.3/station_information-1.json"
+            :: IO StationInformationResponse
+  status_1  <- getDecodedFile "docs/json/2.3/station_status-1.json"
+            :: IO StationStatusResponse
+  status_2  <- getDecodedFile "docs/json/2.3/station_status-2.json"
+            :: IO StationStatusResponse
 
-  -- updatedStationStatusResponse       <- runQueryWithEnv stationStatus
-  updatedStationStatusResponse <- decodeFile "docs/json/2.3/station_status-2.json"
+  -- Insert test data.
+  void $ insertStationInformation   conn $ info   ^. response_data . info_stations
+  void $ insertUpdatedStationStatus conn $ status_1 ^. response_data . status_stations
 
-  case (stationInformationResponse, stationStatusResponse) of
-    (Right info, Right status) -> do
-      -- Insert test data.
-      void $ insertStationInformation   conn $ info   ^. response_data . info_stations
-      void $ insertUpdatedStationStatus conn $ status ^. response_data . status_stations
-    ( _        , _           ) -> assertFailure "Error loading test data"
-
-  case updatedStationStatusResponse of
-    Left   err          -> assertFailure $ "Error decoding station status JSON: " ++ err
-    (Right api_status)  -> do
-      -- Return maps of updated and same API statuses
-      separateNewerStatusRecords conn $ api_status ^. response_data . status_stations
+  -- Return maps of updated and same API statuses
+  separateNewerStatusRecords conn $ status_2 ^. response_data . status_stations
 
 
 -- | HUnit test to assert that changed station status are inserted.
@@ -288,27 +277,22 @@ unit_separateNewerStatusRecordsInsert = do
 doSeparateNewerStatusRecordsInsertOnce :: Connection        -- ^ Database connection
                                    -> IO InsertStatusResult -- ^ Result of inserting updated station statuses.
 doSeparateNewerStatusRecordsInsertOnce conn = do
-  stationInformationResponse    <- decodeFile "docs/json/2.3/station_information-1.json"
-  stationStatusResponse         <- decodeFile "docs/json/2.3/station_status-1.json"
+  info      <- getDecodedFile "docs/json/2.3/station_information-1.json"
+            :: IO StationInformationResponse
+  status_1  <- getDecodedFile "docs/json/2.3/station_status-1.json"
+            :: IO StationStatusResponse
+  status_2  <- getDecodedFile "docs/json/2.3/station_status-2.json"
+            :: IO StationStatusResponse
 
-  -- updatedStationStatusResponse       <- runQueryWithEnv stationStatus
-  updatedStationStatusResponse <- decodeFile "docs/json/2.3/station_status-2.json"
+  -- Insert test data.
+  void $ insertStationInformation   conn $ info   ^. response_data . info_stations
+  void $ insertUpdatedStationStatus conn $ status_1 ^. response_data . status_stations
 
-  case (stationInformationResponse, stationStatusResponse) of
-    (Right info, Right status) -> do
-      -- Insert first round of test data.
-      void $ insertStationInformation   conn $ info   ^. response_data . info_stations
-      void $ insertUpdatedStationStatus conn $ status ^. response_data . status_stations
-    ( _        , _           ) -> assertFailure "Error loading test data"
+  -- Find statuses that need to be updated (second round of data vs. first).
+  updated <- separateNewerStatusRecords conn $ status_2 ^. response_data . status_stations
 
-  case updatedStationStatusResponse of
-    Left   err          -> assertFailure $ "Error decoding station status JSON: " ++ err
-    (Right api_status)  -> do
-      -- Find statuses that need to be updated (second round of data vs. first).
-      updated <- separateNewerStatusRecords conn $ api_status ^. response_data . status_stations
-
-      -- Insert second round of test data (some of which have reported since the first round was inserted).
-      insertUpdatedStationStatus conn $ updated ^. filter_newer
+  -- Insert second round of test data (some of which have reported since the first round was inserted).
+  insertUpdatedStationStatus conn $ updated ^. filter_newer
 
 
 -- FIXME: test fails
@@ -336,27 +320,22 @@ unit_separateNewerStatusRecordsInsertTwice = do
 doSeparateNewerStatusRecordsInsertTwice :: Connection        -- ^ Database connection
                                         -> IO InsertStatusResult -- ^ Result of inserting updated station statuses.
 doSeparateNewerStatusRecordsInsertTwice conn = do
-  stationInformationResponse    <- decodeFile "docs/json/2.3/station_information-1.json"
-  stationStatusResponse         <- decodeFile "docs/json/2.3/station_status-1.json"
+  info      <- getDecodedFile "docs/json/2.3/station_information-1.json"
+            :: IO StationInformationResponse
+  status_1  <- getDecodedFile "docs/json/2.3/station_status-1.json"
+            :: IO StationStatusResponse
+  status_2  <- getDecodedFile "docs/json/2.3/station_status-2.json"
+            :: IO StationStatusResponse
 
-  -- updatedStationStatusResponse       <- runQueryWithEnv stationStatus
-  updatedStationStatusResponse <- decodeFile "docs/json/2.3/station_status-2.json"
+  -- Insert first round of test data.
+  void $ insertStationInformation   conn $ info   ^. response_data . info_stations
+  void $ insertUpdatedStationStatus conn $ status_1 ^. response_data . status_stations
 
-  case (stationInformationResponse, stationStatusResponse) of
-    (Right info, Right status) -> do
-      -- Insert first round of test data.
-      void $ insertStationInformation   conn $ info   ^. response_data . info_stations
-      void $ insertUpdatedStationStatus conn $ status ^. response_data . status_stations
-    ( _        , _           ) -> assertFailure "Error loading test data"
+  -- Find statuses that need to be updated (second round of data vs. first).
+  updated <- separateNewerStatusRecords conn $ status_2 ^. response_data . status_stations
 
-  case updatedStationStatusResponse of
-    Left   err          -> assertFailure $ "Error decoding station status JSON: " ++ err
-    (Right api_status)  -> do
-      -- Find statuses that need to be updated (second round of data vs. first).
-      updated <- separateNewerStatusRecords conn $ api_status ^. response_data . status_stations
+  -- Insert second round of test data (some of which have reported since the first round was inserted).
+  void $ insertUpdatedStationStatus conn $ updated ^. filter_newer
 
-      -- Insert second round of test data (some of which have reported since the first round was inserted).
-      void $ insertUpdatedStationStatus conn $ updated ^. filter_newer
-
-      -- Insert second round of test data once again (nothing should have changed).
-      insertUpdatedStationStatus conn $ updated ^. filter_newer
+  -- Insert second round of test data once again (nothing should have changed).
+  insertUpdatedStationStatus conn $ updated ^. filter_newer
