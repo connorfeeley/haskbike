@@ -1,7 +1,9 @@
-{-# LANGUAGE CPP              #-}
+{-# LANGUAGE CPP                 #-}
 
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE GADTs               #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE TemplateHaskell     #-}
 
 -- | This module contains the operations that can be performed on the database.
 
@@ -14,10 +16,14 @@ module Database.Operations
   , insertStationInformation
   -- , _insertStationStatus -- NOTE: use insertUpdatedStationStatus instead
   , queryUpdatedStatus
-  , filterStatusBase
-  , filterStatusUpdated
-  , filterStatusSame
+  , filterStatus
   , insertUpdatedStationStatus
+  , InsertStatusResult (..)
+  , FilterStatusResult (..)
+  , insert_updated
+  , insert_inserted
+  , filter_updated
+  , filter_same
   ) where
 
 import           API.Types                                (StationInformationResponse (..),
@@ -155,8 +161,15 @@ Query database for updated statuses and return a tuple of maps representing the 
 First element:  map of API statuses that have reported since being inserted.
 Second element: map of API statuses that have not reported since being inserted.
 -}
-filterStatusBase :: Connection -> [AT.StationStatus] -> IO (Map.Map Int AT.StationStatus, Map.Map Int AT.StationStatus)
-filterStatusBase conn api_status = do
+
+data FilterStatusResult where
+  FilterStatusResult :: { _filter_updated :: [AT.StationStatus]
+                        , _filter_same    :: [AT.StationStatus]
+                        } -> FilterStatusResult
+makeLenses ''FilterStatusResult
+
+filterStatus :: Connection -> [AT.StationStatus] -> IO FilterStatusResult
+filterStatus conn api_status = do
   -- Query database for updated statuses
   db_status_updated <- queryUpdatedStatus conn api_status
 
@@ -169,29 +182,19 @@ filterStatusBase conn api_status = do
   let api_status_updated = Map.intersection api_status' db_updated_status'
   let api_status_same    = Map.difference   api_status' db_updated_status'
 
-  pure (api_status_updated, api_status_same)
-
--- | Query database for updated statuses and return a filtered list of API StationStatus which have reported since being inserted.
-filterStatusUpdated :: Connection -> [AT.StationStatus] -> IO [AT.StationStatus]
-filterStatusUpdated conn api_status = do
-  updated_map <- fst <$> filterStatusBase conn api_status
-
-  let updated_list = map snd $ Map.toAscList updated_map
-
-  pure updated_list
-
--- | Query database for updated statuses and return a filtered list of API StationStatus which have not reported since being inserted.
-filterStatusSame :: Connection -> [AT.StationStatus] -> IO [AT.StationStatus]
-filterStatusSame conn api_status = do
-  same_map <- snd <$> filterStatusBase conn api_status
-
-  let same_list = map snd $ Map.toAscList same_map
-
-  pure same_list
+  pure $ FilterStatusResult {_filter_updated = map snd $ Map.toAscList api_status_updated, _filter_same = map snd $ Map.toAscList api_status_same}
 
 
--- | Insert updated station status into the database.
-insertUpdatedStationStatus :: Connection -> [AT.StationStatus] -> IO ([StationStatus], [StationStatus])
+data InsertStatusResult where
+  InsertStatusResult :: { _insert_updated :: [StationStatus]
+                        , _insert_inserted :: [StationStatus]
+                        } -> InsertStatusResult
+makeLenses ''InsertStatusResult
+
+{- |
+Insert updated station status into the database.
+-}
+insertUpdatedStationStatus :: Connection -> [AT.StationStatus] -> IO InsertStatusResult
 insertUpdatedStationStatus conn status = do
   -- Query database for updated statuses
   db_status_updated <- case length status of
@@ -216,7 +219,7 @@ insertUpdatedStationStatus conn status = do
       insert (bikeshareDb ^. bikeshareStationStatus) $
       insertExpressions $ map fromJSONToBeamStationStatus filtered_status
 
-  pure (updated, inserted)
+  pure $ InsertStatusResult {_insert_updated = updated, _insert_inserted = inserted }
 
   where
     status_ids :: [Int]

@@ -15,7 +15,7 @@ import           API.Types                       (StationStatusResponse,
                                                   status_stations)
 import           Common
 import           Database.BikeShare              (d_status_last_reported,
-                                                  d_status_station_id)
+                                                  d_status_station_id, BeamReportTime)
 import           Database.Operations
 import           Database.Utils
 
@@ -82,22 +82,23 @@ statusHandler conn queue =
         Just response -> do
           let resp_data = response ^. response_data
           let status = resp_data ^. status_stations
+          putStrLn $ "HANDLER: status_stations=" ++ show (length status)
 
-          updated <- filterStatusUpdated conn status
-          putStrLn $ "HANDLER: updated=" ++ show (length updated)
+          updated_api <- filterStatus conn status
+          putStrLn $ "HANDLER: updated_api=" ++ show (length $ updated_api ^. filter_updated)
 
           -- Insert the updated status.
-          inserted <- insertUpdatedStationStatus conn updated
+          inserted_result <- insertUpdatedStationStatus conn $ updated_api ^. filter_updated
           let message_data = zipWith (curry
                                       (\s -> ( s ^. _2 . d_status_station_id
                                              , s ^. _1 . d_status_last_reported ^.. _Just
                                              , s ^. _2 . d_status_last_reported ^.. _Just
-                                             ))) (inserted ^. _1) (inserted ^. _2)
+                                             ))) (inserted_result ^. insert_updated) (inserted_result ^. insert_inserted)
           let messages = map (\(sid, last_reported, last_reported') ->
                    "ID: [" ++ show sid ++ "] " ++ -- ID
                    show last_reported ++ "->" ++ show last_reported' -- [prev reported] -> [new reported]
                 ) message_data
           mapM_ putStrLn messages
-          putStrLn $ "HANDLER: updated+inserted=" ++ show (length $ inserted ^. _2)
+          putStrLn $ "HANDLER: updated=" ++ show (length $ inserted_result ^. insert_updated) ++ " inserted=" ++ show (length $ inserted_result ^. insert_inserted)
 
           loop' -- Restart loop

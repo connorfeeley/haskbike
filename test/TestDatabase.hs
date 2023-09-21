@@ -71,7 +71,7 @@ unit_insertStationStatus = do
       inserted_status <- insertUpdatedStationStatus conn $ status ^. response_data . status_stations
 
       assertEqual "Inserted station information" 704 (length inserted_info)
-      assertEqual "Inserted station status"        8 (length $ inserted_status ^. _2)
+      assertEqual "Inserted station status"        8 (length $ inserted_status ^. insert_inserted)
     ( _        , _            ) -> assertFailure "Error loading test data"
 
 
@@ -87,8 +87,10 @@ unit_queryStationStatus = do
   -- Insert test data.
   case (stationInformationResponse, stationStatusResponse) of
     (Right info , Right status  ) -> do
-      void $ insertStationInformation   conn $ info   ^. response_data . info_stations
-      void $ insertUpdatedStationStatus conn $ status ^. response_data . status_stations
+      inserted_info   <- insertStationInformation   conn $ info   ^. response_data . info_stations
+      inserted_status <- insertUpdatedStationStatus conn $ status ^. response_data . status_stations
+      assertEqual "Inserted station information" 6 (length inserted_info)
+      assertEqual "Inserted station information" 5 (length $ inserted_status ^. insert_inserted)
     ( _        , _            ) -> assertFailure "Error loading test data"
 
   -- Query station status.
@@ -127,7 +129,8 @@ unit_insertStationStatusApi = do
       -- Should fail because station information has not been inserted.
       inserted_info <- insertUpdatedStationStatus conn $ status ^. response_data . status_stations
 
-      assertEqual "Inserted station information" ([], []) inserted_info
+      assertEqual "Inserted station information" [] $ inserted_info ^. insert_inserted
+      assertEqual "Updated station information"  [] $ inserted_info ^. insert_updated
 
 -- | HUnit test for inserting station information and status, with data from the actual API.
 unit_insertStationApi :: IO ()
@@ -150,7 +153,7 @@ unit_insertStationApi = do
       inserted_status <- insertUpdatedStationStatus conn $ status ^. response_data . status_stations
 
       assertEqual "Inserted station information" 704 (length inserted_info)
-      assertEqual "Inserted station status"      704 (length $ inserted_status ^. _2)
+      assertEqual "Inserted station status"      704 (length $ inserted_status ^. insert_inserted)
 
 
 -- | HUnit test for querying which station status have reported.
@@ -191,14 +194,14 @@ unit_queryUpdatedStatus' = do
 
   updated_base <- doQueryUpdatedStatus' conn
 
-  let updated = updated_base ^. _1
-  let same    = updated_base ^. _2
+  let updated = updated_base ^. filter_updated
+  let same    = updated_base ^. filter_same
 
-  assertEqual "Updated stations" 302 (Map.size updated)
-  assertEqual "Same    stations" 407 (Map.size same)
+  assertEqual "Updated stations" 302 (length updated)
+  assertEqual "Same    stations" 407 (length same)
 
 -- | Query updated station status and return a list of API statuses.
-doQueryUpdatedStatus' :: Connection -> IO (Map.Map Int AT.StationStatus, Map.Map Int AT.StationStatus)
+doQueryUpdatedStatus' :: Connection -> IO FilterStatusResult
 doQueryUpdatedStatus' conn = do
   stationInformationResponse    <- decodeFile "docs/json/2.3/station_information-1.json"
   stationStatusResponse         <- decodeFile "docs/json/2.3/station_status-1.json"
@@ -217,7 +220,7 @@ doQueryUpdatedStatus' conn = do
     Left   err          -> assertFailure $ "Error decoding station status JSON: " ++ err
     (Right api_status)  -> do
       -- Return maps of updated and same API statuses
-      filterStatusBase conn $ api_status ^. response_data . status_stations
+      filterStatus conn $ api_status ^. response_data . status_stations
 
 
 -- | HUnit test to assert that changed station status are inserted.
@@ -225,17 +228,23 @@ unit_queryUpdatedStatusInsert :: IO ()
 unit_queryUpdatedStatusInsert = do
   conn <- setupDatabaseName dbnameTest
 
+  {-
+  - Insert information and status data (1)
+  - Insert/update status data (2)
+  - Check if inserting status data (2) would result in updates
+  - Returns (updated, same)
+  -}
   updated_base <- doQueryUpdatedStatusInsert conn
 
-  let updated = updated_base ^. _1
-  let same    = updated_base ^. _2
+  let updated = updated_base ^. filter_updated
+  let same    = updated_base ^. filter_same
 
   -- Assert no stations are updated.
-  assertEqual "Updated stations"   0 (Map.size updated)
-  assertEqual "Same    stations" 709 (Map.size same)
+  assertEqual "Updated stations"   0 (length updated)
+  assertEqual "Same    stations" 709 (length same)
 
 -- | Query updated station status and return a list of API statuses.
-doQueryUpdatedStatusInsert :: Connection -> IO (Map.Map Int AT.StationStatus, Map.Map Int AT.StationStatus)
+doQueryUpdatedStatusInsert :: Connection -> IO FilterStatusResult
 doQueryUpdatedStatusInsert conn = do
   stationInformationResponse    <- decodeFile "docs/json/2.3/station_information-1.json"
   stationStatusResponse         <- decodeFile "docs/json/2.3/station_status-1.json"
@@ -254,8 +263,13 @@ doQueryUpdatedStatusInsert conn = do
     Left   err          -> assertFailure $ "Error decoding station status JSON: " ++ err
     (Right api_status)  -> do
       -- Find statuses that need to be updated (second round of data vs. first).
-      updated <- filterStatusUpdated conn $ api_status ^. response_data . status_stations
+      updated <- filterStatus conn $ api_status ^. response_data . status_stations
       -- Insert second round of test data (some of which have reported since the first round was inserted).
-      _inserted <- insertUpdatedStationStatus conn updated
-      -- Find statuses that need to be updated (second round of data vs. second), returning maps of (updated, same).
-      filterStatusBase conn $ api_status ^. response_data . status_stations
+      _inserted <- insertUpdatedStationStatus conn $ _filter_updated updated
+      {-
+      Expecting that none will need to be updated, find statuses that need to be updated
+      (second round of data vs. second), returning maps of (updated, same).
+
+      Expected result: ([], [all stations]])
+      -}
+      filterStatus conn $ api_status ^. response_data . status_stations
