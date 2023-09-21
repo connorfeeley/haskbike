@@ -22,6 +22,7 @@ module TestDatabase
      , unit_queryStationStatus
      , unit_separateNewerStatusRecords
      , unit_separateNewerStatusRecordsInsert
+     , unit_separateNewerStatusRecordsInsertTwice
      ) where
 
 import           API.ResponseWrapper    ( ResponseWrapper (..), response_data )
@@ -276,16 +277,17 @@ unit_separateNewerStatusRecordsInsert = do
   - Check if inserting status data (2) would result in updates
   - Returns (updated, same)
   -}
-  updated <- doSeparateNewerStatusRecordsInsert conn
+  updated <- doSeparateNewerStatusRecordsInsertOnce conn
 
   -- Assert that the same number of status rows are inserted as were updated.
   assertEqual "Deactivated status rows"     302 (length $ updated ^. insert_deactivated)
   assertEqual "Inserted status rows"        302 (length $ updated ^. insert_inserted)
   assertEqual "Same number inserted as updated" (length $ updated ^. insert_inserted) (length $ updated ^. insert_deactivated)
 
--- | Query updated station status and return a list of API statuses.
-doSeparateNewerStatusRecordsInsert :: Connection -> IO InsertStatusResult
-doSeparateNewerStatusRecordsInsert conn = do
+-- | Insert station statuses (1) into a database, then (2).
+doSeparateNewerStatusRecordsInsertOnce :: Connection        -- ^ Database connection
+                                   -> IO InsertStatusResult -- ^ Result of inserting updated station statuses.
+doSeparateNewerStatusRecordsInsertOnce conn = do
   stationInformationResponse    <- decodeFile "docs/json/2.3/station_information-1.json"
   stationStatusResponse         <- decodeFile "docs/json/2.3/station_status-1.json"
 
@@ -306,4 +308,55 @@ doSeparateNewerStatusRecordsInsert conn = do
       updated <- separateNewerStatusRecords conn $ api_status ^. response_data . status_stations
 
       -- Insert second round of test data (some of which have reported since the first round was inserted).
+      insertUpdatedStationStatus conn $ updated ^. filter_newer
+
+
+-- FIXME: test fails
+-- | HUnit test to assert that reinserting already-deactivated rows is a no-op.
+unit_separateNewerStatusRecordsInsertTwice :: IO ()
+unit_separateNewerStatusRecordsInsertTwice = do
+  conn <- setupDatabaseName dbnameTest
+
+  {-
+  - Insert information and status data (1)
+  - Insert/update status data (2)
+  - Check if inserting status data (2) would result in updates
+  - Returns (updated, same)
+  -}
+  updated <- doSeparateNewerStatusRecordsInsertTwice conn
+
+  -- Assert that the no status rows are inserted or deactivated on the second iteration.
+  assertEqual "Deactivated status rows"       0 (length $ updated ^. insert_deactivated)
+  assertEqual "Inserted status rows"          0 (length $ updated ^. insert_inserted)
+  assertEqual "Same number inserted as updated" (length $ updated ^. insert_inserted) (length $ updated ^. insert_deactivated)
+
+
+-- FIXME: test fails
+-- | Insert station statuses (1) into a database, then (2), then (2) again.
+doSeparateNewerStatusRecordsInsertTwice :: Connection        -- ^ Database connection
+                                        -> IO InsertStatusResult -- ^ Result of inserting updated station statuses.
+doSeparateNewerStatusRecordsInsertTwice conn = do
+  stationInformationResponse    <- decodeFile "docs/json/2.3/station_information-1.json"
+  stationStatusResponse         <- decodeFile "docs/json/2.3/station_status-1.json"
+
+  -- updatedStationStatusResponse       <- runQueryWithEnv stationStatus
+  updatedStationStatusResponse <- decodeFile "docs/json/2.3/station_status-2.json"
+
+  case (stationInformationResponse, stationStatusResponse) of
+    (Right info, Right status) -> do
+      -- Insert first round of test data.
+      void $ insertStationInformation   conn $ info   ^. response_data . info_stations
+      void $ insertUpdatedStationStatus conn $ status ^. response_data . status_stations
+    ( _        , _           ) -> assertFailure "Error loading test data"
+
+  case updatedStationStatusResponse of
+    Left   err          -> assertFailure $ "Error decoding station status JSON: " ++ err
+    (Right api_status)  -> do
+      -- Find statuses that need to be updated (second round of data vs. first).
+      updated <- separateNewerStatusRecords conn $ api_status ^. response_data . status_stations
+
+      -- Insert second round of test data (some of which have reported since the first round was inserted).
+      void $ insertUpdatedStationStatus conn $ updated ^. filter_newer
+
+      -- Insert second round of test data once again (nothing should have changed).
       insertUpdatedStationStatus conn $ updated ^. filter_newer
