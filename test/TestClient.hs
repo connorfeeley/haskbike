@@ -4,11 +4,15 @@
 module TestClient where
 
 import           API.Client
+import qualified API.Poll           as Poll
 
 import           Test.Tasty.HUnit
 
-import           Control.Exception (SomeException, try)
-import           Control.Monad     (void)
+import           Control.Exception  (SomeException, try)
+import           Control.Monad      (void)
+import           System.IO          (stdout)
+import           System.IO.Silently (hSilence, silence)
+import           UnliftIO           (stderr, timeout)
 
 
 -- | Mark a test as expected to fail.
@@ -36,3 +40,9 @@ unit_parseSystemRegions      = void $ runQueryWithEnv systemRegions
 
 unit_parseSystemPricingPlans :: IO ()
 unit_parseSystemPricingPlans = void $ runQueryWithEnv systemPricingPlans
+
+unit_poll :: IO ()
+unit_poll = void $
+  timeout 1000000 $
+    -- silence Poll.main
+    hSilence [ {- stdout, stderr -} ] Poll.main

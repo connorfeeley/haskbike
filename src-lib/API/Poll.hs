@@ -1,6 +1,8 @@
+{- |
+Poll the API for status updates, inserting results in database as needed.
+-}
+
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# OPTIONS_GHC -Wno-unused-local-binds #-}
--- |
 
 module API.Poll
   ( main )

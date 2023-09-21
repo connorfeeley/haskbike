@@ -107,6 +107,7 @@ common test-depends
                     , HUnit
                     , file-embed
                     , aeson-better-errors
+                    , silently
 
     -- Ensure tasty-discover is available to discover tests.
     build-tool-depends:
