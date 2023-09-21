@@ -85,15 +85,17 @@ statusHandler conn queue =
           putStrLn $ "HANDLER: status_stations=" ++ show (length status)
 
           updated_api <- filterStatus conn status
-          putStrLn $ "HANDLER: updated_api=" ++ show (length $ updated_api ^. filter_updated)
+          putStrLn $ "HANDLER: updated_api="  ++ show (length $ updated_api ^. filter_updated)
+          putStrLn $ "HANDLER: same_api=" ++ show (length $ updated_api ^. filter_same)
 
           -- Insert the updated status.
-          inserted_result <- insertUpdatedStationStatus conn $ updated_api ^. filter_updated
-          let message_data = zipWith (curry
-                                      (\s -> ( s ^. _2 . d_status_station_id
-                                             , s ^. _1 . d_status_last_reported ^.. _Just
-                                             , s ^. _2 . d_status_last_reported ^.. _Just
-                                             ))) (inserted_result ^. insert_updated) (inserted_result ^. insert_inserted)
+          inserted_result <- insertUpdatedStationStatus conn status
+          let message_data = zipWith (\ updated inserted ->
+                                 ( inserted ^.. d_status_station_id
+                                 , updated  ^.. d_status_last_reported
+                                 , inserted ^.. d_status_last_reported
+                                 ))
+                                 (inserted_result ^. insert_updated) (inserted_result ^. insert_inserted)
           let messages = map (\(sid, last_reported, last_reported') ->
                    "ID: [" ++ show sid ++ "] " ++ -- ID
                    show last_reported ++ "->" ++ show last_reported' -- [prev reported] -> [new reported]

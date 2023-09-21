@@ -126,7 +126,9 @@ _insertStationStatus conn status = do
 
 
 -- | Query database to determine which stations have reported since being inserted.
-queryUpdatedStatus :: Connection -> [AT.StationStatus] -> IO [StationStatus]
+queryUpdatedStatus :: Connection -- ^ Connection to the database.
+  -> [AT.StationStatus] -- ^ List of station statuses from the API response.
+  -> IO [StationStatus] -- ^ List of station statuses that would need to be updated, if the statuses from the API were inserted.
 queryUpdatedStatus conn api_status = do
   -- Select using common table expressions (selectWith).
   runBeamPostgres' conn $ runSelectReturningList $ selectWith $ do
@@ -179,8 +181,8 @@ filterStatus conn api_status = do
   let db_updated_status' = Map.fromList $ map (\ss -> (fromIntegral $ ss ^. d_status_station_id, ss)) db_status_updated
 
   -- Construct map of intersection of both maps; only elements with keys in both are preserved.
-  let api_status_updated = Map.intersection api_status' db_updated_status'
-  let api_status_same    = Map.difference   api_status' db_updated_status'
+  let api_status_same    = Map.intersection api_status' db_updated_status'
+  let api_status_updated = Map.difference   api_status' db_updated_status'
 
   pure $ FilterStatusResult {_filter_updated = map snd $ Map.toAscList api_status_updated, _filter_same = map snd $ Map.toAscList api_status_same}
 
@@ -213,7 +215,7 @@ insertUpdatedStationStatus conn status = do
   -- Get information for the stations that are in the status response.
   info_ids <- map _info_station_id <$> queryStationInformation conn status_ids
   let filtered_status = filter (\ss -> fromIntegral (_status_station_id ss) `elem` info_ids) status
-  inserted <- case length status of
+  inserted <- case length filtered_status of
     0 -> pure [] -- No need to insert if there are no statuses to insert.
     _ -> runBeamPostgres' conn $ runInsertReturningList $
       insert (bikeshareDb ^. bikeshareStationStatus) $
