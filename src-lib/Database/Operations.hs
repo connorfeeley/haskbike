@@ -14,7 +14,6 @@ module Database.Operations
      , queryStationInformationByIds
      , queryStationStatus
      , queryStationStatusFields
-       -- , _insertStationStatus -- NOTE: use insertUpdatedStationStatus instead
      , InsertStatusResult (..)
      , getRowsToDeactivate
      , insertUpdatedStationStatus
@@ -150,23 +149,6 @@ insertStationInformation conn stations = do
   runBeamPostgres' conn $ runInsertReturningList $
     insert (bikeshareDb ^. bikeshareStationInformation) $
     insertExpressions $ map fromJSONToBeamStationInformation stations
-
-
-
--- | Insert station status into the database.
-_insertStationStatus :: Connection         -- ^ Connection to the database.
-                     -> [AT.StationStatus] -- ^ List of 'AT.StationStatus' from the API response.
-                     -> IO [StationStatus] -- ^ List of 'StationStatus' that were inserted.
-_insertStationStatus conn status = do
-  -- Get information for the stations that are in the status response.
-  info_ids <- map _info_station_id <$> queryStationInformationByIds conn status_ids
-  let filtered_status = filter (\ss -> fromIntegral (_status_station_id ss) `elem` info_ids) status
-  runBeamPostgres' conn $ runInsertReturningList $
-    insert (bikeshareDb ^. bikeshareStationStatus) $
-    insertExpressions $ map fromJSONToBeamStationStatus filtered_status
-  where
-    status_ids :: [Int]
-    status_ids = fromIntegral <$> status ^.. traverse . status_station_id
 
 
 {- |
