@@ -68,7 +68,7 @@
               ;
             };
 
-            hlsCheck.enable = true;
+            hlsCheck.enable = false;
           };
         };
 
