@@ -3,16 +3,18 @@ module Main
      ) where
 
 import           API.Client
-import qualified API.Poll            as P
+import qualified API.Poll               as P
 import           API.ResponseWrapper
 import           API.Types
 
 import           Control.Lens
+import           Control.Monad          ( when )
 
+import           Database.Beam.Postgres ( Connection )
 import           Database.Operations
 import           Database.Utils
 
-import           Servant.Client      ( ClientError )
+import           Servant.Client         ( ClientError )
 
 
 main :: IO ()
@@ -24,31 +26,33 @@ main = do
   conn <- connectDbName dbnameProduction
 
   -- Insert station information if missing from database.
-  queryStationInformation conn >>= \info_rows ->
-    case length info_rows of
-      0 -> do -- Request station information from API.
-        info   <- runQueryWithEnv stationInformation  :: IO (Either ClientError StationInformationResponse)
-        -- Insert station information into database.
-        case info of
-          Left  err  -> putStrLn $ "MAIN (ERROR): " ++ show err
-          Right response -> do
-            inserted <- insertStationInformation conn $ response ^. response_data . info_stations
-            putStrLn $ "MAIN:     inserted info " ++ show (length inserted)
-      _ -> putStrLn "MAIN:     station information already present"
+  infoQuery <- queryStationInformation conn
+  when (null infoQuery) $ handleStationInformation conn
 
   -- Insert station status if missing from database.
-  queryStationStatus conn >>= \status_rows ->
-    case length status_rows of
-      0 -> do -- Request station status from API.
-        status <- runQueryWithEnv stationStatus       :: IO (Either ClientError StationStatusResponse)
-        -- Insert station status into database.
-        case status of
-          Left  err  -> putStrLn $ "REQUEST: error: " ++ show err
-          Right response -> do
-            inserted <- insertUpdatedStationStatus conn $ response ^. response_data . status_stations
-            putStrLn $ "MAIN:    inserted status " ++ show (length $ inserted ^. insert_inserted)
-            putStrLn $ "MAIN: deactivated status " ++ show (length $ inserted ^. insert_deactivated)
-      _ -> putStrLn "MAIN:    station status already present"
+  -- statusQuery <- queryStationStatus conn
+  -- when (null statusQuery) $ handleStationStatus conn
 
-  -- Run API poller method.
   P.pollClient conn
+
+handleStationInformation :: Connection -- ^ Database connection.
+                         -> IO ()
+handleStationInformation conn = do
+  info <- runQueryWithEnv stationInformation :: IO (Either ClientError StationInformationResponse)
+  case info of
+    Left err -> putStrLn $ "MAIN (ERROR): " ++ show err
+    Right response -> do
+      let stations = response ^. response_data . info_stations
+      inserted <- insertStationInformation conn stations
+      putStrLn $ "MAIN:     inserted info " ++ show (length inserted)
+
+_handleStationStatus :: Connection -- ^ Database connection.
+                     -> IO ()
+_handleStationStatus conn = do
+  status <- runQueryWithEnv stationStatus :: IO (Either ClientError StationStatusResponse)
+  case status of
+    Left err -> putStrLn $ "MAIN: error: " ++ show err
+    Right response -> do
+      let stationsStatus = response ^. response_data . status_stations
+      inserted <- insertUpdatedStationStatus conn stationsStatus
+      putStrLn $ "MAIN:     inserted status " ++ show (length (inserted ^. insert_inserted))
