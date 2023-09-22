@@ -15,24 +15,15 @@ import           API.Types                       ( StationStatusResponse, status
 
 import           Common
 
-import           Control.Applicative             ( Applicative (liftA2), liftA )
 import           Control.Concurrent              ( threadDelay )
 import           Control.Concurrent.STM
 import           Control.Concurrent.STM.TBMQueue
 import           Control.Lens
-import           Control.Monad                   ( when )
-
-import           Data.Maybe                      ( listToMaybe )
-import           Data.Time
-import           Data.Time.Clock.POSIX
 
 import           Database.Beam.Postgres          ( Connection )
-import           Database.BikeShare              ( BeamReportTime (BeamReportTime), d_status_last_reported,
-                                                   d_status_station_id )
+import           Database.BikeShare              ( d_status_last_reported, d_status_station_id )
 import           Database.Operations
 import           Database.Utils
-
-import           Text.Pretty.Simple              ( pPrint, pPrintString )
 
 import           UnliftIO.Async
 
