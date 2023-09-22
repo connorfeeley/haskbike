@@ -1,5 +1,8 @@
 -- | Station infrormation table definition and functions.
 
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Use camelCase" #-}
+
 {-# LANGUAGE DeriveAnyClass            #-}
 {-# LANGUAGE DeriveGeneric             #-}
 {-# LANGUAGE DerivingVia               #-}
@@ -126,37 +129,59 @@ vehicleTypeFields b =
 vehicleTypesAvailable :: DataType Postgres VehicleType
 vehicleTypesAvailable = DataType pgTextType
 
-VehicleType
-  (LensFor available_boost)
-  (LensFor available_iconic)
-  (LensFor available_efit)
-  (LensFor available_efit_g5)
-  = tableLenses
+-- | VehicleType Lenses
+available_boost   :: Lens' VehicleType Int32
+available_iconic  :: Lens' VehicleType Int32
+available_efit    :: Lens' VehicleType Int32
+available_efit_g5 :: Lens' VehicleType Int32
 
--- | Lenses
-StationStatus
-  (LensFor d_status_id)
-  (StationInformationId (LensFor d_status_info_id))
-  (LensFor d_status_station_id)
-  (LensFor d_status_num_bikes_available)
-  (LensFor d_status_num_bikes_disabled)
-  (LensFor d_status_num_docks_available)
-  (LensFor d_status_num_docks_disabled)
-  (LensFor d_status_last_reported)
-  (LensFor d_status_is_charging_station)
-  (LensFor d_status_status)
-  (LensFor d_status_is_installed)
-  (LensFor d_status_is_renting)
-  (LensFor d_status_is_returning)
-  (LensFor d_status_traffic)
-  (LensFor d_status_vehicle_docks_available)
-  (VehicleType
-    (LensFor vehicle_types_available_boost)
-    (LensFor vehicle_types_available_iconic)
-    (LensFor vehicle_types_available_efit)
-    (LensFor vehicle_types_available_efit_g5))
-  (LensFor d_status_active)
-  = tableLenses
+VehicleType (LensFor available_boost) _ _ _   = tableLenses
+VehicleType _ (LensFor available_iconic) _ _  = tableLenses
+VehicleType _ _ (LensFor available_efit) _    = tableLenses
+VehicleType _ _ _ (LensFor available_efit_g5) = tableLenses
+
+-- | StationStatus Lenses
+d_status_id                      :: Lens' (StationStatusT f) (C f (SqlSerial Int32))
+d_status_info_id                 :: Lens' (StationStatusT f) (C f Int32)
+d_status_station_id              :: Lens' (StationStatusT f) (C f Int32)
+d_status_num_bikes_available     :: Lens' (StationStatusT f) (C f Int32)
+d_status_num_bikes_disabled      :: Lens' (StationStatusT f) (C f Int32)
+d_status_num_docks_available     :: Lens' (StationStatusT f) (C f Int32)
+d_status_num_docks_disabled      :: Lens' (StationStatusT f) (C f Int32)
+d_status_last_reported           :: Lens' (StationStatusT f) (C f (Maybe BeamReportTime))
+d_status_is_charging_station     :: Lens' (StationStatusT f) (C f Bool)
+d_status_status                  :: Lens' (StationStatusT f) (C f BeamStationStatusString)
+d_status_is_installed            :: Lens' (StationStatusT f) (C f Bool)
+d_status_is_renting              :: Lens' (StationStatusT f) (C f Bool)
+d_status_is_returning            :: Lens' (StationStatusT f) (C f Bool)
+d_status_traffic                 :: Lens' (StationStatusT f) (C f (Maybe Text.Text))
+d_status_vehicle_docks_available :: Lens' (StationStatusT f) (C f Int32)
+vehicle_types_available_boost    :: Lens' (StationStatusT f) (C f Int32)
+vehicle_types_available_iconic   :: Lens' (StationStatusT f) (C f Int32)
+vehicle_types_available_efit     :: Lens' (StationStatusT f) (C f Int32)
+vehicle_types_available_efit_g5  :: Lens' (StationStatusT f) (C f Int32)
+d_status_active                  :: Lens' (StationStatusT f) (C f Bool)
+
+StationStatus (LensFor d_status_id)                                         _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
+StationStatus _ (StationInformationId (LensFor d_status_info_id))             _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
+StationStatus _ _ (LensFor d_status_station_id)                                 _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
+StationStatus _ _ _ (LensFor d_status_num_bikes_available)                        _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
+StationStatus _ _ _ _ (LensFor d_status_num_bikes_disabled)                         _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
+StationStatus _ _ _ _ _ (LensFor d_status_num_docks_available)                        _ _ _ _ _ _ _ _ _ _ _ = tableLenses
+StationStatus _ _ _ _ _ _ (LensFor d_status_num_docks_disabled)                         _ _ _ _ _ _ _ _ _ _ = tableLenses
+StationStatus _ _ _ _ _ _ _ (LensFor d_status_last_reported)                              _ _ _ _ _ _ _ _ _ = tableLenses
+StationStatus _ _ _ _ _ _ _ _ (LensFor d_status_is_charging_station)                        _ _ _ _ _ _ _ _ = tableLenses
+StationStatus _ _ _ _ _ _ _ _ _ (LensFor d_status_status)                                     _ _ _ _ _ _ _ = tableLenses
+StationStatus _ _ _ _ _ _ _ _ _ _ (LensFor d_status_is_installed)                               _ _ _ _ _ _ = tableLenses
+StationStatus _ _ _ _ _ _ _ _ _ _ _ (LensFor d_status_is_renting)                                 _ _ _ _ _ = tableLenses
+StationStatus _ _ _ _ _ _ _ _ _ _ _ _ (LensFor d_status_is_returning)                               _ _ _ _ = tableLenses
+StationStatus _ _ _ _ _ _ _ _ _ _ _ _ _ (LensFor d_status_traffic)                                    _ _ _ = tableLenses
+StationStatus _ _ _ _ _ _ _ _ _ _ _ _ _ _ (LensFor d_status_vehicle_docks_available)                    _ _ = tableLenses
+StationStatus _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (VehicleType (LensFor vehicle_types_available_boost) _ _ _)   _ = tableLenses
+StationStatus _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (VehicleType _ (LensFor vehicle_types_available_iconic) _ _)  _ = tableLenses
+StationStatus _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (VehicleType _ _ (LensFor vehicle_types_available_efit)    _) _ = tableLenses
+StationStatus _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (VehicleType _ _ _ (LensFor vehicle_types_available_efit_g5)) _ = tableLenses
+StationStatus _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (LensFor d_status_active)                                     = tableLenses
 
 -- | Newtype wrapper for StationStatusString to allow us to define a custom FromBackendRow instance.
 -- Don't want to implement database-specific code for the underlying StationStatusString type.
