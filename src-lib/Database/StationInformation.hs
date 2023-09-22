@@ -148,15 +148,14 @@ instance (HasSqlValueSyntax be String, Show BeamRentalMethod) => HasSqlValueSynt
   sqlValueSyntax = sqlValueSyntax . show
 
 instance FromField BeamRentalMethod where
-   fromField f mdata = do
-     if typeOid f /= typoid text -- TODO: any way to determine this automatically?
-        then returnError Incompatible f ""
-        else case B.unpack `fmap` mdata of
-               Nothing  -> returnError UnexpectedNull f ""
-               Just dat ->
-                  case [ x | (x,t) <- reads dat, ("","") <- lex t ] of
-                    [x] -> return x
-                    _   -> returnError ConversionFailed f dat
+   fromField f mdata = if typeOid f /= typoid text -- TODO: any way to determine this automatically?
+   then returnError Incompatible f ""
+   else case B.unpack `fmap` mdata of
+          Nothing  -> returnError UnexpectedNull f ""
+          Just dat ->
+             case [ x | (x,t) <- reads dat, ("","") <- lex t ] of
+               [x] -> return x
+               _   -> returnError ConversionFailed f dat
 
 instance ToField BeamRentalMethod where
   toField = toField . show
@@ -186,15 +185,14 @@ instance (HasSqlValueSyntax be String, Show BeamPhysicalConfiguration) => HasSql
   sqlValueSyntax = sqlValueSyntax . show
 
 instance FromField BeamPhysicalConfiguration where
-   fromField f mdata = do
-     if typeOid f /= typoid text -- TODO: any way to determine this automatically?
-        then returnError Incompatible f ""
-        else case B.unpack `fmap` mdata of
-               Nothing  -> returnError UnexpectedNull f ""
-               Just dat ->
-                  case [ x | (x,t) <- reads dat, ("","") <- lex t ] of
-                    [x] -> return x
-                    _   -> returnError ConversionFailed f dat
+   fromField f mdata = if typeOid f /= typoid text -- TODO: any way to determine this automatically?
+   then returnError Incompatible f ""
+   else case B.unpack `fmap` mdata of
+          Nothing  -> returnError UnexpectedNull f ""
+          Just dat ->
+             case [ x | (x,t) <- reads dat, ("","") <- lex t ] of
+               [x] -> return x
+               _   -> returnError ConversionFailed f dat
 
 instance ToField BeamPhysicalConfiguration where
   toField = toField . show
