@@ -331,11 +331,16 @@ doSeparateNewerStatusRecordsInsertTwice conn = do
   void $ insertStationInformation   conn $ info   ^. response_data . info_stations
   void $ insertUpdatedStationStatus conn $ status_1 ^. response_data . status_stations
 
-  -- Find statuses that need to be updated (second round of data vs. first).
-  updated <- separateNewerStatusRecords conn $ status_2 ^. response_data . status_stations
+
+  -- Find status records that need to be updated (second round of data vs. first).
+  updated_1 <- separateNewerStatusRecords conn $ status_2 ^. response_data . status_stations
 
   -- Insert second round of test data (some of which have reported since the first round was inserted).
-  void $ insertUpdatedStationStatus conn $ updated ^. filter_newer
+  void $ insertUpdatedStationStatus conn $ updated_1 ^. filter_newer
+
+
+  -- Find status records that need to be updated (second round of data vs. second).
+  updated_2 <- separateNewerStatusRecords conn $ status_2 ^. response_data . status_stations
 
   -- Insert second round of test data once again (nothing should have changed).
-  insertUpdatedStationStatus conn $ updated ^. filter_newer
+  insertUpdatedStationStatus conn $ updated_2 ^. filter_newer
