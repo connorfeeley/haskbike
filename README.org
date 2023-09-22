@@ -187,6 +187,18 @@ SELECT pg_size_pretty( pg_total_relation_size('station_status') )
 |----------------|
 | 1608 kB        |
 
+** Get number of station status rows
+
+/Note: using production database here./
+#+begin_src sql :database haskbike
+SELECT COUNT(id) FROM station_status;
+#+end_src
+
+#+RESULTS:
+| count |
+|-------|
+|  1601 |
+
 * Lenses
 ** Extract station IDs from ~[StationStatus]~
 #+begin_src haskell
