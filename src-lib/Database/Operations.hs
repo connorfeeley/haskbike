@@ -12,6 +12,7 @@ module Database.Operations
      , printDisabledDocks
      , queryDisabledDocks
      , queryStationInformation
+     , queryStationInformationByIds
      , queryStationStatus
      , queryStationStatusFields
        -- , _insertStationStatus -- NOTE: use insertUpdatedStationStatus instead
@@ -122,11 +123,19 @@ queryStationStatusFields conn =
        , status^.d_status_num_docks_disabled
        )
 
--- | Query database for disabled docks, returning tuples of (name, num_docks_disabled).
-queryStationInformation :: Connection              -- ^ Connection to the database.
-                        -> [Int]                   -- ^ List of station IDs to query.
-                        -> IO [StationInformation] -- ^ List of station information.
-queryStationInformation conn ids =
+
+{- | Query database for all station information. -}
+queryStationInformation:: Connection              -- ^ Connection to the database.
+                       -> IO [StationInformation] -- ^ List of station information.
+queryStationInformation conn =
+  runBeamPostgres' conn $ runSelectReturningList $ select $ do
+  all_ (bikeshareDb ^. bikeshareStationInformation)
+
+{- | Query database for station information corresponding to a list of station IDs. -}
+queryStationInformationByIds :: Connection              -- ^ Connection to the database.
+                             -> [Int]                   -- ^ List of station IDs to query.
+                             -> IO [StationInformation] -- ^ List of station information.
+queryStationInformationByIds conn ids =
   runBeamPostgres' conn $ runSelectReturningList $ select $ do
   info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
   guard_ (_info_station_id info `in_` ids')
@@ -151,7 +160,7 @@ _insertStationStatus :: Connection         -- ^ Connection to the database.
                      -> IO [StationStatus] -- ^ List of 'StationStatus' that were inserted.
 _insertStationStatus conn status = do
   -- Get information for the stations that are in the status response.
-  info_ids <- map _info_station_id <$> queryStationInformation conn status_ids
+  info_ids <- map _info_station_id <$> queryStationInformationByIds conn status_ids
   let filtered_status = filter (\ss -> fromIntegral (_status_station_id ss) `elem` info_ids) status
   runBeamPostgres' conn $ runInsertReturningList $
     insert (bikeshareDb ^. bikeshareStationStatus) $
@@ -232,7 +241,7 @@ insertUpdatedStationStatus :: Connection         -- ^ Connection to the database
                            -> IO InsertStatusResult
 insertUpdatedStationStatus conn api_status = do
   -- Get information for the stations that are in the status response.
-  info_ids <- map _info_station_id <$> queryStationInformation conn status_ids
+  info_ids <- map _info_station_id <$> queryStationInformationByIds conn status_ids
 
   -- Filter out statuses that don't have corresponding information in the database.
   let status = filter (\ss -> fromIntegral (_status_station_id ss) `elem` info_ids) api_status
