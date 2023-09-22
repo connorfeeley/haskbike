@@ -179,7 +179,7 @@ LIMIT 6
 ** Get Table Size
 
 #+begin_src sql
-SELECT pg_size_pretty( pg_total_relation_size('station_status') )
+SELECT pg_size_pretty( pg_total_relation_size('station_status') );
 #+end_src
 
 #+RESULTS:
