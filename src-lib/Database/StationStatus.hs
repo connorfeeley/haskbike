@@ -16,7 +16,7 @@
 {-# LANGUAGE UndecidableInstances      #-}
 
 module Database.StationStatus
-     ( BeamReportTime (..)
+     ( ReportTime (..)
      , BeamStationStatusString (..)
      , PrimaryKey (StationStatusId)
      , StationStatus
@@ -78,7 +78,7 @@ data StationStatusT f where
                    , _d_status_num_bikes_disabled      :: Columnar f Int32
                    , _d_status_num_docks_available     :: Columnar f Int32
                    , _d_status_num_docks_disabled      :: Columnar f Int32
-                   , _d_status_last_reported           :: Columnar f (Maybe BeamReportTime)
+                   , _d_status_last_reported           :: Columnar f (Maybe ReportTime)
                    , _d_status_is_charging_station     :: Columnar f Bool
                    , _d_status_status                  :: Columnar f BeamStationStatusString
                    , _d_status_is_installed            :: Columnar f Bool
@@ -144,7 +144,7 @@ d_status_num_bikes_available     :: Lens' (StationStatusT f) (C f Int32)
 d_status_num_bikes_disabled      :: Lens' (StationStatusT f) (C f Int32)
 d_status_num_docks_available     :: Lens' (StationStatusT f) (C f Int32)
 d_status_num_docks_disabled      :: Lens' (StationStatusT f) (C f Int32)
-d_status_last_reported           :: Lens' (StationStatusT f) (C f (Maybe BeamReportTime))
+d_status_last_reported           :: Lens' (StationStatusT f) (C f (Maybe ReportTime))
 d_status_is_charging_station     :: Lens' (StationStatusT f) (C f Bool)
 d_status_status                  :: Lens' (StationStatusT f) (C f BeamStationStatusString)
 d_status_is_installed            :: Lens' (StationStatusT f) (C f Bool)

@@ -1,4 +1,4 @@
--- | This module defines the BeamReportTime datatype, which is a newtype wrapper for the last_reported field in the StationStatus table.
+-- | This module defines the ReportTime datatype, which is a newtype wrapper for the last_reported field in the StationStatus table.
 
 {-# LANGUAGE DerivingVia           #-}
 {-# LANGUAGE FlexibleContexts      #-}
@@ -6,7 +6,7 @@
 {-# LANGUAGE UndecidableInstances  #-}
 
 module ReportTime
-     ( BeamReportTime (..)
+     ( ReportTime (..)
      , localToPosix
      , localToSystem
      , posixToLocal
@@ -28,16 +28,16 @@ import           Database.PostgreSQL.Simple.ToField   ( ToField (..) )
 
 
 -- | Newtype wrapper for the last_reported field, which is a POSIX timestamp in the JSON API.
-newtype BeamReportTime where
-  BeamReportTime :: LocalTime -> BeamReportTime
+newtype ReportTime where
+  ReportTime :: LocalTime -> ReportTime
   deriving (Eq, Ord, Show, Read, FromField, ToField) via LocalTime
   deriving (HasSqlValueSyntax PgValueSyntax) via LocalTime
   deriving (FromBackendRow Postgres) via LocalTime
   deriving (HasSqlEqualityCheck Postgres) via LocalTime
   deriving (HasDefaultSqlDataType Postgres) via LocalTime
 
-instance Num BeamReportTime where
-    fromInteger i = BeamReportTime $ utcToLocalTime reportTimeZone . posixSecondsToUTCTime . secondsToNominalDiffTime . fromIntegral $ i
+instance Num ReportTime where
+    fromInteger i = ReportTime $ utcToLocalTime reportTimeZone . posixSecondsToUTCTime . secondsToNominalDiffTime . fromIntegral $ i
     abs           = error "BeamReportTime: abs not implemented"
     signum        = error "BeamReportTime: signum not implemented"
     negate        = error "BeamReportTime: negate not implemented"
@@ -45,23 +45,23 @@ instance Num BeamReportTime where
     (-)           = error "BeamReportTime: (-) not implemented"
     (*)           = error "BeamReportTime: (*) not implemented"
 
-instance Real BeamReportTime where
-  toRational (BeamReportTime t) = toRational . localToPosix $ t
+instance Real ReportTime where
+  toRational (ReportTime t) = toRational . localToPosix $ t
 
-instance Integral BeamReportTime => Enum BeamReportTime where
-  toEnum = fromIntegral :: Int -> BeamReportTime
+instance Integral ReportTime => Enum ReportTime where
+  toEnum = fromIntegral :: Int -> ReportTime
   fromEnum a = fromIntegral a :: Int
 
-instance Enum BeamReportTime => Integral BeamReportTime where
-  toInteger (BeamReportTime t) = fromIntegral $ localToPosix t
+instance Enum ReportTime => Integral ReportTime where
+  toInteger (ReportTime t) = fromIntegral $ localToPosix t
   quotRem a _ = (a, a)
 
-instance (HasSqlValueSyntax BeamReportTime x, HasSqlValueSyntax BeamReportTime SqlNull) => HasSqlValueSyntax BeamReportTime (Maybe x) where
+instance (HasSqlValueSyntax ReportTime x, HasSqlValueSyntax ReportTime SqlNull) => HasSqlValueSyntax ReportTime (Maybe x) where
   sqlValueSyntax (Just x) = sqlValueSyntax x
   sqlValueSyntax Nothing  = sqlValueSyntax SqlNull
 
 -- | Beam (migrate) datatype for the last_reported field in the StationStatus table.
-reportTimeType :: DataType Postgres BeamReportTime
+reportTimeType :: DataType Postgres ReportTime
 reportTimeType = DataType (timestampType Nothing True)
 
 localToSystem :: LocalTime -> IO LocalTime
