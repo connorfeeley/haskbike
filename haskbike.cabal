@@ -67,6 +67,7 @@ common warnings
 -- Common language extensions.
 common common-extensions
     default-extensions: OverloadedStrings
+                      , GADTs
 
 -- Common dependencies shared by all targets.
 common common-depends
