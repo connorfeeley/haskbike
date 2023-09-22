@@ -1,7 +1,8 @@
 -- | Utility functions for database operations.
 
 module Database.Utils
-     ( connectProductionDb
+     ( connectDbName
+     , connectProductionDb
      , connectTestDb
      , dbnameProduction
      , dbnameTest

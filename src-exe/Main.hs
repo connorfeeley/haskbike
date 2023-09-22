@@ -17,8 +17,11 @@ import           Servant.Client      ( ClientError )
 
 main :: IO ()
 main = do
-  -- Setup the database.
-  conn <- setupDatabaseName dbnameProduction
+  -- Connect to and reset database.
+  -- conn <- setupDatabaseName dbnameProduction
+
+  -- Connect to database without resetting.
+  conn <- connectDbName dbnameProduction
 
   -- Request station information and status from API.
   info   <- runQueryWithEnv stationInformation  :: IO (Either ClientError StationInformationResponse)
