@@ -1,6 +1,4 @@
 {-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE GADTs             #-}
-{-# LANGUAGE OverloadedStrings #-}
 
 module Database.Migrations where
 

@@ -1,8 +1,6 @@
 -- | This module contains the data types for the BikeShare station_status API.
 
 {-# LANGUAGE DeriveGeneric     #-}
-{-# LANGUAGE GADTs             #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
 
 module API.StationStatus
