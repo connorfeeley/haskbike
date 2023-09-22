@@ -44,7 +44,7 @@ module Database.StationStatus
      , vehicleTypesAvailable
      ) where
 
-import qualified API.Types                                  as API.T
+import qualified API.Types                                  as AT
 
 import           Common
 
@@ -186,15 +186,15 @@ StationStatus _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (LensFor d_status_active)         
 -- | Newtype wrapper for StationStatusString to allow us to define a custom FromBackendRow instance.
 -- Don't want to implement database-specific code for the underlying StationStatusString type.
 newtype BeamStationStatusString where
-  BeamStationStatusString :: API.T.StationStatusString -> BeamStationStatusString
-  deriving (Eq, Generic, Show, Read) via API.T.StationStatusString
+  BeamStationStatusString :: AT.StationStatusString -> BeamStationStatusString
+  deriving (Eq, Generic, Show, Read) via AT.StationStatusString
 
 instance (BeamBackend be, FromBackendRow be Text.Text) => FromBackendRow be BeamStationStatusString where
   fromBackendRow = do
     val <- fromBackendRow
     case val :: Text.Text of
-      "IN_SERVICE"  -> pure $ BeamStationStatusString API.T.InService
-      "END_OF_LIFE" -> pure $ BeamStationStatusString API.T.EndOfLife
+      "IN_SERVICE"  -> pure $ BeamStationStatusString AT.InService
+      "END_OF_LIFE" -> pure $ BeamStationStatusString AT.EndOfLife
       _             -> fail ("Invalid value for BeamStationStatusString: " ++ Text.unpack val)
 
 instance (HasSqlValueSyntax be String, Show BeamStationStatusString) => HasSqlValueSyntax be BeamStationStatusString where
@@ -218,70 +218,55 @@ stationStatusType :: DataType Postgres BeamStationStatusString
 stationStatusType = DataType pgTextType
 
 -- | Convert from the JSON StationStatus to the Beam StationStatus type
-fromJSONToBeamStationStatus (API.T.StationStatus
-                             station_id
-                             num_bikes_available
-                             num_bikes_disabled
-                             num_docks_available
-                             num_docks_disabled
-                             last_reported
-                             is_charging_station
-                             status
-                             is_installed
-                             is_renting
-                             is_returning
-                             traffic
-                             vehicle_docks_available
-                             vehicle_types_available
-                            ) =
+fromJSONToBeamStationStatus status =
   StationStatus { _d_status_id                       = default_
-                , _d_status_info_id                  = StationInformationId $ fromIntegral station_id
-                , _d_status_station_id               = fromIntegral station_id
-                , _d_status_num_bikes_available      = fromIntegral num_bikes_available
-                , _d_status_num_bikes_disabled       = fromIntegral num_bikes_disabled
-                , _d_status_num_docks_available      = fromIntegral num_docks_available
-                , _d_status_num_docks_disabled       = fromIntegral num_docks_disabled
-                , _d_status_last_reported            = val_ (coerce last_reported)
-                , _d_status_is_charging_station      = val_ is_charging_station
-                , _d_status_status                   = val_ (coerce status :: BeamStationStatusString)
-                , _d_status_is_installed             = val_ is_installed
-                , _d_status_is_renting               = val_ is_renting
-                , _d_status_is_returning             = val_ is_returning
-                , _d_status_traffic                  = val_ $ fmap Text.pack traffic
-                , _d_status_vehicle_docks_available  = fromIntegral $ API.T.dock_count $ head vehicle_docks_available
+                , _d_status_info_id                  = StationInformationId $ fromIntegral $ status ^. AT.status_station_id
+                , _d_status_station_id               = fromIntegral $ status ^. AT.status_station_id
+                , _d_status_num_bikes_available      = fromIntegral $ status ^. AT.status_num_bikes_available
+                , _d_status_num_bikes_disabled       = fromIntegral $ status ^. AT.status_num_bikes_disabled
+                , _d_status_num_docks_available      = fromIntegral $ status ^. AT.status_num_docks_available
+                , _d_status_num_docks_disabled       = fromIntegral $ status ^. AT.status_num_docks_disabled
+                , _d_status_last_reported            = val_ (coerce $ status ^. AT.status_last_reported)
+                , _d_status_is_charging_station      = val_ $ status ^. AT.status_is_charging_station
+                , _d_status_status                   = val_ (coerce $ status ^. AT.status_status :: BeamStationStatusString)
+                , _d_status_is_installed             = val_ $ status ^. AT.status_is_installed
+                , _d_status_is_renting               = val_ $ status ^. AT.status_is_renting
+                , _d_status_is_returning             = val_ $ status ^. AT.status_is_returning
+                , _d_status_traffic                  = val_ $ fmap Text.pack $ status ^. AT.status_traffic
+                , _d_status_vehicle_docks_available  = fromIntegral $ AT.dock_count $ head $ status ^. AT.status_vehicle_docks_available
                 , _d_status_vehicle_types_available  = val_ $ VehicleType num_boost num_iconic num_efit num_efit_g5
                 , _d_status_active                   = val_ True
                 }
   where
     -- | Find the vehicle type in the list of vehicle types available; default to 0 if not found.
-    findByType' vehicle_type = find (\x -> API.T.vehicle_type_id x == vehicle_type) vehicle_types_available
-    findByType  vehicle_type = fromIntegral $ maybe 0 API.T.type_count (findByType' vehicle_type)
+    findByType' vehicle_type = find (\x -> AT.vehicle_type_id x == vehicle_type) $ status ^. AT.status_vehicle_types_available
+    findByType  vehicle_type = fromIntegral $ maybe 0 AT.type_count (findByType' vehicle_type)
     num_boost   = findByType "BOOST"
     num_iconic  = findByType "ICONIC"
     num_efit    = findByType "EFIT"
     num_efit_g5 = findByType "EFIT G5"
 
 -- | Convert from the Beam StationStatus type to the JSON StationStatus
-fromBeamStationStatusToJSON :: StationInformation -> StationStatus -> API.T.StationStatus
+fromBeamStationStatusToJSON :: StationInformation -> StationStatus -> AT.StationStatus
 fromBeamStationStatusToJSON _info status =
-  API.T.StationStatus { API.T._status_station_id               = fromIntegral $ status^.d_status_station_id
-                      , API.T._status_num_bikes_available      = fromIntegral $ status^.d_status_num_bikes_available
-                      , API.T._status_num_bikes_disabled       = fromIntegral $ status^.d_status_num_bikes_disabled
-                      , API.T._status_num_docks_available      = fromIntegral $ status^.d_status_num_docks_available
-                      , API.T._status_num_docks_disabled       = fromIntegral $ status^.d_status_num_docks_disabled
-                      , API.T._status_last_reported            = coerce $ status^.d_status_last_reported
-                      , API.T._status_is_charging_station      = status^.d_status_is_charging_station
-                      , API.T._status_status                   = coerce $ status^.d_status_status
-                      , API.T._status_is_installed             = status^.d_status_is_installed
-                      , API.T._status_is_renting               = status^.d_status_is_renting
-                      , API.T._status_is_returning             = status^.d_status_is_returning
-                      , API.T._status_traffic                  = fmap Text.unpack $ status^.d_status_traffic
-                      , API.T._status_vehicle_docks_available  = [ API.T.VehicleDock ["FIXME"] (fromIntegral $ status^.d_status_vehicle_docks_available) ]
-                      , API.T._status_vehicle_types_available  = [ API.T.VehicleType "" (fromIntegral (status^.vehicle_types_available_boost))
-                                                                 , API.T.VehicleType "" (fromIntegral (status^.vehicle_types_available_iconic))
-                                                                 , API.T.VehicleType "" (fromIntegral (status^.vehicle_types_available_efit))
-                                                                 , API.T.VehicleType "" (fromIntegral (status^.vehicle_types_available_efit_g5))
-                                                                 ]
+  AT.StationStatus { AT._status_station_id               = fromIntegral $ status^.d_status_station_id
+                      , AT._status_num_bikes_available      = fromIntegral $ status^.d_status_num_bikes_available
+                      , AT._status_num_bikes_disabled       = fromIntegral $ status^.d_status_num_bikes_disabled
+                      , AT._status_num_docks_available      = fromIntegral $ status^.d_status_num_docks_available
+                      , AT._status_num_docks_disabled       = fromIntegral $ status^.d_status_num_docks_disabled
+                      , AT._status_last_reported            = coerce $ status^.d_status_last_reported
+                      , AT._status_is_charging_station      = status^.d_status_is_charging_station
+                      , AT._status_status                   = coerce $ status^.d_status_status
+                      , AT._status_is_installed             = status^.d_status_is_installed
+                      , AT._status_is_renting               = status^.d_status_is_renting
+                      , AT._status_is_returning             = status^.d_status_is_returning
+                      , AT._status_traffic                  = fmap Text.unpack $ status^.d_status_traffic
+                      , AT._status_vehicle_docks_available  = [ AT.VehicleDock ["FIXME"] (fromIntegral $ status^.d_status_vehicle_docks_available) ]
+                      , AT._status_vehicle_types_available  = [ AT.VehicleType "" (fromIntegral (status^.vehicle_types_available_boost))
+                                                              , AT.VehicleType "" (fromIntegral (status^.vehicle_types_available_iconic))
+                                                              , AT.VehicleType "" (fromIntegral (status^.vehicle_types_available_efit))
+                                                              , AT.VehicleType "" (fromIntegral (status^.vehicle_types_available_efit_g5))
+                                                              ]
                       }
 
 -- | Newtype wrapper for the last_reported field, which is a POSIX timestamp in the JSON API.
