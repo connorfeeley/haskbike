@@ -1,5 +1,8 @@
 -- | Station infrormation table definition and functions.
 
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Use camelCase" #-}
+
 {-# LANGUAGE DeriveAnyClass            #-}
 {-# LANGUAGE DeriveGeneric             #-}
 {-# LANGUAGE DerivingVia               #-}
@@ -11,6 +14,8 @@
 {-# LANGUAGE StandaloneDeriving        #-}
 {-# LANGUAGE TypeFamilies              #-}
 {-# LANGUAGE UndecidableInstances      #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
+
 
 module Database.StationInformation
      ( BeamPhysicalConfiguration (..)
@@ -86,27 +91,42 @@ instance Table StationInformationT where
     deriving (Generic, Beamable)
   primaryKey = StationInformationId . _info_station_id
 
--- | Lenses
-StationInformation
-  (LensFor info_id)
-  (LensFor info_station_id)
-  (LensFor info_name)
-  (LensFor info_physical_configuration)
-  (LensFor info_lat)
-  (LensFor info_lon)
-  (LensFor info_altitude)
-  (LensFor info_address)
-  (LensFor info_capacity)
-  (LensFor info_is_charging_station)
-  (LensFor info_rental_methods)
-  (LensFor info_is_virtual_station)
-  (LensFor info_groups)
-  (LensFor info_obcn)
-  (LensFor info_nearby_distance)
-  (LensFor info_bluetooth_id)
-  (LensFor info_ride_code_support)
-  -- (LensFor info_rental_uris)
-  = tableLenses
+-- | StationInformation Lenses
+info_id                     :: Lens' (StationInformationT f) (C f (SqlSerial Int32))
+info_station_id             :: Lens' (StationInformationT f) (C f Int32)
+info_name                   :: Lens' (StationInformationT f) (C f Text.Text)
+info_physical_configuration :: Lens' (StationInformationT f) (C f BeamPhysicalConfiguration)
+info_lat                    :: Lens' (StationInformationT f) (C f Double)
+info_lon                    :: Lens' (StationInformationT f) (C f Double)
+info_altitude               :: Lens' (StationInformationT f) (C f (Maybe Double))
+info_address                :: Lens' (StationInformationT f) (C f Text.Text)
+info_capacity               :: Lens' (StationInformationT f) (C f Int32)
+info_is_charging_station    :: Lens' (StationInformationT f) (C f Bool)
+info_rental_methods         :: Lens' (StationInformationT f) (C f (Vector.Vector BeamRentalMethod))
+info_is_virtual_station     :: Lens' (StationInformationT f) (C f Bool)
+info_groups                 :: Lens' (StationInformationT f) (C f (Vector.Vector Text.Text))
+info_obcn                   :: Lens' (StationInformationT f) (C f Text.Text)
+info_nearby_distance        :: Lens' (StationInformationT f) (C f Double)
+info_bluetooth_id           :: Lens' (StationInformationT f) (C f Text.Text)
+info_ride_code_support      :: Lens' (StationInformationT f) (C f Bool)
+
+StationInformation (LensFor info_id)                     _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
+StationInformation _ (LensFor info_station_id)             _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
+StationInformation _ _ (LensFor info_name)                   _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
+StationInformation _ _ _ (LensFor info_physical_configuration) _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
+StationInformation _ _ _ _ (LensFor info_lat)                    _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
+StationInformation _ _ _ _ _ (LensFor info_lon)                    _ _ _ _ _ _ _ _ _ _ _ = tableLenses
+StationInformation _ _ _ _ _ _ (LensFor info_altitude)               _ _ _ _ _ _ _ _ _ _ = tableLenses
+StationInformation _ _ _ _ _ _ _ (LensFor info_address)                _ _ _ _ _ _ _ _ _ = tableLenses
+StationInformation _ _ _ _ _ _ _ _ (LensFor info_capacity)               _ _ _ _ _ _ _ _ = tableLenses
+StationInformation _ _ _ _ _ _ _ _ _ (LensFor info_is_charging_station)    _ _ _ _ _ _ _ = tableLenses
+StationInformation _ _ _ _ _ _ _ _ _ _ (LensFor info_rental_methods)         _ _ _ _ _ _ = tableLenses
+StationInformation _ _ _ _ _ _ _ _ _ _ _ (LensFor info_is_virtual_station)     _ _ _ _ _ = tableLenses
+StationInformation _ _ _ _ _ _ _ _ _ _ _ _ (LensFor info_groups)                 _ _ _ _ = tableLenses
+StationInformation _ _ _ _ _ _ _ _ _ _ _ _ _ (LensFor info_obcn)                   _ _ _ = tableLenses
+StationInformation _ _ _ _ _ _ _ _ _ _ _ _ _ _ (LensFor info_nearby_distance)        _ _ = tableLenses
+StationInformation _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (LensFor info_bluetooth_id)           _ = tableLenses
+StationInformation _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (LensFor info_ride_code_support)      = tableLenses
 
 -- | Newtype wrapper for RentalMethod to allow us to define a custom FromBackendRow instance.
 -- Don't want to implement database-specific code for the underlying RentalMethod type.
