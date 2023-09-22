@@ -47,11 +47,12 @@
             tools = hp: {
               ### Haskell tools.
               inherit (hp)
-                # fourmolu
                 haskell-language-server
                 implicit-hie
                 floskell
                 hasktags
+                cabal-install
+                hlint
                 # stylish-haskell
                 ;
               # Disable ghcid.
