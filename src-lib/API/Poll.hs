@@ -92,7 +92,7 @@ statusHandler conn queue last_updated =
           let timeElapsed = currentTime - previousTime
 
           -- Check if last_updated went backwards
-          case timeElapsed > 0 of
+          case timeElapsed >= 0 of
             True  ->
               -- Update last_updated variable.
               atomically $ writeTVar last_updated currentTime
