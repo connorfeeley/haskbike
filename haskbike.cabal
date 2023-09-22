@@ -64,6 +64,10 @@ Flag DEBUG
 common warnings
     ghc-options: -Wall
 
+-- Common language extensions.
+common common-extensions
+    default-extensions: OverloadedStrings
+
 -- Common dependencies shared by all targets.
 common common-depends
     build-depends:    base
@@ -117,6 +121,7 @@ common test-depends
 -- Executable target.
 executable haskbike
     import:           warnings
+                    , common-extensions
                     , common-depends
                     , api-depends
                     , database-depends
@@ -142,6 +147,7 @@ executable haskbike
 -- Library target.
 library
     import:           warnings
+                    , common-extensions
                     , common-depends
                     , api-depends
                     , database-depends
@@ -184,6 +190,7 @@ library
 -- Testing target.
 test-suite haskbike-test
     import:           warnings
+                    , common-extensions
                     , common-depends
                     , api-depends
                     , database-depends
@@ -218,6 +225,7 @@ test-suite haskbike-test
 -- Pure testing target (for Nix flake checks).
 -- test-suite haskbike-test-pure
 --     import:           warnings
+--                     , common-extensions
 --                     , common-depends
 --                     , api-depends
 --                     , database-depends
