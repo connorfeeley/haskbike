@@ -55,7 +55,7 @@
           # By default, this is pkgs.haskellPackages.
           # You may also create your own. See https://haskell.flake.page/package-set
           # basePackages = pkgs.haskellPackages;
-          basePackages = pkgs.haskell.packages.ghc810;
+          basePackages = pkgs.haskell.packages.ghc928;
 
           devShell = {
             # Enabled by default
