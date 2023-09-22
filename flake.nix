@@ -9,7 +9,12 @@
     flake-parts.lib.mkFlake { inherit inputs; } {
       debug = true;
       systems = nixpkgs.lib.systems.flakeExposed;
-      imports = [ inputs.haskell-flake.flakeModule ];
+      imports = [
+        inputs.haskell-flake.flakeModule
+
+        # Import this repo's modules.
+        ./nix/modules
+      ];
 
       perSystem = { self', pkgs, ... }: {
 
