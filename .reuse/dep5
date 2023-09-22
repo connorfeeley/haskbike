@@ -4,7 +4,7 @@ Upstream-Contact: Connor Feeley <git@cfeeley.org>
 Source: https://github.com/connorfeeley/haskbike
 
 ### Source files: exe, lib, test, etc.
-Files: src-exe/* src-lib/* test/* haskbike.cabal cabal.project.freeze hie.yaml flake.nix flake.lock
+Files: src-exe/* src-lib/* test/* haskbike.cabal cabal.project.freeze hie.yaml flake.nix flake.lock .stylish-haskell.yaml
 Copyright: 2023 Connor Feeley <git@cfeeley.org>
 License: BSD-3-Clause
 
