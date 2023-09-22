@@ -155,11 +155,11 @@ library
 
     -- Modules exported by the library.
     exposed-modules:  BikeShareAPI
-                    , Common
                     , API.ResponseWrapper
                     , API.Client
                     , API.Poll
                     , API.Types
+                    , ReportTime
                     , Database.Types
                     , Database.BikeShare
                     , Database.Migrations

@@ -15,7 +15,7 @@ module API.ResponseWrapper
      , response_version
      ) where
 
-import           Common
+import           ReportTime
 
 import           Control.Lens hiding ( (.=) )
 

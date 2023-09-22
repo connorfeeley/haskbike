@@ -29,7 +29,7 @@ module API.StationStatus
 
 import           API.ResponseWrapper
 
-import           Common
+import           ReportTime
 
 import           Control.Lens         hiding ( (.=) )
 

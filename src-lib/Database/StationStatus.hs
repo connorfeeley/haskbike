@@ -46,8 +46,6 @@ module Database.StationStatus
 
 import qualified API.Types                                  as AT
 
-import           Common
-
 import           Control.Lens
 
 import qualified Data.ByteString.Char8                      as B
@@ -56,21 +54,19 @@ import           Data.Int
 import           Data.List                                  ( find )
 import           Data.String                                ( IsString (fromString) )
 import qualified Data.Text                                  as Text
-import           Data.Time
-import           Data.Time.Clock.POSIX
 
 import           Database.Beam
 import           Database.Beam.Backend                      ( BeamBackend, HasSqlValueSyntax (sqlValueSyntax),
-                                                              IsSql92DataTypeSyntax (timestampType), SqlNull (SqlNull),
                                                               SqlSerial (..) )
-import           Database.Beam.Migrate                      ( HasDefaultSqlDataType )
 import           Database.Beam.Postgres                     ( Postgres )
-import           Database.Beam.Postgres.Syntax              ( PgValueSyntax, pgTextType )
+import           Database.Beam.Postgres.Syntax              ( pgTextType )
 import           Database.PostgreSQL.Simple.FromField       ( Field (typeOid), FromField (..), ResultError (..),
                                                               returnError, typoid )
 import           Database.PostgreSQL.Simple.ToField         ( ToField (..) )
 import           Database.PostgreSQL.Simple.TypeInfo.Static ( text )
 import           Database.StationInformation
+
+import           ReportTime
 
 
 -- | Declare a (Beam) table for the 'StationStatus' type.
@@ -268,40 +264,3 @@ fromBeamStationStatusToJSON _info status =
                                                               , AT.VehicleType "" (fromIntegral (status^.vehicle_types_available_efit_g5))
                                                               ]
                       }
-
--- | Newtype wrapper for the last_reported field, which is a POSIX timestamp in the JSON API.
-newtype BeamReportTime where
-  BeamReportTime :: LocalTime -> BeamReportTime
-  deriving (Eq, Ord, Show, Read, FromField, ToField) via LocalTime
-  deriving (HasSqlValueSyntax PgValueSyntax) via LocalTime
-  deriving (FromBackendRow Postgres) via LocalTime
-  deriving (HasSqlEqualityCheck Postgres) via LocalTime
-  deriving (HasDefaultSqlDataType Postgres) via LocalTime
-
-instance Num BeamReportTime where
-    fromInteger i = BeamReportTime $ utcToLocalTime reportTimeZone . posixSecondsToUTCTime . secondsToNominalDiffTime . fromIntegral $ i
-    abs           = error "BeamReportTime: abs not implemented"
-    signum        = error "BeamReportTime: signum not implemented"
-    negate        = error "BeamReportTime: negate not implemented"
-    (+)           = error "BeamReportTime: (+) not implemented"
-    (-)           = error "BeamReportTime: (-) not implemented"
-    (*)           = error "BeamReportTime: (*) not implemented"
-
-instance Real BeamReportTime where
-  toRational (BeamReportTime t) = toRational . localToPosix $ t
-
-instance Integral BeamReportTime => Enum BeamReportTime where
-  toEnum = fromIntegral :: Int -> BeamReportTime
-  fromEnum a = fromIntegral a :: Int
-
-instance Enum BeamReportTime => Integral BeamReportTime where
-  toInteger (BeamReportTime t) = fromIntegral $ localToPosix t
-  quotRem a _ = (a, a)
-
-instance (HasSqlValueSyntax BeamReportTime x, HasSqlValueSyntax BeamReportTime SqlNull) => HasSqlValueSyntax BeamReportTime (Maybe x) where
-  sqlValueSyntax (Just x) = sqlValueSyntax x
-  sqlValueSyntax Nothing  = sqlValueSyntax SqlNull
-
--- | Beam (migrate) datatype for the last_reported field in the StationStatus table.
-reportTimeType :: DataType Postgres BeamReportTime
-reportTimeType = DataType (timestampType Nothing True)
