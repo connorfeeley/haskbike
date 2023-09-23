@@ -30,19 +30,19 @@
               check                = false;   # Don't run cabal tests as part of build.
 
               # Profiling options.
-              libraryProfiling     = false;   # Disable profiling for libraries.
-              executableProfiling  = false;   # Disable profiling for executables.
+              # libraryProfiling     = false;   # Disable profiling for libraries.
+              # executableProfiling  = false;   # Disable profiling for executables.
 
               # Debugging options.
-              strip                = false;   # Don't strip executables.
-              enableDWARFDebugging = true;    # Enable DWARF debugging.
-              deadCodeElimination  = false;   # Disable dead code elimination.
+              # strip                = false;   # Don't strip executables.
+              # enableDWARFDebugging = true;    # Enable DWARF debugging.
+              # deadCodeElimination  = false;   # Disable dead code elimination.
 
-              disableOptimization  = true;    # Disable optimization - significantly speeds up build time.
+              # disableOptimization  = true;    # Disable optimization - significantly speeds up build time.
 
               # Documentation options.
-              haddock              = true;    # Enable haddock generation.
-              hyperlinkSource      = true;    # Enable hyperlinked source.
+              # haddock              = true;    # Enable haddock generation.
+              # hyperlinkSource      = true;    # Enable hyperlinked source.
             };
           };
 
