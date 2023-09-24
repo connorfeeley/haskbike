@@ -56,6 +56,14 @@ connectDbName name = do
   envUsername <- mkParam "" "user="  =<< lookupEnv "HASKBIKE_USERNAME"
   envPassword <- mkParam "" "password=" =<< lookupEnv "HASKBIKE_PASSWORD"
 
+  putStrLn $ "Connecting with: " ++
+    envPgDbHostParam ++ " " ++
+    envPgDbPortParam ++ " " ++
+    envUsername ++ " " ++
+    "(password) " ++
+    " dbname=" ++ name ++
+    " connect_timeout=10"
+
   connectPostgreSQL $ fromString $
     envPgDbHostParam ++ " " ++
     envPgDbPortParam ++ " " ++
