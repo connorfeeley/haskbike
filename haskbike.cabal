@@ -80,6 +80,7 @@ common common-depends
                     , stm-chans
                     , mtl
                     , unliftio
+                    , fmt
 
 -- Dependencies needed by targets excercising the API.
 common api-depends
