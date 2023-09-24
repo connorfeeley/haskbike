@@ -42,7 +42,11 @@ main = do
     else if "--reset" `elem` args then do
       -- Reset the database.
       putStrLn "Resetting database..."
-      _ <- setupDatabaseName dbnameProduction
+      conn <- setupDatabaseName dbnameProduction
+
+      -- Insert station information if missing from database.
+      infoQuery <- queryStationInformation conn
+      when (null infoQuery) $ handleStationInformation conn
       -- Exit.
       exitSuccess
     -- Otherwise, connect to the database.
