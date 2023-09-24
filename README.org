@@ -52,7 +52,13 @@ limit 6;
 
 ** TODO [#A] Query: max count and min count of e-bikes across system
 :LOGBOOK:
-CLOCK: [2023-09-24 Sun 22:12]
+CLOCK: [2023-09-24 Sun 22:12]--[2023-09-24 Sun 22:18] =>  0:06
+:END:
+
+** DONE Convert ~VehicleType~ to enumeration
+CLOSED: [2023-09-24 Sun 22:43]
+:LOGBOOK:
+CLOCK: [2023-09-24 Sun 22:18]--[2023-09-24 Sun 22:43] =>  0:25
 :END:
 
 ** TODO Interesting article
