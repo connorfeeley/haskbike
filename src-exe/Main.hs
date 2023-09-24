@@ -11,19 +11,43 @@ import           Control.Lens
 import           Control.Monad          ( when )
 
 import           Database.Beam.Postgres ( Connection )
+import           Database.Migrations
 import           Database.Operations
 import           Database.Utils
 
 import           Servant.Client         ( ClientError )
 
+import           System.Environment
+import           System.Exit            ( exitSuccess )
+
 
 main :: IO ()
 main = do
-  -- Connect to and reset database.
-  -- conn <- setupDatabaseName dbnameProduction
+  -- Get command-line arguments
+  args <- getArgs
 
-  -- Connect to database without resetting.
-  conn <- connectDbName dbnameProduction
+  conn <- if "--migrate" `elem` args || "--migrate-only" `elem` args
+    then do
+      -- Perform database migrations.
+      putStrLn "Migrating database..."
+      conn' <- connectDbName dbnameProduction
+      _ <- migrateDB conn'
+
+      -- Exit if only migrations were requested.
+      when ("--migrate-only" `elem` args) $
+        putStrLn "Migration done - exiting" >>
+        exitSuccess
+
+      pure conn'
+    else if "--reset" `elem` args then do
+      -- Reset the database.
+      putStrLn "Resetting database..."
+      _ <- setupDatabaseName dbnameProduction
+      -- Exit.
+      exitSuccess
+    -- Otherwise, connect to the database.
+    else putStrLn "Connecting to database..." >>
+         connectDbName dbnameProduction
 
   -- Insert station information if missing from database.
   infoQuery <- queryStationInformation conn
