@@ -1,3 +1,6 @@
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+
 -- | Utility functions for database operations.
 
 module Database.Utils
@@ -17,6 +20,8 @@ import           Database.Beam
 import           Database.Beam.Postgres
 import           Database.Migrations        ( migrateDB )
 import           Database.PostgreSQL.Simple
+
+import           System.Environment         ( lookupEnv )
 
 import           Text.Pretty.Simple
 
@@ -43,10 +48,26 @@ connectTestDb :: IO Connection
 connectTestDb =
   connectDbName dbnameProduction
 
--- | Establish a connection to the named database.
+-- | Establish a connection to the named database, using values from the HASKBIKE_{PGDBHOST,USERNAME,PASSWORD} environment variables.
 connectDbName :: String -> IO Connection
-connectDbName name =
-  connectPostgreSQL $ fromString $ "host=localhost port=5432 dbname=" ++ name ++ " connect_timeout=10"
+connectDbName name = do
+  envPgDbHostParam <- mkParam "host=localhost" "host=" =<< lookupEnv "HASKBIKE_PGDBHOST"
+  envPgDbPortParam <- mkParam "port=5432" "port=" =<< lookupEnv "HASKBIKE_PGDBPORT"
+  envUsername <- mkParam "" "user="  =<< lookupEnv "HASKBIKE_USERNAME"
+  envPassword <- mkParam "" "password=" =<< lookupEnv "HASKBIKE_PASSWORD"
+
+  connectPostgreSQL $ fromString $
+    envPgDbHostParam ++ " " ++
+    envPgDbPortParam ++ " " ++
+    envUsername ++ " " ++
+    envPassword ++ " " ++
+    " dbname=" ++ name ++
+    " connect_timeout=10"
+  where
+    -- takes a default value, a prefix, and an optional value
+    mkParam :: String -> String -> Maybe String -> IO String
+    mkParam defaultVal prefix = maybe (pure defaultVal) (pure . (prefix ++))
+
 
 -- | Setup the production database.
 setupProductionDatabase :: IO Connection
