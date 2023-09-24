@@ -32,6 +32,7 @@ import           API.ResponseWrapper
 import           ReportTime
 
 import           Control.Lens         hiding ( (.=) )
+import           Data.Text            ( pack )
 
 import           Data.Aeson           ( FromJSON (parseJSON), KeyValue ((.=)), ToJSON (toJSON), Value (String), object,
                                         withObject, withText, (.:), (.:?) )
@@ -158,6 +159,44 @@ instance FromJSON VehicleType where
   parseJSON = withObject "VehicleType" $ \v -> VehicleType
     <$> v .: "vehicle_type_id"
     <*> v .: "count"
+
+data TorontoVehicleType where
+  Boost :: TorontoVehicleType
+  Iconic :: TorontoVehicleType
+  EFit :: TorontoVehicleType
+  EFitG5 :: TorontoVehicleType
+  deriving (Generic, Eq, Ord)
+
+instance Show TorontoVehicleType where
+  show Boost = "BOOST"
+  show Iconic = "ICONIC"
+  show EFit = "EFIT"
+  show EFitG5 = "EFIT_G5"
+
+instance Read TorontoVehicleType where
+  readsPrec _ = fromRight [] . parseOnly parser . Text.pack
+    where
+    parser :: Parser [(TorontoVehicleType, String)]
+    parser = choice
+      [ string "BOOST"    $> [(Boost,  "")]
+      , string "ICONIC"   $> [(Iconic, "")]
+      , string "EFIT"     $> [(EFit,   "")]
+      , string "EFIT_G5"  $> [(EFitG5, "")]
+      ]
+
+instance ToJSON TorontoVehicleType where
+  toJSON Boost  = String (Text.pack "BOOST")
+  toJSON Iconic = String (Text.pack "ICONIC")
+  toJSON EFit   = String (Text.pack "EFIT")
+  toJSON EFitG5 = String (Text.pack "EFIT_G5")
+
+instance FromJSON TorontoVehicleType where
+  parseJSON = withText "TorontoVehicleType" $ \t -> case t of
+     "BOOST"   -> return Boost
+     "ICONIC"  -> return Iconic
+     "EFIT"    -> return EFit
+     "EFIT_G5" -> return EFitG5
+     _         -> fail ("Invalid TorontoVehicleType: " ++ show t)
 
 -- | A wrapper type for the station information response.
 newtype StationStatusResponseData where

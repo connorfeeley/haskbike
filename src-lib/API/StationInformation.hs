@@ -38,7 +38,7 @@ data PhysicalConfiguration where
   SmartLitMapFrame      :: PhysicalConfiguration
   SmartMapFrame         :: PhysicalConfiguration
   Vault                 :: PhysicalConfiguration
-  deriving (Eq, Generic)
+  deriving (Generic, Eq, Ord)
 
 instance Show PhysicalConfiguration where
   show ElectricBikeStation = "ELECTRICBIKESTATION"
