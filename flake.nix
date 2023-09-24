@@ -106,7 +106,7 @@
           name = "haskbike-docker";
 
           # Install nginx
-          contents = self'.packages.haskbike-static;
+          contents = [ self'.packages.haskbike-static pkgs.cacert ];
 
           # Extra build commands
           # extraCommands = ''
