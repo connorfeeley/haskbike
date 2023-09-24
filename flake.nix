@@ -98,6 +98,33 @@
 
         # haskell-flake doesn't set the default package, but you can do it here.
         packages.default = self'.packages.haskbike;
+
+        packages.haskbike-static = pkgs.haskell.lib.justStaticExecutables self'.packages.haskbike;
+
+        packages.haskbike-docker = pkgs.dockerTools.buildImage {
+          # Name of the container
+          name = "haskbike-docker";
+
+          # Install nginx
+          contents = self'.packages.haskbike-static;
+
+          # Extra build commands
+          # extraCommands = ''
+          # '';
+
+          # Create the user
+          # runAsRoot = ''
+          #   #!${pkgs.stdenv.shell}
+          #   ${pkgs.dockerTools.shadowSetup}
+          #   groupadd --system nginx
+          #   useradd --system --gid nginx nginx
+          # '';
+
+          # Start the service and expose the port
+          config = {
+            Cmd = [ "haskbike" ];
+          };
+        };
       };
     };
 }
