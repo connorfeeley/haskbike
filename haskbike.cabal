@@ -101,6 +101,7 @@ common database-depends
                     , postgresql-simple
                     , beam-postgres
                     , lens
+                    , dotenv
 
 -- Dependencies needed by testing targets.
 common test-depends
