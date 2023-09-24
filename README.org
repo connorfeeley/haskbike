@@ -6,11 +6,12 @@
 #+date: 2023-09-10
 #+PROPERTY: header-args:sql+ :engine postgres :database haskbike
 * Tasks
-** TODO [#A] Station status for ~station_id~ = ~7165~
+** DONE [#A] Station status for ~station_id~ = ~7165~
+CLOSED: [2023-09-24 Sun 22:13]
 Station status API returns a station that isn't returned in the information API.
 
 
-** TODO [#B] Add test to check foreign key ~`references_`~ works correctly
+** TODO Add test to check foreign key ~`references_`~ works correctly
 ** TODO Add function to ~Operations~ to query and order by ~last_reported~
 #+name: joined-stations
 #+begin_src sql
@@ -43,6 +44,17 @@ limit 6;
 | Lake Shore Blvd E / Knox Ave     | 274 |       7319 |                   9 |                  0 |                   2 |                  0 | 2023-09-12 19:03:13 | f                   | IN_SERVICE | t            | t          | t            |         |                       2 |                             0 |                              8 |                            0 |                               1 |
 | Rosehill Ave / Avoca Ave - SMART | 245 |       7279 |                   0 |                  0 |                  16 |                  0 | 2023-09-12 19:03:51 | f                   | IN_SERVICE | t            | t          | t            |         |                      16 |                             0 |                              0 |                            0 |                               0 |
 | Widmer St / King St W            | 609 |       7721 |                   4 |                  0 |                   7 |                  0 | 2023-09-12 19:03:51 | f                   | IN_SERVICE | t            | t          | t            |         |                       7 |                             0 |                              4 |                            0 |                               0 |
+
+** TODO Timestamps in database are 4 hours ahead of local time
+#+begin_quote
+/Note: times in database are +4 hours ahead of current local time (since we're in UTC -4)./
+#+end_quote
+
+** TODO [#A] Query: max count and min count of e-bikes across system
+:LOGBOOK:
+CLOCK: [2023-09-24 Sun 22:12]
+:END:
+
 ** TODO Interesting article
 [[https://notes.mikejarrett.ca/tracking-bikeshare-use-using-gbfs-feeds/][Tracking bikeshare use using GBFS feeds | Mike Jarrett]]
 ** TODO View
@@ -198,6 +210,12 @@ SELECT COUNT(id) FROM station_status;
 | count |
 |-------|
 |  1601 |
+
+** Get table size and number of rows at same time
+
+#+begin_src sql :database haskbike
+SELECT pg_size_pretty( pg_total_relation_size('station_status') ); SELECT COUNT(id) FROM station_status;
+#+end_src
 
 * Lenses
 ** Extract station IDs from ~[StationStatus]~
