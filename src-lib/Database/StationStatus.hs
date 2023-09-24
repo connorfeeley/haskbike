@@ -16,9 +16,9 @@
 {-# LANGUAGE UndecidableInstances      #-}
 
 module Database.StationStatus
-     ( ReportTime (..)
-     , BeamStationStatusString (..)
+     ( BeamStationStatusString (..)
      , PrimaryKey (StationStatusId)
+     , ReportTime (..)
      , StationStatus
      , StationStatusId
      , StationStatusT (..)
@@ -237,10 +237,10 @@ fromJSONToBeamStationStatus status =
     -- | Find the vehicle type in the list of vehicle types available; default to 0 if not found.
     findByType' vehicle_type = find (\x -> AT.vehicle_type_id x == vehicle_type) $ status ^. AT.status_vehicle_types_available
     findByType  vehicle_type = fromIntegral $ maybe 0 AT.type_count (findByType' vehicle_type)
-    num_boost   = findByType "BOOST"
-    num_iconic  = findByType "ICONIC"
-    num_efit    = findByType "EFIT"
-    num_efit_g5 = findByType "EFIT G5"
+    num_boost   = findByType AT.Boost
+    num_iconic  = findByType AT.Iconic
+    num_efit    = findByType AT.EFit
+    num_efit_g5 = findByType AT.EFitG5
 
 -- | Convert from the Beam StationStatus type to the JSON StationStatus
 fromBeamStationStatusToJSON :: StationInformation -> StationStatus -> AT.StationStatus
@@ -258,9 +258,9 @@ fromBeamStationStatusToJSON _info status =
                       , AT._status_is_returning             = status^.d_status_is_returning
                       , AT._status_traffic                  = fmap Text.unpack $ status^.d_status_traffic
                       , AT._status_vehicle_docks_available  = [ AT.VehicleDock ["FIXME"] (fromIntegral $ status^.d_status_vehicle_docks_available) ]
-                      , AT._status_vehicle_types_available  = [ AT.VehicleType "" (fromIntegral (status^.vehicle_types_available_boost))
-                                                              , AT.VehicleType "" (fromIntegral (status^.vehicle_types_available_iconic))
-                                                              , AT.VehicleType "" (fromIntegral (status^.vehicle_types_available_efit))
-                                                              , AT.VehicleType "" (fromIntegral (status^.vehicle_types_available_efit_g5))
+                      , AT._status_vehicle_types_available  = [ AT.VehicleType AT.Boost  (fromIntegral (status^.vehicle_types_available_boost))
+                                                              , AT.VehicleType AT.Iconic (fromIntegral (status^.vehicle_types_available_iconic))
+                                                              , AT.VehicleType AT.EFit   (fromIntegral (status^.vehicle_types_available_efit))
+                                                              , AT.VehicleType AT.EFitG5 (fromIntegral (status^.vehicle_types_available_efit_g5))
                                                               ]
                       }
