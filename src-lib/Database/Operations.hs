@@ -231,44 +231,34 @@ Insert updated station status into the database.
 insertUpdatedStationStatus :: Connection         -- ^ Connection to the database.
                            -> [AT.StationStatus] -- ^ List of 'AT.StationStatus' from the API response.
                            -> IO InsertStatusResult
-insertUpdatedStationStatus conn api_status = do
-  -- Get information for the stations that are in the status response.
-  info_ids <- map _info_station_id <$> queryStationInformationByIds conn status_ids
+insertUpdatedStationStatus conn api_status
+  | null api_status = return $ InsertStatusResult [] []
+  | otherwise = do
+      info_ids <- map _info_station_id <$> queryStationInformationByIds conn status_ids
 
-  -- Filter out statuses that don't have corresponding information in the database.
-  let status = filter (\ss -> fromIntegral (_status_station_id ss) `elem` info_ids) api_status
+      let status = filter (\ss -> fromIntegral (_status_station_id ss) `elem` info_ids) api_status
 
-  -- Determine which rows will be deactivated.
-  statuses_to_deactivate <- case length api_status of
-    0 -> pure []                             -- No need to query if there are no statuses to update.
-    _ -> getRowsToDeactivate conn api_status -- Get rows to deactivate.
-  let status_ids' =  map _d_status_id statuses_to_deactivate
+      statuses_to_deactivate <- getRowsToDeactivate conn api_status
+      updated_statuses <- deactivateOldStatus conn statuses_to_deactivate
+      inserted_statuses <- insertNewStatus conn status
 
-  -- Deactivate status rows which we have new data for.
-  updated_statuses <- case length statuses_to_deactivate of
-    0 -> pure [] -- Can't update if there are no statuses to update (SQL restriction).
-    _ ->         -- Set returned station statuses as inactive.
-      runBeamPostgres' conn $ runUpdateReturningList $
-        update (bikeshareDb ^. bikeshareStationStatus)
-        (\c -> _d_status_active c <-. val_ False)
-        (\c -> _d_status_id c `in_` map val_ status_ids')
-
-  -- Insert new status rows.
-  inserted_statuses <- case length status of
-    0 -> pure [] -- No need to insert if there are no statuses to insert.
-    _ ->         -- Insert rows for each 'AT.StationStatus' that has newer data.
-      runBeamPostgres' conn $ runInsertReturningList $
-        insert (bikeshareDb ^. bikeshareStationStatus) $
-        insertExpressions $ map fromJSONToBeamStationStatus status
-
-  pure $ InsertStatusResult { _insert_deactivated = updated_statuses
-                            , _insert_inserted    = inserted_statuses
-                            }
+      return $ InsertStatusResult updated_statuses inserted_statuses
 
   where
-    status_ids :: [Int]
     status_ids = fromIntegral <$> api_status ^.. traverse . status_station_id
 
+    deactivateOldStatus conn' status
+      | null status = return []
+      | otherwise = runBeamPostgres' conn' $ runUpdateReturningList $
+          update (bikeshareDb ^. bikeshareStationStatus)
+          (\c -> _d_status_active c <-. val_ False)
+          (\c -> _d_status_id c `in_` map (val_ . _d_status_id) status)
+
+    insertNewStatus conn' status
+      | null status = return []
+      | otherwise = runBeamPostgres' conn' $ runInsertReturningList $
+          insert (bikeshareDb ^. bikeshareStationStatus) $
+          insertExpressions $ map fromJSONToBeamStationStatus status
 
 {- |
 Query the statuses for a station between two times.
