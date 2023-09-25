@@ -15,6 +15,7 @@ module Database.Operations
      , queryDisabledDocks
      , queryStationInformation
      , queryStationInformationByIds
+     , queryStationName
      , queryStationStatus
      , queryStationStatusBetween
      , queryStationStatusFields
@@ -286,3 +287,19 @@ queryStationStatusBetween conn station_id start_time end_time = do
             _d_status_last_reported status >=. val_ (Just start_time) &&.
             _d_status_last_reported status <=. val_ (Just end_time))
     pure status
+
+{- |
+Query the station name given a station ID.
+-}
+queryStationName :: Connection        -- ^ Connection to the database.
+                 -> Int               -- ^ Station ID.
+                 -> IO (Maybe String) -- ^ Station name assosicated with the given station ID.
+queryStationName conn station_id = do
+  info <- runBeamPostgres' conn $ runSelectReturningOne $ select $ do
+    info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
+    guard_ (_info_station_id info ==. val_ (fromIntegral station_id))
+    pure info
+
+  let station_name = info ^. _Just . info_name
+
+  pure $ Just $ Text.unpack station_name
