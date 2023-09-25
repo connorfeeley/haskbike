@@ -8,7 +8,7 @@ module Database.Operations
      ( InsertStatusResult (..)
      , getRowsToDeactivate
      , insertStationInformation
-     , insertUpdatedStationStatus
+     , insertStationStatus
      , printDisabledDocks
      , queryDisabledDocks
      , queryStationId
@@ -235,10 +235,10 @@ separateNewerStatusRecords conn api_status = do
 {- |
 Insert updated station status into the database.
 -}
-insertUpdatedStationStatus :: Connection         -- ^ Connection to the database.
+insertStationStatus :: Connection         -- ^ Connection to the database.
                            -> [AT.StationStatus] -- ^ List of 'AT.StationStatus' from the API response.
                            -> IO InsertStatusResult
-insertUpdatedStationStatus conn api_status
+insertStationStatus conn api_status
   | null api_status = return $ InsertStatusResult [] []
   | otherwise = do
     info_ids <- map (fromIntegral . _info_station_id) <$> queryStationInformationByIds conn status_ids

@@ -82,5 +82,5 @@ _handleStationStatus conn = do
     Left err -> putStrLn $ "MAIN: error: " ++ show err
     Right response -> do
       let stationsStatus = response ^. response_data . status_stations
-      inserted <- insertUpdatedStationStatus conn stationsStatus
+      inserted <- insertStationStatus conn stationsStatus
       putStrLn $ "MAIN:     inserted status " ++ show (length (inserted ^. insert_inserted))

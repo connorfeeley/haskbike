@@ -111,7 +111,7 @@ statusHandler conn queue last_updated =
           putStrLn $ "HANDLER: unchanged="     ++ show (length $ updated_api ^. filter_unchanged)
 
           -- Insert the updated status.
-          inserted_result <- insertUpdatedStationStatus conn $ updated_api ^. filter_newer
+          inserted_result <- insertStationStatus conn $ updated_api ^. filter_newer
 
           let message_data = zipWith (\ updated inserted ->
                                  ( inserted ^.. d_status_station_id

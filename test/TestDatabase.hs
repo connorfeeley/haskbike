@@ -85,7 +85,7 @@ initDBWithAllTestData conn = do
   -- Insert test station status data 1-22.
   mapM_ (\i -> do
             statusResponse <- getDecodedFileStatus $ "docs/json/2.3/station_status-"+|i|+".json"
-            void $ insertUpdatedStationStatus conn $ statusResponse ^. response_data . status_stations
+            void $ insertStationStatus conn $ statusResponse ^. response_data . status_stations
         ) [(1 :: Int) .. (22 :: Int)]
 
 
@@ -114,7 +114,7 @@ unit_insertStationStatus = do
 
   -- Insert test data.
   inserted_info   <- insertStationInformation   conn $ info   ^. response_data . info_stations
-  inserted_status <- insertUpdatedStationStatus conn $ status ^. response_data . status_stations
+  inserted_status <- insertStationStatus conn $ status ^. response_data . status_stations
 
   assertEqual "Inserted station information" 704 (length inserted_info)
   assertEqual "Inserted station status"        8 (length $ inserted_status ^. insert_inserted)
@@ -131,7 +131,7 @@ unit_queryStationStatus = do
 
   -- Insert test data.
   inserted_info   <- insertStationInformation   conn $ info   ^. response_data . info_stations
-  inserted_status <- insertUpdatedStationStatus conn $ status ^. response_data . status_stations
+  inserted_status <- insertStationStatus conn $ status ^. response_data . status_stations
 
   assertEqual "Inserted station information" 6 (length inserted_info)
   assertEqual "Inserted station information" 5 (length $ inserted_status ^. insert_inserted)
@@ -161,7 +161,7 @@ unit_insertStationStatusApi = do
   status  <- getDecodedFileStatus "docs/json/2.3/station_status-1.json"
 
   -- Should fail because station information has not been inserted.
-  inserted_status <- insertUpdatedStationStatus conn $ status ^. response_data . status_stations
+  inserted_status <- insertStationStatus conn $ status ^. response_data . status_stations
 
   assertEqual "Inserted station status" [] $ inserted_status ^. insert_inserted
   assertEqual "Updated station status"  [] $ inserted_status ^. insert_deactivated
@@ -177,7 +177,7 @@ unit_insertStationApi = do
 
   -- Insert test data.
   inserted_info   <- insertStationInformation   conn $ info   ^. response_data . info_stations
-  inserted_status <- insertUpdatedStationStatus conn $ status ^. response_data . status_stations
+  inserted_status <- insertStationStatus conn $ status ^. response_data . status_stations
 
   assertEqual "Inserted station information" 704 (length inserted_info)
   assertEqual "Inserted station status"      704 (length $ inserted_status ^. insert_inserted)
@@ -218,7 +218,7 @@ doGetRowsToDeactivate conn = do
 
   -- Insert test data.
   void $ insertStationInformation   conn $ info   ^. response_data . info_stations
-  void $ insertUpdatedStationStatus conn $ status_1 ^. response_data . status_stations
+  void $ insertStationStatus conn $ status_1 ^. response_data . status_stations
 
   -- Return stations that have reported since being inserted.
   getRowsToDeactivate conn $ status_2 ^. response_data . status_stations
@@ -263,7 +263,7 @@ doSeparateNewerStatusRecords conn = do
 
   -- Insert test data.
   void $ insertStationInformation   conn $ info   ^. response_data . info_stations
-  void $ insertUpdatedStationStatus conn $ status_1 ^. response_data . status_stations
+  void $ insertStationStatus conn $ status_1 ^. response_data . status_stations
 
   -- Return maps of updated and same API statuses
   separateNewerStatusRecords conn $ status_2 ^. response_data . status_stations
@@ -297,13 +297,13 @@ doSeparateNewerStatusRecordsInsertOnce conn = do
 
   -- Insert test data.
   void $ insertStationInformation   conn $ info   ^. response_data . info_stations
-  void $ insertUpdatedStationStatus conn $ status_1 ^. response_data . status_stations
+  void $ insertStationStatus conn $ status_1 ^. response_data . status_stations
 
   -- Find statuses that need to be updated (second round of data vs. first).
   updated <- separateNewerStatusRecords conn $ status_2 ^. response_data . status_stations
 
   -- Insert second round of test data (some of which have reported since the first round was inserted).
-  insertUpdatedStationStatus conn $ updated ^. filter_newer
+  insertStationStatus conn $ updated ^. filter_newer
 
 
 -- FIXME: test fails
@@ -337,21 +337,21 @@ doSeparateNewerStatusRecordsInsertTwice conn = do
 
   -- Insert first round of test data.
   void $ insertStationInformation   conn $ info   ^. response_data . info_stations
-  void $ insertUpdatedStationStatus conn $ status_1 ^. response_data . status_stations
+  void $ insertStationStatus conn $ status_1 ^. response_data . status_stations
 
 
   -- Find status records that need to be updated (second round of data vs. first).
   updated_1 <- separateNewerStatusRecords conn $ status_2 ^. response_data . status_stations
 
   -- Insert second round of test data (some of which have reported since the first round was inserted).
-  void $ insertUpdatedStationStatus conn $ updated_1 ^. filter_newer
+  void $ insertStationStatus conn $ updated_1 ^. filter_newer
 
 
   -- Find status records that need to be updated (second round of data vs. second).
   updated_2 <- separateNewerStatusRecords conn $ status_2 ^. response_data . status_stations
 
   -- Insert second round of test data once again (nothing should have changed).
-  insertUpdatedStationStatus conn $ updated_2 ^. filter_newer
+  insertStationStatus conn $ updated_2 ^. filter_newer
 
 
 -- | HUnit test to validate that a station ID can be looked up by its name, and vice-versa.
