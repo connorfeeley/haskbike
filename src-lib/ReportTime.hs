@@ -7,11 +7,16 @@
 
 module ReportTime
      ( ReportTime (..)
+     , reportTime
      , localToPosix
      , localToSystem
      , posixToLocal
      , reportTimeType
      , reportTimeZone
+     -- Re-exports for ReportTime constructors
+     , Day
+     , TimeOfDay
+     , fromGregorian
      ) where
 
 import           Data.Time
@@ -26,6 +31,10 @@ import           Database.Beam.Postgres.Syntax        ( PgValueSyntax )
 import           Database.PostgreSQL.Simple.FromField ( FromField (..) )
 import           Database.PostgreSQL.Simple.ToField   ( ToField (..) )
 
+
+-- | Smart constructor for the ReportTime datatype.
+reportTime :: Day -> TimeOfDay -> ReportTime
+reportTime day time_of_day = ReportTime $ LocalTime day time_of_day
 
 -- | Newtype wrapper for the last_reported field, which is a POSIX timestamp in the JSON API.
 newtype ReportTime where
