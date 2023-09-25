@@ -17,6 +17,8 @@ module Database.Operations
      , queryStationStatus
      , queryStationStatusBetween
      , queryStationStatusFields
+     , queryStationId
+     , queryStationIdLike
        -- types
      , FilterStatusResult (..)
        -- lenses
@@ -302,3 +304,63 @@ queryStationName conn station_id = do
   let station_name = info ^. _Just . info_name
 
   pure $ Just $ Text.unpack station_name
+
+
+{- |
+Query the station ID for given a station name, using SQL `=` semantics.
+
+== __Examples__
+Get ID for "King St W / Joe Shuster Way":
+
+>>> queryStationId conn "King St W / Joe Shuster Way"
+Just 7148
+
+Get ID for "Wellesley Station Green P":
+
+>>> queryStationId conn "Wellesley Station Green P"
+Just 7001
+-}
+queryStationId :: Connection        -- ^ Connection to the database.
+                 -> String          -- ^ Station ID.
+                 -> IO (Maybe Int)  -- ^ Station ID assosicated with the given station name, if found.
+queryStationId conn station_name = do
+  info <- runBeamPostgres' conn $ runSelectReturningOne $ select $ do
+    info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
+    guard_ (_info_name info ==. val_ (Text.pack station_name))
+    pure info
+
+  pure $ fromIntegral <$> info ^? _Just . info_station_id
+
+
+{- | Query possible station IDs matching a given station name, using SQL `LIKE` semantics.
+
+== __Examples__
+
+Search for station names ending with "Green P":
+
+>>> queryStationIdLike conn "%Green P"
+[ (7001,"Wellesley Station Green P")
+, (7050,"Richmond St E / Jarvis St Green P")
+, (7112,"Liberty St / Fraser Ave Green P")
+, (7789,"75 Holly St - Green P") ]
+
+Search for station names containing "Joe Shuster":
+
+>>> queryStationIdLike conn "%Joe Shuster%"
+[(7148,"King St W / Joe Shuster Way")]
+
+__Return:__ Tuples of (station ID, station name) matching the searched name, using SQL `LIKE` semantics.
+-}
+queryStationIdLike :: Connection          -- ^ Connection to the database.
+                   -> String              -- ^ Station ID.
+                   -> IO [(Int, String)]  -- ^ Tuples of (station ID, name) for stations that matched the query.
+queryStationIdLike conn station_name = do
+  info <- runBeamPostgres' conn $ runSelectReturningList $ select $ do
+    info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
+    guard_ (_info_name info `like_` val_ (Text.pack station_name))
+    pure info
+
+  -- Return tuples of (station_id, station_name)
+  pure $ map (\si -> ( si ^. info_station_id & fromIntegral
+                     , si ^. info_name & Text.unpack
+                     )) info
