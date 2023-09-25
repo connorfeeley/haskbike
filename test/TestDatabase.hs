@@ -71,6 +71,25 @@ getDecodedFileStatus :: FromJSON StationStatusResponse
                      -> IO StationStatusResponse  -- ^ Decoded 'StationStatusReponse'.
 getDecodedFileStatus = getDecodedFile
 
+
+-- | Initialize empty database from the test station information response and all 22 station status responses.
+initDBWithAllTestData :: Connection -- ^ Database connection
+                      -> IO ()
+initDBWithAllTestData conn = do
+  -- Insert station information.
+  info    <- getDecodedFileInformation  "docs/json/2.3/station_information-1.json"
+  status  <- getDecodedFileStatus       "docs/json/2.3/station_status-1.json"
+  void $ insertStationInformation   conn $ info   ^. response_data . info_stations
+  void $ insertUpdatedStationStatus conn $ status ^. response_data . status_stations
+
+  -- Insert test station status data 1-22.
+  mapM_ (\i -> do
+            statusResponse <- getDecodedFile $ "docs/json/2.3/station_status-"+|i|+".json"
+            updated <- separateNewerStatusRecords conn $ statusResponse ^. response_data . status_stations
+            void $ insertUpdatedStationStatus conn $ updated ^. filter_newer
+        ) [(2 :: Int) .. (22 :: Int)] -- FIXME: shouldn't have to handle first insertion differently.
+
+
 -- | HUnit test for inserting station information.
 unit_insertStationInformation :: IO ()
 unit_insertStationInformation = do
