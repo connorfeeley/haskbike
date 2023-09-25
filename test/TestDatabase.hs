@@ -79,18 +79,14 @@ getDecodedFileStatus = getDecodedFile
 initDBWithAllTestData :: Connection -- ^ Database connection
                       -> IO ()
 initDBWithAllTestData conn = do
-  -- Insert station information.
-  info    <- getDecodedFileInformation  "docs/json/2.3/station_information-1.json"
-  status  <- getDecodedFileStatus       "docs/json/2.3/station_status-1.json"
+  info <- getDecodedFileInformation  "docs/json/2.3/station_information-1.json"
   void $ insertStationInformation   conn $ info   ^. response_data . info_stations
-  void $ insertUpdatedStationStatus conn $ status ^. response_data . status_stations
 
   -- Insert test station status data 1-22.
   mapM_ (\i -> do
             statusResponse <- getDecodedFile $ "docs/json/2.3/station_status-"+|i|+".json"
-            updated <- separateNewerStatusRecords conn $ statusResponse ^. response_data . status_stations
-            void $ insertUpdatedStationStatus conn $ updated ^. filter_newer
-        ) [(2 :: Int) .. (22 :: Int)] -- FIXME: shouldn't have to handle first insertion differently.
+            void $ insertUpdatedStationStatus conn $ statusResponse ^. response_data . status_stations
+        ) [(1 :: Int) .. (22 :: Int)]
 
 
 -- | HUnit test for inserting station information.
@@ -168,17 +164,13 @@ unit_insertStationStatusApi = do
   -- Connect to the database.
   conn <- setupDatabaseName dbnameTest
 
-  status  <- getDecodedFile "docs/json/2.3/station_status-1.json"
-          :: IO StationStatusResponse
-
-  -- Insert test data.
-  void $ insertUpdatedStationStatus conn $ status ^. response_data . status_stations
+  status  <- getDecodedFileStatus "docs/json/2.3/station_status-1.json"
 
   -- Should fail because station information has not been inserted.
-  inserted_info <- insertUpdatedStationStatus conn $ status ^. response_data . status_stations
+  inserted_status <- insertUpdatedStationStatus conn $ status ^. response_data . status_stations
 
-  assertEqual "Inserted station status" [] $ inserted_info ^. insert_inserted
-  assertEqual "Updated station status"  [] $ inserted_info ^. insert_deactivated
+  assertEqual "Inserted station status" [] $ inserted_status ^. insert_inserted
+  assertEqual "Updated station status"  [] $ inserted_status ^. insert_deactivated
 
 -- | HUnit test for inserting station information and status, with data from the actual API.
 unit_insertStationApi :: IO ()
@@ -186,10 +178,8 @@ unit_insertStationApi = do
   -- Connect to the database.
   conn <- setupDatabaseName dbnameTest
 
-  info    <- getDecodedFile "docs/json/2.3/station_information-1.json"
-          :: IO StationInformationResponse
-  status  <- getDecodedFile "docs/json/2.3/station_status-1.json"
-          :: IO StationStatusResponse
+  info    <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
+  status  <- getDecodedFileStatus      "docs/json/2.3/station_status-1.json"
 
   -- Insert test data.
   inserted_info   <- insertStationInformation   conn $ info   ^. response_data . info_stations
@@ -378,6 +368,24 @@ doSeparateNewerStatusRecordsInsertTwice conn = do
   -- Insert second round of test data once again (nothing should have changed).
   insertUpdatedStationStatus conn $ updated_2 ^. filter_newer
 
+
+-- | HUnit test to validate that a station ID can be looked up by its name, and vice-versa.
+unit_queryStationByIdAndName :: IO ()
+unit_queryStationByIdAndName = do
+  conn <- setupDatabaseName dbnameTest
+  info <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
+  void $ insertStationInformation conn $ info ^. response_data . info_stations
+
+  assertEqual "Station ID for 'King St W / Joe Shuster Way'" (Just 7148) =<< queryStationId conn "King St W / Joe Shuster Way"
+  assertEqual "Station ID for 'Wellesley Station Green P'" (Just 7001) =<< queryStationId conn "Wellesley Station Green P"
+  assertEqual "Stations with name ending in 'Green P'"
+    [ (7001,"Wellesley Station Green P")
+    , (7050,"Richmond St E / Jarvis St Green P")
+    , (7112,"Liberty St / Fraser Ave Green P")
+    , (7789,"75 Holly St - Green P")
+    ] =<< queryStationIdLike conn "%Green P"
+
+
 -- | HUnit test to query all status records for a station between two times.
 unit_queryStationStatusBetween :: IO ()
 unit_queryStationStatusBetween = do
@@ -413,18 +421,3 @@ unit_queryStationStatusBetween = do
     (reportTime (fromGregorian 2000 01 01) (TimeOfDay 00 00 00))  -- Arbitrary date
   assertEqual "Expected number of status records for #7001 with backwards time parameters" 0 (length statusBetweenBackwards)
 
--- | HUnit test to validate that a station ID can be looked up by its name, and vice-versa.
-unit_queryStationByIdAndName :: IO ()
-unit_queryStationByIdAndName = do
-  conn <- setupDatabaseName dbnameTest
-  info <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
-  void $ insertStationInformation conn $ info ^. response_data . info_stations
-
-  assertEqual "Station ID for 'King St W / Joe Shuster Way'" (Just 7148) =<< queryStationId conn "King St W / Joe Shuster Way"
-  assertEqual "Station ID for 'Wellesley Station Green P'" (Just 7001) =<< queryStationId conn "Wellesley Station Green P"
-  assertEqual "Stations with name ending in 'Green P'"
-    [ (7001,"Wellesley Station Green P")
-    , (7050,"Richmond St E / Jarvis St Green P")
-    , (7112,"Liberty St / Fraser Ave Green P")
-    , (7789,"75 Holly St - Green P")
-    ] =<< queryStationIdLike conn "%Green P"

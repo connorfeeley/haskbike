@@ -11,14 +11,14 @@ module Database.Operations
      , insertUpdatedStationStatus
      , printDisabledDocks
      , queryDisabledDocks
+     , queryStationId
+     , queryStationIdLike
      , queryStationInformation
      , queryStationInformationByIds
      , queryStationName
      , queryStationStatus
      , queryStationStatusBetween
      , queryStationStatusFields
-     , queryStationId
-     , queryStationIdLike
        -- types
      , FilterStatusResult (..)
        -- lenses
@@ -27,6 +27,8 @@ module Database.Operations
      , insert_deactivated
      , insert_inserted
        -- functions
+     , runBeamPostgres'
+     , runBeamPostgresDebug'
      , separateNewerStatusRecords
      ) where
 
@@ -43,8 +45,11 @@ import qualified Data.Text                                as Text
 import           Database.Beam
 import           Database.Beam.Backend.SQL.BeamExtensions
 import           Database.Beam.Postgres
+import qualified Database.Beam.Postgres                   as Pg
 import           Database.BikeShare
 import           Database.Utils
+
+import           Fmt
 
 debug :: Bool
 debug = False
@@ -179,7 +184,7 @@ getRowsToDeactivate conn api_status = do
     -- Common table expression for 'StationStatus'.
     common_status <- selecting $ do
       info <- Database.Beam.reuse common_info
-      status <- orderBy_ (desc_ . _d_status_id) $
+      status <- orderBy_ (asc_ . _d_status_id) $
         all_ (bikeshareDb ^. bikeshareStationStatus)
       guard_ (_d_status_info_id status `references_` info)
       pure status
@@ -234,15 +239,36 @@ insertUpdatedStationStatus :: Connection         -- ^ Connection to the database
 insertUpdatedStationStatus conn api_status
   | null api_status = return $ InsertStatusResult [] []
   | otherwise = do
-      info_ids <- map _info_station_id <$> queryStationInformationByIds conn status_ids
+    info_ids <- map (fromIntegral . _info_station_id) <$> queryStationInformationByIds conn status_ids
 
-      let status = filter (\ss -> fromIntegral (_status_station_id ss) `elem` info_ids) api_status
+    let status = filter (\ss -> fromIntegral (_status_station_id ss) `elem` info_ids) api_status
 
-      statuses_to_deactivate <- getRowsToDeactivate conn api_status
-      updated_statuses <- deactivateOldStatus conn statuses_to_deactivate
-      inserted_statuses <- insertNewStatus conn status
+    statuses_to_deactivate <- getRowsToDeactivate conn status
+    updated_statuses <- deactivateOldStatus conn statuses_to_deactivate
+    -- inserted_statuses <- insertNewStatus conn $
+    --   filter (\ss -> ss ^. status_station_id `notElem`
+    --                  map (fromIntegral . _d_status_station_id) updated_statuses
+    --          ) status
+    -- Insert new records for records that were deactivated.
+    inserted_statuses <- insertNewStatus conn $
+      filter (\ss -> ss ^. status_station_id `elem`
+                     map (fromIntegral . _d_status_station_id) updated_statuses
+             ) status
 
-      return $ InsertStatusResult updated_statuses inserted_statuses
+    -- Select arbitrary (in this case, last [by ID]) status record for each station ID.
+    distinct_by_id <- runBeamPostgres' conn $ runSelectReturningList $ select $ do
+      Pg.pgNubBy_ _d_status_station_id $ orderBy_ (desc_ . _d_status_station_id) $
+        all_ (bikeshareDb ^. bikeshareStationStatus)
+
+    -- Insert new records corresponding to station IDs which did not already exist in the station_status table.
+    new_status <- insertNewStatus conn $
+      filter (\ss -> ss ^. status_station_id `notElem`
+                     map (fromIntegral . _d_status_station_id) distinct_by_id &&
+                     ss ^. status_station_id `elem` info_ids
+             ) status
+
+
+    return $ InsertStatusResult updated_statuses (inserted_statuses ++ new_status)
 
   where
     status_ids = fromIntegral <$> api_status ^.. traverse . status_station_id
