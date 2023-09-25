@@ -77,6 +77,17 @@ GET https://tor.publicbikesystem.net/customer/gbfs/v2/en/system_information
 #+RESULTS:
 [[file:json/2.3/system_information.json]]
 
+** Fields of interest:
+
+#+begin_src json
+"_vehicle_count": {
+  "_mechanical_count": 8051,
+  "_ebike_count": 825
+},
+"_station_count": 697
+#+end_src
+
+
 * GBFS System Pricing Plans
 
 #+begin_src restclient :file json/2.3/system_pricing_plans.json :noheaders :results value file
