@@ -84,7 +84,7 @@ initDBWithAllTestData conn = do
 
   -- Insert test station status data 1-22.
   mapM_ (\i -> do
-            statusResponse <- getDecodedFile $ "docs/json/2.3/station_status-"+|i|+".json"
+            statusResponse <- getDecodedFileStatus $ "docs/json/2.3/station_status-"+|i|+".json"
             void $ insertUpdatedStationStatus conn $ statusResponse ^. response_data . status_stations
         ) [(1 :: Int) .. (22 :: Int)]
 
@@ -95,8 +95,7 @@ unit_insertStationInformation = do
   -- Connect to the database.
   conn <- setupDatabaseName dbnameTest
 
-  stationInformationResponse <- getDecodedFile "test/json/station_information.json"
-                              :: IO StationInformationResponse
+  stationInformationResponse <- getDecodedFileInformation "test/json/station_information.json"
 
   -- Insert test data.
   inserted_info <- insertStationInformation conn $ _info_stations $ stationInformationResponse ^. response_data
@@ -110,10 +109,8 @@ unit_insertStationStatus = do
   -- Connect to the database.
   conn <- setupDatabaseName dbnameTest
 
-  info    <- getDecodedFile "docs/json/2.3/station_information-1.json"
-          :: IO StationInformationResponse
-  status  <- getDecodedFile "test/json/station_status.json"
-          :: IO StationStatusResponse
+  info    <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
+  status  <- getDecodedFileStatus      "test/json/station_status.json"
 
   -- Insert test data.
   inserted_info   <- insertStationInformation   conn $ info   ^. response_data . info_stations
@@ -129,10 +126,8 @@ unit_queryStationStatus = do
   -- Connect to the database.
   conn <- setupDatabaseName dbnameTest
 
-  info    <- getDecodedFile "test/json/station_information.json"
-          :: IO StationInformationResponse
-  status  <- getDecodedFile "test/json/station_status.json"
-          :: IO StationStatusResponse
+  info    <- getDecodedFileInformation  "test/json/station_information.json"
+  status  <- getDecodedFileStatus       "test/json/station_status.json"
 
   -- Insert test data.
   inserted_info   <- insertStationInformation   conn $ info   ^. response_data . info_stations
@@ -151,8 +146,7 @@ unit_insertStationInformationApi = do
   -- Connect to the database.
   conn <- setupDatabaseName dbnameTest
 
-  info    <- getDecodedFile "docs/json/2.3/station_information-1.json"
-          :: IO StationInformationResponse
+  info    <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
 
   -- Insert test data.
   void $ insertStationInformation conn $ info ^. response_data . info_stations
@@ -218,12 +212,9 @@ unit_getRowsToDeactivate = do
 -- | Query updated station status and return a list of database statuses.
 doGetRowsToDeactivate :: Connection -> IO [StationStatusT Identity]
 doGetRowsToDeactivate conn = do
-  info      <- getDecodedFile "docs/json/2.3/station_information-1.json"
-            :: IO StationInformationResponse
-  status_1  <- getDecodedFile "docs/json/2.3/station_status-1.json"
-            :: IO StationStatusResponse
-  status_2  <- getDecodedFile "docs/json/2.3/station_status-2.json"
-            :: IO StationStatusResponse
+  info      <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
+  status_1  <- getDecodedFileStatus      "docs/json/2.3/station_status-1.json"
+  status_2  <- getDecodedFileStatus      "docs/json/2.3/station_status-2.json"
 
   -- Insert test data.
   void $ insertStationInformation   conn $ info   ^. response_data . info_stations
@@ -266,12 +257,9 @@ unit_separateNewerStatusRecords = do
 -- | Query updated station status and return a list of API statuses.
 doSeparateNewerStatusRecords :: Connection -> IO FilterStatusResult
 doSeparateNewerStatusRecords conn = do
-  info      <- getDecodedFile "docs/json/2.3/station_information-1.json"
-            :: IO StationInformationResponse
-  status_1  <- getDecodedFile "docs/json/2.3/station_status-1.json"
-            :: IO StationStatusResponse
-  status_2  <- getDecodedFile "docs/json/2.3/station_status-2.json"
-            :: IO StationStatusResponse
+  info      <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
+  status_1  <- getDecodedFileStatus      "docs/json/2.3/station_status-1.json"
+  status_2  <- getDecodedFileStatus      "docs/json/2.3/station_status-2.json"
 
   -- Insert test data.
   void $ insertStationInformation   conn $ info   ^. response_data . info_stations
@@ -303,12 +291,9 @@ unit_separateNewerStatusRecordsInsert = do
 doSeparateNewerStatusRecordsInsertOnce :: Connection        -- ^ Database connection
                                    -> IO InsertStatusResult -- ^ Result of inserting updated station statuses.
 doSeparateNewerStatusRecordsInsertOnce conn = do
-  info      <- getDecodedFile "docs/json/2.3/station_information-1.json"
-            :: IO StationInformationResponse
-  status_1  <- getDecodedFile "docs/json/2.3/station_status-1.json"
-            :: IO StationStatusResponse
-  status_2  <- getDecodedFile "docs/json/2.3/station_status-2.json"
-            :: IO StationStatusResponse
+  info      <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
+  status_1  <- getDecodedFileStatus      "docs/json/2.3/station_status-1.json"
+  status_2  <- getDecodedFileStatus      "docs/json/2.3/station_status-2.json"
 
   -- Insert test data.
   void $ insertStationInformation   conn $ info   ^. response_data . info_stations
