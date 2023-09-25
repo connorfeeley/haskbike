@@ -173,34 +173,36 @@ Find the corresponding active rows in the database corresponding to each element
 getRowsToDeactivate :: Connection         -- ^ Connection to the database.
                     -> [AT.StationStatus] -- ^ List of 'AT.StationStatus' from the API response.
                     -> IO [StationStatus] -- ^ List of 'StationStatus' rows that would need to be deactivated, if the statuses from the API were inserted.
-getRowsToDeactivate conn api_status = do
-  -- Select using common table expressions (selectWith).
-  runBeamPostgres' conn $ runSelectReturningList $ selectWith $ do
-    -- Common table expression for 'StationInformation'.
-    common_info <- selecting $
-        filter_ (\info -> _info_station_id info `in_` map (fromIntegral . _status_station_id) api_status)
-        (all_ (bikeshareDb ^. bikeshareStationInformation))
+getRowsToDeactivate conn api_status
+  | null api_status = return []
+  | otherwise = do
+    -- Select using common table expressions (selectWith).
+    runBeamPostgres' conn $ runSelectReturningList $ selectWith $ do
+      -- Common table expression for 'StationInformation'.
+      common_info <- selecting $
+          filter_ (\info -> _info_station_id info `in_` map (fromIntegral . _status_station_id) api_status)
+          (all_ (bikeshareDb ^. bikeshareStationInformation))
 
-    -- Common table expression for 'StationStatus'.
-    common_status <- selecting $ do
-      info <- Database.Beam.reuse common_info
-      status <- orderBy_ (asc_ . _d_status_id) $
-        all_ (bikeshareDb ^. bikeshareStationStatus)
-      guard_ (_d_status_info_id status `references_` info)
-      pure status
+      -- Common table expression for 'StationStatus'.
+      common_status <- selecting $ do
+        info <- Database.Beam.reuse common_info
+        status <- orderBy_ (asc_ . _d_status_id) $
+          all_ (bikeshareDb ^. bikeshareStationStatus)
+        guard_ (_d_status_info_id status `references_` info)
+        pure status
 
-    -- Select from station status.
-    pure $ do
-      -- Transform each 'AT.StationStatus' into corresponding rows, containing '_status_station_id' and '_status_last_reported'.
-      api_values <- values_ $ map (\s -> ( as_ @Int32 ( fromIntegral $ _status_station_id s)
-                                         , cast_ (val_ $ _status_last_reported s) (maybeType reportTimeType))
-                                  ) api_status
-      -- Select from station status where the last reported time is older than in the API response.
-      status <- Database.Beam.reuse common_status
-      guard_ (_d_status_station_id    status ==. fst api_values &&. -- Station ID
-              _d_status_active        status ==. val_ True      &&. -- Status record is active
-              _d_status_last_reported status <.  snd api_values)    -- Last reported time is older than in the API response
-      pure status
+      -- Select from station status.
+      pure $ do
+        -- Transform each 'AT.StationStatus' into corresponding rows, containing '_status_station_id' and '_status_last_reported'.
+        api_values <- values_ $ map (\s -> ( as_ @Int32 ( fromIntegral $ _status_station_id s)
+                                           , cast_ (val_ $ _status_last_reported s) (maybeType reportTimeType))
+                                    ) api_status
+        -- Select from station status where the last reported time is older than in the API response.
+        status <- Database.Beam.reuse common_status
+        guard_ (_d_status_station_id    status ==. fst api_values &&. -- Station ID
+                _d_status_active        status ==. val_ True      &&. -- Status record is active
+                _d_status_last_reported status <.  snd api_values)    -- Last reported time is older than in the API response
+        pure status
 
 {- |
 Separate API 'AT.StationStatus' into two lists:
