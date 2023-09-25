@@ -258,9 +258,7 @@ insertUpdatedStationStatus conn api_status
              ) status
 
     -- Select arbitrary (in this case, last [by ID]) status record for each station ID.
-    distinct_by_id <- runBeamPostgres' conn $ runSelectReturningList $ select $ do
-      Pg.pgNubBy_ _d_status_station_id $ orderBy_ (desc_ . _d_status_station_id) $
-        all_ (bikeshareDb ^. bikeshareStationStatus)
+    distinct_by_id <- selectDistinctByStationId conn status
 
     -- Insert new records corresponding to station IDs which did not already exist in the station_status table.
     new_status <- insertNewStatus conn $
@@ -274,6 +272,12 @@ insertUpdatedStationStatus conn api_status
 
   where
     status_ids = fromIntegral <$> api_status ^.. traverse . status_station_id
+
+    selectDistinctByStationId conn' status
+      | null status = return []
+      | otherwise = runBeamPostgres' conn' $ runSelectReturningList $ select $ do
+          Pg.pgNubBy_ _d_status_station_id $ orderBy_ (desc_ . _d_status_station_id) $
+            all_ (bikeshareDb ^. bikeshareStationStatus)
 
     deactivateOldStatus conn' status
       | null status = return []
