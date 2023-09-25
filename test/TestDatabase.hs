@@ -350,33 +350,60 @@ doSeparateNewerStatusRecordsInsertTwice conn = do
 -- | HUnit test to query all status records for a station between two times.
 unit_queryStationStatusBetween :: IO ()
 unit_queryStationStatusBetween = do
+  -- TODO: shouldn't have to wipe and reinsert data for each test.
+  -- First status for #7001 was inserted at 2023-09-15 17:16:58; last status at 2023-09-15 17:35:00.
   conn <- setupDatabaseName dbnameTest
+  statusBetweenAll <- doQueryStationStatusBetween conn 7001
+    (ReportTime $ read "2023-09-15 17:16:58")
+    (ReportTime $ read "2023-09-15 17:35:00")
+  assertEqual "Expected number of status records for #7001 between two valid times" 4 (length statusBetweenAll)
 
-  _statusBetween <- doQueryStationStatusBetween conn
+  -- Query for status records for #7001 between two times, where the start and end time match the first status report.
+  conn <- setupDatabaseName dbnameTest
+  statusBetweenFirst <- doQueryStationStatusBetween conn 7001
+    (ReportTime $ read "2000-09-15 17:16:58") -- Moment the first status was reported.
+    (ReportTime $ read "2023-09-15 17:16:58") -- Moment the first status was reported.
+  assertEqual "Expected number of status records for #7001 for first status reported" 1 (length statusBetweenFirst)
 
-  pure ()
+  -- Query for status records for #7001 between two times, where the end time is before the first status was reported.
+  conn <- setupDatabaseName dbnameTest
+  statusBetweenTooEarly <- doQueryStationStatusBetween conn 7001
+    (ReportTime $ read "2000-01-01 00:00:00") -- Arbitrary date
+    (ReportTime $ read "2023-09-15 17:16:57") -- One second before first status reported.
+  assertEqual "Expected number of status records for #7001 before first status reported" 0 (length statusBetweenTooEarly)
+
+  {-
+  Query for status records for #7001 between two times, where the earliest time is *after* the first status was reported,
+  and the end time is *before* the first status was reported.
+  -}
+  conn <- setupDatabaseName dbnameTest
+  statusBetweenBackwards <- doQueryStationStatusBetween conn 7001
+    (ReportTime $ read "2023-09-15 17:16:59") -- One second after first status reported.
+    (ReportTime $ read "2000-01-01 00:00:00") -- Arbitrary date
+  assertEqual "Expected number of status records for #7001 with backwards time parameters" 0 (length statusBetweenBackwards)
+
 
 -- | Query all status records for a station between two times.
 doQueryStationStatusBetween :: Connection         -- ^ Database connection
+                            -> Int                -- ^ Station ID
+                            -> ReportTime         -- ^ Earliest time to return records for.
+                            -> ReportTime         -- ^ Latest time to return records for.
                             -> IO [StationStatus] -- ^ Result of querying station status between two times.
-doQueryStationStatusBetween conn = do
+doQueryStationStatusBetween conn station_id start_time end_time = do
   -- Insert station information.
   info      <- getDecodedFile "docs/json/2.3/station_information-1.json"
             :: IO StationInformationResponse
-  status      <- getDecodedFile "docs/json/2.3/station_status-1.json"
+  status    <- getDecodedFile "docs/json/2.3/station_status-1.json"
             :: IO StationStatusResponse
   void $ insertStationInformation   conn $ info   ^. response_data . info_stations
-  void $ insertUpdatedStationStatus        conn $ status   ^. response_data . status_stations
+  void $ insertUpdatedStationStatus conn $ status ^. response_data . status_stations
 
   -- Insert test station status data 1-22.
   mapM_ (\i -> do
             statusResponse <- getDecodedFile $ "docs/json/2.3/station_status-"+|i|+".json"
             updated <- separateNewerStatusRecords conn $ statusResponse ^. response_data . status_stations
-            inserted <- insertUpdatedStationStatus conn $ updated ^. filter_newer
-            putStrLn $ "Updated: "+| length (updated ^.filter_newer) |+ " Inserted " +| length (inserted ^. insert_inserted) |+" status " +|i|+ ""
-        ) [(1 :: Int) .. (22 :: Int)]
+            void $ insertUpdatedStationStatus conn $ updated ^. filter_newer
+        ) [(2 :: Int) .. (22 :: Int)] -- FIXME: shouldn't have to handle first insertion differently.
 
   -- Query database for station status between two times.
-  statusBetween <- queryStationStatusBetween conn 7001 1694798218 1694799300
-
-  pure statusBetween
+  queryStationStatusBetween conn station_id start_time end_time
