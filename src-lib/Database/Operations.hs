@@ -216,7 +216,7 @@ separateNewerStatusRecords conn api_status = do
   -- Map of intersection of both maps (station ID key appears in both Maps).
   let api_status_newer    = Map.intersection api_status_map statuses_would_deactivate_map
   -- Map of difference of both maps (station ID key appears in API map but not in the statuses to deactivate Map).
-  let api_status_unchanged = Map.difference   api_status_map statuses_would_deactivate_map
+  let api_status_unchanged = Map.difference  api_status_map statuses_would_deactivate_map
 
   pure $ FilterStatusResult { _filter_newer     = map snd $ Map.toAscList api_status_newer
                             , _filter_unchanged = map snd $ Map.toAscList api_status_unchanged

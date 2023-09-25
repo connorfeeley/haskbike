@@ -59,6 +59,18 @@ getDecodedFile :: FromJSON a => FilePath -- ^ Path to the JSON file.
                              -> IO a     -- ^ Decoded value.
 getDecodedFile filePath = either (assertFailure . ("Error decoding JSON: " ++)) return =<< decodeFile filePath
 
+-- | Helper function to decode a 'StationInformationResponse' from a JSON file.
+getDecodedFileInformation :: FromJSON StationInformationResponse
+                          => FilePath                       -- ^ Path to the JSON file.
+                          -> IO StationInformationResponse  -- ^ Decoded 'StationInformationReponse'.
+getDecodedFileInformation = getDecodedFile
+
+-- | Helper function to decode a 'StationStatusResponse' from a JSON file.
+getDecodedFileStatus :: FromJSON StationStatusResponse
+                     => FilePath                  -- ^ Path to the JSON file.
+                     -> IO StationStatusResponse  -- ^ Decoded 'StationStatusReponse'.
+getDecodedFileStatus = getDecodedFile
+
 -- | HUnit test for inserting station information.
 unit_insertStationInformation :: IO ()
 unit_insertStationInformation = do
@@ -322,12 +334,9 @@ unit_separateNewerStatusRecordsInsertTwice = do
 doSeparateNewerStatusRecordsInsertTwice :: Connection        -- ^ Database connection
                                         -> IO InsertStatusResult -- ^ Result of inserting updated station statuses.
 doSeparateNewerStatusRecordsInsertTwice conn = do
-  info      <- getDecodedFile "docs/json/2.3/station_information-1.json"
-            :: IO StationInformationResponse
-  status_1  <- getDecodedFile "docs/json/2.3/station_status-1.json"
-            :: IO StationStatusResponse
-  status_2  <- getDecodedFile "docs/json/2.3/station_status-2.json"
-            :: IO StationStatusResponse
+  info      <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
+  status_1  <- getDecodedFileStatus "docs/json/2.3/station_status-1.json"
+  status_2  <- getDecodedFileStatus "docs/json/2.3/station_status-2.json"
 
   -- Insert first round of test data.
   void $ insertStationInformation   conn $ info   ^. response_data . info_stations
@@ -391,10 +400,8 @@ doQueryStationStatusBetween :: Connection         -- ^ Database connection
                             -> IO [StationStatus] -- ^ Result of querying station status between two times.
 doQueryStationStatusBetween conn station_id start_time end_time = do
   -- Insert station information.
-  info      <- getDecodedFile "docs/json/2.3/station_information-1.json"
-            :: IO StationInformationResponse
-  status    <- getDecodedFile "docs/json/2.3/station_status-1.json"
-            :: IO StationStatusResponse
+  info    <- getDecodedFileInformation  "docs/json/2.3/station_information-1.json"
+  status  <- getDecodedFileStatus       "docs/json/2.3/station_status-1.json"
   void $ insertStationInformation   conn $ info   ^. response_data . info_stations
   void $ insertUpdatedStationStatus conn $ status ^. response_data . status_stations
 
