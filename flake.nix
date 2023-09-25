@@ -78,7 +78,7 @@
                 cabal-install
                 hlint
                 doctest
-                # stylish-haskell
+                stylish-haskell
                 ;
               # Disable ghcid.
               # ghcid = null;
