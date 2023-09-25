@@ -42,6 +42,10 @@ module Database.StationStatus
      , stationStatusType
      , vehicleTypeFields
      , vehicleTypesAvailable
+     , vehicle_types_available_boost
+     , vehicle_types_available_iconic
+     , vehicle_types_available_efit
+     , vehicle_types_available_efit_g5
      ) where
 
 import qualified API.Types                                  as AT
