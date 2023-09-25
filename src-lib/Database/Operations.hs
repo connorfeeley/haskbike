@@ -47,15 +47,23 @@ import           Database.Utils
 
 
 -- | Enable SQL debug output if DEBUG flag is set.
-runBeamPostgres' :: Connection -- ^ Connection to the database.
-  -> Pg a -- ^ @MonadBeam@ in which we can run Postgres commands.
-  -> IO a
+runBeamPostgres' :: Connection  -- ^ Connection to the database.
+                 -> Pg a        -- ^ @MonadBeam@ in which we can run Postgres commands.
+                 -> IO a
 runBeamPostgres' =
 #ifdef DEBUG
-  runBeamPostgresDebug pPrintCompact
+  runBeamPostgresDebug'
 #else
   runBeamPostgres
 #endif
+
+
+-- | @runBeamPostgresDebug@ prefilled with @pPrintCompact@.
+runBeamPostgresDebug' :: Connection     -- ^ Connection to the database.
+                      -> Pg a           -- ^ @MonadBeam@ in which we can run Postgres commands.
+                      -> IO a
+runBeamPostgresDebug' = runBeamPostgresDebug pPrintCompact
+
 
 data FilterStatusResult where
   FilterStatusResult :: { _filter_newer         :: [AT.StationStatus] -- ^ List of 'AT.StationStatus' that were updated.
