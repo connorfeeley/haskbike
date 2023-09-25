@@ -8,6 +8,7 @@
 module ReportTime
      ( ReportTime (..)
      , reportTime
+     , addHours
      , localToPosix
      , localToSystem
      , posixToLocal
@@ -31,6 +32,10 @@ import           Database.Beam.Postgres.Syntax        ( PgValueSyntax )
 import           Database.PostgreSQL.Simple.FromField ( FromField (..) )
 import           Database.PostgreSQL.Simple.ToField   ( ToField (..) )
 
+
+-- | Subtract a number of hours from a LocalTime.
+addHours :: NominalDiffTime -> LocalTime -> LocalTime
+addHours h time' = utcToLocalTime reportTimeZone (addUTCTime (h*3600) (localTimeToUTC utc time'))
 
 -- | Smart constructor for the ReportTime datatype.
 reportTime :: Day -> TimeOfDay -> ReportTime
