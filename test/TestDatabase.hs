@@ -18,13 +18,15 @@ module TestDatabase
      , unit_insertStationStatus
      , unit_insertStationStatusApi
      , unit_queryStationStatus
+     , unit_queryStationStatusBetween
      , unit_separateNewerStatusRecords
      , unit_separateNewerStatusRecordsInsert
      , unit_separateNewerStatusRecordsInsertTwice
      ) where
 
 import           API.ResponseWrapper    ( response_data )
-import           API.Types              ( _info_stations, info_stations, status_station_id, status_stations, StationInformationResponse, StationStatusResponse )
+import           API.Types              ( StationInformationResponse, StationStatusResponse, _info_stations,
+                                          info_stations, status_station_id, status_stations )
 
 import           Control.Lens
 
@@ -36,6 +38,8 @@ import           Database.Beam.Postgres
 import           Database.BikeShare
 import           Database.Operations
 import           Database.Utils
+
+import           Fmt
 
 import           Test.Tasty.HUnit
 
@@ -342,3 +346,37 @@ doSeparateNewerStatusRecordsInsertTwice conn = do
 
   -- Insert second round of test data once again (nothing should have changed).
   insertUpdatedStationStatus conn $ updated_2 ^. filter_newer
+
+-- | HUnit test to query all status records for a station between two times.
+unit_queryStationStatusBetween :: IO ()
+unit_queryStationStatusBetween = do
+  conn <- setupDatabaseName dbnameTest
+
+  _statusBetween <- doQueryStationStatusBetween conn
+
+  pure ()
+
+-- | Query all status records for a station between two times.
+doQueryStationStatusBetween :: Connection         -- ^ Database connection
+                            -> IO [StationStatus] -- ^ Result of querying station status between two times.
+doQueryStationStatusBetween conn = do
+  -- Insert station information.
+  info      <- getDecodedFile "docs/json/2.3/station_information-1.json"
+            :: IO StationInformationResponse
+  status      <- getDecodedFile "docs/json/2.3/station_status-1.json"
+            :: IO StationStatusResponse
+  void $ insertStationInformation   conn $ info   ^. response_data . info_stations
+  void $ insertUpdatedStationStatus        conn $ status   ^. response_data . status_stations
+
+  -- Insert test station status data 1-22.
+  mapM_ (\i -> do
+            statusResponse <- getDecodedFile $ "docs/json/2.3/station_status-"+|i|+".json"
+            updated <- separateNewerStatusRecords conn $ statusResponse ^. response_data . status_stations
+            inserted <- insertUpdatedStationStatus conn $ updated ^. filter_newer
+            putStrLn $ "Updated: "+| length (updated ^.filter_newer) |+ " Inserted " +| length (inserted ^. insert_inserted) |+" status " +|i|+ ""
+        ) [(1 :: Int) .. (22 :: Int)]
+
+  -- Query database for station status between two times.
+  statusBetween <- queryStationStatusBetween conn 7001 1694798218 1694799300
+
+  pure statusBetween

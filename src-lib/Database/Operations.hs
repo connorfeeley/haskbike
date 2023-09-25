@@ -7,23 +7,24 @@
 -- | This module contains the operations that can be performed on the database.
 
 module Database.Operations
-     ( insertStationInformation
+     ( InsertStatusResult (..)
+     , getRowsToDeactivate
+     , insertStationInformation
+     , insertUpdatedStationStatus
      , printDisabledDocks
      , queryDisabledDocks
      , queryStationInformation
      , queryStationInformationByIds
      , queryStationStatus
+     , queryStationStatusBetween
      , queryStationStatusFields
-     , InsertStatusResult (..)
-     , getRowsToDeactivate
-     , insertUpdatedStationStatus
-     , insert_deactivated
-     , insert_inserted
        -- types
      , FilterStatusResult (..)
        -- lenses
      , filter_newer
      , filter_unchanged
+     , insert_deactivated
+     , insert_inserted
        -- functions
      , separateNewerStatusRecords
      ) where
@@ -257,3 +258,23 @@ insertUpdatedStationStatus conn api_status = do
   where
     status_ids :: [Int]
     status_ids = fromIntegral <$> api_status ^.. traverse . status_station_id
+
+
+{- |
+Query the statuses for a station between two times.
+-}
+queryStationStatusBetween :: Connection         -- ^ Connection to the database.
+                          -> Int                -- ^ Station ID.
+                          -> ReportTime         -- ^ Start time.
+                          -> ReportTime         -- ^ End time.
+                          -> IO [StationStatus] -- ^ List of 'StationStatus' for the given station between the given times.
+queryStationStatusBetween conn station_id start_time end_time = do
+  runBeamPostgres' conn $ runSelectReturningList $ select $ do
+    info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
+    status <- orderBy_ (asc_ . _d_status_last_reported)
+                (all_ (bikeshareDb ^. bikeshareStationStatus))
+    guard_ (_d_status_info_id status `references_` info &&.
+            _info_station_id info ==. val_ (fromIntegral station_id) &&.
+            _d_status_last_reported status >=. val_ (Just start_time) &&.
+            _d_status_last_reported status <=. val_ (Just end_time))
+    pure status
