@@ -1,5 +1,3 @@
-{-# LANGUAGE CPP                 #-}
-
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
@@ -46,17 +44,18 @@ import           Database.Beam.Postgres
 import           Database.BikeShare
 import           Database.Utils
 
+debug :: Bool
+debug = False
+
 
 -- | Enable SQL debug output if DEBUG flag is set.
 runBeamPostgres' :: Connection  -- ^ Connection to the database.
                  -> Pg a        -- ^ @MonadBeam@ in which we can run Postgres commands.
                  -> IO a
 runBeamPostgres' =
-#ifdef DEBUG
-  runBeamPostgresDebug'
-#else
-  runBeamPostgres
-#endif
+  if debug
+  then runBeamPostgresDebug'
+  else runBeamPostgres
 
 
 -- | @runBeamPostgresDebug@ prefilled with @pPrintCompact@.
