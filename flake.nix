@@ -77,6 +77,7 @@
                 hasktags
                 cabal-install
                 hlint
+                doctest
                 # stylish-haskell
                 ;
               # Disable ghcid.
