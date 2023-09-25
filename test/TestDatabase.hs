@@ -17,6 +17,7 @@ module TestDatabase
      , unit_insertStationInformationApi
      , unit_insertStationStatus
      , unit_insertStationStatusApi
+     , unit_queryStationByIdAndName
      , unit_queryStationStatus
      , unit_queryStationStatusBetween
      , unit_separateNewerStatusRecords
@@ -411,3 +412,19 @@ unit_queryStationStatusBetween = do
     (ReportTime $ read "2023-09-15 17:16:59")                     -- One second after first status reported.
     (reportTime (fromGregorian 2000 01 01) (TimeOfDay 00 00 00))  -- Arbitrary date
   assertEqual "Expected number of status records for #7001 with backwards time parameters" 0 (length statusBetweenBackwards)
+
+-- | HUnit test to validate that a station ID can be looked up by its name, and vice-versa.
+unit_queryStationByIdAndName :: IO ()
+unit_queryStationByIdAndName = do
+  conn <- setupDatabaseName dbnameTest
+  info <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
+  void $ insertStationInformation conn $ info ^. response_data . info_stations
+
+  assertEqual "Station ID for 'King St W / Joe Shuster Way'" (Just 7148) =<< queryStationId conn "King St W / Joe Shuster Way"
+  assertEqual "Station ID for 'Wellesley Station Green P'" (Just 7001) =<< queryStationId conn "Wellesley Station Green P"
+  assertEqual "Stations with name ending in 'Green P'"
+    [ (7001,"Wellesley Station Green P")
+    , (7050,"Richmond St E / Jarvis St Green P")
+    , (7112,"Liberty St / Fraser Ave Green P")
+    , (7789,"75 Holly St - Green P")
+    ] =<< queryStationIdLike conn "%Green P"
