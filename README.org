@@ -255,7 +255,7 @@ cabal test --test-show-details=direct
 ** Specific Test
 
 #+begin_src shell
-cabal test --test-show-details=direct test:haskbu-test -- -p '$0=="test/Driver.hs.TestDatabase.insertStationStatus"'
+cabal test --test-show-details=direct --test-options='--pattern /queryStationStatusBetween/'
 #+end_src
 
 #+RESULTS:

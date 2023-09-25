@@ -1,5 +1,3 @@
-{-# LANGUAGE CPP                 #-}
-
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
@@ -13,8 +11,11 @@ module Database.Operations
      , insertUpdatedStationStatus
      , printDisabledDocks
      , queryDisabledDocks
+     , queryStationId
+     , queryStationIdLike
      , queryStationInformation
      , queryStationInformationByIds
+     , queryStationName
      , queryStationStatus
      , queryStationStatusBetween
      , queryStationStatusFields
@@ -26,6 +27,8 @@ module Database.Operations
      , insert_deactivated
      , insert_inserted
        -- functions
+     , runBeamPostgres'
+     , runBeamPostgresDebug'
      , separateNewerStatusRecords
      ) where
 
@@ -42,8 +45,14 @@ import qualified Data.Text                                as Text
 import           Database.Beam
 import           Database.Beam.Backend.SQL.BeamExtensions
 import           Database.Beam.Postgres
+import qualified Database.Beam.Postgres                   as Pg
 import           Database.BikeShare
 import           Database.Utils
+
+import           Fmt
+
+debug :: Bool
+debug = False
 
 
 -- | Enable SQL debug output if DEBUG flag is set.
@@ -51,11 +60,9 @@ runBeamPostgres' :: Connection  -- ^ Connection to the database.
                  -> Pg a        -- ^ @MonadBeam@ in which we can run Postgres commands.
                  -> IO a
 runBeamPostgres' =
-#ifdef DEBUG
-  runBeamPostgresDebug'
-#else
-  runBeamPostgres
-#endif
+  if debug
+  then runBeamPostgresDebug'
+  else runBeamPostgres
 
 
 -- | @runBeamPostgresDebug@ prefilled with @pPrintCompact@.
@@ -166,34 +173,36 @@ Find the corresponding active rows in the database corresponding to each element
 getRowsToDeactivate :: Connection         -- ^ Connection to the database.
                     -> [AT.StationStatus] -- ^ List of 'AT.StationStatus' from the API response.
                     -> IO [StationStatus] -- ^ List of 'StationStatus' rows that would need to be deactivated, if the statuses from the API were inserted.
-getRowsToDeactivate conn api_status = do
-  -- Select using common table expressions (selectWith).
-  runBeamPostgres' conn $ runSelectReturningList $ selectWith $ do
-    -- Common table expression for 'StationInformation'.
-    common_info <- selecting $
-        filter_ (\info -> _info_station_id info `in_` map (fromIntegral . _status_station_id) api_status)
-        (all_ (bikeshareDb ^. bikeshareStationInformation))
+getRowsToDeactivate conn api_status
+  | null api_status = return []
+  | otherwise = do
+    -- Select using common table expressions (selectWith).
+    runBeamPostgres' conn $ runSelectReturningList $ selectWith $ do
+      -- Common table expression for 'StationInformation'.
+      common_info <- selecting $
+          filter_ (\info -> _info_station_id info `in_` map (fromIntegral . _status_station_id) api_status)
+          (all_ (bikeshareDb ^. bikeshareStationInformation))
 
-    -- Common table expression for 'StationStatus'.
-    common_status <- selecting $ do
-      info <- Database.Beam.reuse common_info
-      status <- orderBy_ (desc_ . _d_status_id) $
-        all_ (bikeshareDb ^. bikeshareStationStatus)
-      guard_ (_d_status_info_id status `references_` info)
-      pure status
+      -- Common table expression for 'StationStatus'.
+      common_status <- selecting $ do
+        info <- Database.Beam.reuse common_info
+        status <- orderBy_ (asc_ . _d_status_id) $
+          all_ (bikeshareDb ^. bikeshareStationStatus)
+        guard_ (_d_status_info_id status `references_` info)
+        pure status
 
-    -- Select from station status.
-    pure $ do
-      -- Transform each 'AT.StationStatus' into corresponding rows, containing '_status_station_id' and '_status_last_reported'.
-      api_values <- values_ $ map (\s -> ( as_ @Int32 ( fromIntegral $ _status_station_id s)
-                                         , cast_ (val_ $ _status_last_reported s) (maybeType reportTimeType))
-                                  ) api_status
-      -- Select from station status where the last reported time is older than in the API response.
-      status <- Database.Beam.reuse common_status
-      guard_ (_d_status_station_id    status ==. fst api_values &&. -- Station ID
-              _d_status_active        status ==. val_ True      &&. -- Status record is active
-              _d_status_last_reported status <.  snd api_values)    -- Last reported time is older than in the API response
-      pure status
+      -- Select from station status.
+      pure $ do
+        -- Transform each 'AT.StationStatus' into corresponding rows, containing '_status_station_id' and '_status_last_reported'.
+        api_values <- values_ $ map (\s -> ( as_ @Int32 ( fromIntegral $ _status_station_id s)
+                                           , cast_ (val_ $ _status_last_reported s) (maybeType reportTimeType))
+                                    ) api_status
+        -- Select from station status where the last reported time is older than in the API response.
+        status <- Database.Beam.reuse common_status
+        guard_ (_d_status_station_id    status ==. fst api_values &&. -- Station ID
+                _d_status_active        status ==. val_ True      &&. -- Status record is active
+                _d_status_last_reported status <.  snd api_values)    -- Last reported time is older than in the API response
+        pure status
 
 {- |
 Separate API 'AT.StationStatus' into two lists:
@@ -229,44 +238,59 @@ Insert updated station status into the database.
 insertUpdatedStationStatus :: Connection         -- ^ Connection to the database.
                            -> [AT.StationStatus] -- ^ List of 'AT.StationStatus' from the API response.
                            -> IO InsertStatusResult
-insertUpdatedStationStatus conn api_status = do
-  -- Get information for the stations that are in the status response.
-  info_ids <- map _info_station_id <$> queryStationInformationByIds conn status_ids
+insertUpdatedStationStatus conn api_status
+  | null api_status = return $ InsertStatusResult [] []
+  | otherwise = do
+    info_ids <- map (fromIntegral . _info_station_id) <$> queryStationInformationByIds conn status_ids
 
-  -- Filter out statuses that don't have corresponding information in the database.
-  let status = filter (\ss -> fromIntegral (_status_station_id ss) `elem` info_ids) api_status
+    let status = filter (\ss -> fromIntegral (_status_station_id ss) `elem` info_ids) api_status
 
-  -- Determine which rows will be deactivated.
-  statuses_to_deactivate <- case length api_status of
-    0 -> pure []                             -- No need to query if there are no statuses to update.
-    _ -> getRowsToDeactivate conn api_status -- Get rows to deactivate.
-  let status_ids' =  map _d_status_id statuses_to_deactivate
+    statuses_to_deactivate <- getRowsToDeactivate conn status
+    updated_statuses <- deactivateOldStatus conn statuses_to_deactivate
+    -- inserted_statuses <- insertNewStatus conn $
+    --   filter (\ss -> ss ^. status_station_id `notElem`
+    --                  map (fromIntegral . _d_status_station_id) updated_statuses
+    --          ) status
+    -- Insert new records for records that were deactivated.
+    inserted_statuses <- insertNewStatus conn $
+      filter (\ss -> ss ^. status_station_id `elem`
+                     map (fromIntegral . _d_status_station_id) updated_statuses
+             ) status
 
-  -- Deactivate status rows which we have new data for.
-  updated_statuses <- case length statuses_to_deactivate of
-    0 -> pure [] -- Can't update if there are no statuses to update (SQL restriction).
-    _ ->         -- Set returned station statuses as inactive.
-      runBeamPostgres' conn $ runUpdateReturningList $
-        update (bikeshareDb ^. bikeshareStationStatus)
-        (\c -> _d_status_active c <-. val_ False)
-        (\c -> _d_status_id c `in_` map val_ status_ids')
+    -- Select arbitrary (in this case, last [by ID]) status record for each station ID.
+    distinct_by_id <- selectDistinctByStationId conn status
 
-  -- Insert new status rows.
-  inserted_statuses <- case length status of
-    0 -> pure [] -- No need to insert if there are no statuses to insert.
-    _ ->         -- Insert rows for each 'AT.StationStatus' that has newer data.
-      runBeamPostgres' conn $ runInsertReturningList $
-        insert (bikeshareDb ^. bikeshareStationStatus) $
-        insertExpressions $ map fromJSONToBeamStationStatus status
+    -- Insert new records corresponding to station IDs which did not already exist in the station_status table.
+    new_status <- insertNewStatus conn $
+      filter (\ss -> ss ^. status_station_id `notElem`
+                     map (fromIntegral . _d_status_station_id) distinct_by_id &&
+                     ss ^. status_station_id `elem` info_ids
+             ) status
 
-  pure $ InsertStatusResult { _insert_deactivated = updated_statuses
-                            , _insert_inserted    = inserted_statuses
-                            }
+
+    return $ InsertStatusResult updated_statuses (inserted_statuses ++ new_status)
 
   where
-    status_ids :: [Int]
     status_ids = fromIntegral <$> api_status ^.. traverse . status_station_id
 
+    selectDistinctByStationId conn' status
+      | null status = return []
+      | otherwise = runBeamPostgres' conn' $ runSelectReturningList $ select $ do
+          Pg.pgNubBy_ _d_status_station_id $ orderBy_ (desc_ . _d_status_station_id) $
+            all_ (bikeshareDb ^. bikeshareStationStatus)
+
+    deactivateOldStatus conn' status
+      | null status = return []
+      | otherwise = runBeamPostgres' conn' $ runUpdateReturningList $
+          update (bikeshareDb ^. bikeshareStationStatus)
+          (\c -> _d_status_active c <-. val_ False)
+          (\c -> _d_status_id c `in_` map (val_ . _d_status_id) status)
+
+    insertNewStatus conn' status
+      | null status = return []
+      | otherwise = runBeamPostgres' conn' $ runInsertReturningList $
+          insert (bikeshareDb ^. bikeshareStationStatus) $
+          insertExpressions $ map fromJSONToBeamStationStatus status
 
 {- |
 Query the statuses for a station between two times.
@@ -286,3 +310,79 @@ queryStationStatusBetween conn station_id start_time end_time = do
             _d_status_last_reported status >=. val_ (Just start_time) &&.
             _d_status_last_reported status <=. val_ (Just end_time))
     pure status
+
+{- |
+Query the station name given a station ID.
+-}
+queryStationName :: Connection        -- ^ Connection to the database.
+                 -> Int               -- ^ Station ID.
+                 -> IO (Maybe String) -- ^ Station name assosicated with the given station ID.
+queryStationName conn station_id = do
+  info <- runBeamPostgres' conn $ runSelectReturningOne $ select $ do
+    info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
+    guard_ (_info_station_id info ==. val_ (fromIntegral station_id))
+    pure info
+
+  let station_name = info ^. _Just . info_name
+
+  pure $ Just $ Text.unpack station_name
+
+
+{- |
+Query the station ID for given a station name, using SQL `=` semantics.
+
+== __Examples__
+Get ID for "King St W / Joe Shuster Way":
+
+>>> queryStationId conn "King St W / Joe Shuster Way"
+Just 7148
+
+Get ID for "Wellesley Station Green P":
+
+>>> queryStationId conn "Wellesley Station Green P"
+Just 7001
+-}
+queryStationId :: Connection        -- ^ Connection to the database.
+                 -> String          -- ^ Station ID.
+                 -> IO (Maybe Int)  -- ^ Station ID assosicated with the given station name, if found.
+queryStationId conn station_name = do
+  info <- runBeamPostgres' conn $ runSelectReturningOne $ select $ do
+    info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
+    guard_ (_info_name info ==. val_ (Text.pack station_name))
+    pure info
+
+  pure $ fromIntegral <$> info ^? _Just . info_station_id
+
+
+{- | Query possible station IDs matching a given station name, using SQL `LIKE` semantics.
+
+== __Examples__
+
+Search for station names ending with "Green P":
+
+>>> queryStationIdLike conn "%Green P"
+[ (7001,"Wellesley Station Green P")
+, (7050,"Richmond St E / Jarvis St Green P")
+, (7112,"Liberty St / Fraser Ave Green P")
+, (7789,"75 Holly St - Green P") ]
+
+Search for station names containing "Joe Shuster":
+
+>>> queryStationIdLike conn "%Joe Shuster%"
+[(7148,"King St W / Joe Shuster Way")]
+
+__Return:__ Tuples of (station ID, station name) matching the searched name, using SQL `LIKE` semantics.
+-}
+queryStationIdLike :: Connection          -- ^ Connection to the database.
+                   -> String              -- ^ Station ID.
+                   -> IO [(Int, String)]  -- ^ Tuples of (station ID, name) for stations that matched the query.
+queryStationIdLike conn station_name = do
+  info <- runBeamPostgres' conn $ runSelectReturningList $ select $ do
+    info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
+    guard_ (_info_name info `like_` val_ (Text.pack station_name))
+    pure info
+
+  -- Return tuples of (station_id, station_name)
+  pure $ map (\si -> ( si ^. info_station_id & fromIntegral
+                     , si ^. info_name & Text.unpack
+                     )) info

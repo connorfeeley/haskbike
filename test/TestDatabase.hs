@@ -17,6 +17,7 @@ module TestDatabase
      , unit_insertStationInformationApi
      , unit_insertStationStatus
      , unit_insertStationStatusApi
+     , unit_queryStationByIdAndName
      , unit_queryStationStatus
      , unit_queryStationStatusBetween
      , unit_separateNewerStatusRecords
@@ -40,6 +41,8 @@ import           Database.Operations
 import           Database.Utils
 
 import           Fmt
+
+import           ReportTime
 
 import           Test.Tasty.HUnit
 
@@ -71,14 +74,28 @@ getDecodedFileStatus :: FromJSON StationStatusResponse
                      -> IO StationStatusResponse  -- ^ Decoded 'StationStatusReponse'.
 getDecodedFileStatus = getDecodedFile
 
+
+-- | Initialize empty database from the test station information response and all 22 station status responses.
+initDBWithAllTestData :: Connection -- ^ Database connection
+                      -> IO ()
+initDBWithAllTestData conn = do
+  info <- getDecodedFileInformation  "docs/json/2.3/station_information-1.json"
+  void $ insertStationInformation   conn $ info   ^. response_data . info_stations
+
+  -- Insert test station status data 1-22.
+  mapM_ (\i -> do
+            statusResponse <- getDecodedFileStatus $ "docs/json/2.3/station_status-"+|i|+".json"
+            void $ insertUpdatedStationStatus conn $ statusResponse ^. response_data . status_stations
+        ) [(1 :: Int) .. (22 :: Int)]
+
+
 -- | HUnit test for inserting station information.
 unit_insertStationInformation :: IO ()
 unit_insertStationInformation = do
   -- Connect to the database.
   conn <- setupDatabaseName dbnameTest
 
-  stationInformationResponse <- getDecodedFile "test/json/station_information.json"
-                              :: IO StationInformationResponse
+  stationInformationResponse <- getDecodedFileInformation "test/json/station_information.json"
 
   -- Insert test data.
   inserted_info <- insertStationInformation conn $ _info_stations $ stationInformationResponse ^. response_data
@@ -92,10 +109,8 @@ unit_insertStationStatus = do
   -- Connect to the database.
   conn <- setupDatabaseName dbnameTest
 
-  info    <- getDecodedFile "docs/json/2.3/station_information-1.json"
-          :: IO StationInformationResponse
-  status  <- getDecodedFile "test/json/station_status.json"
-          :: IO StationStatusResponse
+  info    <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
+  status  <- getDecodedFileStatus      "test/json/station_status.json"
 
   -- Insert test data.
   inserted_info   <- insertStationInformation   conn $ info   ^. response_data . info_stations
@@ -111,10 +126,8 @@ unit_queryStationStatus = do
   -- Connect to the database.
   conn <- setupDatabaseName dbnameTest
 
-  info    <- getDecodedFile "test/json/station_information.json"
-          :: IO StationInformationResponse
-  status  <- getDecodedFile "test/json/station_status.json"
-          :: IO StationStatusResponse
+  info    <- getDecodedFileInformation  "test/json/station_information.json"
+  status  <- getDecodedFileStatus       "test/json/station_status.json"
 
   -- Insert test data.
   inserted_info   <- insertStationInformation   conn $ info   ^. response_data . info_stations
@@ -133,8 +146,7 @@ unit_insertStationInformationApi = do
   -- Connect to the database.
   conn <- setupDatabaseName dbnameTest
 
-  info    <- getDecodedFile "docs/json/2.3/station_information-1.json"
-          :: IO StationInformationResponse
+  info    <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
 
   -- Insert test data.
   void $ insertStationInformation conn $ info ^. response_data . info_stations
@@ -146,17 +158,13 @@ unit_insertStationStatusApi = do
   -- Connect to the database.
   conn <- setupDatabaseName dbnameTest
 
-  status  <- getDecodedFile "docs/json/2.3/station_status-1.json"
-          :: IO StationStatusResponse
-
-  -- Insert test data.
-  void $ insertUpdatedStationStatus conn $ status ^. response_data . status_stations
+  status  <- getDecodedFileStatus "docs/json/2.3/station_status-1.json"
 
   -- Should fail because station information has not been inserted.
-  inserted_info <- insertUpdatedStationStatus conn $ status ^. response_data . status_stations
+  inserted_status <- insertUpdatedStationStatus conn $ status ^. response_data . status_stations
 
-  assertEqual "Inserted station status" [] $ inserted_info ^. insert_inserted
-  assertEqual "Updated station status"  [] $ inserted_info ^. insert_deactivated
+  assertEqual "Inserted station status" [] $ inserted_status ^. insert_inserted
+  assertEqual "Updated station status"  [] $ inserted_status ^. insert_deactivated
 
 -- | HUnit test for inserting station information and status, with data from the actual API.
 unit_insertStationApi :: IO ()
@@ -164,10 +172,8 @@ unit_insertStationApi = do
   -- Connect to the database.
   conn <- setupDatabaseName dbnameTest
 
-  info    <- getDecodedFile "docs/json/2.3/station_information-1.json"
-          :: IO StationInformationResponse
-  status  <- getDecodedFile "docs/json/2.3/station_status-1.json"
-          :: IO StationStatusResponse
+  info    <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
+  status  <- getDecodedFileStatus      "docs/json/2.3/station_status-1.json"
 
   -- Insert test data.
   inserted_info   <- insertStationInformation   conn $ info   ^. response_data . info_stations
@@ -206,12 +212,9 @@ unit_getRowsToDeactivate = do
 -- | Query updated station status and return a list of database statuses.
 doGetRowsToDeactivate :: Connection -> IO [StationStatusT Identity]
 doGetRowsToDeactivate conn = do
-  info      <- getDecodedFile "docs/json/2.3/station_information-1.json"
-            :: IO StationInformationResponse
-  status_1  <- getDecodedFile "docs/json/2.3/station_status-1.json"
-            :: IO StationStatusResponse
-  status_2  <- getDecodedFile "docs/json/2.3/station_status-2.json"
-            :: IO StationStatusResponse
+  info      <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
+  status_1  <- getDecodedFileStatus      "docs/json/2.3/station_status-1.json"
+  status_2  <- getDecodedFileStatus      "docs/json/2.3/station_status-2.json"
 
   -- Insert test data.
   void $ insertStationInformation   conn $ info   ^. response_data . info_stations
@@ -254,12 +257,9 @@ unit_separateNewerStatusRecords = do
 -- | Query updated station status and return a list of API statuses.
 doSeparateNewerStatusRecords :: Connection -> IO FilterStatusResult
 doSeparateNewerStatusRecords conn = do
-  info      <- getDecodedFile "docs/json/2.3/station_information-1.json"
-            :: IO StationInformationResponse
-  status_1  <- getDecodedFile "docs/json/2.3/station_status-1.json"
-            :: IO StationStatusResponse
-  status_2  <- getDecodedFile "docs/json/2.3/station_status-2.json"
-            :: IO StationStatusResponse
+  info      <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
+  status_1  <- getDecodedFileStatus      "docs/json/2.3/station_status-1.json"
+  status_2  <- getDecodedFileStatus      "docs/json/2.3/station_status-2.json"
 
   -- Insert test data.
   void $ insertStationInformation   conn $ info   ^. response_data . info_stations
@@ -291,12 +291,9 @@ unit_separateNewerStatusRecordsInsert = do
 doSeparateNewerStatusRecordsInsertOnce :: Connection        -- ^ Database connection
                                    -> IO InsertStatusResult -- ^ Result of inserting updated station statuses.
 doSeparateNewerStatusRecordsInsertOnce conn = do
-  info      <- getDecodedFile "docs/json/2.3/station_information-1.json"
-            :: IO StationInformationResponse
-  status_1  <- getDecodedFile "docs/json/2.3/station_status-1.json"
-            :: IO StationStatusResponse
-  status_2  <- getDecodedFile "docs/json/2.3/station_status-2.json"
-            :: IO StationStatusResponse
+  info      <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
+  status_1  <- getDecodedFileStatus      "docs/json/2.3/station_status-1.json"
+  status_2  <- getDecodedFileStatus      "docs/json/2.3/station_status-2.json"
 
   -- Insert test data.
   void $ insertStationInformation   conn $ info   ^. response_data . info_stations
@@ -356,27 +353,44 @@ doSeparateNewerStatusRecordsInsertTwice conn = do
   -- Insert second round of test data once again (nothing should have changed).
   insertUpdatedStationStatus conn $ updated_2 ^. filter_newer
 
+
+-- | HUnit test to validate that a station ID can be looked up by its name, and vice-versa.
+unit_queryStationByIdAndName :: IO ()
+unit_queryStationByIdAndName = do
+  conn <- setupDatabaseName dbnameTest
+  info <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
+  void $ insertStationInformation conn $ info ^. response_data . info_stations
+
+  assertEqual "Station ID for 'King St W / Joe Shuster Way'" (Just 7148) =<< queryStationId conn "King St W / Joe Shuster Way"
+  assertEqual "Station ID for 'Wellesley Station Green P'" (Just 7001) =<< queryStationId conn "Wellesley Station Green P"
+  assertEqual "Stations with name ending in 'Green P'"
+    [ (7001,"Wellesley Station Green P")
+    , (7050,"Richmond St E / Jarvis St Green P")
+    , (7112,"Liberty St / Fraser Ave Green P")
+    , (7789,"75 Holly St - Green P")
+    ] =<< queryStationIdLike conn "%Green P"
+
+
 -- | HUnit test to query all status records for a station between two times.
 unit_queryStationStatusBetween :: IO ()
 unit_queryStationStatusBetween = do
-  -- TODO: shouldn't have to wipe and reinsert data for each test.
-  -- First status for #7001 was inserted at 2023-09-15 17:16:58; last status at 2023-09-15 17:35:00.
   conn <- setupDatabaseName dbnameTest
-  statusBetweenAll <- doQueryStationStatusBetween conn 7001
+  initDBWithAllTestData conn
+
+  -- First status for #7001 was inserted at 2023-09-15 17:16:58; last status at 2023-09-15 17:35:00.
+  statusBetweenAll <- queryStationStatusBetween conn 7001
     (ReportTime $ read "2023-09-15 17:16:58")
     (ReportTime $ read "2023-09-15 17:35:00")
   assertEqual "Expected number of status records for #7001 between two valid times" 4 (length statusBetweenAll)
 
   -- Query for status records for #7001 between two times, where the start and end time match the first status report.
-  conn <- setupDatabaseName dbnameTest
-  statusBetweenFirst <- doQueryStationStatusBetween conn 7001
+  statusBetweenFirst <- queryStationStatusBetween conn 7001
     (ReportTime $ read "2000-09-15 17:16:58") -- Moment the first status was reported.
     (ReportTime $ read "2023-09-15 17:16:58") -- Moment the first status was reported.
   assertEqual "Expected number of status records for #7001 for first status reported" 1 (length statusBetweenFirst)
 
   -- Query for status records for #7001 between two times, where the end time is before the first status was reported.
-  conn <- setupDatabaseName dbnameTest
-  statusBetweenTooEarly <- doQueryStationStatusBetween conn 7001
+  statusBetweenTooEarly <- queryStationStatusBetween conn 7001
     (ReportTime $ read "2000-01-01 00:00:00") -- Arbitrary date
     (ReportTime $ read "2023-09-15 17:16:57") -- One second before first status reported.
   assertEqual "Expected number of status records for #7001 before first status reported" 0 (length statusBetweenTooEarly)
@@ -384,33 +398,11 @@ unit_queryStationStatusBetween = do
   {-
   Query for status records for #7001 between two times, where the earliest time is *after* the first status was reported,
   and the end time is *before* the first status was reported.
+
+  NOTE: as an example, uses both 'ReportTime $ ...' and 'reportTime ...' to construct a 'ReportTime' value.
   -}
-  conn <- setupDatabaseName dbnameTest
-  statusBetweenBackwards <- doQueryStationStatusBetween conn 7001
-    (ReportTime $ read "2023-09-15 17:16:59") -- One second after first status reported.
-    (ReportTime $ read "2000-01-01 00:00:00") -- Arbitrary date
+  statusBetweenBackwards <- queryStationStatusBetween conn 7001
+    (ReportTime $ read "2023-09-15 17:16:59")                     -- One second after first status reported.
+    (reportTime (fromGregorian 2000 01 01) (TimeOfDay 00 00 00))  -- Arbitrary date
   assertEqual "Expected number of status records for #7001 with backwards time parameters" 0 (length statusBetweenBackwards)
 
-
--- | Query all status records for a station between two times.
-doQueryStationStatusBetween :: Connection         -- ^ Database connection
-                            -> Int                -- ^ Station ID
-                            -> ReportTime         -- ^ Earliest time to return records for.
-                            -> ReportTime         -- ^ Latest time to return records for.
-                            -> IO [StationStatus] -- ^ Result of querying station status between two times.
-doQueryStationStatusBetween conn station_id start_time end_time = do
-  -- Insert station information.
-  info    <- getDecodedFileInformation  "docs/json/2.3/station_information-1.json"
-  status  <- getDecodedFileStatus       "docs/json/2.3/station_status-1.json"
-  void $ insertStationInformation   conn $ info   ^. response_data . info_stations
-  void $ insertUpdatedStationStatus conn $ status ^. response_data . status_stations
-
-  -- Insert test station status data 1-22.
-  mapM_ (\i -> do
-            statusResponse <- getDecodedFile $ "docs/json/2.3/station_status-"+|i|+".json"
-            updated <- separateNewerStatusRecords conn $ statusResponse ^. response_data . status_stations
-            void $ insertUpdatedStationStatus conn $ updated ^. filter_newer
-        ) [(2 :: Int) .. (22 :: Int)] -- FIXME: shouldn't have to handle first insertion differently.
-
-  -- Query database for station status between two times.
-  queryStationStatusBetween conn station_id start_time end_time
