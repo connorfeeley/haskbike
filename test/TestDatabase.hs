@@ -41,6 +41,8 @@ import           Database.Utils
 
 import           Fmt
 
+import           ReportTime
+
 import           Test.Tasty.HUnit
 
 
@@ -402,8 +404,10 @@ unit_queryStationStatusBetween = do
   {-
   Query for status records for #7001 between two times, where the earliest time is *after* the first status was reported,
   and the end time is *before* the first status was reported.
+
+  NOTE: as an example, uses both 'ReportTime $ ...' and 'reportTime ...' to construct a 'ReportTime' value.
   -}
   statusBetweenBackwards <- queryStationStatusBetween conn 7001
-    (ReportTime $ read "2023-09-15 17:16:59") -- One second after first status reported.
-    (ReportTime $ read "2000-01-01 00:00:00") -- Arbitrary date
+    (ReportTime $ read "2023-09-15 17:16:59")                     -- One second after first status reported.
+    (reportTime (fromGregorian 2000 01 01) (TimeOfDay 00 00 00))  -- Arbitrary date
   assertEqual "Expected number of status records for #7001 with backwards time parameters" 0 (length statusBetweenBackwards)

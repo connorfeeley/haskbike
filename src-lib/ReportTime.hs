@@ -14,8 +14,8 @@ module ReportTime
      , reportTimeType
      , reportTimeZone
      -- Re-exports for ReportTime constructors
-     , Day
-     , TimeOfDay
+     , Day(..)
+     , TimeOfDay(..)
      , fromGregorian
      ) where
 
