@@ -115,7 +115,7 @@
           name = "haskbike-docker";
 
           # Install nginx
-          contents = [ self'.packages.haskbike-static pkgs.cacert ];
+          copyToRoot = [ self'.packages.haskbike-static pkgs.cacert ];
 
           # Extra build commands
           # extraCommands = ''
