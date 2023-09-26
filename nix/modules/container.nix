@@ -112,7 +112,7 @@ in
             })
           ];
         });
-      packages.aarch64-darwin.darwinVM = self.nixosConfigurations.darwinVM.config.system.build.vm;
+      packages.aarch64-darwin.darwin-vm = self.nixosConfigurations.darwin-vm.config.system.build.vm;
     };
   };
 }

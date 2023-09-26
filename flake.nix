@@ -3,6 +3,8 @@
     nixpkgs.url = "github:nixos/nixpkgs/nixos-23.05";
     flake-parts.url = "github:hercules-ci/flake-parts";
     haskell-flake.url = "github:srid/haskell-flake";
+    treefmt-nix.url = "github:numtide/treefmt-nix";
+    flake-root.url = "github:srid/flake-root";
     flake-compat = { url = "github:edolstra/flake-compat"; flake = false; };
   };
   outputs = inputs@{ self, nixpkgs, flake-parts, ... }:
@@ -12,11 +14,14 @@
       imports = [
         inputs.haskell-flake.flakeModule
 
+        inputs.treefmt-nix.flakeModule
+        inputs.flake-root.flakeModule
+
         # Import this repo's modules.
         ./nix/modules
       ];
 
-      perSystem = { self', pkgs, ... }: {
+      perSystem = { self', config, pkgs, ... }: {
 
         # Typically, you just want a single project named "default". But
         # multiple projects are also possible, each using different GHC version.
@@ -27,7 +32,7 @@
 
           settings = {
             haskbike = {
-              check                = false;   # Don't run cabal tests as part of build.
+              check = false; # Don't run cabal tests as part of build.
 
               # Profiling options.
               # libraryProfiling     = false;   # Disable profiling for libraries.
@@ -79,6 +84,7 @@
                 hlint
                 doctest
                 stylish-haskell
+
                 ;
               # Disable ghcid.
               # ghcid = null;
@@ -90,8 +96,10 @@
                 postgresql
                 pgadmin
                 litecli
-              ;
-            };
+                ;
+
+              treefmt = config.treefmt.build.wrapper;
+            } // config.treefmt.build.programs;
 
             hlsCheck.enable = false;
           };
@@ -107,7 +115,7 @@
           name = "haskbike-docker";
 
           # Install nginx
-          contents = [ self'.packages.haskbike-static pkgs.cacert ];
+          copyToRoot = [ self'.packages.haskbike-static pkgs.cacert ];
 
           # Extra build commands
           # extraCommands = ''
@@ -125,6 +133,22 @@
           config = {
             Cmd = [ "haskbike" ];
           };
+        };
+
+        treefmt.config = {
+          inherit (config.flake-root) projectRootFile;
+          # This is the default, and can be overriden.
+          package = pkgs.treefmt;
+          # formats .hs files
+          programs.stylish-haskell.enable = true;
+          # formats .nix files
+          programs.nixpkgs-fmt.enable = true;
+          # formats .cabal files
+          programs.cabal-fmt.enable = false;
+          # Suggests improvements for your code in .hs files
+          programs.hlint.enable = false;
+
+          settings.formatter.stylish-haskell.excludes = [ "./test/Driver.hs" ];
         };
       };
     };
