@@ -7,16 +7,16 @@
 
 module ReportTime
      ( ReportTime (..)
-     , reportTime
      , addHours
      , localToPosix
      , localToSystem
      , posixToLocal
+     , reportTime
      , reportTimeType
      , reportTimeZone
-     -- Re-exports for ReportTime constructors
-     , Day(..)
-     , TimeOfDay(..)
+       -- Re-exports for ReportTime constructors
+     , Day (..)
+     , TimeOfDay (..)
      , fromGregorian
      ) where
 

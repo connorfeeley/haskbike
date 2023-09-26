@@ -15,14 +15,14 @@ module API.ResponseWrapper
      , response_version
      ) where
 
-import           ReportTime
-
 import           Control.Lens hiding ( (.=) )
 
 import           Data.Aeson
 import           Data.Time    ( LocalTime )
 
 import           GHC.Generics
+
+import           ReportTime
 
 
 -- | A type representing a BikeShare response.
