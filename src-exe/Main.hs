@@ -26,6 +26,8 @@ import           Database.Migrations
 import           Database.Operations
 import           Database.Utils
 
+import           Options.Applicative
+
 import           Prelude                hiding ( log )
 
 import           Servant.Client         ( ClientError )
@@ -34,17 +36,33 @@ import           System.Environment
 import           System.Exit            ( exitSuccess )
 
 import           UnliftIO               ( MonadUnliftIO )
-import Options.Applicative
 
-data Options = Options
-  { optVerbose :: Bool
-  , optInputFile :: FilePath
-  , optOutputFile :: FilePath
-  } deriving (Show)
+data Command where
+  Poll :: Command
+  Reset :: Command
+  deriving (Show)
+
+data Options where
+  Options :: { optCommand :: !Command
+             , optVerbose :: Bool
+             , optInputFile :: FilePath
+             , optOutputFile :: FilePath
+             } -> Options
+  deriving (Show)
+
+parseCommand :: Parser Command
+parseCommand =
+  flag' Poll
+  ( long "poll"
+    <> help "Run Poll command")
+  <|> flag' Reset
+  ( long "reset"
+    <> help "Run Reset command")
 
 parseOptions :: Parser Options
 parseOptions = Options
-  <$> switch
+  <$> parseCommand
+  <*> switch
       ( long "verbose"
      <> short 'v'
      <> help "Enable verbose output" )
@@ -65,7 +83,7 @@ main = runApp simpleEnv appMain
 appMain :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
         => m ()
 appMain = do
-  options <- liftIO $ execParser (info parseOptions fullDesc)
+  options <- liftIO $ customExecParser (prefs helpShowGlobals) opts
   liftIO $ print options
 
   -- Get command-line arguments
@@ -103,6 +121,12 @@ appMain = do
   when (null infoQuery) $ handleStationInformation conn
 
   P.pollClient conn
+  where
+    opts = info (parseOptions <**> helper)
+      ( fullDesc
+     <> progDesc "Poll the Toronto Bikeshare API."
+     <> header "Toronto Bikeshare API client" )
+
 
 handleStationInformation :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
                          => Connection -- ^ Database connection.
