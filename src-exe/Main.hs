@@ -106,7 +106,6 @@ appMain :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
 appMain = do
   -- Parse command line options.
   options <- liftIO $ customExecParser (prefs $ helpShowGlobals <> showHelpOnEmpty <> showHelpOnError) opts
-  liftIO $ print options
   log D $ "Parsed options" <> Text.pack (show options)
   conn <- handleDatabase options
 
