@@ -1,23 +1,25 @@
+-- | Test the client functions.
+
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module TestClient where
 
 import           API.Client
-import qualified API.Poll           as Poll
+import qualified API.Poll          as Poll
 
-import           Control.Exception  ( SomeException, try )
-import           Control.Monad      ( void )
+import           AppEnv
+
+import           Colog             ( Message, WithLog )
+
+import           Control.Exception ( SomeException, try )
+import           Control.Monad     ( void )
 
 import           Database.Utils
 
-import           System.IO          ( stdout )
-import           System.IO.Silently ( hSilence, silence )
-
 import           Test.Tasty.HUnit
 
-import           UnliftIO           ( stderr, timeout )
-
+import           UnliftIO          ( MonadIO, MonadUnliftIO, liftIO, timeout )
 
 -- | Mark a test as expected to fail.
 markAsExpectedFailure :: IO () -> IO ()
@@ -46,7 +48,9 @@ unit_parseSystemPricingPlans :: IO ()
 unit_parseSystemPricingPlans = void $ runQueryWithEnv systemPricingPlans
 
 unit_poll :: IO ()
-unit_poll = void $
-  timeout 1000000 $ do
-    conn <- setupDatabaseName dbnameTest
-    hSilence [ {- stdout, stderr -} ] $ pure $ Poll.pollClient conn
+unit_poll = runApp simpleEnv doPoll
+  where
+    doPoll :: (WithLog env Message m, MonadIO m, MonadUnliftIO m) => m ()
+    doPoll = void $ timeout 1000000 $ do -- Terminate after 1 second
+      conn <- liftIO $ setupDatabaseName dbnameTest
+      void $ Poll.pollClient conn

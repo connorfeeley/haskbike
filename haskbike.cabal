@@ -160,6 +160,7 @@ library
 
     -- Modules exported by the library.
     exposed-modules:  BikeShareAPI
+                    , AppEnv
                     , API.ResponseWrapper
                     , API.Client
                     , API.Poll
