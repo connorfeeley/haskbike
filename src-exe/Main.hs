@@ -16,7 +16,7 @@ import           Colog                  ( Message, WithLog, log, pattern I, patt
 import           Colog.Message          ( logException )
 
 import           Control.Lens
-import           Control.Monad          ( when )
+import           Control.Monad          ( when, (<=<) )
 import           Control.Monad.IO.Class ( MonadIO (liftIO) )
 
 import qualified Data.Text              as Text
@@ -103,42 +103,33 @@ appMain = do
   options <- liftIO $ customExecParser (prefs $ helpShowGlobals <> showHelpOnEmpty <> showHelpOnError) opts
   liftIO $ print options
 
-  -- Get command-line arguments
-  args <- liftIO getArgs
+  conn <- case optCommand options of
+    Poll ->
+      connectToDatabase dbnameProduction
 
-  conn <- if "--migrate" `elem` args || "--migrate-only" `elem` args
-    then do
-      -- Perform database migrations.
-      log W "Migrating database."
-
-      conn' <- liftIO $ connectDbName dbnameProduction
-      _ <- liftIO $ migrateDB conn'
-
-      -- Exit if only migrations were requested.
-      when ("--migrate-only" `elem` args) $
-        log W "Migrating database." >>
+    Reset resetOptions -> if optResetOnly resetOptions
+      then do
+        log W "Resetting database."
+        conn <- liftIO $ setupDatabaseName dbnameTest
+        -- Insert station information if missing from database.
+        infoQuery <- liftIO $ queryStationInformation conn
+        when (null infoQuery) $ handleStationInformation conn
+        -- Exit.
         liftIO exitSuccess
-
-      pure conn'
-    else if "--reset" `elem` args then do
-      -- Reset the database.
-      log W "Resetting database."
-      conn <- liftIO $ setupDatabaseName dbnameProduction
-
-      -- Insert station information if missing from database.
-      infoQuery <- liftIO $ queryStationInformation conn
-      when (null infoQuery) $ handleStationInformation conn
-      -- Exit.
-      liftIO exitSuccess
-    -- Otherwise, connect to the database.
-    else log I "Connecting to database." >> liftIO (connectDbName dbnameProduction)
-
+      else do
+        log W "Migrating database."
+        conn' <- liftIO $ connectDbName dbnameProduction
+        _ <- liftIO $ migrateDB conn'
+        pure conn'
   -- Insert station information if missing from database.
   infoQuery <- liftIO $ queryStationInformation conn
   when (null infoQuery) $ handleStationInformation conn
 
   P.pollClient conn
   where
+    connectToDatabase name = do
+      log I "Connecting to database."
+      liftIO $ connectDbName name
     opts = info (parseOptions <**> helper)
       ( fullDesc
      <> progDesc "Poll the Toronto Bikeshare API and inserts new records into the database."
@@ -156,3 +147,22 @@ handleStationInformation conn = do
       let stations = response ^. response_data . info_stations
       inserted <- liftIO $ insertStationInformation conn stations
       log I $ "Line length: " <> Text.pack (show $ length inserted)
+
+handleDatabase :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
+               => Options
+               -> m Connection
+handleDatabase options = case optCommand options of
+  Poll -> connectToDatabase dbnameProduction
+  Reset resetOptions
+    | optResetOnly resetOptions -> resetOnly dbnameTest
+    | otherwise -> migrate dbnameProduction
+  where
+    connectToDatabase name = log I "Connecting to database." >> liftIO (connectDbName name)
+    resetOnly name = log W "Resetting database." >> setupDb name >> liftIO exitSuccess
+    migrate name = log W "Migrating database." >> connectDbNameAndMigrate name
+    setupDb name = liftIO $ setupDatabaseName name
+    connectDbNameAndMigrate =
+      liftIO . (migrateDB' <=< connectDbName)
+
+migrateDB' :: Connection -> IO Connection
+migrateDB' conn = migrateDB conn >> return conn
