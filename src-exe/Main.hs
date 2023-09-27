@@ -38,9 +38,10 @@ import Data.Foldable (for_)
 
 -- | Top-level options.
 data Options where
-  Options :: { optCommand  :: !Command
-             , optVerbose  :: Bool
-             , optDatabase :: String
+  Options :: { optCommand         :: !Command
+             , optVerbose         :: Bool
+             , optDatabase        :: String
+             , optEnableMigration :: Bool
              } -> Options
   deriving (Show)
 
@@ -59,6 +60,10 @@ parseOptions = Options
      <> showDefault
      <> value dbnameProduction
      <> help "Target database name." )
+  <*> switch
+      ( long "enable-migrations"
+     <> showDefault
+     <> help "Perform database migrations." )
 
 -- | Top-level commands.
 data Command where
