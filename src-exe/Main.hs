@@ -3,6 +3,7 @@
 
 module Main
      ( main
+     , appMain
      ) where
 
 import           API.Client
