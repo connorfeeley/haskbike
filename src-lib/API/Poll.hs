@@ -1,129 +1,128 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DerivingStrategies  #-}
+{-# LANGUAGE LambdaCase          #-}
+{-# LANGUAGE PatternSynonyms     #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+
 {- |
 Poll the API for status updates, inserting results in database as needed.
 -}
-
-{-# LANGUAGE ScopedTypeVariables #-}
-
 module API.Poll
-     ( main
-     , pollClient
+     ( pollClient
      ) where
 
 import           API.Client
 import           API.ResponseWrapper
-import           API.Types                       ( StationStatusResponse, status_stations )
+import           API.Types              ( StationStatusResponse, status_stations )
 
-import           Control.Concurrent              ( threadDelay )
+import           Colog                  ( Message, Msg (msgText), WithLog, cmap, log, logException, pattern D,
+                                          pattern E, pattern I, withLog )
+
+import           Control.Concurrent     ( threadDelay )
 import           Control.Concurrent.STM
-import           Control.Concurrent.STM.TBMQueue
 import           Control.Lens
+import           Control.Monad          ( void )
+import           Control.Monad.Cont     ( forever )
 
-import           Database.Beam.Postgres          ( Connection )
-import           Database.BikeShare              ( d_status_last_reported, d_status_station_id )
+import qualified Data.Text              as Text
+
+import           Database.Beam.Postgres ( Connection )
+import           Database.BikeShare     ( d_status_last_reported, d_status_station_id )
 import           Database.Operations
-import           Database.Utils
 
-import           ReportTime                      ( localToPosix, localToSystem )
+import           Fmt
 
-import           UnliftIO.Async
+import           Prelude                hiding ( log )
 
+import           ReportTime             ( localToPosix, localToSystem )
 
-main :: IO ()
-main = do
-  -- Setup the database.
-  conn <- setupDatabaseName dbnameTest
+import           UnliftIO               ( MonadIO, MonadUnliftIO, liftIO )
+import           UnliftIO.Async         ( concurrently_ )
 
-  pollClient conn
-
-pollClient :: Connection -> IO ()
+pollClient :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
+           => Connection
+           -> m ()
 pollClient conn = do
-  ttl           <- newTVarIO (0 * 1000000)
-  last_updated  <- newTVarIO 0
-  queue_resp    <- newTBMQueueIO 4
+  (ttl, last_updated, queue_resp) <- liftIO $
+    (,,) <$> newTVarIO 0 <*> newTVarIO 0 <*> newTBQueueIO 4
 
-  -- Request status every second.
-  -- void $ forkIO $ forever $ fillQueue queue ttl
+  log I "Polling API for status updates."
+  void $
+    concurrently_
+      (statusRequester queue_resp ttl)
+      (statusHandler conn queue_resp last_updated)
+  log I "Done."
 
-  concurrently_
-    (statusRequester queue_resp ttl)
-    (statusHandler conn queue_resp last_updated)
+statusRequester :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
+                => TBQueue StationStatusResponse -- ^ Queue of responses
+                -> TVar Int                      -- ^ Interval between requests
+                -> m ()
+statusRequester queue interval_var = void . forever $ do
+  interval <- liftIO $ readTVarIO interval_var
+  log D $ "Sleeping for " <> Text.pack (show interval) <> " microseconds."
+  liftIO $ threadDelay interval
+  liftIO (runQueryWithEnv stationStatus) >>= \case
+    Left err -> logException err
+    Right result -> do
+      time' <- liftIO $ localToSystem (result ^. response_last_updated)
+      let ttl = result ^. response_ttl
+      log I $ "TTL=" <> Text.pack (show ttl) <> " | last updated=" <> Text.pack (show time')
+      liftIO $ atomically $ writeTVar interval_var (ttl * 1000000)
+      liftIO $ atomically $ writeTBQueue queue result
 
-statusRequester :: TBMQueue StationStatusResponse -> TVar Int -> IO ()
-statusRequester queue interval_var = loop'
-  where
-    loop' = do
-      interval <- readTVarIO interval_var
-      putStrLn $ "REQUEST: interval=" ++ show (interval `div` 1000000) ++ "s"
-      threadDelay interval
-
-      response <- runQueryWithEnv stationStatus
-      case response of
-        Left  err  -> putStrLn $ "REQUEST: error: " ++ show err
-        Right result -> do
-          time' <- localToSystem $ result ^. response_last_updated
-          let ttl = result ^. response_ttl
-          putStrLn $ "REQUEST: TTL=" ++ show ttl ++ " | " ++ "last updated=" ++ show time'
-
-          -- Update the interval
-          atomically $ writeTVar interval_var (ttl * 1000000)
-
-          -- Enqueue the response.
-          putStrLn "REQUEST: enqueing response"
-          atomically $ writeTBMQueue queue result
-
-          loop' -- Restart loop
-
-statusHandler :: Connection                     -- ^ Database connection
-              -> TBMQueue StationStatusResponse -- ^ Queue of responses
+statusHandler :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
+              => Connection                     -- ^ Database connection
+              -> TBQueue StationStatusResponse  -- ^ Queue of responses
               -> TVar Int                       -- ^ Last updated time
-              -> IO ()
-statusHandler conn queue last_updated =
-  loop'
-  where
-    loop' = do
-      mnext <- atomically $ readTBMQueue queue
-      case mnext of
-        Nothing -> atomically retry
-        Just response -> do
-          let currentTime = localToPosix $ response ^. response_last_updated
+              -> m ()
+statusHandler conn queue last_updated = void . forever $ do
+  response <- liftIO $ atomically $ readTBQueue queue
+  let currentTime = localToPosix $ response ^. response_last_updated
 
-          previousTime <- readTVarIO last_updated
+  previousTime <- liftIO $ readTVarIO last_updated
 
-          let timeElapsed = currentTime - previousTime
+  let timeElapsed = currentTime - previousTime
 
-          -- Check if last_updated went backwards
-          case timeElapsed >= 0 of
-            True  ->
-              -- Update last_updated variable.
-              atomically $ writeTVar last_updated currentTime
-            False -> do
-              putStrLn $ "HANDLER: last_updated went backwards: " ++ show previousTime ++ " -> " ++ show currentTime ++ "(" ++ show timeElapsed ++ ")"
+  -- Check if last_updated went backwards
+  if timeElapsed >= 0
+    then -- Update last_updated variable.
+      liftIO $ atomically $ writeTVar last_updated currentTime
+    else log E $ "last_updated went backwards: "
+      <> show previousTime <> " -> " <> show currentTime
+      <> "(" |++| show timeElapsed |++| ")"
 
-          let status = response ^. (response_data . status_stations)
-          putStrLn $ "HANDLER: status_stations=" ++ show (length status)
+  let status = response ^. (response_data . status_stations)
+  log I $ "TTL=" <> Text.pack (show (length status))
 
-          updated_api <- separateNewerStatusRecords conn status
-          -- pPrint $ listToMaybe status
-          -- pPrint $ listToMaybe $ updated_api ^. filter_newer
-          -- pPrint $ listToMaybe $ updated_api ^. filter_unchanged
+  updated_api <- liftIO $ separateNewerStatusRecords conn status
 
-          putStrLn $ "HANDLER:     newer="  ++ show (length $ updated_api ^. filter_newer)
-          putStrLn $ "HANDLER: unchanged="     ++ show (length $ updated_api ^. filter_unchanged)
+  -- Insert the updated status.
+  inserted_result <- liftIO $ insertStationStatus conn $ updated_api ^. filter_newer
 
-          -- Insert the updated status.
-          inserted_result <- insertStationStatus conn $ updated_api ^. filter_newer
-
-          let message_data = zipWith (\ updated inserted ->
-                                 ( inserted ^.. d_status_station_id
-                                 , updated  ^.. d_status_last_reported
-                                 , inserted ^.. d_status_last_reported
-                                 ))
-                                 (inserted_result ^. insert_deactivated) (inserted_result ^. insert_inserted)
-          let messages = map (\(sid, last_reported, last_reported') ->
-                   "ID: [" ++ show sid ++ "] " ++ -- ID
-                   show last_reported ++ "->" ++ show last_reported' -- [prev reported] -> [new reported]
-                ) message_data
-          mapM_ putStrLn messages
-          putStrLn $ "HANDLER: updated=" ++ show (length $ inserted_result ^. insert_deactivated) ++ " inserted=" ++ show (length $ inserted_result ^. insert_inserted)
-
-          loop' -- Restart loop
+  let message_data =
+          zipWith
+              ( \updated inserted ->
+                  ( inserted ^.. d_status_station_id
+                  , updated ^.. d_status_last_reported
+                  , inserted ^.. d_status_last_reported
+                  )
+              )
+              (inserted_result ^. insert_deactivated)
+              (inserted_result ^. insert_inserted)
+  let messages =
+          map
+              ( \(sid, last_reported, last_reported') ->
+                  "ID: "
+                      ++ show sid
+                      ++ " "
+                      ++ show last_reported -- ID
+                      ++ "->"
+                      ++ show last_reported' -- [prev reported] -> [new reported]
+              )
+              message_data
+  mapM_ (log D . Text.pack) messages
+  log I $
+      "HANDLER: updated="
+          <> Text.pack (show (length $ inserted_result ^. insert_deactivated))
+          <> " inserted="
+          <> Text.pack (show (length $ inserted_result ^. insert_inserted))

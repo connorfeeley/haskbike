@@ -77,10 +77,13 @@ common common-depends
                     , text
                     , containers
                     , stm
-                    , stm-chans
                     , mtl
                     , unliftio
+                    , async
                     , fmt
+                    , co-log-core
+                    , monad-control
+                    , co-log
 
 -- Dependencies needed by targets excercising the API.
 common api-depends

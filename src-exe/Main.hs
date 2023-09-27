@@ -1,3 +1,7 @@
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE PatternSynonyms    #-}
+{-# LANGUAGE RecordWildCards    #-}
+
 module Main
      ( main
      ) where
@@ -7,80 +11,109 @@ import qualified API.Poll               as P
 import           API.ResponseWrapper
 import           API.Types
 
+import           Colog                  ( HasLog (..), LogAction, Message, WithLog, log, pattern I, pattern W,
+                                          richMessageAction )
+import           Colog.Message          ( logException )
+
 import           Control.Lens
 import           Control.Monad          ( when )
+import           Control.Monad.IO.Class ( MonadIO (liftIO) )
+import           Control.Monad.Reader   ( MonadReader, ReaderT (..) )
+
+import qualified Data.Text              as Text
 
 import           Database.Beam.Postgres ( Connection )
 import           Database.Migrations
 import           Database.Operations
 import           Database.Utils
 
+import           Prelude                hiding ( log )
+
 import           Servant.Client         ( ClientError )
 
 import           System.Environment
 import           System.Exit            ( exitSuccess )
 
+import           UnliftIO               ( MonadUnliftIO )
+
+-- Application environment
+data Env m where
+  Env :: { envLogAction :: !(LogAction m Message) } -> Env m
+
+-- Implement logging for the application environment.
+instance HasLog (Env m) Message m where
+    getLogAction :: Env m -> LogAction m Message
+    getLogAction = envLogAction
+    {-# INLINE getLogAction #-}
+
+    setLogAction :: LogAction m Message -> Env m -> Env m
+    setLogAction newLogAction env = env { envLogAction = newLogAction }
+    {-# INLINE setLogAction #-}
+
+-- Application type
+newtype App a = App
+    { unApp :: ReaderT (Env App) IO a
+    } deriving newtype (Functor, Applicative, Monad, MonadIO, MonadUnliftIO, MonadReader (Env App))
+
+simpleEnv :: Env App
+simpleEnv = Env
+    { envLogAction  = richMessageAction
+    }
+
+runApp :: Env App -> App a -> IO a
+runApp env app = runReaderT (unApp app) env
+
 
 main :: IO ()
-main = do
+main = runApp simpleEnv appMain
+
+appMain :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
+        => m ()
+appMain = do
   -- Get command-line arguments
-  args <- getArgs
+  args <- liftIO getArgs
 
   conn <- if "--migrate" `elem` args || "--migrate-only" `elem` args
     then do
       -- Perform database migrations.
-      putStrLn "Migrating database..."
-      conn' <- connectDbName dbnameProduction
-      _ <- migrateDB conn'
+      log W "Migrating database."
+
+      conn' <- liftIO $ connectDbName dbnameProduction
+      _ <- liftIO $ migrateDB conn'
 
       -- Exit if only migrations were requested.
       when ("--migrate-only" `elem` args) $
-        putStrLn "Migration done - exiting" >>
-        exitSuccess
+        log W "Migrating database." >>
+        liftIO exitSuccess
 
       pure conn'
     else if "--reset" `elem` args then do
       -- Reset the database.
-      putStrLn "Resetting database..."
-      conn <- setupDatabaseName dbnameProduction
+      log W "Resetting database."
+      conn <- liftIO $ setupDatabaseName dbnameProduction
 
       -- Insert station information if missing from database.
-      infoQuery <- queryStationInformation conn
+      infoQuery <- liftIO $ queryStationInformation conn
       when (null infoQuery) $ handleStationInformation conn
       -- Exit.
-      exitSuccess
+      liftIO exitSuccess
     -- Otherwise, connect to the database.
-    else putStrLn "Connecting to database..." >>
-         connectDbName dbnameProduction
+    else log I "Connecting to database." >> liftIO (connectDbName dbnameProduction)
 
   -- Insert station information if missing from database.
-  infoQuery <- queryStationInformation conn
+  infoQuery <- liftIO $ queryStationInformation conn
   when (null infoQuery) $ handleStationInformation conn
-
-  -- Insert station status if missing from database.
-  -- statusQuery <- queryStationStatus conn
-  -- when (null statusQuery) $ handleStationStatus conn
 
   P.pollClient conn
 
-handleStationInformation :: Connection -- ^ Database connection.
-                         -> IO ()
+handleStationInformation :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
+                         => Connection -- ^ Database connection.
+                         -> m ()
 handleStationInformation conn = do
-  info <- runQueryWithEnv stationInformation :: IO (Either ClientError StationInformationResponse)
+  info <- liftIO (runQueryWithEnv stationInformation :: IO (Either ClientError StationInformationResponse))
   case info of
-    Left err -> putStrLn $ "MAIN (ERROR): " ++ show err
+    Left err -> logException err
     Right response -> do
       let stations = response ^. response_data . info_stations
-      inserted <- insertStationInformation conn stations
-      putStrLn $ "MAIN:     inserted info " ++ show (length inserted)
-
-_handleStationStatus :: Connection -- ^ Database connection.
-                     -> IO ()
-_handleStationStatus conn = do
-  status <- runQueryWithEnv stationStatus :: IO (Either ClientError StationStatusResponse)
-  case status of
-    Left err -> putStrLn $ "MAIN: error: " ++ show err
-    Right response -> do
-      let stationsStatus = response ^. response_data . status_stations
-      inserted <- insertStationStatus conn stationsStatus
-      putStrLn $ "MAIN:     inserted status " ++ show (length (inserted ^. insert_inserted))
+      inserted <- liftIO $ insertStationInformation conn stations
+      log I $ "Line length: " <> Text.pack (show $ length inserted)
