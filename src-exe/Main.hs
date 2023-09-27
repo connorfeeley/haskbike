@@ -11,8 +11,8 @@ import qualified API.Poll               as P
 import           API.ResponseWrapper
 import           API.Types
 
-import           Colog                  ( HasLog (..), LogAction, Message, Msg (..), WithLog, formatWith, log,
-                                          logTextStderr, pattern I, pattern W, showSeverity, showSourceLoc )
+import           Colog                  ( HasLog (..), LogAction, Message, WithLog, log, pattern I, pattern W,
+                                          richMessageAction )
 import           Colog.Message          ( logException )
 
 import           Control.Lens
@@ -57,18 +57,8 @@ newtype App a = App
 
 simpleEnv :: Env App
 simpleEnv = Env
-    { envLogAction  = logStdErrActionWithoutStackAction -- richMessageAction
+    { envLogAction  = richMessageAction
     }
-
-fmtMessageWithoutSourceLoc :: Message -> Text.Text
-fmtMessageWithoutSourceLoc Msg{..} =
-  showSeverity msgSeverity
-  <> showSourceLoc msgStack
-  <> msgText
-
-logStdErrActionWithoutStackAction :: MonadIO env => LogAction env Message
-logStdErrActionWithoutStackAction = formatWith fmtMessageWithoutSourceLoc logTextStderr
-
 
 runApp :: Env App -> App a -> IO a
 runApp env app = runReaderT (unApp app) env

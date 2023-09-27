@@ -49,12 +49,9 @@ pollClient conn = do
   log I "Polling API for status updates."
   void $
     concurrently_
-      (withLog (cmap $ addPrefix "Requester: ") (statusRequester queue_resp ttl))
-      (withLog (cmap $ addPrefix "Handler:   ") (statusHandler conn queue_resp last_updated))
+      (statusRequester queue_resp ttl)
+      (statusHandler conn queue_resp last_updated)
   log I "Done."
-  where
-    addPrefix :: Text.Text -> Message -> Message
-    addPrefix prefix msg = msg { msgText = prefix <> msgText msg }
 
 statusRequester :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
                 => TBQueue StationStatusResponse -- ^ Queue of responses
