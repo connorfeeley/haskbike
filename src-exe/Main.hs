@@ -140,15 +140,18 @@ handleDatabase :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
                => Options
                -> m Connection
 handleDatabase options = case optCommand options of
-  Poll -> connectToDatabase dbnameProduction
+  Poll
+    | optEnableMigration options -> migrate dbname >>= \conn -> pure conn
+    | otherwise -> connectToDatabase dbname
   Reset resetOptions
-    | optResetOnly resetOptions -> reset dbnameTest >> liftIO exitSuccess
-    | otherwise -> reset dbnameTest
+    | optResetOnly resetOptions -> reset dbname >> liftIO exitSuccess
+    | otherwise -> reset dbname
   where
     connectToDatabase name = log I "Connecting to database." >> liftIO (connectDbName name)
     setupDb     name    = liftIO $ setupDatabaseName name
     reset       name    = log W "Resetting database." >> setupDb name >>= \conn -> handleInformation conn >> pure conn
-    -- migrate     name    = log W "Migrating database." >> connectDbNameAndMigrate name
-    -- connectDbNameAndMigrate = migrateDB' <=< connectDbName
-    -- migrateDB' :: Connection -> IO Connection
-    -- migrateDB' conn = migrateDB conn >> return conn
+    migrate     name    = log W "Migrating database." >> connectDbNameAndMigrate name
+    connectDbNameAndMigrate = liftIO . (migrateDB' <=< connectDbName)
+    migrateDB' :: Connection -> IO Connection
+    migrateDB' conn = migrateDB conn >> return conn
+    dbname = optDatabase options
