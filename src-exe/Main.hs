@@ -34,6 +34,30 @@ import           System.Environment
 import           System.Exit            ( exitSuccess )
 
 import           UnliftIO               ( MonadUnliftIO )
+import Options.Applicative
+
+data Options = Options
+  { optVerbose :: Bool
+  , optInputFile :: FilePath
+  , optOutputFile :: FilePath
+  } deriving (Show)
+
+parseOptions :: Parser Options
+parseOptions = Options
+  <$> switch
+      ( long "verbose"
+     <> short 'v'
+     <> help "Enable verbose output" )
+  <*> strOption
+      ( long "input"
+     <> short 'i'
+     <> metavar "FILE"
+     <> help "Input file" )
+  <*> strOption
+      ( long "output"
+     <> short 'o'
+     <> metavar "FILE"
+     <> help "Output file" )
 
 main :: IO ()
 main = runApp simpleEnv appMain
@@ -41,6 +65,9 @@ main = runApp simpleEnv appMain
 appMain :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
         => m ()
 appMain = do
+  options <- liftIO $ execParser (info parseOptions fullDesc)
+  liftIO $ print options
+
   -- Get command-line arguments
   args <- liftIO getArgs
 
