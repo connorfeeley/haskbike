@@ -15,9 +15,10 @@ import           AppEnv
 import           Colog                  ( Message, WithLog, log, pattern D, pattern I, pattern W )
 
 import           Control.Lens
-import           Control.Monad          ( (<=<), unless )
+import           Control.Monad          ( unless, (<=<) )
 import           Control.Monad.IO.Class ( MonadIO (liftIO) )
 
+import           Data.Foldable          ( for_ )
 import qualified Data.Text              as Text
 
 import           Database.Beam.Postgres ( Connection )
@@ -34,7 +35,6 @@ import           Servant.Client         ( ClientError )
 import           System.Exit            ( exitSuccess )
 
 import           UnliftIO               ( MonadUnliftIO )
-import Data.Foldable (for_)
 
 -- | Top-level options.
 data Options where
