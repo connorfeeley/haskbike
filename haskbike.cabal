@@ -143,6 +143,7 @@ executable haskbike
 
     -- Other library packages from which modules are imported.
     build-depends:    haskbike
+                    , optparse-applicative
 
     -- Directories containing source files.
     hs-source-dirs:   src-exe
