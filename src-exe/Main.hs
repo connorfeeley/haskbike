@@ -12,11 +12,10 @@ import           API.Types
 
 import           AppEnv
 
-import           Colog                  ( Message, WithLog, log, pattern I, pattern W )
-import           Colog.Message          ( logException )
+import           Colog                  ( Message, WithLog, log, pattern D, pattern I, pattern W )
 
 import           Control.Lens
-import           Control.Monad          ( when, (<=<) )
+import           Control.Monad          ( (<=<), unless )
 import           Control.Monad.IO.Class ( MonadIO (liftIO) )
 
 import qualified Data.Text              as Text
@@ -32,10 +31,10 @@ import           Prelude                hiding ( log )
 
 import           Servant.Client         ( ClientError )
 
-import           System.Environment
 import           System.Exit            ( exitSuccess )
 
 import           UnliftIO               ( MonadUnliftIO )
+import Data.Foldable (for_)
 
 -- | Top-level options.
 data Options where
@@ -100,53 +99,37 @@ main = runApp simpleEnv appMain
 appMain :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
         => m ()
 appMain = do
+  -- Parse command line options.
   options <- liftIO $ customExecParser (prefs $ helpShowGlobals <> showHelpOnEmpty <> showHelpOnError) opts
   liftIO $ print options
-
-  conn <- case optCommand options of
-    Poll ->
-      connectToDatabase dbnameProduction
-
-    Reset resetOptions -> if optResetOnly resetOptions
-      then do
-        log W "Resetting database."
-        conn <- liftIO $ setupDatabaseName dbnameTest
-        -- Insert station information if missing from database.
-        infoQuery <- liftIO $ queryStationInformation conn
-        when (null infoQuery) $ handleStationInformation conn
-        -- Exit.
-        liftIO exitSuccess
-      else do
-        log W "Migrating database."
-        conn' <- liftIO $ connectDbName dbnameProduction
-        _ <- liftIO $ migrateDB conn'
-        pure conn'
-  -- Insert station information if missing from database.
-  infoQuery <- liftIO $ queryStationInformation conn
-  when (null infoQuery) $ handleStationInformation conn
+  log D $ "Parsed options" <> Text.pack (show options)
+  conn <- handleDatabase options
 
   P.pollClient conn
   where
-    connectToDatabase name = do
-      log I "Connecting to database."
-      liftIO $ connectDbName name
     opts = info (parseOptions <**> helper)
       ( fullDesc
      <> progDesc "Poll the Toronto Bikeshare API and inserts new records into the database."
      <> header "Toronto Bikeshare API client" )
 
+handleInformation :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
+                  => Connection
+                  -> m ()
+handleInformation conn = do
+  infoQuery <- liftIO $ queryStationInformation conn
+  unless (null infoQuery) $ handleStationInformation conn
 
 handleStationInformation :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
-                         => Connection -- ^ Database connection.
+                         => Connection
                          -> m ()
 handleStationInformation conn = do
-  information <- liftIO (runQueryWithEnv stationInformation :: IO (Either ClientError StationInformationResponse))
-  case information of
-    Left err -> logException err
-    Right response -> do
-      let stations = response ^. response_data . info_stations
-      inserted <- liftIO $ insertStationInformation conn stations
-      log I $ "Line length: " <> Text.pack (show $ length inserted)
+  stationInfo <- liftIO (runQueryWithEnv stationInformation :: IO (Either ClientError StationInformationResponse))
+  for_ (rightToMaybe stationInfo) $ \response -> do
+        let stations = response ^. response_data . info_stations
+        liftIO (insertStationInformation conn stations) >>= report
+  where
+    report = log I . ("Line length: " <>) . Text.pack . show . length
+    rightToMaybe = either (const Nothing) Just
 
 handleDatabase :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
                => Options
@@ -154,15 +137,13 @@ handleDatabase :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
 handleDatabase options = case optCommand options of
   Poll -> connectToDatabase dbnameProduction
   Reset resetOptions
-    | optResetOnly resetOptions -> resetOnly dbnameTest
-    | otherwise -> migrate dbnameProduction
+    | optResetOnly resetOptions -> reset dbnameTest >> liftIO exitSuccess
+    | otherwise -> reset dbnameTest
   where
     connectToDatabase name = log I "Connecting to database." >> liftIO (connectDbName name)
-    resetOnly name = log W "Resetting database." >> setupDb name >> liftIO exitSuccess
-    migrate name = log W "Migrating database." >> connectDbNameAndMigrate name
-    setupDb name = liftIO $ setupDatabaseName name
-    connectDbNameAndMigrate =
-      liftIO . (migrateDB' <=< connectDbName)
-
-migrateDB' :: Connection -> IO Connection
-migrateDB' conn = migrateDB conn >> return conn
+    setupDb     name    = liftIO $ setupDatabaseName name
+    reset       name    = log W "Resetting database." >> setupDb name >>= \conn -> handleInformation conn >> pure conn
+    -- migrate     name    = log W "Migrating database." >> connectDbNameAndMigrate name
+    -- connectDbNameAndMigrate = migrateDB' <=< connectDbName
+    -- migrateDB' :: Connection -> IO Connection
+    -- migrateDB' conn = migrateDB conn >> return conn
