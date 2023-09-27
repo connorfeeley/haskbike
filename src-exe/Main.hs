@@ -39,8 +39,9 @@ import           UnliftIO               ( MonadUnliftIO )
 
 -- | Top-level options.
 data Options where
-  Options :: { optCommand :: !Command
-             , optVerbose :: Bool
+  Options :: { optCommand  :: !Command
+             , optVerbose  :: Bool
+             , optDatabase :: String
              } -> Options
   deriving (Show)
 
@@ -49,9 +50,16 @@ parseOptions :: Parser Options
 parseOptions = Options
   <$> commandParser
   <*> switch
+  -- TODO: implement verbose output.
       ( long "verbose"
      <> short 'v'
-     <> help "Enable verbose output" )
+     <> help "Enable verbose output." )
+  <*> strOption
+      ( long "database"
+     <> metavar "DATABASE"
+     <> showDefault
+     <> value dbnameProduction
+     <> help "Target database name." )
 
 -- | Top-level commands.
 data Command where
@@ -80,10 +88,10 @@ resetOptionsParser :: Parser ResetOptions
 resetOptionsParser = ResetOptions
   <$> switch
       ( long "reset-only"
-     <> help "Only reset, don't insert new data" )
+     <> help "Only reset, don't insert new data." )
   <*> switch
       ( long "test"
-     <> help "Run the command in test mode" )
+     <> help "Run the command in test mode." )
 
 
 main :: IO ()
@@ -133,7 +141,7 @@ appMain = do
   where
     opts = info (parseOptions <**> helper)
       ( fullDesc
-     <> progDesc "Poll the Toronto Bikeshare API."
+     <> progDesc "Poll the Toronto Bikeshare API and inserts new records into the database."
      <> header "Toronto Bikeshare API client" )
 
 
