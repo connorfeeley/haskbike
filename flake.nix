@@ -131,7 +131,7 @@
 
           # Start the service and expose the port
           config = {
-            Cmd = [ "haskbike" ];
+            Cmd = [ "haskbike" "poll" ];
           };
         };
 
