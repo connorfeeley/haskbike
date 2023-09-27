@@ -81,8 +81,8 @@ handleStationInformation :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
                          => Connection -- ^ Database connection.
                          -> m ()
 handleStationInformation conn = do
-  info <- liftIO (runQueryWithEnv stationInformation :: IO (Either ClientError StationInformationResponse))
-  case info of
+  information <- liftIO (runQueryWithEnv stationInformation :: IO (Either ClientError StationInformationResponse))
+  case information of
     Left err -> logException err
     Right response -> do
       let stations = response ^. response_data . info_stations
