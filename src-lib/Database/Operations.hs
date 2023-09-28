@@ -49,8 +49,6 @@ import qualified Database.Beam.Postgres                   as Pg
 import           Database.BikeShare
 import           Database.Utils
 
-import           Fmt
-
 debug :: Bool
 debug = False
 
