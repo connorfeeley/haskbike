@@ -2,8 +2,8 @@
 {-# LANGUAGE PatternSynonyms    #-}
 
 module Main
-     ( main
-     , appMain
+     ( appMain
+     , main
      ) where
 
 import           API.Client

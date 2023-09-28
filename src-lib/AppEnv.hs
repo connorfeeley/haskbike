@@ -5,12 +5,13 @@
 module AppEnv
      ( App
      , Env (..)
+     , mainEnv
      , runApp
      , simpleEnv
-      , mainEnv
      ) where
 
-import           Colog                  ( HasLog (..), LogAction(..), Message, richMessageAction, filterBySeverity, Severity (..), Msg (msgSeverity))
+import           Colog                  ( HasLog (..), LogAction (..), Message, Msg (msgSeverity), Severity (..),
+                                          filterBySeverity, richMessageAction )
 
 import           Control.Monad.IO.Class ( MonadIO )
 import           Control.Monad.Reader   ( MonadReader, ReaderT (..) )

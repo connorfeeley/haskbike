@@ -1,8 +1,8 @@
 -- | Test the client functions.
 
 {-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE PatternSynonyms     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE PatternSynonyms #-}
 
 module TestClient where
 
@@ -11,7 +11,7 @@ import qualified API.Poll          as Poll
 
 import           AppEnv
 
-import           Colog             ( Message, WithLog, pattern W)
+import           Colog             ( Message, WithLog, pattern W )
 
 import           Control.Exception ( SomeException, try )
 import           Control.Monad     ( void )
