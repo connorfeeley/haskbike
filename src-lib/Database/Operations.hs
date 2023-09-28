@@ -117,9 +117,6 @@ queryStationStatus conn = do
     info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
     status <- all_ (bikeshareDb ^. bikeshareStationStatus)
     guard_ (_d_status_info_id status `references_` info)
-    -- station_status <- leftJoin_ (all_(bikeshareDb ^. bikeshareStationStatus))
-    --   (\station_status -> _station_id station_status `references_` station_information)
-    -- guard_ (isJust_ station_status)
     pure (info, status)
 
 -- | Query database for station status, returning the number of bikes and docks available and disabled.
@@ -247,11 +244,6 @@ insertStationStatus conn api_status
 
     statuses_to_deactivate <- getRowsToDeactivate conn status
     updated_statuses <- deactivateOldStatus conn statuses_to_deactivate
-    -- inserted_statuses <- insertNewStatus conn $
-    --   filter (\ss -> ss ^. status_station_id `notElem`
-    --                  map (fromIntegral . _d_status_station_id) updated_statuses
-    --          ) status
-    -- Insert new records for records that were deactivated.
     inserted_statuses <- insertNewStatus conn $
       filter (\ss -> ss ^. status_station_id `elem`
                      map (fromIntegral . _d_status_station_id) updated_statuses
