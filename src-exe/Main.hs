@@ -7,13 +7,15 @@ module Main
      ) where
 
 import           API.Client
-import qualified CLI.Poll               as P
 import           API.ResponseWrapper
 import           API.Types
 
 import           AppEnv
 
-import           Colog                  ( Message, WithLog, log, pattern D, pattern I, pattern W, pattern E )
+import           CLI.Options
+import qualified CLI.Poll               as P
+
+import           Colog                  ( Message, WithLog, log, pattern D, pattern E, pattern I, pattern W )
 
 import           Control.Lens
 import           Control.Monad          ( unless, (<=<) )
@@ -37,114 +39,48 @@ import           System.Exit            ( exitSuccess )
 
 import           UnliftIO               ( MonadUnliftIO )
 
--- | Top-level options.
-data Options where
-  Options :: { optCommand         :: !Command
-             , optVerbose         :: Bool
-             , optDatabase        :: String
-             , optEnableMigration :: Bool
-             } -> Options
-  deriving (Show)
-
--- | Parser for 'Options'.
-parseOptions :: Parser Options
-parseOptions = Options
-  <$> commandParser
-  <*> switch
-  -- TODO: implement verbose output.
-      ( long "verbose"
-     <> short 'v'
-     <> help "Enable verbose output." )
-  <*> strOption
-      ( long "database"
-     <> metavar "DATABASE"
-     <> showDefault
-     <> value dbnameProduction
-     <> help "Target database name." )
-  <*> switch
-      ( long "enable-migrations"
-     <> showDefault
-     <> help "Perform database migrations." )
-
--- | Top-level commands.
-data Command where
-  Poll  :: Command
-  Query :: !QueryOptions -> Command
-  Reset :: !ResetOptions -> Command
-  deriving (Show)
-
--- | Parser for 'Command'.
-commandParser :: Parser Command
-commandParser = subparser
-  (  command "poll"   (info (pure Poll)
-                       (progDesc "Poll the API and insert new station status into database."))
-  <> command "query" (info (Query <$> queryOptionsParser)
-                      (progDesc "Query the database."))
-  <> command "reset" (info (Reset <$> resetOptionsParser)
-                      (progDesc "Reset the database. [DANGER]"))
-  )
-
--- | Options for the 'Reset' command.
-data ResetOptions where
-  ResetOptions :: { optResetOnly :: Bool
-                  , optTest      :: Bool
-                  } -> ResetOptions
-  deriving (Show)
-
--- | Parser for 'ResetOptions'.
-resetOptionsParser :: Parser ResetOptions
-resetOptionsParser = ResetOptions
-  <$> switch
-      ( long "reset-only"
-     <> help "Only reset, don't insert new data." )
-  <*> switch
-      ( long "test"
-     <> help "Run the command in test mode." )
-
--- | Options for the 'Query' command.
-data QueryOptions where
-  QueryOptions :: { optStationId :: String -- TODO: convert to Int
-                  } -> QueryOptions
-  deriving (Show)
-
--- | Parser for 'ResetOptions'.
-queryOptionsParser :: Parser QueryOptions
-queryOptionsParser = QueryOptions
-  <$> strOption
-      ( long "station-id"
-     <> metavar "STATION_ID"
-     <> showDefault
-     <> value "7001"
-     <> help "Station ID to query." )
-
 main :: IO ()
 main = runApp simpleEnv appMain
 
-appMain :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
-        => m ()
+appMain :: (WithLog env Message m, MonadIO m, MonadUnliftIO m) => m ()
 appMain = do
   -- Parse command line options.
   options <- liftIO $ customExecParser (prefs $ helpShowGlobals <> showHelpOnEmpty <> showHelpOnError) opts
   log D $ "Parsed options" <> Text.pack (show options)
-  conn <- handleDatabase options
 
-  P.pollClient conn
+  case optCommand options of
+    Poll      -> handlePoll  options
+    (Query q) -> handleQuery options q
+    (Reset r) -> handleReset options r
   where
     opts = info (parseOptions <**> helper)
       ( fullDesc
-     <> progDesc "Poll the Toronto Bikeshare API and inserts new records into the database."
-     <> header "Toronto Bikeshare API client" )
+     <> progDesc "Toronto Bikeshare CLI and API client."
+     <> header "Toronto Bikeshare" )
 
-handleInformation :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
-                  => Connection
-                  -> m ()
+handlePoll :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)  => Options -> m ()
+handlePoll options = do
+  conn <- handleDatabase options
+  P.pollClient conn
+
+
+handleQuery :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)  => Options -> QueryOptions -> m ()
+handleQuery options queryOptions = do
+  conn <- handleDatabase options
+  log E $ "Query command unimplemented. Parsed options: " <> (Text.pack . show) queryOptions
+
+handleReset :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)  => Options -> ResetOptions -> m ()
+handleReset options resetOptions = do
+  conn <- handleDatabase options
+  log E $ "Reset command unimplemented. Parsed options: " <> (Text.pack . show) resetOptions
+
+
+handleInformation :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)  => Connection -> m ()
 handleInformation conn = do
   infoQuery <- liftIO $ queryStationInformation conn
   unless (null infoQuery) $ handleStationInformation conn
 
-handleStationInformation :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
-                         => Connection
-                         -> m ()
+handleStationInformation :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)  => Connection -> m ()
 handleStationInformation conn = do
   stationInfo <- liftIO (runQueryWithEnv stationInformation :: IO (Either ClientError StationInformationResponse))
   for_ (rightToMaybe stationInfo) $ \response -> do
@@ -154,9 +90,7 @@ handleStationInformation conn = do
     report = log I . ("Line length: " <>) . Text.pack . show . length
     rightToMaybe = either (const Nothing) Just
 
-handleDatabase :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
-               => Options
-               -> m Connection
+handleDatabase :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)  => Options -> m Connection
 handleDatabase options = case optCommand options of
   Poll
     | optEnableMigration options -> migrate dbname >>= \conn -> pure conn
@@ -164,6 +98,7 @@ handleDatabase options = case optCommand options of
   Reset resetOptions
     | optResetOnly resetOptions -> reset dbname >> liftIO exitSuccess
     | otherwise -> reset dbname
+  _ -> connectToDatabase dbname
   where
     connectToDatabase name = log I "Connecting to database." >> liftIO (connectDbName name)
     setupDb     name    = liftIO $ setupDatabaseName name
