@@ -13,7 +13,7 @@ import           API.Types
 
 import           AppEnv
 
-import           Colog                  ( Message, WithLog, log, pattern D, pattern I, pattern W )
+import           Colog                  ( Message, WithLog, log, pattern D, pattern I, pattern W, pattern E )
 
 import           Control.Lens
 import           Control.Monad          ( unless, (<=<) )
@@ -69,6 +69,7 @@ parseOptions = Options
 -- | Top-level commands.
 data Command where
   Poll  :: Command
+  Query :: !QueryOptions -> Command
   Reset :: !ResetOptions -> Command
   deriving (Show)
 
@@ -77,6 +78,8 @@ commandParser :: Parser Command
 commandParser = subparser
   (  command "poll"   (info (pure Poll)
                        (progDesc "Poll the API and insert new station status into database."))
+  <> command "query" (info (Query <$> queryOptionsParser)
+                      (progDesc "Query the database."))
   <> command "reset" (info (Reset <$> resetOptionsParser)
                       (progDesc "Reset the database. [DANGER]"))
   )
@@ -98,6 +101,21 @@ resetOptionsParser = ResetOptions
       ( long "test"
      <> help "Run the command in test mode." )
 
+-- | Options for the 'Query' command.
+data QueryOptions where
+  QueryOptions :: { optStationId :: String -- TODO: convert to Int
+                  } -> QueryOptions
+  deriving (Show)
+
+-- | Parser for 'ResetOptions'.
+queryOptionsParser :: Parser QueryOptions
+queryOptionsParser = QueryOptions
+  <$> strOption
+      ( long "station-id"
+     <> metavar "STATION_ID"
+     <> showDefault
+     <> value "7001"
+     <> help "Station ID to query." )
 
 main :: IO ()
 main = runApp simpleEnv appMain
