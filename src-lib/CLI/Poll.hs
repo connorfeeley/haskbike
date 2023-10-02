@@ -7,7 +7,7 @@
 {- |
 Poll the API for status updates, inserting results in database as needed.
 -}
-module API.Poll
+module CLI.Poll
      ( pollClient
      ) where
 

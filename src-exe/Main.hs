@@ -7,7 +7,7 @@ module Main
      ) where
 
 import           API.Client
-import qualified API.Poll               as P
+import qualified CLI.Poll               as P
 import           API.ResponseWrapper
 import           API.Types
 

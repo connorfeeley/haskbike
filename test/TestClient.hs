@@ -7,9 +7,10 @@
 module TestClient where
 
 import           API.Client
-import qualified API.Poll          as Poll
 
 import           AppEnv
+
+import qualified CLI.Poll          as Poll
 
 import           Colog             ( Message, WithLog, pattern W )
 

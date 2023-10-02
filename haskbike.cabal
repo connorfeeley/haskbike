@@ -164,7 +164,7 @@ library
                     , AppEnv
                     , API.ResponseWrapper
                     , API.Client
-                    , API.Poll
+                    , CLI.Poll
                     , API.Types
                     , ReportTime
                     , Database.Types
