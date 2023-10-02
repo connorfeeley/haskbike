@@ -8,15 +8,17 @@
 Poll the API for status updates, inserting results in database as needed.
 -}
 module CLI.Poll
-     ( pollClient
+     ( dispatchPoll
+     , pollClient
      ) where
 
 import           API.Client
 import           API.ResponseWrapper
 import           API.Types              ( StationStatusResponse, status_stations )
 
-import           Colog                  ( Message, Msg (msgText), WithLog, cmap, log, logException, pattern D,
-                                          pattern E, pattern I, withLog )
+
+import           Colog                  ( Message, WithLog, log, logException, pattern D,
+                                          pattern E, pattern I )
 
 import           Control.Concurrent     ( threadDelay )
 import           Control.Concurrent.STM
@@ -38,6 +40,13 @@ import           ReportTime             ( localToPosix, localToSystem )
 
 import           UnliftIO               ( MonadIO, MonadUnliftIO, liftIO )
 import           UnliftIO.Async         ( concurrently_ )
+
+
+-- | Dispatch CLI arguments to the poller.
+dispatchPoll :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
+         => Connection
+         -> m ()
+dispatchPoll = pollClient
 
 pollClient :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
            => Connection

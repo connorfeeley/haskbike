@@ -165,6 +165,8 @@ library
                     , API.ResponseWrapper
                     , API.Client
                     , CLI.Poll
+                    , CLI.Query
+                    , CLI.Database
                     , CLI.Options
                     , API.Types
                     , ReportTime
