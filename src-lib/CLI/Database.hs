@@ -42,7 +42,7 @@ import           UnliftIO               ( MonadUnliftIO )
 
 dispatchDatabase :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)  => Options -> m Connection
 dispatchDatabase options = case optCommand options of
-  Poll
+  Poll pollOptions
     | optEnableMigration options -> migrate dbname >>= \conn -> pure conn
     | otherwise -> connectToDatabase dbname
   Reset resetOptions

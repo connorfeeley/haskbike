@@ -46,8 +46,9 @@ appMain = do
   options <- liftIO $ customExecParser (prefs $ helpShowGlobals <> showHelpOnEmpty <> showHelpOnError) opts
   log D $ "Parsed options" <> Text.pack (show options)
 
+  -- Dispatch to appropriate command.
   case optCommand options of
-    Poll      -> dispatchDatabase options >>= dispatchPoll
+    (Poll p)  -> dispatchDatabase options >>= dispatchPoll
     (Query q) -> dispatchDatabase options >>= dispatchQuery q
     (Reset r) -> void (dispatchDatabase options)
   where

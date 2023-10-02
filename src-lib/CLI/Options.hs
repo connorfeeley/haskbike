@@ -42,7 +42,7 @@ parseOptions = Options
 
 -- | Top-level commands.
 data Command where
-  Poll  :: Command
+  Poll  :: !PollOptions  -> Command
   Query :: !QueryOptions -> Command
   Reset :: !ResetOptions -> Command
   deriving (Show)
@@ -50,7 +50,7 @@ data Command where
 -- | Parser for 'Command'.
 commandParser :: Parser Command
 commandParser = subparser
-  (  command "poll"   (info (pure Poll)
+  (  command "poll"   (info (Poll <$> pollOptionsParser)
                        (progDesc "Poll the API and insert new station status into database."))
   <> command "query" (info (Query <$> queryOptionsParser)
                       (progDesc "Query the database."))
@@ -90,3 +90,12 @@ queryOptionsParser = QueryOptions
      <> showDefault
      <> value "7001"
      <> help "Station ID to query." )
+
+-- | Options for the 'Poll' command.
+data PollOptions where
+  PollOptions :: { } -> PollOptions
+  deriving (Show)
+
+-- | Parser for 'ResetOptions'.
+pollOptionsParser :: Parser PollOptions
+pollOptionsParser = pure PollOptions
