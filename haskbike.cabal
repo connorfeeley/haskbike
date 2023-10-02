@@ -68,6 +68,7 @@ common warnings
 common common-extensions
     default-extensions: OverloadedStrings
                       , GADTs
+                      , ApplicativeDo
 
 -- Common dependencies shared by all targets.
 common common-depends
