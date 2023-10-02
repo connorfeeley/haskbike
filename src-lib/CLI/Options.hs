@@ -25,7 +25,6 @@ parseOptions :: Parser Options
 parseOptions = Options
   <$> commandParser
   <*> switch
-  -- TODO: implement verbose output.
       ( long "verbose"
      <> short 'v'
      <> help "Enable verbose output." )
