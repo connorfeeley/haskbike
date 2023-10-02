@@ -69,6 +69,7 @@ common common-extensions
     default-extensions: OverloadedStrings
                       , GADTs
                       , ApplicativeDo
+                      , LambdaCase
 
 -- Common dependencies shared by all targets.
 common common-depends
