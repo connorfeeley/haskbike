@@ -14,7 +14,7 @@ import           Prelude             hiding ( log )
 -- | Top-level options.
 data Options where
   Options :: { optCommand         :: !Command
-             , optVerbose         :: Bool
+             , optVerbose         :: [Bool] -- ^ Verbosity flags.
              , optDatabase        :: String
              , optEnableMigration :: Bool
              } -> Options
@@ -24,10 +24,8 @@ data Options where
 parseOptions :: Parser Options
 parseOptions = Options
   <$> commandParser
-  <*> switch
-      ( long "verbose"
-     <> short 'v'
-     <> help "Enable verbose output." )
+  -- Support multiple verbosity flags.
+  <*> many verboseFlag
   <*> strOption
       ( long "database"
      <> metavar "DATABASE"
@@ -38,6 +36,12 @@ parseOptions = Options
       ( long "enable-migrations"
      <> showDefault
      <> help "Perform database migrations." )
+  where
+    verboseFlag = flag' True -- Active when flag is present.
+                  ( long "verbose"
+                 <> short 'v'
+                 <> help "Output verbosity (pass multiple times for more verbosity)."
+                 <> showDefault)
 
 -- | Top-level commands.
 data Command where
