@@ -84,8 +84,9 @@
                 hlint
                 doctest
                 stylish-haskell
-
                 ;
+                inherit (self'.packages)
+                  haskbike-completions;
               # Disable ghcid.
               # ghcid = null;
 
@@ -107,6 +108,11 @@
 
         # haskell-flake doesn't set the default package, but you can do it here.
         packages.default = self'.packages.haskbike;
+        packages.haskbike-completions = pkgs.writeTextFile {
+          name = "haskbike-completions";
+          text = "source <(haskbike --bash-completion-script haskbike)";
+          destination = "/etc/bash_completion.d/haskbike";
+        };
 
         packages.haskbike-static = pkgs.haskell.lib.justStaticExecutables self'.packages.haskbike;
 
