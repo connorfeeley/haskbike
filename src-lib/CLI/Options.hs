@@ -77,18 +77,18 @@ resetOptionsParser = ResetOptions
 
 -- | Options for the 'Query' command.
 data QueryOptions where
-  QueryOptions :: { optStationId :: String -- TODO: convert to Int
+  QueryOptions :: { optStationId :: Int
                   } -> QueryOptions
   deriving (Show)
 
 -- | Parser for 'ResetOptions'.
 queryOptionsParser :: Parser QueryOptions
 queryOptionsParser = QueryOptions
-  <$> strOption
+  <$> option auto
       ( long "station-id"
      <> metavar "STATION_ID"
      <> showDefault
-     <> value "7001"
+     <> value 7001
      <> help "Station ID to query." )
 
 -- | Options for the 'Poll' command.

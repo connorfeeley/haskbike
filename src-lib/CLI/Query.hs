@@ -13,6 +13,8 @@ import           API.Client
 import           API.ResponseWrapper
 import           API.Types              ( StationStatusResponse, status_stations )
 
+import           CLI.Options            ( QueryOptions (..) )
+
 import           Colog                  ( Message, Msg (msgText), WithLog, cmap, log, logException, pattern D,
                                           pattern E, pattern I, withLog )
 
@@ -27,6 +29,7 @@ import qualified Data.Text              as Text
 import           Database.Beam.Postgres ( Connection )
 import           Database.BikeShare     ( d_status_last_reported, d_status_station_id )
 import           Database.Operations
+import           Database.Utils         ( pPrintCompact )
 
 import           Fmt
 
@@ -37,11 +40,12 @@ import           ReportTime             ( localToPosix, localToSystem )
 import           UnliftIO               ( MonadIO, MonadUnliftIO, liftIO )
 import           UnliftIO.Async         ( concurrently_ )
 
-import           CLI.Options (QueryOptions (..))
-
 dispatchQuery :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
               => QueryOptions
               -> Connection
               -> m ()
 dispatchQuery options conn = do
-  log E $ "Query command unimplemented. Parsed options: " <> (Text.pack . show) options
+  let stationId = optStationId options
+  query <- liftIO $ queryStationName conn stationId
+  log I $ "Query result: " <> (Text.pack . show) query
+  pPrintCompact query
