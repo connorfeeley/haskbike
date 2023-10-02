@@ -272,6 +272,12 @@ cabal freeze --enable-tests --upgrade-dependencies --allow-newer=aeson
 psql -d haskbike -c "SELECT * FROM station_information"
 #+end_src
 
+** Start Postgres on MacOS
+
+#+begin_src shell
+pg_ctl -D '/opt/homebrew/var/postgresql@14/' -l /tmp/logfile start
+#+end_src
+
 ** Create Database
 
 #+begin_src shell :noeval
