@@ -26,7 +26,9 @@ import           Data.Time              ( LocalTime (..), TimeZone, defaultTimeL
 import           Database.Beam.Postgres ( Connection )
 import           Database.BikeShare     ( StationStatus, d_status_last_reported, d_status_num_bikes_available,
                                           d_status_num_bikes_disabled, d_status_num_docks_available,
-                                          d_status_num_docks_disabled, d_status_station_id )
+                                          d_status_num_docks_disabled, d_status_station_id,
+                                          vehicle_types_available_boost, vehicle_types_available_efit,
+                                          vehicle_types_available_efit_g5, vehicle_types_available_iconic )
 import           Database.Operations
 import           Database.Utils         ( pPrintCompact )
 
@@ -109,9 +111,16 @@ formatStationStatusResult = maybe ["No status found."] formatStationInfo
 
 formatStationInfo :: (TimeZone, String, StationStatus) -> [Text]
 formatStationInfo (timeZone, name, status) =
-    let pairs = [("Bikes:\t", status ^. d_status_num_bikes_available, status ^. d_status_num_bikes_disabled),
-                 ("Docks:\t", status ^. d_status_num_docks_available, status ^. d_status_num_docks_disabled)]
-    in [formattedName name status, formattedLastReport timeZone $ reportToLocal <$> status ^. d_status_last_reported] ++ map fmtAvailability pairs
+  let
+    bikeAvailability = [ fmtBikeAvailability "Iconic"   (status ^. vehicle_types_available_iconic)
+                       -- , fmtBikeAvailability "Boost"    (status ^. vehicle_types_available_boost) -- Not used in Toronto.
+                       , fmtBikeAvailability "E-Fit"    (status ^. vehicle_types_available_efit)
+                       , fmtBikeAvailability "E-Fit G5" (status ^. vehicle_types_available_efit_g5)]
+
+    pairs = [ ("Docks:\t", status ^. d_status_num_docks_available, status ^. d_status_num_docks_disabled)
+            , ("Bikes:\t", status ^. d_status_num_bikes_available, status ^. d_status_num_bikes_disabled)
+            ]
+    in [formattedName name status, formattedLastReport timeZone $ reportToLocal <$> status ^. d_status_last_reported] ++ map fmtAvailability pairs ++ bikeAvailability
 
 formattedName :: String -> StationStatus -> Text
 formattedName name status =
@@ -140,6 +149,13 @@ fmtAvailability (name, avail, disabled)
  <> colouredText' Vivid Green  (fmt $ padLeftF 2 ' ' avail)    <> " available" <> tab
  <> boldCode <> "|" <> tab <> resetIntens
  <> colouredText' Vivid Red    (fmt $ padLeftF 2 ' ' disabled) <> " disabled"
+ where tab = "\t" :: Text
+
+fmtBikeAvailability :: Text -> Int32 -> Text
+fmtBikeAvailability name count
+  = tab
+ <> colouredText' Dull Yellow (fmt $ padLeftF 9 ' ' name) <> ": "
+ <> colouredText' Vivid Green  (fmt $ padLeftF 2 ' ' count) <> tab <> boldCode <> "|" <> resetIntens
  where tab = "\t" :: Text
 
 colouredText :: Show a => ColorIntensity -> Color -> a -> Text
