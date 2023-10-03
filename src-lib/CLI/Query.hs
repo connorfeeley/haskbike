@@ -12,7 +12,7 @@ module CLI.Query
      ) where
 
 
-import           CLI.Options            ( QueryOptions (..) )
+import           CLI.Options            ( QueryOptions (..), MatchMethod(..), unMatchMethod )
 
 import           Colog                  ( Message, WithLog, log, pattern D, pattern I )
 
@@ -63,10 +63,10 @@ queryByStationId stationId conn = do
   pPrintCompact name
 
 queryByStationName :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
-                   => String
+                   => MatchMethod String
                    -> Connection
                    -> m ()
-queryByStationName stationName conn = do
+queryByStationName stationMatch conn = do
   currentTimeZone <- liftIO getCurrentTimeZone
 
   log I $ toStrict $ "Querying station names like '" <> pack stationName <> "'"
@@ -89,6 +89,7 @@ queryByStationName stationName conn = do
     putStrLn $ unpack $ unlines $ withHeader " Begins "  (concat beginsText)
 
   where
+    stationName = unMatchMethod stationMatch
     withHeader :: Text -> [Text] -> [Text]
     withHeader header results = case results of
       [] -> fmtHeader : ["\t\t" <> indent 6 <> italCode <> " None." <> resetItal ]

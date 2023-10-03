@@ -1,5 +1,4 @@
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE PatternSynonyms    #-}
 
 -- | Command-line options.
 module CLI.Options where
@@ -81,8 +80,23 @@ resetOptionsParser = ResetOptions
 -- | Options for the 'Query' command.
 data QueryOptions where
   QueryByStationId      :: { optStationId       :: Int }    -> QueryOptions
-  QueryByStationName    :: { optStationName     :: String } -> QueryOptions
+  QueryByStationName    :: { optStationName     :: MatchMethod String
+                           } -> QueryOptions
   deriving (Show)
+
+data MatchMethod a =
+    ExactMatch a
+  | PrefixMatch a
+  | SuffixMatch a
+  | WildcardMatch a
+  deriving (Show, Functor)
+
+-- | Unwrap a 'MatchMethod'.
+unMatchMethod :: MatchMethod a -> a
+unMatchMethod (ExactMatch a)    = a
+unMatchMethod (PrefixMatch a)   = a
+unMatchMethod (SuffixMatch a)   = a
+unMatchMethod (WildcardMatch a) = a
 
 -- | Parser for 'ResetOptions'.
 queryOptionsParser :: Parser QueryOptions
@@ -97,8 +111,8 @@ parseStationId = option auto
  <> value 7001
  <> help "Station ID to query." )
 
-parseStationName :: Parser String
-parseStationName = strOption
+parseStationName :: Parser (MatchMethod String)
+parseStationName = WildcardMatch <$> option auto
   ( long "station-name"
  <> metavar "STATION_NAME"
  <> help "Station name to query." )
