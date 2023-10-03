@@ -60,9 +60,11 @@ Flag DEBUG
   Default:     False
   Manual:      True
 
--- Common warning flags.
-common warnings
-    ghc-options: -Wall
+-- Linker (use gold) common warning flags.
+common compile-flags
+  if os(linux)
+    ghc-options:       -optl-fuse-ld=gold
+    ld-options:        -fuse-ld=gold
 
 -- Common language extensions.
 common common-extensions
@@ -134,7 +136,7 @@ common test-depends
 
 -- Executable target.
 executable haskbike
-    import:           warnings
+    import:           compile-flags
                     , common-extensions
                     , common-depends
                     , api-depends
@@ -160,7 +162,7 @@ executable haskbike
 
 -- Library target.
 library
-    import:           warnings
+    import:           compile-flags
                     , common-extensions
                     , common-depends
                     , api-depends
@@ -208,7 +210,7 @@ library
 
 -- Testing target.
 test-suite haskbike-test
-    import:           warnings
+    import:           compile-flags
                     , common-extensions
                     , common-depends
                     , api-depends
