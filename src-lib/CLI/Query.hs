@@ -33,12 +33,12 @@ import           Fmt
 
 import           Prelude                hiding ( log )
 
-import           ReportTime             ( localToPosix, localToSystem, reportToLocal )
+import           ReportTime             ( localToPosix, localToSystem, reportToLocal, localToSystem' )
 
 import           System.Console.ANSI
 
 import           UnliftIO               ( MonadIO, MonadUnliftIO, liftIO )
-import Data.Time (formatTime, defaultTimeLocale, LocalTime (..))
+import Data.Time (formatTime, defaultTimeLocale, LocalTime (..), TimeZone, getCurrentTimeZone)
 
 dispatchQuery :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
               => QueryOptions
@@ -65,6 +65,8 @@ queryByStationName :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
                    -> Connection
                    -> m ()
 queryByStationName stationName conn = do
+  currentTimeZone <- liftIO getCurrentTimeZone
+
   log I $ "Querying station names like '" <> Text.pack stationName <> "'"
   resultsAnywhere  <- liftIO $ queryStationIdLike conn (nameTransformer "%" stationName "%")
   resultsBegins    <- liftIO $ queryStationIdLike conn (nameTransformer ""  stationName "%")
@@ -78,7 +80,7 @@ queryByStationName stationName conn = do
   cliOut $ "" : "Begins with: "      : formatStationResults resultsBegins
   cliOut $ "" : "Ends with: "        : formatStationResults resultsEnds
 
-  liftIO $ mapM_ (showStationStatus conn) resultsAnywhere
+  liftIO $ mapM_ (showStationStatus conn currentTimeZone) resultsAnywhere
 
   where
     nameTransformer prepend name append = intercalate "" [prepend, name, append]
@@ -95,37 +97,38 @@ queryByStationName stationName conn = do
     cliOut :: MonadIO m => [Text.Text] -> m ()
     cliOut = mapM_ (liftIO . putStrLn . Text.unpack)
 
-    showStationStatus :: Connection -> (Int, String) -> IO ()
-    showStationStatus conn' (id', name') = do
+    showStationStatus :: Connection -> TimeZone -> (Int, String) -> IO ()
+    showStationStatus conn' currentTimeZone' (id', name') = do
       latest <- queryStationStatusLatest conn' id'
-      let status = fmap (name', ) latest
+      let status = fmap (currentTimeZone', name', ) latest
       putStrLn (Text.unpack $ Text.unlines $ formatStationStatusResult status)
 
 
-formatStationStatusResult :: Maybe (String, StationStatus) -> [Text.Text]
+formatStationStatusResult :: Maybe (TimeZone, String, StationStatus) -> [Text.Text]
 formatStationStatusResult = maybe ["No status found."] formatStationInfo
 
-formatStationInfo :: (String, StationStatus) -> [Text.Text]
-formatStationInfo (name, status) =
+formatStationInfo :: (TimeZone, String, StationStatus) -> [Text.Text]
+formatStationInfo (timeZone, name, status) =
     let pairs = [("Bikes:\t", status ^. d_status_num_bikes_available, status ^. d_status_num_bikes_disabled),
                  ("Docks:\t", status ^. d_status_num_docks_available, status ^. d_status_num_docks_disabled)]
-    in [formattedName name status, formattedLastReport $ reportToLocal <$> status ^. d_status_last_reported] ++ map fmtAvailability pairs
+    in [formattedName name status, formattedLastReport timeZone $ reportToLocal <$> status ^. d_status_last_reported] ++ map fmtAvailability pairs
 
 formattedName :: String -> StationStatus -> Text.Text
 formattedName name status =
     format "{}[{}]{} {}{}{}" boldCode (status ^. d_status_station_id) resetIntens underCode name resetUnder
 
-formattedLastReport :: Maybe LocalTime -> Text.Text
-formattedLastReport status = reportedText
+-- Format the last reported time in the specified time zone (namerly, the system's time zone).
+formattedLastReport :: TimeZone -> Maybe LocalTime -> Text.Text
+formattedLastReport timeZone status = reportedText
   where
     reportedText = case status of
       Nothing -> boldCode <> colouredText' Red "Never" <> resetIntens
       -- Just t  -> italCode <> showText t <> resetItal
       Just t  -> "[" <> showText t <> "]"
               <> boldCode <> "\t" <> "|" <> "\t" <> resetIntens
-              <> italCode <> Text.pack (formatTime' t) <> resetItal
+              <> italCode <> Text.pack (formatTime' t) <> resetItal <> " (local)"
     timeFormat = "%A, %b %e, %T" -- DayOfWeek Month Day Hour:Minute:Second
-    formatTime' = formatTime defaultTimeLocale timeFormat
+    formatTime' t = formatTime defaultTimeLocale timeFormat $ localToSystem' timeZone t
 
 showText :: Show a => a -> Text.Text
 showText = Text.pack . show
