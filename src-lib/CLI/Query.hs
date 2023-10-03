@@ -102,36 +102,39 @@ queryByStationName stationName conn = do
 
 
 formatStationStatusResult :: Maybe (String, StationStatus) -> [Text.Text]
-formatStationStatusResult =
-  maybe ["No status found."] $ \s ->
-  [ format "{}[{}]{} {}{}{}"
-    boldCode (s ^. _2 . d_status_station_id) resetIntens
-    underCode (s ^. _1) resetUnder
-  , "Last reported: " <> maybe "Never" showText (s ^. _2 . d_status_last_reported)
-  ] <> map fmtAvailability [ ("Bikes:\t", s ^. _2 . d_status_num_bikes_available, s ^. _2 . d_status_num_bikes_disabled)
-                           , ("Docks:\t", s ^. _2 . d_status_num_docks_available, s ^. _2 . d_status_num_docks_disabled) ]
+formatStationStatusResult = maybe ["No status found."] formatStationInfo
 
-fmtAvailability :: (Text.Text, Int32, Int32) -> Text.Text
-fmtAvailability (name, available, disabled) =
-    showTextTextColour Green name
- <> showTextColour Green available <> " available\t"
- <> boldCode <> "|\t" <> resetIntens
- <> showTextColour Red disabled <> " disabled"
+formatStationInfo :: (String, StationStatus) -> [Text.Text]
+formatStationInfo (name, status) =
+    let pairs = [("Bikes:\t", status ^. d_status_num_bikes_available, status ^. d_status_num_bikes_disabled),
+                 ("Docks:\t", status ^. d_status_num_docks_available, status ^. d_status_num_docks_disabled)]
+    in [formattedName name status, formattedLastReport status] ++ map fmtAvailability pairs
+
+formattedName :: String -> StationStatus -> Text.Text
+formattedName name status =
+    format "{}[{}]{} {}{}{}" boldCode (status ^. d_status_station_id) resetIntens underCode name resetUnder
+
+formattedLastReport :: StationStatus -> Text.Text
+formattedLastReport status = "Last reported: " <> maybe "Never" showText (status ^. d_status_last_reported)
 
 showText :: Show a => a -> Text.Text
 showText = Text.pack . show
 
-showTextColour :: Show a => Color -> a -> Text.Text
-showTextColour colour item = coloredText colour $ fmt $ padLeftF 2 ' ' $ show item
+fmtAvailability :: (Text.Text, Int32, Int32) -> Text.Text
+fmtAvailability (name, avail, disable)
+  = colouredText' Green name
+ <> colouredText Green avail <> " available" <> "\t"
+ <> boldCode <> "|" <> "\t "<> resetIntens
+ <> colouredText Red disable <> " disabled"
 
-showTextTextColour :: Color -> Text.Text -> Text.Text
-showTextTextColour = coloredText
+colouredText :: Show a => Color -> a -> Text.Text
+colouredText colour = colouredText' colour . Text.pack . show
 
-coloredText :: Color -> Text.Text -> Text.Text
-coloredText colour text = format "{}{}{}" (setSGRCode [SetColor Foreground Vivid colour]) text (setSGRCode [])
+colouredText' :: Color -> Text.Text -> Text.Text
+colouredText' colour text = format "{}{}{}" (setSGRCode [SetColor Foreground Vivid colour]) text (setSGRCode [])
 
 boldCode, resetIntens, underCode, resetUnder :: Text.Text
-boldCode    = Text.pack $ setSGRCode [ SetConsoleIntensity BoldIntensity ]
-resetIntens = Text.pack $ setSGRCode [ SetConsoleIntensity NormalIntensity ]
-underCode   = Text.pack $ setSGRCode [ SetUnderlining SingleUnderline ]
-resetUnder  = Text.pack $ setSGRCode [ SetUnderlining NoUnderline ]
+boldCode    = Text.pack $ setSGRCode [ SetConsoleIntensity  BoldIntensity   ]
+resetIntens = Text.pack $ setSGRCode [ SetConsoleIntensity  NormalIntensity ]
+underCode   = Text.pack $ setSGRCode [ SetUnderlining       SingleUnderline ]
+resetUnder  = Text.pack $ setSGRCode [ SetUnderlining       NoUnderline     ]
