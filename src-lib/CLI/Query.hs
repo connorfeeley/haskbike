@@ -70,9 +70,9 @@ queryByStationName :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
                    -> m ()
 queryByStationName stationName conn = do
   log I $ "Querying station names like '" <> Text.pack stationName <> "'"
-  resultsAnywhere  <- liftIO $ queryStationIdLike conn (nameAnywhere stationName)
-  resultsBegins    <- liftIO $ queryStationIdLike conn (nameBegins   stationName)
-  resultsEnds      <- liftIO $ queryStationIdLike conn (nameEnds     stationName)
+  resultsAnywhere  <- liftIO $ queryStationIdLike conn (nameTransformer "%" stationName "%")
+  resultsBegins    <- liftIO $ queryStationIdLike conn (nameTransformer ""  stationName "%")
+  resultsEnds      <- liftIO $ queryStationIdLike conn (nameTransformer "%" stationName "")
 
   log D $ "Wildcard: "    <> (Text.pack . show) resultsAnywhere
   log D $ "Begins with: " <> (Text.pack . show) resultsBegins
@@ -87,9 +87,7 @@ queryByStationName stationName conn = do
   liftIO $ putStrLn (Text.unpack $ formatStationStatusResult $ fromBeamStationStatusToJSON <$> latest)
 
   where
-    nameAnywhere name = intercalate "" ["%", stationName, "%"]
-    nameBegins name = intercalate "" [stationName, "%"]
-    nameEnds name = intercalate "" ["%", stationName]
+    nameTransformer prepend name append = intercalate "" [prepend, name, append]
 
     formatStationResults :: [(Int, String)] -> [Text.Text]
     formatStationResults results = case results of
