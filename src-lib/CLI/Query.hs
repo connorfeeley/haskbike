@@ -108,21 +108,27 @@ formatStationStatusResult =
     boldCode (s ^. _2 . d_status_station_id) resetIntens
     underCode (s ^. _1) resetUnder
   , "Last reported: " <> maybe "Never" showText (s ^. _2 . d_status_last_reported)
-  ] <> map fmtAvailability [ ("Bikes", s ^. _2 . d_status_num_bikes_available, s ^. _2 . d_status_num_bikes_disabled)
-                           , ("Docks", s ^. _2 . d_status_num_docks_available, s ^. _2 . d_status_num_docks_disabled) ]
+  ] <> map fmtAvailability [ ("Bikes:\t", s ^. _2 . d_status_num_bikes_available, s ^. _2 . d_status_num_bikes_disabled)
+                           , ("Docks:\t", s ^. _2 . d_status_num_docks_available, s ^. _2 . d_status_num_docks_disabled) ]
 
-fmtAvailability :: (String, Int32, Int32) -> Text.Text
+fmtAvailability :: (Text.Text, Int32, Int32) -> Text.Text
 fmtAvailability (name, available, disabled) =
- showTextColour Green name <> ": "
- <> showTextColour Green available <> " available "
- <> boldCode <> " | " <> resetIntens
+    showTextTextColour Green name
+ <> showTextColour Green available <> " available\t"
+ <> boldCode <> "|\t" <> resetIntens
  <> showTextColour Red disabled <> " disabled"
 
 showText :: Show a => a -> Text.Text
 showText = Text.pack . show
 
 showTextColour :: Show a => Color -> a -> Text.Text
-showTextColour colour text = format "{}{}{}" (setSGRCode [SetColor Foreground Vivid colour]) (show text) (setSGRCode [])
+showTextColour colour item = coloredText colour $ fmt $ padLeftF 2 ' ' $ show item
+
+showTextTextColour :: Color -> Text.Text -> Text.Text
+showTextTextColour = coloredText
+
+coloredText :: Color -> Text.Text -> Text.Text
+coloredText colour text = format "{}{}{}" (setSGRCode [SetColor Foreground Vivid colour]) text (setSGRCode [])
 
 boldCode, resetIntens, underCode, resetUnder :: Text.Text
 boldCode    = Text.pack $ setSGRCode [ SetConsoleIntensity BoldIntensity ]
