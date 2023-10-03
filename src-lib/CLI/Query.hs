@@ -1,35 +1,30 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE DerivingStrategies  #-}
+{-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE PatternSynonyms     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections       #-}
 
-{- |
-CLI interface for querying the database.
--}
+-- | CLI interface for querying the database.
 module CLI.Query
      ( dispatchQuery
      ) where
 
-import           API.Client
-import           API.ResponseWrapper
-import           API.Types
 
 import           CLI.Options            ( QueryOptions (..) )
 
-import           Colog                  ( Message, Msg (msgText), WithLog, cmap, log, logException, pattern D,
-                                          pattern E, pattern I, withLog )
+import           Colog                  ( Message, WithLog, log, pattern D, pattern I )
 
-import           Control.Concurrent     ( threadDelay )
-import           Control.Concurrent.STM
 import           Control.Lens
-import           Control.Monad          ( void )
-import           Control.Monad.Cont     ( forever )
 
 import           Data.List              ( intercalate )
 import qualified Data.Text              as Text
 
 import           Database.Beam.Postgres ( Connection )
-import           Database.BikeShare     ( d_status_last_reported, d_status_station_id, fromBeamStationStatusToJSON )
+import           Database.BikeShare     ( StationStatus, d_status_last_reported, d_status_num_bikes_available,
+                                          d_status_num_bikes_disabled, d_status_num_docks_available,
+                                          d_status_num_docks_disabled, d_status_station_id )
 import           Database.Operations
 import           Database.Utils         ( pPrintCompact )
 
@@ -37,12 +32,7 @@ import           Fmt
 
 import           Prelude                hiding ( log )
 
-import           ReportTime             ( localToPosix, localToSystem )
-
-import           Text.Pretty.Simple     ( pPrintString )
-
 import           UnliftIO               ( MonadIO, MonadUnliftIO, liftIO )
-import           UnliftIO.Async         ( concurrently_ )
 
 dispatchQuery :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
               => QueryOptions
@@ -82,9 +72,7 @@ queryByStationName stationName conn = do
   cliOut $ "" : "Begins with: "      : formatStationResults resultsBegins
   cliOut $ "" : "Ends with: "        : formatStationResults resultsEnds
 
-  latest <- liftIO $ queryStationStatusLatest conn (head resultsAnywhere ^. _1)
-  liftIO $ putStrLn ("Latest status:" :: String)
-  liftIO $ putStrLn (Text.unpack $ formatStationStatusResult $ fromBeamStationStatusToJSON <$> latest)
+  liftIO $ mapM_ (showStationStatus conn) resultsAnywhere
 
   where
     nameTransformer prepend name append = intercalate "" [prepend, name, append]
@@ -97,19 +85,31 @@ queryByStationName stationName conn = do
     formatStationResult :: (Int, String) -> Text.Text
     formatStationResult (sId, sName) = Text.pack $ show sId <> ": " <> sName
 
-    formatStationStatusResult :: Maybe StationStatus -> Text.Text
-    formatStationStatusResult status = case status of
-      Nothing -> Text.pack "No status found."
-      Just status' -> Text.pack $ fmt $ nameF "station" $ blockListF
-        [ "Station ID: " <> (Text.pack . show $ status' ^. status_station_id)
-        -- FIXME: this is hideous.
-        -- FIXME: just dump the database type directly.
-        , Text.pack (fmt $ blockListF $ map formatStationStatusAvailableResult (status' ^. status_vehicle_types_available))]
-
-    -- FIXME: this too is hideous.
-    formatStationStatusAvailableResult :: VehicleType -> Text.Text
-    formatStationStatusAvailableResult available =
-      Text.pack $ fmt $ blockListF (vehicle_type_id available, type_count available)
 
     cliOut :: MonadIO m => [Text.Text] -> m ()
     cliOut = mapM_ (liftIO . putStrLn . Text.unpack)
+
+    showStationStatus :: Connection -> (Int, String) -> IO ()
+    showStationStatus conn' (id', name') = do
+      latest <- queryStationStatusLatest conn' id'
+      let status = fmap (name', ) latest
+      putStrLn (Text.unpack $ Text.unlines $ formatStationStatusResult status)
+
+
+formatStationStatusResult :: Maybe (String, StationStatus) -> [Text.Text]
+formatStationStatusResult = maybe ["No status found."] $ \s ->
+                [ "[" +| show (s ^. _2 . d_status_station_id) |+ "] " +| (s ^. _1) |+ ""
+                , "Last reported: " <> maybe "Never" (Text.pack . show) (s ^. _2 . d_status_last_reported)
+                ] <> fmtVehiclesAvailable (s ^. _2)
+
+
+fmtVehiclesAvailable :: StationStatus -> [Text.Text]
+fmtVehiclesAvailable s =
+  [ showText (s ^. d_status_num_bikes_available)  <> " bikes available."
+  , showText (s ^. d_status_num_docks_available)  <> " docks available."
+  , showText (s ^. d_status_num_bikes_disabled)   <> " bikes disabled."
+  , showText (s ^. d_status_num_docks_disabled)   <> " docks disabled."
+  ]
+
+showText :: Show a => a -> Text.Text
+showText = Text.pack . show
