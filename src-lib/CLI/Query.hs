@@ -109,23 +109,23 @@ formatStationInfo :: (String, StationStatus) -> [Text.Text]
 formatStationInfo (name, status) =
     let pairs = [("Bikes:\t", status ^. d_status_num_bikes_available, status ^. d_status_num_bikes_disabled),
                  ("Docks:\t", status ^. d_status_num_docks_available, status ^. d_status_num_docks_disabled)]
-    in [formattedName name status, formattedLastReport status] ++ map fmtAvailability pairs
+    in [formattedName name status, formattedLastReport $ reportToLocal <$> status ^. d_status_last_reported] ++ map fmtAvailability pairs
 
 formattedName :: String -> StationStatus -> Text.Text
 formattedName name status =
     format "{}[{}]{} {}{}{}" boldCode (status ^. d_status_station_id) resetIntens underCode name resetUnder
 
-formattedLastReport :: StationStatus -> Text.Text
+formattedLastReport :: Maybe LocalTime -> Text.Text
 formattedLastReport status = reportedText
   where
-    reportedText = case status ^. d_status_last_reported of
+    reportedText = case status of
       Nothing -> boldCode <> colouredText' Red "Never" <> resetIntens
       -- Just t  -> italCode <> showText t <> resetItal
       Just t  -> "[" <> showText t <> "]"
               <> boldCode <> "\t" <> "|" <> "\t" <> resetIntens
               <> italCode <> Text.pack (formatTime' t) <> resetItal
     timeFormat = "%A, %b %e, %T" -- DayOfWeek Month Day Hour:Minute:Second
-    formatTime' t = formatTime defaultTimeLocale timeFormat $ reportToLocal t
+    formatTime' = formatTime defaultTimeLocale timeFormat
 
 showText :: Show a => a -> Text.Text
 showText = Text.pack . show
