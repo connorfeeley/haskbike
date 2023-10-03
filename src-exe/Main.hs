@@ -43,7 +43,7 @@ main = do
 
 
 -- Main application entry point inside the 'App' monad environment.
-appMain :: (WithLog env Message m, MonadIO m, MonadUnliftIO m) => Options -> m ()
+appMain :: (App ~ m, WithLog env Message m, MonadIO m, MonadUnliftIO m) => Options -> m ()
 appMain options = do
   log I $ "Starting Toronto Bikeshare CLI with verbosity '" <> Text.pack (show (logLevel options)) <> "'."
   -- Dispatch to appropriate command.

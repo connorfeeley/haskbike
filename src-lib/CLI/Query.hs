@@ -3,16 +3,19 @@ module CLI.Query
      ( dispatchQuery
      ) where
 
+import           AppEnv
+
 import           CLI.Options            ( MatchMethod (..), QueryOptions (..), unMatchMethod )
 import           CLI.QueryFormat
 import           CLI.Utils
 
 import           Colog                  ( Message, WithLog, log, pattern D, pattern I )
 
+import           Control.Monad.Reader   ( asks )
+
 import qualified Data.List              as List
 import           Data.Maybe             ( fromMaybe )
 import           Data.Text.Lazy         ( Text, pack, toStrict, unlines, unpack )
-import           Data.Time              ( getCurrentTimeZone )
 
 import           Database.Beam.Postgres ( Connection )
 import           Database.BikeShare     ( StationStatus, d_status_last_reported, d_status_num_bikes_available,
@@ -28,7 +31,7 @@ import           UnliftIO               ( MonadIO, MonadUnliftIO, liftIO )
 
 
 -- | Dispatch CLI arguments to the query interface.
-dispatchQuery :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
+dispatchQuery :: (App ~ m, WithLog env Message m, MonadIO m, MonadUnliftIO m)
               => QueryOptions
               -> Connection
               -> m ()
@@ -39,7 +42,7 @@ dispatchQuery options conn = do
 
 
 -- | Query the database for the station with the given ID.
-queryByStationId :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
+queryByStationId :: (App ~ m, WithLog env Message m, MonadIO m, MonadUnliftIO m)
                  => Int
                  -> Connection
                  -> m ()
@@ -59,7 +62,7 @@ queryByStationId stationId conn = do
 
 
 -- | Query the database for stations with names matching the given pattern.
-queryByStationName :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
+queryByStationName :: (App ~ m, WithLog env Message m, MonadIO m, MonadUnliftIO m)
                    => MatchMethod String
                    -> Connection
                    -> m ()
@@ -83,14 +86,14 @@ queryByStationName stationMatch conn = do
     nameTransformer prepend name append = List.intercalate "" [prepend, name, append]
 
 -- | Query the database for the status of the given station tuple.
-queryStatus :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
-                   => Connection
-                   -> String -- ^ Header
-                   -> (Int, String) -- ^ (station_id, station_name)
-                   -> m [Text]
+queryStatus :: (App ~ m, WithLog env Message m, MonadIO m, MonadUnliftIO m)
+            => Connection
+            -> String -- ^ Header
+            -> (Int, String) -- ^ (station_id, station_name)
+            -> m [Text]
 queryStatus conn header station_tuple = do
   -- Query the current time zone.
-  currentTimeZone <- liftIO getCurrentTimeZone
+  currentTimeZone <- asks envTimeZone  -- Fetch the timeZone from the environment
 
   -- Query the latest status for the given station tuple.
   resultsText <- liftIO (fmtStationStatus conn currentTimeZone station_tuple)
