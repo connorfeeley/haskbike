@@ -33,11 +33,12 @@ import           Fmt
 
 import           Prelude                hiding ( log )
 
-import           ReportTime             ( localToPosix, localToSystem )
+import           ReportTime             ( localToPosix, localToSystem, reportToLocal )
 
 import           System.Console.ANSI
 
 import           UnliftIO               ( MonadIO, MonadUnliftIO, liftIO )
+import Data.Time (formatTime, defaultTimeLocale, LocalTime (..))
 
 dispatchQuery :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
               => QueryOptions
@@ -115,7 +116,16 @@ formattedName name status =
     format "{}[{}]{} {}{}{}" boldCode (status ^. d_status_station_id) resetIntens underCode name resetUnder
 
 formattedLastReport :: StationStatus -> Text.Text
-formattedLastReport status = "Last reported: " <> maybe "Never" showText (status ^. d_status_last_reported)
+formattedLastReport status = reportedText
+  where
+    reportedText = case status ^. d_status_last_reported of
+      Nothing -> boldCode <> colouredText' Red "Never" <> resetIntens
+      -- Just t  -> italCode <> showText t <> resetItal
+      Just t  -> "[" <> showText t <> "]"
+              <> boldCode <> "\t" <> "|" <> "\t" <> resetIntens
+              <> italCode <> Text.pack (formatTime' t) <> resetItal
+    timeFormat = "%A, %b %e, %T" -- DayOfWeek Month Day Hour:Minute:Second
+    formatTime' t = formatTime defaultTimeLocale timeFormat $ reportToLocal t
 
 showText :: Show a => a -> Text.Text
 showText = Text.pack . show
@@ -123,9 +133,10 @@ showText = Text.pack . show
 fmtAvailability :: (Text.Text, Int32, Int32) -> Text.Text
 fmtAvailability (name, avail, disable)
   = colouredText' Green name
- <> colouredText Green avail <> " available" <> "\t"
- <> boldCode <> "|" <> "\t "<> resetIntens
+ <> colouredText Green avail <> " available" <> tab
+ <> boldCode <> "|" <> tab <> resetIntens
  <> colouredText Red disable <> " disabled"
+ where tab = "\t" :: Text.Text
 
 colouredText :: Show a => Color -> a -> Text.Text
 colouredText colour = colouredText' colour . Text.pack . show
@@ -133,8 +144,10 @@ colouredText colour = colouredText' colour . Text.pack . show
 colouredText' :: Color -> Text.Text -> Text.Text
 colouredText' colour text = format "{}{}{}" (setSGRCode [SetColor Foreground Vivid colour]) text (setSGRCode [])
 
-boldCode, resetIntens, underCode, resetUnder :: Text.Text
+boldCode, resetIntens, italCode, resetItal, underCode, resetUnder :: Text.Text
 boldCode    = Text.pack $ setSGRCode [ SetConsoleIntensity  BoldIntensity   ]
 resetIntens = Text.pack $ setSGRCode [ SetConsoleIntensity  NormalIntensity ]
+italCode    = Text.pack $ setSGRCode [ SetItalicized        True            ]
+resetItal   = Text.pack $ setSGRCode [ SetItalicized        False           ]
 underCode   = Text.pack $ setSGRCode [ SetUnderlining       SingleUnderline ]
 resetUnder  = Text.pack $ setSGRCode [ SetUnderlining       NoUnderline     ]
