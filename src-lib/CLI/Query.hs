@@ -33,7 +33,7 @@ import           Fmt
 
 import           Prelude                hiding ( log )
 
-import           ReportTime             ( localToPosix, localToSystem, reportToLocal, localToSystem' )
+import           ReportTime             ( reportToLocal, localToSystem' )
 
 import           System.Console.ANSI
 
