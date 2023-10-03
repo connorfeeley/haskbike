@@ -17,6 +17,8 @@ import           Colog             ( Message, WithLog, pattern W )
 import           Control.Exception ( SomeException, try )
 import           Control.Monad     ( void )
 
+import           Data.Time         ( getCurrentTimeZone )
+
 import           Database.Utils
 
 import           Test.Tasty.HUnit
@@ -50,9 +52,11 @@ unit_parseSystemPricingPlans :: IO ()
 unit_parseSystemPricingPlans = void $ runQueryWithEnv systemPricingPlans
 
 unit_poll :: IO ()
-unit_poll = runApp (mainEnv W) doPoll
+unit_poll = do
+  timeZone <- getCurrentTimeZone
+  runApp (mainEnv W timeZone) doPoll
   where
-    doPoll :: (WithLog env Message m, MonadIO m, MonadUnliftIO m) => m ()
+    doPoll :: (App ~ m, WithLog env Message m, MonadIO m, MonadUnliftIO m) => m ()
     doPoll = void $ timeout 1000000 $ do -- Terminate after 1 second
       conn <- liftIO $ setupDatabaseName dbnameTest
       void $ Poll.pollClient conn
