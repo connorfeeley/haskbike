@@ -232,8 +232,8 @@ separateNewerStatusRecords conn api_status = do
 Insert updated station status into the database.
 -}
 insertStationStatus :: Connection         -- ^ Connection to the database.
-                           -> [AT.StationStatus] -- ^ List of 'AT.StationStatus' from the API response.
-                           -> IO InsertStatusResult
+                    -> [AT.StationStatus] -- ^ List of 'AT.StationStatus' from the API response.
+                    -> IO InsertStatusResult
 insertStationStatus conn api_status
   | null api_status = return $ InsertStatusResult [] []
   | otherwise = do
