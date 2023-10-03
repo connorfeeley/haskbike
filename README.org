@@ -284,3 +284,21 @@ pg_ctl -D '/opt/homebrew/var/postgresql@14/' -l /tmp/logfile start
 createdb haskbike
 createdb haskbike-test
 #+end_src
+
+** Load completions
+With ~haskbike~ in =PATH=:
+
+Zsh:
+#+begin_src zsh
+eval "$(haskbike --zsh-completion-script haskbike)"
+# or
+autoload bashcompinit && bashcompinit
+eval "$(haskbike --bash-completion-script haskbike)"
+#+end_src
+
+Bash:
+#+begin_src bash
+eval "$(haskbike --bash-completion-script haskbike)"
+#+end_src
+
+/Note: can be added to =PATH= by adding ~PATH_add dist-newstyle/build/*/ghc-*/haskbike-*/x/haskbike/build/haskbike~ to ~.envrc~./

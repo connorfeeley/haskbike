@@ -247,9 +247,9 @@ fromJSONToBeamStationStatus status =
     num_efit_g5 = findByType AT.EFitG5
 
 -- | Convert from the Beam StationStatus type to the JSON StationStatus
-fromBeamStationStatusToJSON :: StationInformation -> StationStatus -> AT.StationStatus
-fromBeamStationStatusToJSON _info status =
-  AT.StationStatus { AT._status_station_id               = fromIntegral $ status^.d_status_station_id
+fromBeamStationStatusToJSON :: StationStatus -> AT.StationStatus
+fromBeamStationStatusToJSON status =
+  AT.StationStatus { AT._status_station_id                  = fromIntegral $ status^.d_status_station_id
                       , AT._status_num_bikes_available      = fromIntegral $ status^.d_status_num_bikes_available
                       , AT._status_num_bikes_disabled       = fromIntegral $ status^.d_status_num_bikes_disabled
                       , AT._status_num_docks_available      = fromIntegral $ status^.d_status_num_docks_available

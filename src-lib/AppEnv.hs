@@ -8,6 +8,7 @@ module AppEnv
      , mainEnv
      , runApp
      , simpleEnv
+     , mainLogAction
      ) where
 
 import           Colog                  ( HasLog (..), LogAction (..), Message, Msg (msgSeverity), Severity (..),

@@ -19,6 +19,7 @@ module Database.Operations
      , queryStationStatus
      , queryStationStatusBetween
      , queryStationStatusFields
+     , queryStationStatusLatest
        -- types
      , FilterStatusResult (..)
        -- lenses
@@ -376,3 +377,19 @@ queryStationIdLike conn station_name = do
   pure $ map (\si -> ( si ^. info_station_id & fromIntegral
                      , si ^. info_name & Text.unpack
                      )) info
+
+{- |
+Query the latest status for a station.
+-}
+queryStationStatusLatest :: Connection        -- ^ Connection to the database.
+                         -> Int              -- ^ Station ID.
+                         -> IO (Maybe StationStatus) -- ^ Latest 'StationStatus' for the given station.
+queryStationStatusLatest conn station_id = do
+  runBeamPostgres' conn $ runSelectReturningOne $ select $ do
+    info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
+    status <- orderBy_ (asc_ . _d_status_last_reported)
+                (all_ (bikeshareDb ^. bikeshareStationStatus))
+    guard_ (_d_status_info_id status `references_` info &&.
+            _info_station_id info ==. val_ (fromIntegral station_id) &&.
+           _d_status_active status ==. val_ True)
+    pure status
