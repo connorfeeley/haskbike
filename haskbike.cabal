@@ -170,6 +170,7 @@ library
                     , AppEnv
                     , API.ResponseWrapper
                     , API.Client
+                    , CLI.Utils
                     , CLI.Poll
                     , CLI.Query
                     , CLI.Database

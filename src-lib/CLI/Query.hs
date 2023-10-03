@@ -1,7 +1,3 @@
-{-# LANGUAGE DataKinds           #-}
-{-# LANGUAGE DerivingStrategies  #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-
 -- | CLI interface for querying the database.
 module CLI.Query
      ( dispatchQuery
@@ -9,8 +5,9 @@ module CLI.Query
 
 
 import           CLI.Options            ( MatchMethod (..), QueryOptions (..), unMatchMethod )
+import           CLI.Utils
 
-import           Colog                  ( Message, WithLog, log, pattern D, pattern E, pattern I )
+import           Colog                  ( Message, WithLog, log, pattern D, pattern I )
 
 import           Control.Lens
 
@@ -24,10 +21,9 @@ import           Database.Beam.Postgres ( Connection )
 import           Database.BikeShare     ( StationStatus, d_status_last_reported, d_status_num_bikes_available,
                                           d_status_num_bikes_disabled, d_status_num_docks_available,
                                           d_status_num_docks_disabled, d_status_station_id,
-                                          vehicle_types_available_boost, vehicle_types_available_efit,
-                                          vehicle_types_available_efit_g5, vehicle_types_available_iconic )
+                                          vehicle_types_available_efit, vehicle_types_available_efit_g5,
+                                          vehicle_types_available_iconic )
 import           Database.Operations
-import           Database.Utils         ( pPrintCompact )
 
 import           Fmt
 
@@ -116,15 +112,12 @@ queryStatus conn header station_tuple = do
       _  -> fmtHeader : results
       where
         fmtHeader = "\t" <> indent 5 <> indent 8 <> " " <> boldCode <> underCode <> header' <> resetUnder <> resetIntens <> " " <> indent 8
-        indent (n :: Int) = pack (unwords (replicate n ""))
-        boxLine n = intercalate "" (replicate n boxDrawingCharacter)
-        boxDrawingCharacter = "\x2500" :: Text -- Unicode U+2500 (Box Drawing Character)
 
-    fmtStationStatus :: Connection -> TimeZone -> (Int, String) -> IO [Text]
-    fmtStationStatus conn' currentTimeZone' (id', name') = do
-      latest <- queryStationStatusLatest conn' id'
-      let status = fmap (currentTimeZone', name', ) latest
-      pure $ formatStationStatusResult status
+fmtStationStatus :: Connection -> TimeZone -> (Int, String) -> IO [Text]
+fmtStationStatus conn' currentTimeZone' (id', name') = do
+  latest <- queryStationStatusLatest conn' id'
+  let status = fmap (currentTimeZone', name', ) latest
+  pure $ formatStationStatusResult status
 
 formatStationStatusResult :: Maybe (TimeZone, String, StationStatus) -> [Text]
 formatStationStatusResult = maybe ["No status found."] formatStationInfo
@@ -156,9 +149,7 @@ formattedLastReport timeZone status = reportedText
       -- Just t  -> italCode <> showText t <> resetItal
       Just t  -> "[" <> showText t <> "]"
               <> boldCode <> "\t" <> "|" <> "\t" <> resetIntens
-              <> italCode <> pack (formatTime' t) <> resetItal <> " (local)"
-    timeFormat = "%A, %b %e, %T" -- DayOfWeek Month Day Hour:Minute:Second
-    formatTime' t = formatTime defaultTimeLocale timeFormat $ localToSystem timeZone t
+              <> italCode <> pack (formatTime' timeZone t) <> resetItal <> " (local)"
 
 showText :: Show a => a -> Text
 showText = pack . show
