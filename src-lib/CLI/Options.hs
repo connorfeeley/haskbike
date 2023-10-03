@@ -76,10 +76,14 @@ resetOptionsParser = ResetOptions
      <> help "Run the command in test mode." )
 
 -- | Options for the 'Query' command.
-data QueryOptions where
-  QueryByStationId      :: { optStationId       :: Int }    -> QueryOptions
-  QueryByStationName    :: { optStationName     :: MatchMethod String
-                           } -> QueryOptions
+data QueryOptions =
+  QueryOptions { optRefresh     :: Bool
+               , optQueryBy     :: QueryMethod
+               } deriving (Show)
+
+data QueryMethod =
+    QueryByStationId Int
+  | QueryByStationName (MatchMethod String)
   deriving (Show)
 
 data MatchMethod a =
@@ -96,11 +100,16 @@ unMatchMethod (PrefixMatch a)   = a
 unMatchMethod (SuffixMatch a)   = a
 unMatchMethod (WildcardMatch a) = a
 
--- | Parser for 'ResetOptions'.
+
+-- | Parser for 'QueryOptions'.
 queryOptionsParser :: Parser QueryOptions
-queryOptionsParser = subparser $
-  command "id"   (info (QueryByStationId   <$> parseStationId)   (progDesc "Query by station ID.")) <>
-  command "name" (info (QueryByStationName <$> parseStationName) (progDesc "Query by station name."))
+queryOptionsParser = QueryOptions
+  <$> switch (long "refresh" <> help "Refresh the data.")
+  <*> (subparser $
+       queryByIdParser <> queryByNameParser)
+  where
+    queryByIdParser = command "id"   (info (QueryByStationId   <$> parseStationId)   (progDesc "Query by station ID."))
+    queryByNameParser = command "name" (info (QueryByStationName <$> parseStationName) (progDesc "Query by station name."))
 
 parseStationId :: Parser Int
 parseStationId = argument auto

@@ -5,13 +5,14 @@ module CLI.Query
 
 import           AppEnv
 
-import           CLI.Options            ( MatchMethod (..), QueryOptions (..), unMatchMethod )
+import           CLI.Database
+import           CLI.Options
 import           CLI.QueryFormat
 import           CLI.Utils
 
 import           Colog                  ( Message, WithLog, log, pattern D, pattern I )
 
-import           Control.Monad.Reader   ( asks )
+import           Control.Monad.Reader   ( asks, when )
 
 import qualified Data.List              as List
 import           Data.Maybe             ( fromMaybe )
@@ -36,7 +37,13 @@ dispatchQuery :: (App ~ m, WithLog env Message m, MonadIO m, MonadUnliftIO m)
               -> Connection
               -> m ()
 dispatchQuery options conn = do
-  case options of
+  -- Refresh the database if requested.
+  when (optRefresh options) $ do
+    log D "Refreshing database with latest status from API."
+    handleStatus conn
+
+  -- Query the database by either ID or name.
+  case optQueryBy options of
     QueryByStationId stationId     -> queryByStationId   stationId conn
     QueryByStationName stationName -> queryByStationName stationName conn
 

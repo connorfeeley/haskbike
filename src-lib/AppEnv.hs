@@ -6,9 +6,9 @@ module AppEnv
      ( App
      , Env (..)
      , mainEnv
+     , mainLogAction
      , runApp
      , simpleEnv
-     , mainLogAction
      ) where
 
 import           Colog                  ( HasLog (..), LogAction (..), Message, Msg (msgSeverity), Severity (..),
@@ -17,10 +17,11 @@ import           Colog                  ( HasLog (..), LogAction (..), Message, 
 import           Control.Monad.IO.Class ( MonadIO )
 import           Control.Monad.Reader   ( MonadReader, ReaderT (..) )
 
+import           Data.Time              ( TimeZone )
+
 import           Prelude                hiding ( log )
 
 import           UnliftIO               ( MonadUnliftIO )
-import           Data.Time              ( TimeZone )
 
 -- Application environment
 data Env m where
