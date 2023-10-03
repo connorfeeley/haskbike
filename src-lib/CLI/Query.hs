@@ -19,8 +19,8 @@ import           Colog                  ( Message, WithLog, log, pattern D, patt
 import           Control.Lens
 
 import           Data.Int               ( Int32 )
-import           Data.List              ( intercalate )
-import           Data.Text.Lazy         ( Text, pack, toStrict, unlines, unpack )
+import qualified Data.List              as List
+import           Data.Text.Lazy         ( Text, intercalate, pack, toStrict, unlines, unpack )
 import           Data.Time              ( LocalTime (..), TimeZone, defaultTimeLocale, formatTime, getCurrentTimeZone )
 
 import           Database.Beam.Postgres ( Connection )
@@ -69,40 +69,40 @@ queryByStationName stationName conn = do
 
   log I $ toStrict $ "Querying station names like '" <> pack stationName <> "'"
   resultsAnywhere  <- liftIO $ queryStationIdLike conn (nameTransformer "%" stationName "%")
-  resultsBegins    <- liftIO $ queryStationIdLike conn (nameTransformer ""  stationName "%")
   resultsEnds      <- liftIO $ queryStationIdLike conn (nameTransformer "%" stationName "")
+  resultsBegins    <- liftIO $ queryStationIdLike conn (nameTransformer ""  stationName "%")
 
   log D $ toStrict $ "Wildcard: "    <> (pack . show) resultsAnywhere
-  log D $ toStrict $ "Begins with: " <> (pack . show) resultsBegins
   log D $ toStrict $ "Ends with: "   <> (pack . show) resultsEnds
+  log D $ toStrict $ "Begins with: " <> (pack . show) resultsBegins
 
-  cliOut $ "" : "Matched anywhere: " : formatStationResults resultsAnywhere
-  cliOut $ "" : "Begins with: "      : formatStationResults resultsBegins
-  cliOut $ "" : "Ends with: "        : formatStationResults resultsEnds
+  anywhereText  <- liftIO $ mapM (fmtStationStatus conn currentTimeZone) resultsAnywhere
+  endsText      <- liftIO $ mapM (fmtStationStatus conn currentTimeZone) resultsEnds
+  beginsText    <- liftIO $ mapM (fmtStationStatus conn currentTimeZone) resultsBegins
 
-  liftIO $ mapM_ (showStationStatus conn currentTimeZone) resultsAnywhere
+  -- Print formatted results to the console.
+  liftIO $ do
+    putStrLn $ unpack $ unlines $ withHeader "Wildcard"  (concat anywhereText)
+    putStrLn $ unpack $ unlines $ withHeader "  Ends  "  (concat endsText)
+    putStrLn $ unpack $ unlines $ withHeader " Begins "  (concat beginsText)
 
   where
-    nameTransformer prepend name append = intercalate "" [prepend, name, append]
+    withHeader :: Text -> [Text] -> [Text]
+    withHeader header results = case results of
+      [] -> fmtHeader : ["\t\t" <> indent 6 <> italCode <> " None." <> resetItal ]
+      _  -> fmtHeader : results
+      where
+        fmtHeader = "\t" <> indent 5 <> indent 8 <> " " <> boldCode <> underCode <> header <> resetUnder <> resetIntens <> " " <> indent 8
+        indent (n :: Int) = pack (unwords (replicate n ""))
+        boxLine n = intercalate "" (replicate n boxDrawingCharacter)
+        boxDrawingCharacter = "\x2500" :: Text -- Unicode U+2500 (Box Drawing Character)
+    nameTransformer prepend name append = List.intercalate "" [prepend, name, append]
 
-    formatStationResults :: [(Int, String)] -> [Text]
-    formatStationResults results = case results of
-      []        -> ["No results found."]
-      _results' -> map formatStationResult results
-
-    formatStationResult :: (Int, String) -> Text
-    formatStationResult (sId, sName) = pack $ show sId <> ": " <> sName
-
-
-    cliOut :: MonadIO m => [Text] -> m ()
-    cliOut = mapM_ (liftIO . putStrLn . unpack)
-
-    showStationStatus :: Connection -> TimeZone -> (Int, String) -> IO ()
-    showStationStatus conn' currentTimeZone' (id', name') = do
+    fmtStationStatus :: Connection -> TimeZone -> (Int, String) -> IO [Text]
+    fmtStationStatus conn' currentTimeZone' (id', name') = do
       latest <- queryStationStatusLatest conn' id'
       let status = fmap (currentTimeZone', name', ) latest
-      putStrLn (unpack $ unlines $ formatStationStatusResult status)
-
+      pure $ formatStationStatusResult status
 
 formatStationStatusResult :: Maybe (TimeZone, String, StationStatus) -> [Text]
 formatStationStatusResult = maybe ["No status found."] formatStationInfo
@@ -115,14 +115,15 @@ formatStationInfo (timeZone, name, status) =
 
 formattedName :: String -> StationStatus -> Text
 formattedName name status =
-    format "{}[{}]{} {}{}{}" boldCode (status ^. d_status_station_id) resetIntens underCode name resetUnder
+    format "{}[{}{}]{} {}{}{}" boldCode idPrefix (status ^. d_status_station_id) resetIntens underCode name resetUnder
+    where idPrefix = resetIntens <> "# " <> boldCode
 
 -- Format the last reported time in the specified time zone (namerly, the system's time zone).
 formattedLastReport :: TimeZone -> Maybe LocalTime -> Text
 formattedLastReport timeZone status = reportedText
   where
     reportedText = case status of
-      Nothing -> boldCode <> colouredText' Red "Never" <> resetIntens
+      Nothing -> boldCode <> colouredText' Vivid Red "Never" <> resetIntens
       -- Just t  -> italCode <> showText t <> resetItal
       Just t  -> "[" <> showText t <> "]"
               <> boldCode <> "\t" <> "|" <> "\t" <> resetIntens
@@ -134,18 +135,18 @@ showText :: Show a => a -> Text
 showText = pack . show
 
 fmtAvailability :: (Text, Int32, Int32) -> Text
-fmtAvailability (name, avail, disable)
-  = colouredText' Green name
- <> colouredText Green avail <> " available" <> tab
+fmtAvailability (name, avail, disabled)
+  = colouredText' Dull Yellow name
+ <> colouredText' Vivid Green  (fmt $ padLeftF 2 ' ' avail)    <> " available" <> tab
  <> boldCode <> "|" <> tab <> resetIntens
- <> colouredText Red disable <> " disabled"
+ <> colouredText' Vivid Red    (fmt $ padLeftF 2 ' ' disabled) <> " disabled"
  where tab = "\t" :: Text
 
-colouredText :: Show a => Color -> a -> Text
-colouredText colour = colouredText' colour . pack . show
+colouredText :: Show a => ColorIntensity -> Color -> a -> Text
+colouredText intensity colour = colouredText' intensity colour . pack . show
 
-colouredText' :: Color -> Text -> Text
-colouredText' colour text = format "{}{}{}" (setSGRCode [SetColor Foreground Vivid colour]) text (setSGRCode [])
+colouredText' :: ColorIntensity -> Color -> Text -> Text
+colouredText' intensity colour text = format "{}{}{}" (setSGRCode [SetColor Foreground intensity colour]) text (setSGRCode [])
 
 boldCode, resetIntens, italCode, resetItal, underCode, resetUnder :: Text
 boldCode    = pack $ setSGRCode [ SetConsoleIntensity  BoldIntensity   ]
