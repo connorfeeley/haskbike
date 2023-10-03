@@ -12,9 +12,9 @@ module CLI.Query
      ) where
 
 
-import           CLI.Options            ( QueryOptions (..), MatchMethod(..), unMatchMethod )
+import           CLI.Options            ( MatchMethod (..), QueryOptions (..), unMatchMethod )
 
-import           Colog                  ( Message, WithLog, log, pattern D, pattern I )
+import           Colog                  ( Message, WithLog, log, pattern D, pattern E, pattern I )
 
 import           Control.Lens
 
@@ -70,23 +70,18 @@ queryByStationName stationMatch conn = do
   currentTimeZone <- liftIO getCurrentTimeZone
 
   log I $ toStrict $ "Querying station names like '" <> pack stationName <> "'"
-  resultsAnywhere  <- liftIO $ queryStationIdLike conn (nameTransformer "%" stationName "%")
-  resultsEnds      <- liftIO $ queryStationIdLike conn (nameTransformer "%" stationName "")
-  resultsBegins    <- liftIO $ queryStationIdLike conn (nameTransformer ""  stationName "%")
 
-  log D $ toStrict $ "Wildcard: "    <> (pack . show) resultsAnywhere
-  log D $ toStrict $ "Ends with: "   <> (pack . show) resultsEnds
-  log D $ toStrict $ "Begins with: " <> (pack . show) resultsBegins
+  let transformer = case stationMatch of
+        WildcardMatch query -> ("Wildcard", nameTransformer "%" query "%")
+        ExactMatch    query -> ("Exact",    nameTransformer ""  query "")
+        PrefixMatch   query -> ("Prefix",   nameTransformer ""  query "%")
+        SuffixMatch   query -> ("Suffix",   nameTransformer "%" query "")
 
-  anywhereText  <- liftIO $ mapM (fmtStationStatus conn currentTimeZone) resultsAnywhere
-  endsText      <- liftIO $ mapM (fmtStationStatus conn currentTimeZone) resultsEnds
-  beginsText    <- liftIO $ mapM (fmtStationStatus conn currentTimeZone) resultsBegins
+  results <- liftIO $ queryStationIdLike conn (snd transformer)
+  log D $ toStrict $ fst transformer <> ": "    <> (pack . show) results
 
-  -- Print formatted results to the console.
-  liftIO $ do
-    putStrLn $ unpack $ unlines $ withHeader "Wildcard"  (concat anywhereText)
-    putStrLn $ unpack $ unlines $ withHeader "  Ends  "  (concat endsText)
-    putStrLn $ unpack $ unlines $ withHeader " Begins "  (concat beginsText)
+  resultsText  <- liftIO $ mapM (fmtStationStatus conn currentTimeZone) results
+  liftIO $ putStrLn $ unpack $ unlines $ withHeader (fst transformer)  (concat resultsText)
 
   where
     stationName = unMatchMethod stationMatch

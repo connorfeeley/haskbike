@@ -100,23 +100,35 @@ unMatchMethod (WildcardMatch a) = a
 
 -- | Parser for 'ResetOptions'.
 queryOptionsParser :: Parser QueryOptions
-queryOptionsParser =
-  (QueryByStationId <$> parseStationId) <|> (QueryByStationName <$> parseStationName)
+queryOptionsParser = subparser $
+  command "id"   (info (QueryByStationId   <$> parseStationId)   (progDesc "Query by station ID.")) <>
+  command "name" (info (QueryByStationName <$> parseStationName) (progDesc "Query by station name."))
 
 parseStationId :: Parser Int
-parseStationId = option auto
-  ( long "station-id"
- <> metavar "STATION_ID"
+parseStationId = argument auto
+  ( metavar "STATION_ID"
  <> showDefault
  <> value 7001
  <> help "Station ID to query." )
 
+-- | Parser for variants of 'MatchMethod' parameterized over 'String'.
 parseStationName :: Parser (MatchMethod String)
-parseStationName = WildcardMatch <$> option auto
-  ( long "station-name"
- <> metavar "STATION_NAME"
- <> help "Station name to query." )
-
+parseStationName = exact <|> prefix <|> suffix <|> wildcard where
+  exact = ExactMatch <$> strOption
+    ( long "exact"
+   <> metavar "STATION_NAME"
+   <> help "Query for an exact match of the station name." )
+  prefix = PrefixMatch <$> strOption
+    ( long "prefix"
+   <> metavar "PREFIX"
+   <> help "Query stations where STATION_NAME appears at the start of the name." )
+  suffix = SuffixMatch <$> strOption
+    ( long "suffix"
+   <> metavar "SUFFIX"
+   <> help "Query stations where STATION_NAME appears at the end of the name." )
+  wildcard = WildcardMatch <$> argument str
+    ( metavar "STATION_NAME"
+   <> help "Query stations where STATION_NAME appears anywhere in the name." )
 
 -- | Options for the 'Poll' command.
 data PollOptions where
