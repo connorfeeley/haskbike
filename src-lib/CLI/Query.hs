@@ -18,6 +18,7 @@ import           Colog                  ( Message, WithLog, log, pattern D, patt
 
 import           Control.Lens
 
+import           Data.Int               ( Int32 )
 import           Data.List              ( intercalate )
 import qualified Data.Text              as Text
 
@@ -101,24 +102,21 @@ queryByStationName stationName conn = do
 
 
 formatStationStatusResult :: Maybe (String, StationStatus) -> [Text.Text]
-formatStationStatusResult = maybe ["No status found."] $ \s ->
-                [ format "{}[{}]{} {}{}{}"
-                  boldCode (s ^. _2 . d_status_station_id) resetIntens
-                  underCode (s ^. _1) resetUnder
-                , "Last reported: " <> maybe "Never" (Text.pack . show) (s ^. _2 . d_status_last_reported)
-                ] <> fmtVehiclesAvailable (s ^. _2)
+formatStationStatusResult =
+  maybe ["No status found."] $ \s ->
+  [ format "{}[{}]{} {}{}{}"
+    boldCode (s ^. _2 . d_status_station_id) resetIntens
+    underCode (s ^. _1) resetUnder
+  , "Last reported: " <> maybe "Never" showText (s ^. _2 . d_status_last_reported)
+  ] <> map fmtAvailability [ ("Bikes", s ^. _2 . d_status_num_bikes_available, s ^. _2 . d_status_num_bikes_disabled)
+                           , ("Docks", s ^. _2 . d_status_num_docks_available, s ^. _2 . d_status_num_docks_disabled) ]
 
-
-fmtVehiclesAvailable :: StationStatus -> [Text.Text]
-fmtVehiclesAvailable s =
-  [ Text.pack ("Bikes: " <> (setSGRCode [SetColor Foreground Vivid Green] <> show  (s ^. d_status_num_bikes_available)  <> setSGRCode [])) <> " available"
- <> Text.pack (setSGRCode [SetConsoleIntensity BoldIntensity] <> " | " <> setSGRCode [])
- <> Text.pack (setSGRCode [SetColor Foreground Vivid Red] <> show  (s ^. d_status_num_bikes_disabled) <> setSGRCode [] <> " disabled")
-
-  , Text.pack ("Docks: " <> (setSGRCode [SetColor Foreground Vivid Green] <> show  (s ^. d_status_num_docks_available)  <> setSGRCode [])) <> " available"
- <> Text.pack (setSGRCode [SetConsoleIntensity BoldIntensity] <> " | " <> setSGRCode [])
- <> Text.pack (setSGRCode [SetColor Foreground Vivid Red] <> show  (s ^. d_status_num_docks_disabled) <> setSGRCode [] <> " disabled")
-  ]
+fmtAvailability :: (String, Int32, Int32) -> Text.Text
+fmtAvailability (name, available, disabled) =
+ showTextColour Green name <> ": "
+ <> showTextColour Green available <> " available "
+ <> boldCode <> " | " <> resetIntens
+ <> showTextColour Red disabled <> " disabled"
 
 showText :: Show a => a -> Text.Text
 showText = Text.pack . show
@@ -126,12 +124,8 @@ showText = Text.pack . show
 showTextColour :: Show a => Color -> a -> Text.Text
 showTextColour colour text = format "{}{}{}" (setSGRCode [SetColor Foreground Vivid colour]) (show text) (setSGRCode [])
 
-boldCode :: String
-boldCode = setSGRCode [ SetConsoleIntensity BoldIntensity ]
-resetIntens :: String
-resetIntens = setSGRCode [ SetConsoleIntensity NormalIntensity ]
-
-underCode :: String
-underCode = setSGRCode [ SetUnderlining SingleUnderline ]
-resetUnder :: String
-resetUnder = setSGRCode [ SetUnderlining NoUnderline ]
+boldCode, resetIntens, underCode, resetUnder :: Text.Text
+boldCode    = Text.pack $ setSGRCode [ SetConsoleIntensity BoldIntensity ]
+resetIntens = Text.pack $ setSGRCode [ SetConsoleIntensity NormalIntensity ]
+underCode   = Text.pack $ setSGRCode [ SetUnderlining SingleUnderline ]
+resetUnder  = Text.pack $ setSGRCode [ SetUnderlining NoUnderline ]
