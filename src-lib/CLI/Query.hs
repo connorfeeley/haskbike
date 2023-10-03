@@ -21,6 +21,7 @@ import           Control.Lens
 import           Data.Int               ( Int32 )
 import           Data.List              ( intercalate )
 import qualified Data.Text              as Text
+import           Data.Time              ( LocalTime (..), TimeZone, defaultTimeLocale, formatTime, getCurrentTimeZone )
 
 import           Database.Beam.Postgres ( Connection )
 import           Database.BikeShare     ( StationStatus, d_status_last_reported, d_status_num_bikes_available,
@@ -33,12 +34,11 @@ import           Fmt
 
 import           Prelude                hiding ( log )
 
-import           ReportTime             ( reportToLocal, localToSystem' )
+import           ReportTime             ( localToSystem, reportToLocal )
 
 import           System.Console.ANSI
 
 import           UnliftIO               ( MonadIO, MonadUnliftIO, liftIO )
-import Data.Time (formatTime, defaultTimeLocale, LocalTime (..), TimeZone, getCurrentTimeZone)
 
 dispatchQuery :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
               => QueryOptions
@@ -128,7 +128,7 @@ formattedLastReport timeZone status = reportedText
               <> boldCode <> "\t" <> "|" <> "\t" <> resetIntens
               <> italCode <> Text.pack (formatTime' t) <> resetItal <> " (local)"
     timeFormat = "%A, %b %e, %T" -- DayOfWeek Month Day Hour:Minute:Second
-    formatTime' t = formatTime defaultTimeLocale timeFormat $ localToSystem' timeZone t
+    formatTime' t = formatTime defaultTimeLocale timeFormat $ localToSystem timeZone t
 
 showText :: Show a => a -> Text.Text
 showText = Text.pack . show

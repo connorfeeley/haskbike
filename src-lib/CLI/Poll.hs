@@ -26,6 +26,7 @@ import           Control.Monad          ( void )
 import           Control.Monad.Cont     ( forever )
 
 import qualified Data.Text              as Text
+import           Data.Time              ( getCurrentTimeZone )
 
 import           Database.Beam.Postgres ( Connection )
 import           Database.BikeShare     ( d_status_last_reported, d_status_station_id )
@@ -35,11 +36,10 @@ import           Fmt
 
 import           Prelude                hiding ( log )
 
-import           ReportTime             ( localToPosix, localToSystem' )
+import           ReportTime             ( localToPosix, localToSystem )
 
 import           UnliftIO               ( MonadIO, MonadUnliftIO, liftIO )
 import           UnliftIO.Async         ( concurrently_ )
-import Data.Time (getCurrentTimeZone)
 
 
 -- | Dispatch CLI arguments to the poller.
@@ -75,7 +75,7 @@ statusRequester queue interval_var = void . forever $ do
     Left err -> logException err
     Right result -> do
       currentTimeZone <- liftIO getCurrentTimeZone
-      let time' = localToSystem' currentTimeZone (result ^. response_last_updated)
+      let time' = localToSystem currentTimeZone (result ^. response_last_updated)
       let ttl = result ^. response_ttl
       log I $ "TTL=" <> Text.pack (show ttl) <> " | last updated=" <> Text.pack (show time')
       liftIO $ atomically $ writeTVar interval_var (ttl * 1000000)
