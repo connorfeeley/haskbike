@@ -14,6 +14,7 @@ module ReportTime
      , reportTime
      , reportTimeType
      , reportTimeZone
+     , reportToLocal
        -- Re-exports for ReportTime constructors
      , Day (..)
      , TimeOfDay (..)
@@ -98,3 +99,7 @@ posixToLocal = utcToLocalTime reportTimeZone . posixSecondsToUTCTime . secondsTo
 
 localToPosix :: LocalTime -> Int
 localToPosix = floor . utcTimeToPOSIXSeconds . localTimeToUTC reportTimeZone
+
+-- | Convert ReportTime to LocalTime
+reportToLocal :: ReportTime -> LocalTime
+reportToLocal (ReportTime localTime) = localTime
