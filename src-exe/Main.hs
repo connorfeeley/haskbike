@@ -59,7 +59,7 @@ appMain options = do
   log I $ "Starting Toronto Bikeshare CLI with verbosity '" <> Text.pack (show (logLevel options)) <> "'."
   -- Dispatch to appropriate command.
   case optCommand options of
-    (Poll p)  -> dispatchDatabase options >>= dispatchPoll
+    (Poll p)  -> dispatchDatabase options >>= dispatchPoll p
     (Query q) -> dispatchDatabase options >>= dispatchQuery q
     (Reset r) -> void (dispatchDatabase options)
 

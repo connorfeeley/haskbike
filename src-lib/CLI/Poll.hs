@@ -15,9 +15,9 @@ import           API.Client
 import           API.ResponseWrapper
 import           API.Types              ( StationStatusResponse, status_stations )
 
+import           CLI.Options            ( PollOptions (..) )
 
-import           Colog                  ( Message, WithLog, log, logException, pattern D,
-                                          pattern E, pattern I )
+import           Colog                  ( Message, WithLog, log, logException, pattern D, pattern E, pattern I )
 
 import           Control.Concurrent     ( threadDelay )
 import           Control.Concurrent.STM
@@ -43,9 +43,10 @@ import           UnliftIO.Async         ( concurrently_ )
 
 -- | Dispatch CLI arguments to the poller.
 dispatchPoll :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
-         => Connection
-         -> m ()
-dispatchPoll = pollClient
+             => PollOptions
+             -> Connection
+             -> m ()
+dispatchPoll _options = pollClient
 
 pollClient :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
            => Connection
