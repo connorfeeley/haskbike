@@ -67,10 +67,12 @@ common warnings
 -- Common language extensions.
 common common-extensions
     default-extensions: OverloadedStrings
+                      , ExtendedDefaultRules
                       , GADTs
                       , ApplicativeDo
                       , LambdaCase
                       , PatternSynonyms
+                      , TupleSections
 
 -- Common dependencies shared by all targets.
 common common-depends
