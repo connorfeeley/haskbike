@@ -10,6 +10,7 @@ module ReportTime
      , addHours
      , localToPosix
      , localToSystem
+     , localToSystem'
      , posixToLocal
      , reportTime
      , reportTimeType
@@ -87,6 +88,16 @@ localToSystem localTime = do
   let asPosix = localToPosix localTime
   -- Convert the POSIX time to a local time, using the system's current timezone
   pure $ posixToLocal' currentTimeZone asPosix
+  where
+    posixToLocal' timezone = utcToLocalTime timezone . posixSecondsToUTCTime . secondsToNominalDiffTime . fromIntegral
+
+
+localToSystem' :: TimeZone -> LocalTime -> LocalTime
+localToSystem' currentTimeZone localTime = do
+  -- Convert the local time to a POSIX time, using "fake UTC" as the timezone
+  let asPosix = localToPosix localTime
+  -- Convert the POSIX time to a local time, using the system's current timezone
+  posixToLocal' currentTimeZone asPosix
   where
     posixToLocal' timezone = utcToLocalTime timezone . posixSecondsToUTCTime . secondsToNominalDiffTime . fromIntegral
 
