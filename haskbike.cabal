@@ -86,6 +86,7 @@ common common-depends
                     , co-log-core
                     , monad-control
                     , co-log
+                    , ansi-terminal
                     , optparse-applicative
 
 -- Dependencies needed by targets excercising the API.
