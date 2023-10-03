@@ -1,11 +1,4 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE DerivingStrategies  #-}
-{-# LANGUAGE PatternSynonyms     #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-
-{- |
-Poll the API for status updates, inserting results in database as needed.
--}
+-- | Poll the API for status updates, inserting results in database as needed.
 module CLI.Poll
      ( dispatchPoll
      , pollClient

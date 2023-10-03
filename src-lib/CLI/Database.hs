@@ -1,21 +1,15 @@
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE PatternSynonyms    #-}
-
 -- | CLI interface for database operations.
-
-module CLI.Database (dispatchDatabase) where
+module CLI.Database
+     ( dispatchDatabase
+     ) where
 
 import           API.Client
 import           API.ResponseWrapper
 import           API.Types
 
-import           AppEnv
-
 import           CLI.Options
-import qualified CLI.Poll               as P
-import qualified CLI.Query               as Q
 
-import           Colog                  ( Message, WithLog, log, pattern D, pattern E, pattern I, pattern W )
+import           Colog                  ( Message, WithLog, log, pattern E, pattern I, pattern W )
 
 import           Control.Lens
 import           Control.Monad          ( unless, (<=<) )
@@ -40,35 +34,54 @@ import           System.Exit            ( exitSuccess )
 import           UnliftIO               ( MonadUnliftIO )
 
 
+-- | Helper functions.
+
+-- | Reset the database.
+reset :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)  => String -> m Connection
+reset name = log W "Resetting database." >> setupDb name >>= \conn -> handleInformation conn >> pure conn
+
+-- | Setup the database.
+setupDb :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)  => String -> m Connection
+setupDb name = liftIO $ setupDatabaseName name
+
+-- | Get the database name from the CLI options.
+dbname :: Options -> String
+dbname = optDatabase
+
+
+-- | Dispatch CLI arguments to the database interface.
 dispatchDatabase :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)  => Options -> m Connection
 dispatchDatabase options = case optCommand options of
-  Poll pollOptions
-    | optEnableMigration options -> migrate dbname >>= \conn -> pure conn
-    | otherwise -> connectToDatabase dbname
-  Reset resetOptions
-    | optResetOnly resetOptions -> reset dbname >> liftIO exitSuccess
-    | otherwise -> reset dbname
-  _ -> connectToDatabase dbname
+  Poll _pollOptions
+    | optEnableMigration options -> migrate (dbname options) >>= \conn -> pure conn
+    | otherwise -> connectToDatabase (dbname options)
+  Reset resetOptions -> handleReset options resetOptions
+  _ -> connectToDatabase (dbname options)
   where
     connectToDatabase name = log I "Connecting to database." >> liftIO (connectDbName name)
-    setupDb     name    = liftIO $ setupDatabaseName name
-    reset       name    = log W "Resetting database." >> setupDb name >>= \conn -> handleInformation conn >> pure conn
     migrate     name    = log W "Migrating database." >> connectDbNameAndMigrate name
     connectDbNameAndMigrate = liftIO . (migrateDB' <=< connectDbName)
     migrateDB' :: Connection -> IO Connection
     migrateDB' conn = migrateDB conn >> return conn
-    dbname = optDatabase options
 
-handleReset :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)  => Options -> ResetOptions -> m ()
+
+-- | Handle the 'Reset' command.
+handleReset :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)  => Options -> ResetOptions -> m Connection
 handleReset options resetOptions = do
   log E $ "Reset command unimplemented. Parsed options: " <> (Text.pack . show) resetOptions
 
+  if optResetOnly resetOptions
+    then reset (dbname options) >> liftIO exitSuccess
+    else reset (dbname options)
+
+
+-- | Helper for station information request.
 handleInformation :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)  => Connection -> m ()
 handleInformation conn = do
   infoQuery <- liftIO $ queryStationInformation conn
   unless (null infoQuery) $ handleStationInformation conn
 
-
+-- | Handle station information request.
 handleStationInformation :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)  => Connection -> m ()
 handleStationInformation conn = do
   stationInfo <- liftIO (runQueryWithEnv stationInformation :: IO (Either ClientError StationInformationResponse))

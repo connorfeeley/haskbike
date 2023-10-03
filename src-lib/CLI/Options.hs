@@ -1,5 +1,3 @@
-{-# LANGUAGE DerivingStrategies #-}
-
 -- | Command-line options.
 module CLI.Options where
 

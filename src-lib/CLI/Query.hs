@@ -3,7 +3,6 @@ module CLI.Query
      ( dispatchQuery
      ) where
 
-
 import           CLI.Options            ( MatchMethod (..), QueryOptions (..), unMatchMethod )
 import           CLI.Utils
 
@@ -14,8 +13,8 @@ import           Control.Lens
 import           Data.Int               ( Int32 )
 import qualified Data.List              as List
 import           Data.Maybe             ( fromMaybe )
-import           Data.Text.Lazy         ( Text, intercalate, pack, toStrict, unlines, unpack )
-import           Data.Time              ( LocalTime (..), TimeZone, defaultTimeLocale, formatTime, getCurrentTimeZone )
+import           Data.Text.Lazy         ( Text, pack, toStrict, unlines, unpack )
+import           Data.Time              ( LocalTime (..), TimeZone, getCurrentTimeZone )
 
 import           Database.Beam.Postgres ( Connection )
 import           Database.BikeShare     ( StationStatus, d_status_last_reported, d_status_num_bikes_available,
@@ -29,7 +28,7 @@ import           Fmt
 
 import           Prelude                hiding ( log, unlines )
 
-import           ReportTime             ( localToSystem, reportToLocal )
+import           ReportTime             ( reportToLocal )
 
 import           System.Console.ANSI
 
