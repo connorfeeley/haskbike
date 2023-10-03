@@ -91,6 +91,7 @@ common common-depends
                     , co-log
                     , ansi-terminal
                     , optparse-applicative
+                    , time
 
 -- Dependencies needed by targets excercising the API.
 common api-depends
@@ -173,6 +174,7 @@ library
                     , CLI.Utils
                     , CLI.Poll
                     , CLI.Query
+                    , CLI.QueryFormat
                     , CLI.Database
                     , CLI.Options
                     , API.Types
@@ -197,7 +199,6 @@ library
                     , colour
                     , text-show
                     , attoparsec
-                    , time
 
     -- Directories containing source files.
     hs-source-dirs:   src-lib

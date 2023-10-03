@@ -4,17 +4,15 @@ module CLI.Query
      ) where
 
 import           CLI.Options            ( MatchMethod (..), QueryOptions (..), unMatchMethod )
+import           CLI.QueryFormat
 import           CLI.Utils
 
 import           Colog                  ( Message, WithLog, log, pattern D, pattern I )
 
-import           Control.Lens
-
-import           Data.Int               ( Int32 )
 import qualified Data.List              as List
 import           Data.Maybe             ( fromMaybe )
 import           Data.Text.Lazy         ( Text, pack, toStrict, unlines, unpack )
-import           Data.Time              ( LocalTime (..), TimeZone, getCurrentTimeZone )
+import           Data.Time              ( getCurrentTimeZone )
 
 import           Database.Beam.Postgres ( Connection )
 import           Database.BikeShare     ( StationStatus, d_status_last_reported, d_status_num_bikes_available,
@@ -24,13 +22,7 @@ import           Database.BikeShare     ( StationStatus, d_status_last_reported,
                                           vehicle_types_available_iconic )
 import           Database.Operations
 
-import           Fmt
-
 import           Prelude                hiding ( log, unlines )
-
-import           ReportTime             ( reportToLocal )
-
-import           System.Console.ANSI
 
 import           UnliftIO               ( MonadIO, MonadUnliftIO, liftIO )
 
@@ -111,70 +103,3 @@ queryStatus conn header station_tuple = do
       _  -> fmtHeader : results
       where
         fmtHeader = "\t" <> indent 5 <> indent 8 <> " " <> boldCode <> underCode <> header' <> resetUnder <> resetIntens <> " " <> indent 8
-
-fmtStationStatus :: Connection -> TimeZone -> (Int, String) -> IO [Text]
-fmtStationStatus conn' currentTimeZone' (id', name') = do
-  latest <- queryStationStatusLatest conn' id'
-  let status = fmap (currentTimeZone', name', ) latest
-  pure $ formatStationStatusResult status
-
-formatStationStatusResult :: Maybe (TimeZone, String, StationStatus) -> [Text]
-formatStationStatusResult = maybe ["No status found."] formatStationInfo
-
-formatStationInfo :: (TimeZone, String, StationStatus) -> [Text]
-formatStationInfo (timeZone, name, status) =
-  let
-    bikeAvailability = [ fmtBikeAvailability "Iconic"   (status ^. vehicle_types_available_iconic)
-                       -- , fmtBikeAvailability "Boost"    (status ^. vehicle_types_available_boost) -- Not used in Toronto.
-                       , fmtBikeAvailability "E-Fit"    (status ^. vehicle_types_available_efit)
-                       , fmtBikeAvailability "E-Fit G5" (status ^. vehicle_types_available_efit_g5)]
-
-    pairs = [ ("Docks:\t", status ^. d_status_num_docks_available, status ^. d_status_num_docks_disabled)
-            , ("Bikes:\t", status ^. d_status_num_bikes_available, status ^. d_status_num_bikes_disabled)
-            ]
-    in [formattedName name status, formattedLastReport timeZone $ reportToLocal <$> status ^. d_status_last_reported] ++ map fmtAvailability pairs ++ bikeAvailability
-
-formattedName :: String -> StationStatus -> Text
-formattedName name status =
-    format "{}[{}{}]{} {}{}{}" boldCode idPrefix (status ^. d_status_station_id) resetIntens underCode name resetUnder
-    where idPrefix = resetIntens <> "# " <> boldCode
-
--- Format the last reported time in the specified time zone (namerly, the system's time zone).
-formattedLastReport :: TimeZone -> Maybe LocalTime -> Text
-formattedLastReport timeZone status = reportedText
-  where
-    reportedText = case status of
-      Nothing -> boldCode <> colouredText Vivid Red "Never" <> resetIntens
-      -- Just t  -> italCode <> showText t <> resetItal
-      Just t  -> "[" <> showText t <> "]"
-              <> boldCode <> "\t" <> "|" <> "\t" <> resetIntens
-              <> italCode <> pack (formatTime' timeZone t) <> resetItal <> " (local)"
-
-showText :: Show a => a -> Text
-showText = pack . show
-
-fmtAvailability :: (Text, Int32, Int32) -> Text
-fmtAvailability (name, avail, disabled)
-  = colouredText Dull Yellow name
- <> colouredText Vivid Green  (fmt $ padLeftF 2 ' ' avail)    <> " available" <> tab
- <> boldCode <> "|" <> tab <> resetIntens
- <> colouredText Vivid Red    (fmt $ padLeftF 2 ' ' disabled) <> " disabled"
- where tab = "\t" :: Text
-
-fmtBikeAvailability :: Text -> Int32 -> Text
-fmtBikeAvailability name count
-  = tab
- <> colouredText Dull Yellow (fmt $ padLeftF 9 ' ' name) <> ": "
- <> colouredText Vivid Green  (fmt $ padLeftF 2 ' ' count) <> tab <> boldCode <> "|" <> resetIntens
- where tab = "\t" :: Text
-
-colouredText :: ColorIntensity -> Color -> Text -> Text
-colouredText intensity colour text = format "{}{}{}" (setSGRCode [SetColor Foreground intensity colour]) text (setSGRCode [])
-
-boldCode, resetIntens, italCode, resetItal, underCode, resetUnder :: Text
-boldCode    = pack $ setSGRCode [ SetConsoleIntensity  BoldIntensity   ]
-resetIntens = pack $ setSGRCode [ SetConsoleIntensity  NormalIntensity ]
-italCode    = pack $ setSGRCode [ SetItalicized        True            ]
-resetItal   = pack $ setSGRCode [ SetItalicized        False           ]
-underCode   = pack $ setSGRCode [ SetUnderlining       SingleUnderline ]
-resetUnder  = pack $ setSGRCode [ SetUnderlining       NoUnderline     ]

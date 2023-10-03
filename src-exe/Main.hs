@@ -1,14 +1,8 @@
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE PatternSynonyms    #-}
-
 module Main
      ( appMain
      , main
      ) where
 
-import           API.Client
-import           API.ResponseWrapper
-import           API.Types
 
 import           AppEnv
 
@@ -17,20 +11,13 @@ import           CLI.Options
 import           CLI.Poll
 import           CLI.Query
 
-import           Colog                  ( Message, Severity (..), WithLog, log, pattern D, pattern E, pattern I,
-                                          pattern W )
+import           Colog                  ( Message, Severity (..), WithLog, log, pattern I )
 
-import           Control.Lens
-import           Control.Monad          ( unless, void, (<=<) )
+import           Control.Monad          ( void )
 import           Control.Monad.IO.Class ( MonadIO (liftIO) )
 
-import           Data.Foldable          ( for_ )
 import qualified Data.Text              as Text
-
-import           Database.Beam.Postgres ( Connection )
-import           Database.Migrations
-import           Database.Operations
-import           Database.Utils
+import           Data.Time              ( getCurrentTimeZone )
 
 import           Options.Applicative
 
@@ -44,7 +31,9 @@ main = do
   -- Parse command line options.
   options <- liftIO $ customExecParser (prefs $ helpShowGlobals <> showHelpOnEmpty <> showHelpOnError) opts
 
-  runApp (mainEnv (logLevel options)) (appMain options)
+  timeZone <- getCurrentTimeZone
+
+  runApp (mainEnv (logLevel options) timeZone) (appMain options)
   where
     opts :: ParserInfo Options
     opts = info (parseOptions <**> helper)
@@ -61,7 +50,7 @@ appMain options = do
   case optCommand options of
     (Poll p)  -> dispatchDatabase options >>= dispatchPoll p
     (Query q) -> dispatchDatabase options >>= dispatchQuery q
-    (Reset r) -> void (dispatchDatabase options)
+    (Reset _) -> void (dispatchDatabase options)
 
 -- Convert CLI options to a logging severity.
 logLevel :: Options -> Severity

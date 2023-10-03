@@ -20,11 +20,13 @@ import           Control.Monad.Reader   ( MonadReader, ReaderT (..) )
 import           Prelude                hiding ( log )
 
 import           UnliftIO               ( MonadUnliftIO )
+import           Data.Time              ( TimeZone )
 
 -- Application environment
 data Env m where
   Env :: { envLogAction   :: !(LogAction m Message)
          , envMinSeverity :: !Severity
+         , envTimeZone    :: !TimeZone
          } -> Env m
 
 -- Implement logging for the application environment.
@@ -43,16 +45,18 @@ newtype App a = App
   } deriving newtype (Functor, Applicative, Monad, MonadIO, MonadUnliftIO, MonadReader (Env App))
 
 -- | Simple environment for the main application.
-simpleEnv :: Env App
-simpleEnv = Env { envLogAction   = mainLogAction Info
-                , envMinSeverity = Info
-                }
+simpleEnv :: TimeZone -> Env App
+simpleEnv timeZone = Env { envLogAction   = mainLogAction Info
+                         , envMinSeverity = Info
+                         , envTimeZone    = timeZone
+                         }
 
 -- | Environment for the main application.
-mainEnv :: Severity -> Env App
-mainEnv sev = Env { envLogAction   = mainLogAction sev
-                  , envMinSeverity = Info
-                  }
+mainEnv :: Severity -> TimeZone -> Env App
+mainEnv sev timeZone = Env { envLogAction   = mainLogAction sev
+                           , envMinSeverity = Info
+                           , envTimeZone    = timeZone
+                           }
 
 -- | Log action for the main application.
 mainLogAction :: (MonadIO m)
