@@ -7,7 +7,8 @@ import           CLI.Utils
 import           Control.Lens
 
 import           Data.Int               ( Int32 )
-import           Data.Text.Lazy         ( Text, pack )
+import           Data.Text.Lazy         ( Text, chunksOf, intercalate, pack, reverse, toStrict, unlines, unpack,
+                                          unwords )
 import           Data.Time              ( LocalTime (..), TimeZone )
 
 import           Database.Beam.Postgres ( Connection )
@@ -20,7 +21,7 @@ import           Database.Operations
 
 import           Fmt
 
-import           Prelude                hiding ( log, unlines )
+import           Prelude                hiding ( log, reverse, unlines, unwords )
 
 import           ReportTime             ( reportToLocal )
 
@@ -97,3 +98,18 @@ fmtBikeAvailability name count
  <> colouredText Dull Yellow (fmt $ padLeftF 9 ' ' name) <> ": "
  <> colouredText Vivid Green  (fmt $ padLeftF 2 ' ' count) <> tab <> boldCode <> "|" <> resetIntens
  where tab = "\t" :: Text
+
+withHeader :: Text -> [Text] -> [Text]
+withHeader header' results = case results of
+  [] -> fmtHeader : ["\t\t" <> indent 6 <> italCode <> " None." <> resetItal ]
+  _  -> fmtHeader : results
+  where
+    fmtHeader = "\t" <> indent 5 <> indent 8 <> " " <> boldCode <> underCode <> header' <> resetUnder <> resetIntens <> " " <> indent 8
+
+-- | Print a list of 'Text' lines to the console.
+cliOut :: [Text] -> IO ()
+cliOut = putStrLn . unpack . unlines
+
+-- | Format a number with thousands separators.
+prettyNum :: Integer -> Text
+prettyNum = unwords . chunksOf 3 . reverse . pack . show

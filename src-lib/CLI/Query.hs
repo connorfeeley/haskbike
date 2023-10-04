@@ -105,11 +105,3 @@ queryStatus conn header station_tuple = do
   -- Query the latest status for the given station tuple.
   resultsText <- liftIO (fmtStationStatus conn currentTimeZone station_tuple)
   pure $ withHeader (pack header) resultsText
-
-  where
-    withHeader :: Text -> [Text] -> [Text]
-    withHeader header' results = case results of
-      [] -> fmtHeader : ["\t\t" <> indent 6 <> italCode <> " None." <> resetItal ]
-      _  -> fmtHeader : results
-      where
-        fmtHeader = "\t" <> indent 5 <> indent 8 <> " " <> boldCode <> underCode <> header' <> resetUnder <> resetIntens <> " " <> indent 8

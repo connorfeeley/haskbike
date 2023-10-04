@@ -7,6 +7,7 @@ module Main
 import           AppEnv
 
 import           CLI.Database
+import           CLI.Debug
 import           CLI.Options
 import           CLI.Poll
 import           CLI.Query
@@ -48,9 +49,10 @@ appMain options = do
   log I $ "Starting Toronto Bikeshare CLI with verbosity '" <> Text.pack (show (logLevel options)) <> "'."
   -- Dispatch to appropriate command.
   case optCommand options of
-    (Poll p)  -> dispatchDatabase options >>= dispatchPoll p
-    (Query q) -> dispatchDatabase options >>= dispatchQuery q
-    (Reset _) -> void (dispatchDatabase options)
+    (Poll p)      -> dispatchDatabase options >>= dispatchPoll p
+    (Query q)     -> dispatchDatabase options >>= dispatchQuery q
+    (DebugMisc d) -> dispatchDatabase options >>= dispatchDebug d
+    (Reset _)     -> void (dispatchDatabase options)
 
 -- Convert CLI options to a logging severity.
 logLevel :: Options -> Severity

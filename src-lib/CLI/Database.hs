@@ -80,7 +80,9 @@ handleReset options resetOptions = do
 -- | Helper for station information request.
 handleInformation :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)  => Connection -> m ()
 handleInformation conn = do
+  log D "Querying station information from API."
   infoQuery <- liftIO $ queryStationInformation conn
+  log D "Queried station information from API."
   unless (null infoQuery) $ handleStationInformation conn
 
 -- | Handle station information request.
@@ -98,8 +100,9 @@ handleStationInformation conn = do
 handleStatus :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)  => Connection -> m ()
 handleStatus conn = do
   log D "Querying station status from API."
-  infoQuery <- liftIO $ queryStationStatus conn
-  unless (null infoQuery) $ handleStationStatus conn
+  statusQuery <- liftIO $ queryStationStatus conn
+  log D "Queried station status from API."
+  unless (null statusQuery) $ handleStationStatus conn
 
 -- | Handle station status request.
 handleStationStatus :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)  => Connection -> m ()
