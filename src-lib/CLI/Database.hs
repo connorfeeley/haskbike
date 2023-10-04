@@ -80,18 +80,23 @@ handleReset options resetOptions = do
 -- | Helper for station information request.
 handleInformation :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)  => Connection -> m ()
 handleInformation conn = do
-  log D "Querying station information from API."
+  log D "Querying station information from database."
   infoQuery <- liftIO $ queryStationInformation conn
-  log D "Queried station information from API."
+  log D "Queried station information from database."
   unless (null infoQuery) $ handleStationInformation conn
 
 -- | Handle station information request.
 handleStationInformation :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)  => Connection -> m ()
 handleStationInformation conn = do
+  log D "Requesting station information from API."
   stationInfo <- liftIO (runQueryWithEnv stationInformation :: IO (Either ClientError StationInformationResponse))
+  log D "Requested station information from API."
+
   for_ (rightToMaybe stationInfo) $ \response -> do
         let stations = response ^. response_data . info_stations
+        log D "Inserting station information into database."
         liftIO (insertStationInformation conn stations) >>= report
+        log D "Inserted station information into database."
   where
     report = log I . ("Stations inserted: " <>) . Text.pack . show . length
     rightToMaybe = either (const Nothing) Just
@@ -99,18 +104,23 @@ handleStationInformation conn = do
 -- | Helper for station status request.
 handleStatus :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)  => Connection -> m ()
 handleStatus conn = do
-  log D "Querying station status from API."
+  log D "Querying station status from database."
   statusQuery <- liftIO $ queryStationStatus conn
-  log D "Queried station status from API."
+  log D "Queried station status from database."
   unless (null statusQuery) $ handleStationStatus conn
 
 -- | Handle station status request.
 handleStationStatus :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)  => Connection -> m ()
 handleStationStatus conn = do
+  log D "Requesting station status from API."
   stationStatus <- liftIO (runQueryWithEnv stationStatus :: IO (Either ClientError StationStatusResponse))
+  log D "Requested station status from API."
+
   for_ (rightToMaybe stationStatus) $ \response -> do
         let stations = response ^. response_data . status_stations
+        log D "Inserting station status into database."
         liftIO (insertStationStatus conn stations) >>= report
+        log D "Inserted station status into database."
   where
     report = log I . ("Status updated: " <>) . Text.pack . show .
       (\inserted -> length (inserted ^. insert_inserted) + length (inserted ^. insert_deactivated))
