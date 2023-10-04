@@ -21,6 +21,7 @@ import           Data.Foldable          ( for_ )
 import qualified Data.Text              as Text
 
 import           Database.Beam.Postgres ( Connection )
+import           Database.BikeShare     ( bikeshareStationInformation, bikeshareStationStatus )
 import           Database.Migrations
 import           Database.Operations
 import           Database.Utils
@@ -81,9 +82,9 @@ handleReset options resetOptions = do
 handleInformation :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)  => Connection -> m ()
 handleInformation conn = do
   log D "Querying station information from database."
-  infoQuery <- liftIO $ queryStationInformation conn
+  numInfoRows <- liftIO (queryRowCount conn bikeshareStationInformation)
   log D "Queried station information from database."
-  unless (null infoQuery) $ handleStationInformation conn
+  unless (null numInfoRows) $ handleStationInformation conn
 
 -- | Handle station information request.
 handleStationInformation :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)  => Connection -> m ()
@@ -105,9 +106,9 @@ handleStationInformation conn = do
 handleStatus :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)  => Connection -> m ()
 handleStatus conn = do
   log D "Querying station status from database."
-  statusQuery <- liftIO $ queryStationStatus conn
+  numStatusRows <- liftIO (queryRowCount conn bikeshareStationStatus)
   log D "Queried station status from database."
-  unless (null statusQuery) $ handleStationStatus conn
+  unless (null numStatusRows) $ handleStationStatus conn
 
 -- | Handle station status request.
 handleStationStatus :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)  => Connection -> m ()
