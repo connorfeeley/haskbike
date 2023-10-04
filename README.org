@@ -9,6 +9,7 @@
 ** DONE [#A] Station status for ~station_id~ = ~7165~
 CLOSED: [2023-09-24 Sun 22:13]
 Station status API returns a station that isn't returned in the information API.
+** TODO Refactor Database.Operations to use a monaidic environment for the connection
 
 
 ** TODO Add test to check foreign key ~`references_`~ works correctly
