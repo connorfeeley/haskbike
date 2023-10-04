@@ -18,6 +18,7 @@ module Database.Operations
      , queryStationInformationByIds
      , queryStationName
      , queryStationStatus
+     , queryStationStatus'
      , queryStationStatusBetween
      , queryStationStatusFields
      , queryStationStatusLatest
@@ -111,8 +112,23 @@ printDisabledDocks conn = queryDisabledDocks conn >>= pPrintCompact
 
 -- | Query database for station status.
 queryStationStatus :: Connection                               -- ^ Connection to the database.
+                   -> Integer                                  -- ^ Limit number of rows returned.
                    -> IO [(StationInformation, StationStatus)] -- ^ List of tuples of (station information, station status).
-queryStationStatus conn = do
+queryStationStatus conn limit = do
+  runBeamPostgres' conn $ runSelectReturningList $ select $ do
+    info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
+    status <- limit_ limit (all_ (bikeshareDb ^. bikeshareStationStatus))
+    guard_ (_d_status_info_id status `references_` info)
+    pure (info, status)
+
+{- |
+Query database for station status.
+
+WARNING: can be very slow if table is large; consider using 'queryStationStatus' instead.
+-}
+queryStationStatus' :: Connection                               -- ^ Connection to the database.
+                    -> IO [(StationInformation, StationStatus)] -- ^ List of tuples of (station information, station status).
+queryStationStatus' conn = do
   runBeamPostgres' conn $ runSelectReturningList $ select $ do
     info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
     status <- all_ (bikeshareDb ^. bikeshareStationStatus)
