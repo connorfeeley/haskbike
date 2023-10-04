@@ -1,7 +1,6 @@
--- | Application environment and monad.
-
 {-# LANGUAGE DerivingStrategies #-}
 
+-- | Application environment and monad.
 module AppEnv
      ( App
      , Env (..)

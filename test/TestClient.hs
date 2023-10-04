@@ -1,7 +1,5 @@
 -- | Test the client functions.
 
-{-# LANGUAGE OverloadedStrings   #-}
-{-# LANGUAGE PatternSynonyms     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module TestClient where
