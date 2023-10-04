@@ -101,6 +101,8 @@ common api-depends
                     , aeson
                     , servant-server
                     , servant-client
+                    , servant-client-core
+                    , free
                     , servant-docs
                     , http-client
                     , http-client-tls
@@ -173,6 +175,7 @@ library
                     , AppEnv
                     , API.ResponseWrapper
                     , API.Client
+                    , API.DebugClient
                     , CLI.Utils
                     , CLI.Poll
                     , CLI.Query
