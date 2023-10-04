@@ -8,6 +8,8 @@ import           API.Client
 import           API.ResponseWrapper
 import           API.Types              ( StationStatusResponse, status_stations )
 
+import           AppEnv
+
 import           CLI.Options            ( PollOptions (..) )
 
 import           Colog                  ( Message, WithLog, log, logException, pattern D, pattern E, pattern I )
@@ -36,16 +38,12 @@ import           UnliftIO.Async         ( concurrently_ )
 
 
 -- | Dispatch CLI arguments to the poller.
-dispatchPoll :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
-             => PollOptions
-             -> Connection
-             -> m ()
+dispatchPoll :: PollOptions
+             -> App ()
 dispatchPoll _options = pollClient
 
-pollClient :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
-           => Connection
-           -> m ()
-pollClient conn = do
+pollClient :: App ()
+pollClient = do
   (ttl, last_updated, queue_resp) <- liftIO $
     (,,) <$> newTVarIO 0 <*> newTVarIO 0 <*> newTBQueueIO 4
 
@@ -53,7 +51,7 @@ pollClient conn = do
   void $
     concurrently_
       (statusRequester queue_resp ttl)
-      (statusHandler conn queue_resp last_updated)
+      (statusHandler queue_resp last_updated)
   log I "Done."
 
 statusRequester :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
@@ -74,12 +72,10 @@ statusRequester queue interval_var = void . forever $ do
       liftIO $ atomically $ writeTVar interval_var (ttl * 1000000)
       liftIO $ atomically $ writeTBQueue queue result
 
-statusHandler :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
-              => Connection                     -- ^ Database connection
-              -> TBQueue StationStatusResponse  -- ^ Queue of responses
+statusHandler :: TBQueue StationStatusResponse  -- ^ Queue of responses
               -> TVar Int                       -- ^ Last updated time
-              -> m ()
-statusHandler conn queue last_updated = void . forever $ do
+              -> App ()
+statusHandler queue last_updated = void . forever $ do
   response <- liftIO $ atomically $ readTBQueue queue
   let currentTime = localToPosix $ response ^. response_last_updated
 
@@ -98,10 +94,10 @@ statusHandler conn queue last_updated = void . forever $ do
   let status = response ^. (response_data . status_stations)
   log I $ "TTL=" <> Text.pack (show (length status))
 
-  updated_api <- liftIO $ separateNewerStatusRecords conn status
+  updated_api <- separateNewerStatusRecords <$> withConn <*> pure status >>= liftIO
 
   -- Insert the updated status.
-  inserted_result <- liftIO $ insertStationStatus conn $ updated_api ^. filter_newer
+  inserted_result <- insertStationStatus <$> withConn <*> pure (updated_api ^. filter_newer) >>= liftIO
 
   let message_data =
           zipWith

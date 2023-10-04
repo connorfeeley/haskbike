@@ -2,6 +2,8 @@
 
 module CLI.QueryFormat where
 
+import           AppEnv
+
 import           CLI.Utils
 
 import           Control.Lens
@@ -27,6 +29,8 @@ import           ReportTime             ( reportToLocal )
 
 import           System.Console.ANSI
 
+import           UnliftIO               ( liftIO )
+
 
 -- | Helper function to show a value as 'Text'.
 showText :: Show a => a -> Text
@@ -46,9 +50,9 @@ underCode   = pack $ setSGRCode [ SetUnderlining       SingleUnderline ]
 resetUnder  = pack $ setSGRCode [ SetUnderlining       NoUnderline     ]
 
 -- | Lookup local time zone.
-fmtStationStatus :: Connection -> TimeZone -> (Int, String) -> IO [Text]
-fmtStationStatus conn' currentTimeZone' (id', name') = do
-  latest <- queryStationStatusLatest conn' id'
+fmtStationStatus :: TimeZone -> (Int, String) -> App [Text]
+fmtStationStatus currentTimeZone' (id', name') = do
+  latest <- queryStationStatusLatest <$> withConn <*> pure id' >>= liftIO
   let status = fmap (currentTimeZone', name', ) latest
   pure $ formatStationStatusResult status
 

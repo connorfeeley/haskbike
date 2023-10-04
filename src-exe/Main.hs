@@ -20,12 +20,13 @@ import           Control.Monad.IO.Class ( MonadIO (liftIO) )
 import qualified Data.Text              as Text
 import           Data.Time              ( getCurrentTimeZone )
 
+import           Database.Utils         ( connectDbName )
+
 import           Options.Applicative
 
 import           Prelude                hiding ( log )
 
 import           UnliftIO               ( MonadUnliftIO )
-import Database.Utils (connectDbName)
 
 
 main :: IO ()
@@ -52,9 +53,9 @@ appMain options = do
   log I $ "Starting Toronto Bikeshare CLI with verbosity '" <> Text.pack (show (logLevel options)) <> "'."
   -- Dispatch to appropriate command.
   case optCommand options of
-    (Poll p)      -> dispatchDatabase options >>= dispatchPoll p
-    (Query q)     -> dispatchDatabase options >>= dispatchQuery q
-    (DebugMisc d) -> dispatchDatabase options >>= dispatchDebug d
+    (Poll p)      -> dispatchDatabase options >> dispatchPoll p
+    (Query q)     -> dispatchDatabase options >> dispatchQuery q
+    (DebugMisc d) -> dispatchDatabase options >> dispatchDebug d
     (Reset _)     -> void (dispatchDatabase options)
 
 -- Convert CLI options to a logging severity.

@@ -8,10 +8,10 @@ module Database.Utils
      , connectTestDb
      , dbnameProduction
      , dbnameTest
-     , pPrintCompact
-     , setupDatabaseName
      , dropTables
      , migrateDatabase
+     , pPrintCompact
+     , setupDatabaseName
      , setupProductionDatabase
      ) where
 

@@ -35,13 +35,11 @@ import           UnliftIO               ( MonadIO, MonadUnliftIO, liftIO )
 
 
 -- | Dispatch CLI arguments for debugging.
-dispatchDebug :: (App ~ m, WithLog env Message m, MonadIO m, MonadUnliftIO m)
-              => DebugMiscOptions
-              -> Connection
-              -> m ()
-dispatchDebug options conn = do
+dispatchDebug :: DebugMiscOptions
+              -> App ()
+dispatchDebug options = do
   log D "Refreshing database with latest status from API."
-  num_status_rows <- liftIO (fromMaybe (0 :: Int32) <$> queryRowCount conn bikeshareStationStatus)
+  num_status_rows <- fromMaybe (0 :: Int32) <$> (queryRowCount <$> withConn <*> pure bikeshareStationStatus >>= liftIO)
   log D $ "Number of rows in station_status table: " <> toStrict (pack $ show num_status_rows)
   liftIO $
     cliOut $ formatDatabaseStats num_status_rows

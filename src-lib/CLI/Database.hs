@@ -43,12 +43,18 @@ import           UnliftIO               ( MonadUnliftIO )
 -- | Helper functions.
 
 -- | Reset the database.
-reset :: (App ~ m, WithAppEnv env Message m)  => String -> m Connection
-reset name = log W "Resetting database." >> setupDb name >>= \conn -> handleInformation >> pure conn
+reset :: String -> App ()
+reset name =
+  log W "Resetting database."
+  >> resetDb name
+  >> handleInformation
 
 -- | Setup the database.
-setupDb :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)  => String -> m Connection
-setupDb name = liftIO $ setupDatabaseName name
+resetDb :: String -> App Connection
+resetDb name =
+  (dropTables <$> withConn)
+  >> (migrateDatabase <$> withConn)
+  >>= liftIO
 
 -- | Get the database name from the CLI options.
 dbname :: Options -> String
@@ -56,15 +62,14 @@ dbname = optDatabase
 
 
 -- | Dispatch CLI arguments to the database interface.
-dispatchDatabase :: (App ~ m, WithLog env Message m, MonadIO m, MonadUnliftIO m)  => Options -> m Connection
+dispatchDatabase :: Options -> App Connection
 dispatchDatabase options = do
-  conn <- asks envDBConnection
   case optCommand options of
     Poll _pollOptions
-      | optEnableMigration options -> liftIO $ migrateDB' conn
-      | otherwise -> pure conn
+      | optEnableMigration options -> withConn >>= liftIO . migrateDB'
+      | otherwise -> withConn
     Reset resetOptions -> handleReset options resetOptions
-    _ -> pure conn
+    _ -> withConn
     where
       migrateDB' :: Connection -> IO Connection
       migrateDB' conn = migrateDB conn >> pure conn
@@ -77,13 +82,8 @@ handleReset options resetOptions = do
     then reset (dbname options) >> liftIO exitSuccess
     else reset (dbname options) >> liftIO exitFailure
 
-withConn :: (WithAppEnv (Env env) Message m) => m Connection
-withConn = do
-  conn <- asks envDBConnection
-  liftIO $ pure conn
-
 -- | Helper for station information request.
-handleInformation :: (App ~ m, WithAppEnv env Message m)  => m ()
+handleInformation :: App ()
 handleInformation = do
   log D "Querying station information from database."
   numInfoRows <- queryRowCount <$> withConn <*> pure bikeshareStationInformation >>= liftIO

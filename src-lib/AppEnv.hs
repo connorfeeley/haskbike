@@ -1,11 +1,13 @@
-{-# LANGUAGE DerivingStrategies, FlexibleContexts #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleContexts   #-}
 
 -- | Application environment and monad.
 module AppEnv
      ( App
-     , WithAppEnv
      , Env (..)
-     -- , HasConnection(..)
+     , WithAppEnv
+     , withConn
+       -- , HasConnection(..)
      , mainEnv
      , mainLogAction
      , runApp
@@ -16,15 +18,17 @@ import           Colog                  ( HasLog (..), LogAction (..), Message, 
                                           filterBySeverity, richMessageAction )
 
 import           Control.Monad.IO.Class ( MonadIO )
-import           Control.Monad.Reader   ( MonadReader, ReaderT (..) )
+import           Control.Monad.Reader   ( MonadReader, ReaderT (..), asks )
 
 import           Data.Time              ( TimeZone )
-import           Database.Beam.Postgres (Connection)
+
+import           Database.Beam.Postgres ( Connection )
+
+import           GHC.Stack              ( HasCallStack )
 
 import           Prelude                hiding ( log )
 
-import           UnliftIO               ( MonadUnliftIO )
-import GHC.Stack (HasCallStack)
+import           UnliftIO               ( MonadUnliftIO, liftIO )
 
 -- Application environment
 data Env m where
@@ -44,6 +48,11 @@ If you use this constraint, function call stack will be propagated and
 you will have access to code lines that log messages.
 -}
 type WithAppEnv env msg m = (MonadReader env m, HasLog env msg m, HasCallStack, MonadIO m, MonadUnliftIO m)
+
+withConn :: (WithAppEnv (Env env) Message m) => m Connection
+withConn = do
+  conn <- asks envDBConnection
+  liftIO $ pure conn
 
 -- Implement logging for the application environment.
 instance HasLog (Env m) Message m where
