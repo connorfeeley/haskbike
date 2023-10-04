@@ -42,9 +42,10 @@ parseOptions = Options
 
 -- | Top-level commands.
 data Command where
-  Poll  :: !PollOptions  -> Command
-  Query :: !QueryOptions -> Command
-  Reset :: !ResetOptions -> Command
+  Poll          :: !PollOptions         -> Command
+  Query         :: !QueryOptions        -> Command
+  DebugMisc     :: !DebugMiscOptions    -> Command
+  Reset         :: !ResetOptions        -> Command
   deriving (Show)
 
 -- | Parser for 'Command'.
@@ -54,6 +55,8 @@ commandParser = subparser
                        (progDesc "Poll the API and insert new station status into database."))
   <> command "query" (info (Query <$> queryOptionsParser)
                       (progDesc "Query the database."))
+  <> command "debug" (info (DebugMisc <$> debugMiscOptionsParser)
+                      (progDesc "Miscellaneous debugging faciilities."))
   <> command "reset" (info (Reset <$> resetOptionsParser)
                       (progDesc "Reset the database. [DANGER]"))
   )
@@ -76,10 +79,14 @@ resetOptionsParser = ResetOptions
      <> help "Run the command in test mode." )
 
 -- | Options for the 'Query' command.
-data QueryOptions where
-  QueryByStationId      :: { optStationId       :: Int }    -> QueryOptions
-  QueryByStationName    :: { optStationName     :: MatchMethod String
-                           } -> QueryOptions
+data QueryOptions =
+  QueryOptions { optRefresh :: Bool
+               , optQueryBy :: QueryMethod
+               } deriving (Show)
+
+data QueryMethod =
+    QueryByStationId Int
+  | QueryByStationName (MatchMethod String)
   deriving (Show)
 
 data MatchMethod a =
@@ -96,11 +103,15 @@ unMatchMethod (PrefixMatch a)   = a
 unMatchMethod (SuffixMatch a)   = a
 unMatchMethod (WildcardMatch a) = a
 
--- | Parser for 'ResetOptions'.
+
+-- | Parser for 'QueryOptions'.
 queryOptionsParser :: Parser QueryOptions
-queryOptionsParser = subparser $
-  command "id"   (info (QueryByStationId   <$> parseStationId)   (progDesc "Query by station ID.")) <>
-  command "name" (info (QueryByStationName <$> parseStationName) (progDesc "Query by station name."))
+queryOptionsParser = QueryOptions
+  <$> flag True False (long "no-refresh" <> help "Don't refresh the data from the API.")
+  <*> subparser (queryByIdParser <> queryByNameParser)
+  where
+    queryByIdParser = command "id"   (info (QueryByStationId   <$> parseStationId)   (progDesc "Query by station ID."))
+    queryByNameParser = command "name" (info (QueryByStationName <$> parseStationName) (progDesc "Query by station name."))
 
 parseStationId :: Parser Int
 parseStationId = argument auto
@@ -136,3 +147,16 @@ data PollOptions where
 -- | Parser for 'ResetOptions'.
 pollOptionsParser :: Parser PollOptions
 pollOptionsParser = pure PollOptions
+
+-- | Options for the 'Debug' command.
+data DebugMiscOptions where
+  DebugMiscOptions :: { optFoo :: Bool -- TODO: this is just a placeholder.
+                      } -> DebugMiscOptions
+  deriving (Show)
+
+-- | Parser for 'DebugOptions'.
+debugMiscOptionsParser :: Parser DebugMiscOptions
+debugMiscOptionsParser = DebugMiscOptions
+  <$> switch
+      ( long "foo"
+     <> help "Foo. Foo foo foo bar." )

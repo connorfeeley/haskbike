@@ -51,15 +51,14 @@
             };
           };
 
-          # Dependency overrides go here. See https://haskell.flake.page/dependency
-          # source-overrides = { };
-
           # defaults.packages = { }; # Disable default packages
-          # packages = {
-          #   haskbike.source = ./.;
-          #   aeson.source = "2.1.2.0";
-          #   zlib.source = pkgs.zlib;
-          # };
+
+          # Dependency overrides go here. See https://haskell.flake.page/dependency
+          packages = {
+            # haskbike.source = ./.;
+            # aeson.source = "2.1.2.0";
+            # zlib.source = pkgs.zlib;
+          };
 
           # The base package set representing a specific GHC version.
           # By default, this is pkgs.haskellPackages.

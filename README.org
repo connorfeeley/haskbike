@@ -9,6 +9,7 @@
 ** DONE [#A] Station status for ~station_id~ = ~7165~
 CLOSED: [2023-09-24 Sun 22:13]
 Station status API returns a station that isn't returned in the information API.
+** TODO Refactor Database.Operations to use a monaidic environment for the connection
 
 
 ** TODO Add test to check foreign key ~`references_`~ works correctly
@@ -221,6 +222,37 @@ SELECT COUNT(id) FROM station_status;
 
 #+begin_src sql :database haskbike
 SELECT pg_size_pretty( pg_total_relation_size('station_status') ); SELECT COUNT(id) FROM station_status;
+#+end_src
+** Create read-only user for AWS RDS
+#+begin_src sql :noeval
+--
+-- Read only
+--
+
+-- Create a group
+CREATE ROLE postgres_ro_group;
+
+-- Grant access to existing tables
+GRANT USAGE ON SCHEMA public TO postgres_ro_group;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO postgres_ro_group;
+GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO postgres_ro_group;
+
+-- Grant access to future tables
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO postgres_ro_group;
+
+-- Create a final user with password
+CREATE USER postgres_ro WITH PASSWORD 'secret';
+GRANT postgres_ro_group TO postgres_ro;
+
+--
+-- Superuser
+--
+
+-- Create a final user with password
+CREATE USER postgres_adm WITH PASSWORD 'secret';
+GRANT rds_superuser to postgres_adm;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON SEQUENCES TO postgres_ro_group;
 #+end_src
 
 * Lenses

@@ -1,6 +1,8 @@
 -- | CLI interface for database operations.
 module CLI.Database
      ( dispatchDatabase
+     , handleInformation
+     , handleStatus
      ) where
 
 import           API.Client
@@ -9,7 +11,7 @@ import           API.Types
 
 import           CLI.Options
 
-import           Colog                  ( Message, WithLog, log, pattern E, pattern I, pattern W )
+import           Colog                  ( Message, WithLog, log, pattern D, pattern E, pattern I, pattern W )
 
 import           Control.Lens
 import           Control.Monad          ( unless, (<=<) )
@@ -78,7 +80,9 @@ handleReset options resetOptions = do
 -- | Helper for station information request.
 handleInformation :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)  => Connection -> m ()
 handleInformation conn = do
+  log D "Querying station information from API."
   infoQuery <- liftIO $ queryStationInformation conn
+  log D "Queried station information from API."
   unless (null infoQuery) $ handleStationInformation conn
 
 -- | Handle station information request.
@@ -89,5 +93,25 @@ handleStationInformation conn = do
         let stations = response ^. response_data . info_stations
         liftIO (insertStationInformation conn stations) >>= report
   where
-    report = log I . ("Line length: " <>) . Text.pack . show . length
+    report = log I . ("Stations inserted: " <>) . Text.pack . show . length
+    rightToMaybe = either (const Nothing) Just
+
+-- | Helper for station status request.
+handleStatus :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)  => Connection -> m ()
+handleStatus conn = do
+  log D "Querying station status from API."
+  statusQuery <- liftIO $ queryStationStatus conn
+  log D "Queried station status from API."
+  unless (null statusQuery) $ handleStationStatus conn
+
+-- | Handle station status request.
+handleStationStatus :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)  => Connection -> m ()
+handleStationStatus conn = do
+  stationStatus <- liftIO (runQueryWithEnv stationStatus :: IO (Either ClientError StationStatusResponse))
+  for_ (rightToMaybe stationStatus) $ \response -> do
+        let stations = response ^. response_data . status_stations
+        liftIO (insertStationStatus conn stations) >>= report
+  where
+    report = log I . ("Status updated: " <>) . Text.pack . show .
+      (\inserted -> length (inserted ^. insert_inserted) + length (inserted ^. insert_deactivated))
     rightToMaybe = either (const Nothing) Just

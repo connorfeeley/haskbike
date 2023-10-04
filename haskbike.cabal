@@ -176,6 +176,7 @@ library
                     , CLI.Utils
                     , CLI.Poll
                     , CLI.Query
+                    , CLI.Debug
                     , CLI.QueryFormat
                     , CLI.Database
                     , CLI.Options

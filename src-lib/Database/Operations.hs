@@ -11,6 +11,7 @@ module Database.Operations
      , insertStationStatus
      , printDisabledDocks
      , queryDisabledDocks
+     , queryRowCount
      , queryStationId
      , queryStationIdLike
      , queryStationInformation
@@ -378,9 +379,7 @@ queryStationIdLike conn station_name = do
                      , si ^. info_name & Text.unpack
                      )) info
 
-{- |
-Query the latest status for a station.
--}
+-- | Query the latest status for a station.
 queryStationStatusLatest :: Connection        -- ^ Connection to the database.
                          -> Int              -- ^ Station ID.
                          -> IO (Maybe StationStatus) -- ^ Latest 'StationStatus' for the given station.
@@ -393,3 +392,13 @@ queryStationStatusLatest conn station_id = do
             _info_station_id info ==. val_ (fromIntegral station_id) &&.
            _d_status_active status ==. val_ True)
     pure status
+
+-- | Count the number of rows in a given table.
+queryRowCount :: (Beamable table, Database Postgres db)
+              => Connection           -- ^ Connection to the database.
+              -> Getting (DatabaseEntity Postgres db (TableEntity table)) (DatabaseSettings be BikeshareDb) (DatabaseEntity Postgres db (TableEntity table))
+              -- ^ Lens to the table in the database.
+              -> IO (Maybe Int32)     -- ^ Count of rows in the specified table.
+queryRowCount conn table = do
+  runBeamPostgres' conn $ runSelectReturningOne $ select $
+    aggregate_ (\_ -> as_ @Int32 countAll_) (all_ (bikeshareDb ^. table))
