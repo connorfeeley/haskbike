@@ -1,9 +1,11 @@
-{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingStrategies, FlexibleContexts #-}
 
 -- | Application environment and monad.
 module AppEnv
      ( App
+     , WithAppEnv
      , Env (..)
+     -- , HasConnection(..)
      , mainEnv
      , mainLogAction
      , runApp
@@ -17,17 +19,31 @@ import           Control.Monad.IO.Class ( MonadIO )
 import           Control.Monad.Reader   ( MonadReader, ReaderT (..) )
 
 import           Data.Time              ( TimeZone )
+import           Database.Beam.Postgres (Connection)
 
 import           Prelude                hiding ( log )
 
 import           UnliftIO               ( MonadUnliftIO )
+import GHC.Stack (HasCallStack)
 
 -- Application environment
 data Env m where
-  Env :: { envLogAction   :: !(LogAction m Message)
-         , envMinSeverity :: !Severity
-         , envTimeZone    :: !TimeZone
+  Env :: { envLogAction    :: !(LogAction m Message)
+         , envMinSeverity  :: !Severity
+         , envTimeZone     :: !TimeZone
+         , envDBConnection :: !Connection
          } -> Env m
+
+{- | Type alias for constraint for:
+
+1. Monad @m@ have access to environment @env@.
+2. Environment @env@ contains 'LogAction' that can log messages of type @msg@.
+3. Function call stack.
+
+If you use this constraint, function call stack will be propagated and
+you will have access to code lines that log messages.
+-}
+type WithAppEnv env msg m = (MonadReader env m, HasLog env msg m, HasCallStack, MonadIO m, MonadUnliftIO m)
 
 -- Implement logging for the application environment.
 instance HasLog (Env m) Message m where
@@ -45,18 +61,20 @@ newtype App a = App
   } deriving newtype (Functor, Applicative, Monad, MonadIO, MonadUnliftIO, MonadReader (Env App))
 
 -- | Simple environment for the main application.
-simpleEnv :: TimeZone -> Env App
-simpleEnv timeZone = Env { envLogAction   = mainLogAction Info
-                         , envMinSeverity = Info
-                         , envTimeZone    = timeZone
-                         }
+simpleEnv :: TimeZone -> Connection -> Env App
+simpleEnv timeZone conn = Env { envLogAction    = mainLogAction Info
+                              , envMinSeverity  = Info
+                              , envTimeZone     = timeZone
+                              , envDBConnection = conn
+                              }
 
 -- | Environment for the main application.
-mainEnv :: Severity -> TimeZone -> Env App
-mainEnv sev timeZone = Env { envLogAction   = mainLogAction sev
-                           , envMinSeverity = Info
-                           , envTimeZone    = timeZone
-                           }
+mainEnv :: Severity -> TimeZone -> Connection -> Env App
+mainEnv sev timeZone conn = Env { envLogAction    = mainLogAction sev
+                                , envMinSeverity  = Info
+                                , envTimeZone     = timeZone
+                                , envDBConnection = conn
+                                }
 
 -- | Log action for the main application.
 mainLogAction :: (MonadIO m)

@@ -12,7 +12,7 @@ import           CLI.Options
 import           CLI.Poll
 import           CLI.Query
 
-import           Colog                  ( Message, Severity (..), WithLog, log, pattern I )
+import           Colog                  ( Message, Severity (..), WithLog, log, pattern I, usingLoggerT )
 
 import           Control.Monad          ( void )
 import           Control.Monad.IO.Class ( MonadIO (liftIO) )
@@ -25,6 +25,7 @@ import           Options.Applicative
 import           Prelude                hiding ( log )
 
 import           UnliftIO               ( MonadUnliftIO )
+import Database.Utils (connectDbName)
 
 
 main :: IO ()
@@ -34,7 +35,9 @@ main = do
 
   timeZone <- getCurrentTimeZone
 
-  runApp (mainEnv (logLevel options) timeZone) (appMain options)
+  conn <- connectDbName (optDatabase options)
+
+  runApp (mainEnv (logLevel options) timeZone conn) (appMain options)
   where
     opts :: ParserInfo Options
     opts = info (parseOptions <**> helper)

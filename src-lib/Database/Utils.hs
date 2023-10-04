@@ -10,6 +10,8 @@ module Database.Utils
      , dbnameTest
      , pPrintCompact
      , setupDatabaseName
+     , dropTables
+     , migrateDatabase
      , setupProductionDatabase
      ) where
 
@@ -83,22 +85,29 @@ setupProductionDatabase = setupDatabaseName dbnameProduction
 -- | Setup the named database.
 setupDatabaseName :: String -> IO Connection
 setupDatabaseName name = do
-  -- Connect to the database.
-  conn <- connectDbName name
+  pPrintString "Reinitializing database."
 
+  -- Connect to named database, drop all tables, and execute migrations.
+  connectDbName name >>= dropTables >>= migrateDatabase
+
+-- | Drop all tables in the named database.
+dropTables :: Connection -> IO Connection
+dropTables conn = do
   -- Drop all tables.
   _ <- execute_ conn $ dropCascade "station_status"
   _ <- execute_ conn $ dropCascade "station_information"
   _ <- execute_ conn $ dropCascade "beam_migration"
   _ <- execute_ conn $ dropCascade "beam_version"
 
+  pure conn
+
+-- | Drop all tables in the named database.
+migrateDatabase :: Connection -> IO Connection
+migrateDatabase conn = do
   -- Initialize the database.
   _ <- migrateDB conn
 
-  pPrintString "Database reinitialization complete."
-
   pure conn
-
 
 -- | pPrint with compact output.
 pPrintCompact :: (MonadIO m, Show a) => a -> m ()

@@ -32,15 +32,14 @@ import           UnliftIO               ( MonadIO, MonadUnliftIO, liftIO )
 
 
 -- | Dispatch CLI arguments to the query interface.
-dispatchQuery :: (App ~ m, WithLog env Message m, MonadIO m, MonadUnliftIO m)
-              => QueryOptions
+dispatchQuery :: QueryOptions
               -> Connection
-              -> m ()
+              -> App ()
 dispatchQuery options conn = do
   -- Refresh the database if requested.
   when (optRefresh options) $ do
     log D "Refreshing database with latest status from API."
-    handleStatus conn
+    handleStatus
 
   -- Query the database by either ID or name.
   case optQueryBy options of
@@ -49,10 +48,9 @@ dispatchQuery options conn = do
 
 
 -- | Query the database for the station with the given ID.
-queryByStationId :: (App ~ m, WithLog env Message m, MonadIO m, MonadUnliftIO m)
-                 => Int
+queryByStationId :: Int
                  -> Connection
-                 -> m ()
+                 -> App ()
 queryByStationId stationId conn = do
   log I $ toStrict $ "Querying station ID '" <> (pack . show) stationId <> "'"
 
@@ -69,10 +67,9 @@ queryByStationId stationId conn = do
 
 
 -- | Query the database for stations with names matching the given pattern.
-queryByStationName :: (App ~ m, WithLog env Message m, MonadIO m, MonadUnliftIO m)
-                   => MatchMethod String
+queryByStationName :: MatchMethod String
                    -> Connection
-                   -> m ()
+                   -> App ()
 queryByStationName stationMatch conn = do
   log I $ toStrict $ "Querying station names like '" <> pack stationName <> "'"
 
@@ -93,11 +90,10 @@ queryByStationName stationMatch conn = do
     nameTransformer prepend name append = List.intercalate "" [prepend, name, append]
 
 -- | Query the database for the status of the given station tuple.
-queryStatus :: (App ~ m, WithLog env Message m, MonadIO m, MonadUnliftIO m)
-            => Connection
+queryStatus :: Connection
             -> String -- ^ Header
             -> (Int, String) -- ^ (station_id, station_name)
-            -> m [Text]
+            -> App [Text]
 queryStatus conn header station_tuple = do
   -- Query the current time zone.
   currentTimeZone <- asks envTimeZone  -- Fetch the timeZone from the environment
