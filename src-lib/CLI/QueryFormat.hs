@@ -13,7 +13,6 @@ import           Data.Text.Lazy         ( Text, chunksOf, intercalate, pack, rev
                                           unwords )
 import           Data.Time              ( LocalTime (..), TimeZone )
 
-import           Database.Beam.Postgres ( Connection )
 import           Database.BikeShare     ( StationStatus, d_status_last_reported, d_status_num_bikes_available,
                                           d_status_num_bikes_disabled, d_status_num_docks_available,
                                           d_status_num_docks_disabled, d_status_station_id,

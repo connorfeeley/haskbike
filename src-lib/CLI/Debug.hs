@@ -19,7 +19,6 @@ import qualified Data.List              as List
 import           Data.Maybe             ( fromMaybe )
 import           Data.Text.Lazy         ( Text, pack, toStrict, unpack )
 
-import           Database.Beam.Postgres ( Connection )
 import           Database.BikeShare     ( StationStatus, bikeshareStationStatus, d_status_last_reported,
                                           d_status_num_bikes_available, d_status_num_bikes_disabled,
                                           d_status_num_docks_available, d_status_num_docks_disabled,

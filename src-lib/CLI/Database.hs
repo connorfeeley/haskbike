@@ -66,13 +66,10 @@ dispatchDatabase :: Options -> App Connection
 dispatchDatabase options = do
   case optCommand options of
     Poll _pollOptions
-      | optEnableMigration options -> withConn >>= liftIO . migrateDB'
+      | optEnableMigration options -> withConn >>= liftIO . (migrateDB >> pure)
       | otherwise -> withConn
     Reset resetOptions -> handleReset options resetOptions
     _ -> withConn
-    where
-      migrateDB' :: Connection -> IO Connection
-      migrateDB' conn = migrateDB conn >> pure conn
 
 
 -- | Handle the 'Reset' command.

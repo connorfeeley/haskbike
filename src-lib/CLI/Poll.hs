@@ -23,7 +23,6 @@ import           Control.Monad.Cont     ( forever )
 import qualified Data.Text              as Text
 import           Data.Time
 
-import           Database.Beam.Postgres ( Connection )
 import           Database.BikeShare     ( d_status_last_reported, d_status_station_id )
 import           Database.Operations
 
