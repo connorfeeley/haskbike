@@ -107,9 +107,8 @@ unMatchMethod (WildcardMatch a) = a
 -- | Parser for 'QueryOptions'.
 queryOptionsParser :: Parser QueryOptions
 queryOptionsParser = QueryOptions
-  <$> switch (long "refresh" <> help "Refresh the data.")
-  <*> (subparser $
-       queryByIdParser <> queryByNameParser)
+  <$> flag True False (long "no-refresh" <> help "Don't refresh the data from the API.")
+  <*> subparser (queryByIdParser <> queryByNameParser)
   where
     queryByIdParser = command "id"   (info (QueryByStationId   <$> parseStationId)   (progDesc "Query by station ID."))
     queryByNameParser = command "name" (info (QueryByStationName <$> parseStationName) (progDesc "Query by station name."))
