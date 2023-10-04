@@ -46,9 +46,12 @@ import qualified Data.Map                                 as Map
 import qualified Data.Text                                as Text
 
 import           Database.Beam
+import           Database.Beam.Backend                    ( BeamSqlBackend )
 import           Database.Beam.Backend.SQL.BeamExtensions
 import           Database.Beam.Postgres
 import qualified Database.Beam.Postgres                   as Pg
+import           Database.Beam.Query
+import           Database.Beam.Query.CTE
 import           Database.BikeShare
 import           Database.Utils
 
@@ -180,6 +183,13 @@ insertStationInformation conn stations = do
     insertExpressions $ map fromJSONToBeamStationInformation stations
 
 
+
+-- | Query expression for 'StationInformation'.
+qInfo :: BeamSqlBackend be => [Int32] -> Q be BikeshareDb s (StationInformationT (QExpr be s))
+qInfo api_status =
+    filter_ (\info -> _info_station_id info `in_` map val_ api_status)
+    (all_ (bikeshareDb ^. bikeshareStationInformation))
+
 {- |
 Find the corresponding active rows in the database corresponding to each element of a list of *newer* 'AT.StationStatus' records.
 -}
@@ -191,14 +201,9 @@ getRowsToDeactivate conn api_status
   | otherwise = do
     -- Select using common table expressions (selectWith).
     runBeamPostgres' conn $ runSelectReturningList $ selectWith $ do
-      -- Common table expression for 'StationInformation'.
-      common_info <- selecting $
-          filter_ (\info -> _info_station_id info `in_` map (fromIntegral . _status_station_id) api_status)
-          (all_ (bikeshareDb ^. bikeshareStationInformation))
-
       -- Common table expression for 'StationStatus'.
       common_status <- selecting $ do
-        info <- Database.Beam.reuse common_info
+        info <- qInfo (map (fromIntegral . _status_station_id) api_status)
         status <- orderBy_ (asc_ . _d_status_id) $
           all_ (bikeshareDb ^. bikeshareStationStatus)
         guard_ (_d_status_info_id status `references_` info)
@@ -327,9 +332,7 @@ queryStationName :: Connection        -- ^ Connection to the database.
                  -> IO (Maybe String) -- ^ Station name assosicated with the given station ID.
 queryStationName conn station_id = do
   info <- runBeamPostgres' conn $ runSelectReturningOne $ select $ do
-    info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
-    guard_ (_info_station_id info ==. val_ (fromIntegral station_id))
-    pure info
+    qInfo [fromIntegral station_id]
 
   let station_name = info ^. _Just . info_name
 
@@ -355,7 +358,7 @@ queryStationId :: Connection        -- ^ Connection to the database.
                  -> IO (Maybe Int)  -- ^ Station ID assosicated with the given station name, if found.
 queryStationId conn station_name = do
   info <- runBeamPostgres' conn $ runSelectReturningOne $ select $ do
-    info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
+    info <- all_ (bikeshareDb ^. bikeshareStationInformation)
     guard_ (_info_name info ==. val_ (Text.pack station_name))
     pure info
 
@@ -396,16 +399,16 @@ queryStationIdLike conn station_name = do
                      )) info
 
 -- | Query the latest status for a station.
-queryStationStatusLatest :: Connection        -- ^ Connection to the database.
-                         -> Int              -- ^ Station ID.
+queryStationStatusLatest :: Connection               -- ^ Connection to the database.
+                         -> Int                      -- ^ Station ID.
                          -> IO (Maybe StationStatus) -- ^ Latest 'StationStatus' for the given station.
 queryStationStatusLatest conn station_id = do
   runBeamPostgres' conn $ runSelectReturningOne $ select $ do
     info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
+    guard_ (_info_station_id info ==. val_ ( fromIntegral station_id))
     status <- orderBy_ (asc_ . _d_status_last_reported)
                 (all_ (bikeshareDb ^. bikeshareStationStatus))
     guard_ (_d_status_info_id status `references_` info &&.
-            _info_station_id info ==. val_ (fromIntegral station_id) &&.
            _d_status_active status ==. val_ True)
     pure status
 
