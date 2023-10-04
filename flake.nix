@@ -84,8 +84,8 @@
                 doctest
                 stylish-haskell
                 ;
-                inherit (self'.packages)
-                  haskbike-completions;
+              inherit (self'.packages)
+                haskbike-completions;
               # Disable ghcid.
               # ghcid = null;
 
