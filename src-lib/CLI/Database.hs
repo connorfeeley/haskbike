@@ -16,7 +16,7 @@ import           CLI.Options
 import           Colog                  ( Message, WithLog, log, pattern D, pattern E, pattern I, pattern W )
 
 import           Control.Lens
-import           Control.Monad          ( unless, (<=<) )
+import           Control.Monad          ( unless, void, (<=<) )
 import           Control.Monad.IO.Class ( MonadIO (liftIO) )
 import           Control.Monad.Reader   ( asks, lift )
 
@@ -66,10 +66,14 @@ dispatchDatabase :: Options -> App Connection
 dispatchDatabase options = do
   case optCommand options of
     Poll _pollOptions
-      | optEnableMigration options -> withConn >>= liftIO . (migrateDB >> pure)
-      | otherwise -> withConn
-    Reset resetOptions -> handleReset options resetOptions
-    _ -> withConn
+      | optEnableMigration options -> do
+          log D "Migrating database."
+          mig <- withConn >>= liftIO . migrateDB
+          log D "Migrated database."
+          withConn >>= liftIO . pure
+      | otherwise -> withConn >>= liftIO . pure
+    Reset resetOptions -> handleReset options resetOptions >>= liftIO . pure
+    _ -> withConn >>= liftIO . pure
 
 
 -- | Handle the 'Reset' command.
