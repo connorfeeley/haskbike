@@ -23,7 +23,7 @@ import           Data.Text              ( intercalate, intersperse, pack, unword
 import qualified Data.Text              as Text
 import           Data.Time              ( getCurrentTimeZone )
 
-import           Database.Utils
+import           Database.BikeShare.Utils
 
 import           Options.Applicative
 

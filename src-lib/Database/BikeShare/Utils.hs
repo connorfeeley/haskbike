@@ -2,7 +2,7 @@
 
 -- | Utility functions for database operations.
 
-module Database.Utils
+module Database.BikeShare.Utils
      ( connectDbName
      , connectProductionDb
      , connectTestDb
@@ -21,7 +21,7 @@ import           Data.String                ( fromString )
 
 import           Database.Beam
 import           Database.Beam.Postgres
-import           Database.Migrations        ( migrateDB )
+import           Database.BikeShare.Migrations        ( migrateDB )
 import           Database.PostgreSQL.Simple
 
 import           System.Environment         ( lookupEnv )

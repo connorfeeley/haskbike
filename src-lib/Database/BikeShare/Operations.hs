@@ -19,7 +19,7 @@
 
 -- | This module contains the operations that can be performed on the database.
 
-module Database.Operations
+module Database.BikeShare.Operations
      ( InsertStatusResult (..)
      , getRowsToDeactivate
      , insertStationInformation
@@ -74,7 +74,7 @@ import           Database.Beam.Query.CTE
 import           Database.Beam.Query.CustomSQL
 import           Database.BikeShare
 import           Database.PostgreSQL.Simple               ( Connection, Only (..), query_ )
-import           Database.Utils
+import           Database.BikeShare.Utils
 
 import           GHC.Exts                                 ( IsString, fromString )
 

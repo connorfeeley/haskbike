@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 
-module Database.Migrations where
+module Database.BikeShare.Migrations where
 
 import           Data.String                    ( fromString )
 

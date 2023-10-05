@@ -25,9 +25,9 @@ import qualified Data.Text              as Text
 
 import           Database.Beam.Postgres ( Connection )
 import           Database.BikeShare     ( bikeshareStationInformation, bikeshareStationStatus )
-import           Database.Migrations
-import           Database.Operations
-import           Database.Utils
+import           Database.BikeShare.Migrations
+import           Database.BikeShare.Operations
+import           Database.BikeShare.Utils
 
 import           Options.Applicative
 

@@ -1,7 +1,7 @@
 -- | Command-line options.
 module CLI.Options where
 
-import           Database.Utils
+import           Database.BikeShare.Utils
 
 import           Options.Applicative
 

@@ -15,7 +15,7 @@
 {-# LANGUAGE TypeFamilies              #-}
 {-# LANGUAGE UndecidableInstances      #-}
 
-module Database.StationStatus
+module Database.BikeShare.StationStatus
      ( BeamStationStatusString (..)
      , PrimaryKey (StationStatusId)
      , ReportTime (..)
@@ -68,7 +68,7 @@ import           Database.PostgreSQL.Simple.FromField       ( Field (typeOid), F
                                                               returnError, typoid )
 import           Database.PostgreSQL.Simple.ToField         ( ToField (..) )
 import           Database.PostgreSQL.Simple.TypeInfo.Static ( text )
-import           Database.StationInformation
+import           Database.BikeShare.StationInformation
 
 import           ReportTime
 

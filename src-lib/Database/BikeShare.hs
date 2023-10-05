@@ -12,14 +12,14 @@
 
 module Database.BikeShare
      ( BikeshareDb (..)
-     , module Database.Types
+     , module Database.BikeShare.Types
      , bikeshareDb
      , bikeshareStationInformation
      , bikeshareStationStatus
      ) where
 
 import           Database.Beam
-import           Database.Types
+import           Database.BikeShare.Types
 
 
 -- | Define the database; only containing one table for now.

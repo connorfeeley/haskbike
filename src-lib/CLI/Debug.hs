@@ -29,7 +29,7 @@ import           Database.BikeShare          ( StationStatus, StationStatusT, bi
                                                d_status_num_docks_disabled, d_status_station_id,
                                                vehicle_types_available_efit, vehicle_types_available_efit_g5,
                                                vehicle_types_available_iconic )
-import           Database.Operations
+import           Database.BikeShare.Operations
 import           Database.PostgreSQL.Simple  ( Connection, query_ )
 
 import           Prelude                     hiding ( log )

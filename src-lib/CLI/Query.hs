@@ -22,7 +22,7 @@ import           Database.BikeShare   ( StationStatus, d_status_last_reported, d
                                         d_status_num_bikes_disabled, d_status_num_docks_available,
                                         d_status_num_docks_disabled, d_status_station_id, vehicle_types_available_efit,
                                         vehicle_types_available_efit_g5, vehicle_types_available_iconic )
-import           Database.Operations
+import           Database.BikeShare.Operations
 
 import           Prelude              hiding ( log, unlines )
 

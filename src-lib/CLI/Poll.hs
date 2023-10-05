@@ -24,7 +24,7 @@ import qualified Data.Text              as Text
 import           Data.Time
 
 import           Database.BikeShare     ( d_status_last_reported, d_status_station_id )
-import           Database.Operations
+import           Database.BikeShare.Operations
 
 import           Fmt
 
