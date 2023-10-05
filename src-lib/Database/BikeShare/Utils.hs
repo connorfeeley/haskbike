@@ -87,8 +87,6 @@ setupProductionDatabase = setupDatabaseName dbnameProduction
 -- | Setup the named database.
 setupDatabaseName :: String -> IO Connection
 setupDatabaseName name = do
-  pPrintString "Reinitializing database."
-
   -- Connect to named database, drop all tables, and execute migrations.
   mkDbParams dbnameProduction >>= uncurry5 connectDbName >>= dropTables >>= migrateDatabase
 

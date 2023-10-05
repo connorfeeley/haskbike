@@ -37,8 +37,8 @@ import           Data.Functor           ( void )
 
 import           Database.Beam.Postgres
 import           Database.BikeShare
-import           Database.Operations
-import           Database.Utils
+import           Database.BikeShare.Operations
+import           Database.BikeShare.Utils
 
 import           Fmt
 
