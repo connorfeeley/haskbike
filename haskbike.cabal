@@ -75,6 +75,7 @@ common common-extensions
                       , LambdaCase
                       , PatternSynonyms
                       , TupleSections
+                      , ScopedTypeVariables
 
 -- Common dependencies shared by all targets.
 common common-depends

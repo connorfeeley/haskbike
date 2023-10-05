@@ -1,5 +1,3 @@
-{-# LANGUAGE ScopedTypeVariables #-}
-
 -- | Utility functions for database operations.
 
 module Database.BikeShare.Utils

@@ -8,7 +8,6 @@
 {-# LANGUAGE OverloadedStrings         #-}
 {-# LANGUAGE PartialTypeSignatures     #-}
 {-# LANGUAGE Rank2Types                #-}
-{-# LANGUAGE ScopedTypeVariables       #-}
 {-# LANGUAGE TemplateHaskell           #-}
 {-# LANGUAGE TypeApplications          #-}
 
