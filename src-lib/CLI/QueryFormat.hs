@@ -2,6 +2,8 @@
 
 module CLI.QueryFormat where
 
+import           AppEnv
+
 import           CLI.Utils
 
 import           Control.Lens
@@ -11,7 +13,6 @@ import           Data.Text.Lazy         ( Text, chunksOf, intercalate, pack, rev
                                           unwords )
 import           Data.Time              ( LocalTime (..), TimeZone )
 
-import           Database.Beam.Postgres ( Connection )
 import           Database.BikeShare     ( StationStatus, d_status_last_reported, d_status_num_bikes_available,
                                           d_status_num_bikes_disabled, d_status_num_docks_available,
                                           d_status_num_docks_disabled, d_status_station_id,
@@ -26,6 +27,8 @@ import           Prelude                hiding ( log, reverse, unlines, unwords 
 import           ReportTime             ( reportToLocal )
 
 import           System.Console.ANSI
+
+import           UnliftIO               ( liftIO )
 
 
 -- | Helper function to show a value as 'Text'.
@@ -46,9 +49,9 @@ underCode   = pack $ setSGRCode [ SetUnderlining       SingleUnderline ]
 resetUnder  = pack $ setSGRCode [ SetUnderlining       NoUnderline     ]
 
 -- | Lookup local time zone.
-fmtStationStatus :: Connection -> TimeZone -> (Int, String) -> IO [Text]
-fmtStationStatus conn' currentTimeZone' (id', name') = do
-  latest <- queryStationStatusLatest conn' id'
+fmtStationStatus :: TimeZone -> (Int, String) -> App [Text]
+fmtStationStatus currentTimeZone' (id', name') = do
+  latest <- queryStationStatusLatest <$> withConn <*> pure id' >>= liftIO
   let status = fmap (currentTimeZone', name', ) latest
   pure $ formatStationStatusResult status
 

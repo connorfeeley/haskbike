@@ -12,17 +12,22 @@ import           CLI.Options
 import           CLI.Poll
 import           CLI.Query
 
-import           Colog                  ( Message, Severity (..), WithLog, log, pattern I )
+import           Colog                  ( HasLog (logActionL), Message, Severity (..), WithLog, log, logMsg, pattern I,
+                                          pattern W, unLogAction, usingLoggerT )
 
+import           Control.Lens
 import           Control.Monad          ( void )
 import           Control.Monad.IO.Class ( MonadIO (liftIO) )
 
+import           Data.Text              ( intercalate, intersperse, pack, unwords )
 import qualified Data.Text              as Text
 import           Data.Time              ( getCurrentTimeZone )
 
+import           Database.Utils
+
 import           Options.Applicative
 
-import           Prelude                hiding ( log )
+import           Prelude                hiding ( log, unwords )
 
 import           UnliftIO               ( MonadUnliftIO )
 
@@ -32,9 +37,26 @@ main = do
   -- Parse command line options.
   options <- liftIO $ customExecParser (prefs $ helpShowGlobals <> showHelpOnEmpty <> showHelpOnError) opts
 
+  -- Get the current time zone.
   timeZone <- getCurrentTimeZone
 
-  runApp (mainEnv (logLevel options) timeZone) (appMain options)
+  -- Establish a connection to the database.
+  dbParams@(name, host, port, username, password) <- mkDbParams (optDatabase options)
+  conn <- connectDbName name host port username password
+
+  -- Create the application environment.
+  let env = mainEnv (logLevel options) timeZone conn
+
+  -- Log the database connection parameters.
+  runApp env (log I $ "Connected to database using: " <> unwords [ "dbname=" <> pack name
+                                                                 , pack host
+                                                                 , pack port
+                                                                 , pack username
+                                                                 , pack "password=***" -- Don't log the password.
+                                                                 ])
+
+  -- Run the application.
+  runApp env (appMain options)
   where
     opts :: ParserInfo Options
     opts = info (parseOptions <**> helper)
@@ -49,9 +71,9 @@ appMain options = do
   log I $ "Starting Toronto Bikeshare CLI with verbosity '" <> Text.pack (show (logLevel options)) <> "'."
   -- Dispatch to appropriate command.
   case optCommand options of
-    (Poll p)      -> dispatchDatabase options >>= dispatchPoll p
-    (Query q)     -> dispatchDatabase options >>= dispatchQuery q
-    (DebugMisc d) -> dispatchDatabase options >>= dispatchDebug d
+    (Poll p)      -> dispatchDatabase options >> dispatchPoll p
+    (Query q)     -> dispatchDatabase options >> dispatchQuery q
+    (DebugMisc d) -> dispatchDatabase options >> dispatchDebug d
     (Reset _)     -> void (dispatchDatabase options)
 
 -- Convert CLI options to a logging severity.

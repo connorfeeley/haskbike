@@ -1,5 +1,3 @@
-{-# LANGUAGE TupleSections #-}
-
 module TestMisc where
 
 import           Data.List                  ( sortOn )

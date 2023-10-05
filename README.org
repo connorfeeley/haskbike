@@ -244,6 +244,8 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO postgres_ro_
 CREATE USER postgres_ro WITH PASSWORD 'secret';
 GRANT postgres_ro_group TO postgres_ro;
 
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON SEQUENCES TO postgres_ro_group;
+
 --
 -- Superuser
 --
@@ -251,8 +253,6 @@ GRANT postgres_ro_group TO postgres_ro;
 -- Create a final user with password
 CREATE USER postgres_adm WITH PASSWORD 'secret';
 GRANT rds_superuser to postgres_adm;
-
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON SEQUENCES TO postgres_ro_group;
 #+end_src
 
 * Lenses

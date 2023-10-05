@@ -9,13 +9,16 @@ import           API.Client
 import           API.ResponseWrapper
 import           API.Types
 
+import           AppEnv
+
 import           CLI.Options
 
 import           Colog                  ( Message, WithLog, log, pattern D, pattern E, pattern I, pattern W )
 
 import           Control.Lens
-import           Control.Monad          ( unless, (<=<) )
+import           Control.Monad          ( unless, void, (<=<) )
 import           Control.Monad.IO.Class ( MonadIO (liftIO) )
+import           Control.Monad.Reader   ( asks, lift )
 
 import           Data.Foldable          ( for_ )
 import qualified Data.Text              as Text
@@ -32,7 +35,7 @@ import           Prelude                hiding ( log )
 
 import           Servant.Client         ( ClientError )
 
-import           System.Exit            ( exitSuccess )
+import           System.Exit            ( exitFailure, exitSuccess )
 
 import           UnliftIO               ( MonadUnliftIO )
 
@@ -40,12 +43,18 @@ import           UnliftIO               ( MonadUnliftIO )
 -- | Helper functions.
 
 -- | Reset the database.
-reset :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)  => String -> m Connection
-reset name = log W "Resetting database." >> setupDb name >>= \conn -> handleInformation conn >> pure conn
+reset :: String -> App ()
+reset name =
+  log W "Resetting database."
+  >> resetDb name
+  >> handleInformation
 
 -- | Setup the database.
-setupDb :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)  => String -> m Connection
-setupDb name = liftIO $ setupDatabaseName name
+resetDb :: String -> App Connection
+resetDb name =
+  (dropTables <$> withConn)
+  >> (migrateDatabase <$> withConn)
+  >>= liftIO
 
 -- | Get the database name from the CLI options.
 dbname :: Options -> String
@@ -53,42 +62,38 @@ dbname = optDatabase
 
 
 -- | Dispatch CLI arguments to the database interface.
-dispatchDatabase :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)  => Options -> m Connection
-dispatchDatabase options = case optCommand options of
-  Poll _pollOptions
-    | optEnableMigration options -> migrate (dbname options) >>= \conn -> pure conn
-    | otherwise -> connectToDatabase (dbname options)
-  Reset resetOptions -> handleReset options resetOptions
-  _ -> connectToDatabase (dbname options)
-  where
-    connectToDatabase name = log I "Connecting to database." >> liftIO (connectDbName name)
-    migrate     name    = log W "Migrating database." >> connectDbNameAndMigrate name
-    connectDbNameAndMigrate = liftIO . (migrateDB' <=< connectDbName)
-    migrateDB' :: Connection -> IO Connection
-    migrateDB' conn = migrateDB conn >> return conn
+dispatchDatabase :: Options -> App Connection
+dispatchDatabase options = do
+  case optCommand options of
+    Poll _pollOptions
+      | optEnableMigration options -> do
+          log D "Migrating database."
+          mig <- withConn >>= liftIO . migrateDB
+          log D "Migrated database."
+          withConn >>= liftIO . pure
+      | otherwise -> withConn >>= liftIO . pure
+    Reset resetOptions -> handleReset options resetOptions >>= liftIO . pure
+    _ -> withConn >>= liftIO . pure
 
 
 -- | Handle the 'Reset' command.
-handleReset :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)  => Options -> ResetOptions -> m Connection
+handleReset :: (App ~ m, WithAppEnv env Message m)  => Options -> ResetOptions -> m Connection
 handleReset options resetOptions = do
-  log E $ "Reset command unimplemented. Parsed options: " <> (Text.pack . show) resetOptions
-
   if optResetOnly resetOptions
     then reset (dbname options) >> liftIO exitSuccess
-    else reset (dbname options)
-
+    else reset (dbname options) >> liftIO exitFailure
 
 -- | Helper for station information request.
-handleInformation :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)  => Connection -> m ()
-handleInformation conn = do
+handleInformation :: App ()
+handleInformation = do
   log D "Querying station information from database."
-  numInfoRows <- liftIO (queryRowCount conn bikeshareStationInformation)
+  numInfoRows <- queryRowCount <$> withConn <*> pure bikeshareStationInformation >>= liftIO
   log D "Queried station information from database."
-  unless (null numInfoRows) $ handleStationInformation conn
+  unless (null numInfoRows) handleStationInformation
 
 -- | Handle station information request.
-handleStationInformation :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)  => Connection -> m ()
-handleStationInformation conn = do
+handleStationInformation :: App ()
+handleStationInformation = do
   log D "Requesting station information from API."
   stationInfo <- liftIO (runQueryWithEnv stationInformation :: IO (Either ClientError StationInformationResponse))
   log D "Requested station information from API."
@@ -96,23 +101,23 @@ handleStationInformation conn = do
   for_ (rightToMaybe stationInfo) $ \response -> do
         let stations = response ^. response_data . info_stations
         log D "Inserting station information into database."
-        liftIO (insertStationInformation conn stations) >>= report
+        numInfoRows <- insertStationInformation <$> withConn <*> pure stations >>= liftIO >>= report
         log D "Inserted station information into database."
   where
     report = log I . ("Stations inserted: " <>) . Text.pack . show . length
     rightToMaybe = either (const Nothing) Just
 
 -- | Helper for station status request.
-handleStatus :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)  => Connection -> m ()
-handleStatus conn = do
+handleStatus :: App ()
+handleStatus = do
   log D "Querying station status from database."
-  numStatusRows <- liftIO (queryRowCount conn bikeshareStationStatus)
+  numStatusRows <- queryRowCount <$> withConn <*> pure bikeshareStationStatus >>= liftIO
   log D "Queried station status from database."
-  unless (null numStatusRows) $ handleStationStatus conn
+  unless (null numStatusRows) handleStationStatus
 
 -- | Handle station status request.
-handleStationStatus :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)  => Connection -> m ()
-handleStationStatus conn = do
+handleStationStatus :: App ()
+handleStationStatus = do
   log D "Requesting station status from API."
   stationStatus <- liftIO (runQueryWithEnv stationStatus :: IO (Either ClientError StationStatusResponse))
   log D "Requested station status from API."
@@ -120,7 +125,7 @@ handleStationStatus conn = do
   for_ (rightToMaybe stationStatus) $ \response -> do
         let stations = response ^. response_data . status_stations
         log D "Inserting station status into database."
-        liftIO (insertStationStatus conn stations) >>= report
+        numStatusRows <- insertStationStatus <$> withConn <*> pure stations >>= liftIO >>= report
         log D "Inserted station status into database."
   where
     report = log I . ("Status updated: " <>) . Text.pack . show .

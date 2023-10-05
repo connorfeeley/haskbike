@@ -110,7 +110,7 @@ queryOptionsParser = QueryOptions
   <$> flag True False (long "no-refresh" <> help "Don't refresh the data from the API.")
   <*> subparser (queryByIdParser <> queryByNameParser)
   where
-    queryByIdParser = command "id"   (info (QueryByStationId   <$> parseStationId)   (progDesc "Query by station ID."))
+    queryByIdParser   = command "id"   (info (QueryByStationId   <$> parseStationId)   (progDesc "Query by station ID."))
     queryByNameParser = command "name" (info (QueryByStationName <$> parseStationName) (progDesc "Query by station name."))
 
 parseStationId :: Parser Int

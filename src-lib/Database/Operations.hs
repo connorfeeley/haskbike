@@ -1,6 +1,21 @@
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskell     #-}
-{-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE AllowAmbiguousTypes       #-}
+{-# LANGUAGE DeriveAnyClass            #-}
+{-# LANGUAGE DeriveGeneric             #-}
+{-# LANGUAGE FunctionalDependencies    #-}
+{-# LANGUAGE LambdaCase                #-}
+{-# LANGUAGE ScopedTypeVariables       #-}
+{-# LANGUAGE TemplateHaskell           #-}
+{-# LANGUAGE TypeApplications          #-}
+{-# LANGUAGE MultiWayIf                #-}
+{-# LANGUAGE NoMonomorphismRestriction #-}
+{-# LANGUAGE OverloadedStrings         #-}
+{-# LANGUAGE PartialTypeSignatures     #-}
+{-# LANGUAGE Rank2Types                #-}
+
+
+{- signatures of beam-related functions are incredibly verbose, so let's settle for partial type signatures.
+   Sometimes it is straight up impossible to write the types down because of ambiguous types .-}
+{-# OPTIONS_GHC -fno-warn-partial-type-signatures -fno-warn-missing-signatures #-}
 
 -- | This module contains the operations that can be performed on the database.
 
@@ -9,6 +24,7 @@ module Database.Operations
      , getRowsToDeactivate
      , insertStationInformation
      , insertStationStatus
+     , queryTableSize
      , printDisabledDocks
      , queryDisabledDocks
      , queryRowCount
@@ -41,8 +57,10 @@ import qualified API.Types                                as AT
 
 import           Control.Lens                             hiding ( (<.) )
 
+import           Data.ByteString                          ( ByteString )
 import           Data.Int                                 ( Int32 )
 import qualified Data.Map                                 as Map
+import           Data.Maybe                               ( fromMaybe )
 import qualified Data.Text                                as Text
 
 import           Database.Beam
@@ -50,10 +68,16 @@ import           Database.Beam.Backend                    ( BeamSqlBackend )
 import           Database.Beam.Backend.SQL.BeamExtensions
 import           Database.Beam.Postgres
 import qualified Database.Beam.Postgres                   as Pg
+import           Database.Beam.Postgres.Syntax            ( PgExpressionSyntax(..), emit )
 import           Database.Beam.Query
 import           Database.Beam.Query.CTE
+import           Database.Beam.Query.CustomSQL
 import           Database.BikeShare
+import           Database.PostgreSQL.Simple               ( Connection, Only (..), query_ )
 import           Database.Utils
+
+import           GHC.Exts                                 ( IsString, fromString )
+
 
 debug :: Bool
 debug = False
@@ -117,12 +141,11 @@ printDisabledDocks conn = queryDisabledDocks conn >>= pPrintCompact
 queryStationStatus :: Connection                               -- ^ Connection to the database.
                    -> Integer                                  -- ^ Limit number of rows returned.
                    -> IO [(StationInformation, StationStatus)] -- ^ List of tuples of (station information, station status).
-queryStationStatus conn limit = do
-  runBeamPostgres' conn $ runSelectReturningList $ select $ do
-    info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
-    status <- limit_ limit (all_ (bikeshareDb ^. bikeshareStationStatus))
-    guard_ (_d_status_info_id status `references_` info)
-    pure (info, status)
+queryStationStatus conn limit = runBeamPostgres' conn $ runSelectReturningList $ select $ do
+  info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
+  status <- limit_ limit (all_ (bikeshareDb ^. bikeshareStationStatus))
+  guard_ (_d_status_info_id status `references_` info)
+  pure (info, status)
 
 {- |
 Query database for station status.
@@ -131,12 +154,11 @@ WARNING: can be very slow if table is large; consider using 'queryStationStatus'
 -}
 queryStationStatus' :: Connection                               -- ^ Connection to the database.
                     -> IO [(StationInformation, StationStatus)] -- ^ List of tuples of (station information, station status).
-queryStationStatus' conn = do
-  runBeamPostgres' conn $ runSelectReturningList $ select $ do
-    info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
-    status <- all_ (bikeshareDb ^. bikeshareStationStatus)
-    guard_ (_d_status_info_id status `references_` info)
-    pure (info, status)
+queryStationStatus' conn = runBeamPostgres' conn $ runSelectReturningList $ select $ do
+  info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
+  status <- all_ (bikeshareDb ^. bikeshareStationStatus)
+  guard_ (_d_status_info_id status `references_` info)
+  pure (info, status)
 
 -- | Query database for station status, returning the number of bikes and docks available and disabled.
 queryStationStatusFields :: Connection                                   -- ^ Connection to the database.
@@ -158,8 +180,7 @@ queryStationStatusFields conn =
 queryStationInformation:: Connection              -- ^ Connection to the database.
                        -> IO [StationInformation] -- ^ List of station information.
 queryStationInformation conn =
-  runBeamPostgres' conn $ runSelectReturningList $ select $ do
-  all_ (bikeshareDb ^. bikeshareStationInformation)
+  runBeamPostgres' conn $ runSelectReturningList $ select $ all_ (bikeshareDb ^. bikeshareStationInformation)
 
 {- | Query database for station information corresponding to a list of station IDs. -}
 queryStationInformationByIds :: Connection              -- ^ Connection to the database.
@@ -177,10 +198,9 @@ queryStationInformationByIds conn ids =
 insertStationInformation :: Connection              -- ^ Connection to the database.
                          -> [AT.StationInformation] -- ^ List of 'StationInformation' from the API response.
                          -> IO [StationInformation] -- ^ List of 'StationInformation' that where inserted.
-insertStationInformation conn stations = do
-  runBeamPostgres' conn $ runInsertReturningList $
-    insert (bikeshareDb ^. bikeshareStationInformation) $
-    insertExpressions $ map fromJSONToBeamStationInformation stations
+insertStationInformation conn stations = runBeamPostgres' conn $ runInsertReturningList $
+  insert (bikeshareDb ^. bikeshareStationInformation) $
+  insertExpressions $ map fromJSONToBeamStationInformation stations
 
 
 
@@ -288,9 +308,8 @@ insertStationStatus conn api_status
 
     selectDistinctByStationId conn' status
       | null status = return []
-      | otherwise = runBeamPostgres' conn' $ runSelectReturningList $ select $ do
-          Pg.pgNubBy_ _d_status_station_id $ orderBy_ (desc_ . _d_status_station_id) $
-            all_ (bikeshareDb ^. bikeshareStationStatus)
+      | otherwise = runBeamPostgres' conn' $ runSelectReturningList $ select $ Pg.pgNubBy_ _d_status_station_id $ orderBy_ (desc_ . _d_status_station_id) $
+      all_ (bikeshareDb ^. bikeshareStationStatus)
 
     deactivateOldStatus conn' status
       | null status = return []
@@ -313,16 +332,15 @@ queryStationStatusBetween :: Connection         -- ^ Connection to the database.
                           -> ReportTime         -- ^ Start time.
                           -> ReportTime         -- ^ End time.
                           -> IO [StationStatus] -- ^ List of 'StationStatus' for the given station between the given times.
-queryStationStatusBetween conn station_id start_time end_time = do
-  runBeamPostgres' conn $ runSelectReturningList $ select $ do
-    info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
-    status <- orderBy_ (asc_ . _d_status_last_reported)
-                (all_ (bikeshareDb ^. bikeshareStationStatus))
-    guard_ (_d_status_info_id status `references_` info &&.
-            _info_station_id info ==. val_ (fromIntegral station_id) &&.
-            _d_status_last_reported status >=. val_ (Just start_time) &&.
-            _d_status_last_reported status <=. val_ (Just end_time))
-    pure status
+queryStationStatusBetween conn station_id start_time end_time = runBeamPostgres' conn $ runSelectReturningList $ select $ do
+  info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
+  status <- orderBy_ (asc_ . _d_status_last_reported)
+              (all_ (bikeshareDb ^. bikeshareStationStatus))
+  guard_ (_d_status_info_id status `references_` info &&.
+          _info_station_id info ==. val_ (fromIntegral station_id) &&.
+          _d_status_last_reported status >=. val_ (Just start_time) &&.
+          _d_status_last_reported status <=. val_ (Just end_time))
+  pure status
 
 {- |
 Query the station name given a station ID.
@@ -331,8 +349,7 @@ queryStationName :: Connection        -- ^ Connection to the database.
                  -> Int               -- ^ Station ID.
                  -> IO (Maybe String) -- ^ Station name assosicated with the given station ID.
 queryStationName conn station_id = do
-  info <- runBeamPostgres' conn $ runSelectReturningOne $ select $ do
-    qInfo [fromIntegral station_id]
+  info <- runBeamPostgres' conn $ runSelectReturningOne $ select $ qInfo [fromIntegral station_id]
 
   let station_name = info ^. _Just . info_name
 
@@ -402,15 +419,14 @@ queryStationIdLike conn station_name = do
 queryStationStatusLatest :: Connection               -- ^ Connection to the database.
                          -> Int                      -- ^ Station ID.
                          -> IO (Maybe StationStatus) -- ^ Latest 'StationStatus' for the given station.
-queryStationStatusLatest conn station_id = do
-  runBeamPostgres' conn $ runSelectReturningOne $ select $ do
-    info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
-    guard_ (_info_station_id info ==. val_ ( fromIntegral station_id))
-    status <- orderBy_ (asc_ . _d_status_last_reported)
-                (all_ (bikeshareDb ^. bikeshareStationStatus))
-    guard_ (_d_status_info_id status `references_` info &&.
-           _d_status_active status ==. val_ True)
-    pure status
+queryStationStatusLatest conn station_id = runBeamPostgres' conn $ runSelectReturningOne $ select $ do
+  info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
+  guard_ (_info_station_id info ==. val_ ( fromIntegral station_id))
+  status <- orderBy_ (asc_ . _d_status_last_reported)
+              (all_ (bikeshareDb ^. bikeshareStationStatus))
+  guard_ (_d_status_info_id status `references_` info &&.
+         _d_status_active status ==. val_ True)
+  pure status
 
 -- | Count the number of rows in a given table.
 queryRowCount :: (Beamable table, Database Postgres db)
@@ -418,6 +434,13 @@ queryRowCount :: (Beamable table, Database Postgres db)
               -> Getting (DatabaseEntity Postgres db (TableEntity table)) (DatabaseSettings be BikeshareDb) (DatabaseEntity Postgres db (TableEntity table))
               -- ^ Lens to the table in the database.
               -> IO (Maybe Int32)     -- ^ Count of rows in the specified table.
-queryRowCount conn table = do
-  runBeamPostgres' conn $ runSelectReturningOne $ select $
-    aggregate_ (\_ -> as_ @Int32 countAll_) (all_ (bikeshareDb ^. table))
+queryRowCount conn table = runBeamPostgres' conn $ runSelectReturningOne $ select $
+  aggregate_ (\_ -> as_ @Int32 countAll_) (all_ (bikeshareDb ^. table))
+
+-- | Function to query the size of a table.
+queryTableSize :: Connection            -- ^ Connection to the database.
+               -> String                -- ^ Name of the table.
+               -> IO (Maybe String)     -- ^ Size of the table.
+queryTableSize conn tableName = do
+  [Only size] <- query_ conn $ fromString ("SELECT pg_size_pretty(pg_total_relation_size('" ++ tableName ++ "'))")
+  return size

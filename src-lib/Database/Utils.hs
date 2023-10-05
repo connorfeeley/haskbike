@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 -- | Utility functions for database operations.
@@ -9,9 +8,13 @@ module Database.Utils
      , connectTestDb
      , dbnameProduction
      , dbnameTest
+     , dropTables
+     , migrateDatabase
+     , mkDbParams
      , pPrintCompact
      , setupDatabaseName
      , setupProductionDatabase
+     , uncurry5
      ) where
 
 import           Data.String                ( fromString )
@@ -40,37 +43,37 @@ dbnameTest = "haskbike-test"
 
 -- | Establish a connection to the production database.
 connectProductionDb :: IO Connection
-connectProductionDb =
-  connectDbName dbnameProduction
+connectProductionDb = mkDbParams dbnameProduction >>= uncurry5 connectDbName
 
 -- | Establish a connection to the testing database.
 connectTestDb :: IO Connection
-connectTestDb =
-  connectDbName dbnameProduction
+connectTestDb = mkDbParams dbnameTest >>= uncurry5 connectDbName
 
 -- | Establish a connection to the named database, using values from the HASKBIKE_{PGDBHOST,USERNAME,PASSWORD} environment variables.
-connectDbName :: String -> IO Connection
-connectDbName name = do
+connectDbName :: String -> String -> String -> String -> String -> IO Connection
+connectDbName name host port username password= do
+  connectPostgreSQL $ fromString $
+    host ++ " " ++
+    port ++ " " ++
+    username ++ " " ++
+    password ++ " " ++
+    " dbname=" ++ name ++
+    " connect_timeout=10"
+
+
+-- | Utility function to uncurry a 5-argument function
+uncurry5 :: (a -> b -> c -> d -> e -> f) -> (a, b, c, d, e) -> f
+uncurry5 fn (a, b, c, d, e) = fn a b c d e
+
+
+mkDbParams :: String -> IO (String, String, String, String, String)
+mkDbParams name = do
   envPgDbHostParam <- mkParam "host=localhost" "host=" =<< lookupEnv "HASKBIKE_PGDBHOST"
   envPgDbPortParam <- mkParam "port=5432" "port=" =<< lookupEnv "HASKBIKE_PGDBPORT"
   envUsername <- mkParam "" "user="  =<< lookupEnv "HASKBIKE_USERNAME"
   envPassword <- mkParam "" "password=" =<< lookupEnv "HASKBIKE_PASSWORD"
 
-  putStrLn $ "Connecting with: " ++
-    envPgDbHostParam ++ " " ++
-    envPgDbPortParam ++ " " ++
-    envUsername ++ " " ++
-    "(password) " ++
-    " dbname=" ++ name ++
-    " connect_timeout=10"
-
-  connectPostgreSQL $ fromString $
-    envPgDbHostParam ++ " " ++
-    envPgDbPortParam ++ " " ++
-    envUsername ++ " " ++
-    envPassword ++ " " ++
-    " dbname=" ++ name ++
-    " connect_timeout=10"
+  pure (name, envPgDbHostParam, envPgDbPortParam, envUsername, envPassword)
   where
     -- takes a default value, a prefix, and an optional value
     mkParam :: String -> String -> Maybe String -> IO String
@@ -84,22 +87,29 @@ setupProductionDatabase = setupDatabaseName dbnameProduction
 -- | Setup the named database.
 setupDatabaseName :: String -> IO Connection
 setupDatabaseName name = do
-  -- Connect to the database.
-  conn <- connectDbName name
+  pPrintString "Reinitializing database."
 
+  -- Connect to named database, drop all tables, and execute migrations.
+  mkDbParams dbnameProduction >>= uncurry5 connectDbName >>= dropTables >>= migrateDatabase
+
+-- | Drop all tables in the named database.
+dropTables :: Connection -> IO Connection
+dropTables conn = do
   -- Drop all tables.
   _ <- execute_ conn $ dropCascade "station_status"
   _ <- execute_ conn $ dropCascade "station_information"
   _ <- execute_ conn $ dropCascade "beam_migration"
   _ <- execute_ conn $ dropCascade "beam_version"
 
+  pure conn
+
+-- | Drop all tables in the named database.
+migrateDatabase :: Connection -> IO Connection
+migrateDatabase conn = do
   -- Initialize the database.
   _ <- migrateDB conn
 
-  pPrintString "Database reinitialization complete."
-
   pure conn
-
 
 -- | pPrint with compact output.
 pPrintCompact :: (MonadIO m, Show a) => a -> m ()

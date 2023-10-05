@@ -1,16 +1,16 @@
 -- | This module contains the BikeShare API client.
 
-{-# LANGUAGE DataKinds     #-}
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE DataKinds          #-}
 {-# LANGUAGE ExplicitNamespaces #-}
+{-# LANGUAGE TypeOperators      #-}
 
 module API.DebugClient
      ( bikeShareAPIClient
-     -- , handleResponse
-     -- , mkClientManager
-     -- , run
-     -- , runQuery
-     -- , runQueryWithEnv
+       -- , handleResponse
+       -- , mkClientManager
+       -- , run
+       -- , runQuery
+       -- , runQueryWithEnv
      , stationInformation
      , stationStatus
      , systemInformation
@@ -20,32 +20,26 @@ module API.DebugClient
      , versions
      ) where
 
-import           API.Types               ( StationInformationResponse, StationStatusResponse )
+import           API.Types                          ( StationInformationResponse, StationStatusResponse )
 
 import           BikeShareAPI
 
-import           Control.Exception       ( Exception (displayException) )
+import           Control.Exception                  ( Exception (displayException) )
+import           Control.Monad.Free
 
-import           Data.Aeson              ( Object )
+import           Data.Aeson                         ( Object )
+import           Data.ByteString.Lazy
 
-import Data.ByteString.Lazy
--- import           Data.Proxy
-
--- import           Network.HTTP.Client     ( Manager, newManager )
-import           Network.HTTP.Client.TLS ( tlsManagerSettings )
-
--- import           Servant.API
--- import           Servant.Client
-
-import           Text.Pretty.Simple      ( pPrintString )
-
-
-import Control.Monad.Free
-import Servant.Client.Free
-import qualified Servant.Client.Internal.HttpClient as I
 import qualified Network.HTTP.Client                as HTTP
-import Servant
-import System.Environment       (getArgs)
+import           Network.HTTP.Client.TLS            ( tlsManagerSettings )
+
+import           Servant
+import           Servant.Client.Free
+import qualified Servant.Client.Internal.HttpClient as I
+
+import           System.Environment                 ( getArgs )
+
+import           Text.Pretty.Simple                 ( pPrintString )
 
 
 -- | The BikeShare API client.
