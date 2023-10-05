@@ -24,15 +24,15 @@ module TestDatabase
      , unit_separateNewerStatusRecordsInsertTwice
      ) where
 
-import           API.ResponseWrapper    ( response_data )
-import           API.Types              ( StationInformationResponse, StationStatusResponse, _info_stations,
-                                          info_stations, status_station_id, status_stations )
+import           API.ResponseWrapper           ( response_data )
+import           API.Types                     ( StationInformationResponse, StationStatusResponse, _info_stations,
+                                                 info_stations, status_station_id, status_stations )
 
 import           Control.Lens
 
-import           Data.Aeson             ( FromJSON, eitherDecode )
-import qualified Data.ByteString.Lazy   as BL
-import           Data.Functor           ( void )
+import           Data.Aeson                    ( FromJSON, eitherDecode )
+import qualified Data.ByteString.Lazy          as BL
+import           Data.Functor                  ( void )
 
 import           Database.Beam.Postgres
 import           Database.BikeShare
