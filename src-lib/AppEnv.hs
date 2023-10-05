@@ -50,9 +50,7 @@ you will have access to code lines that log messages.
 type WithAppEnv env msg m = (MonadReader env m, HasLog env msg m, HasCallStack, MonadIO m, MonadUnliftIO m)
 
 withConn :: (WithAppEnv (Env env) Message m) => m Connection
-withConn = do
-  conn <- asks envDBConnection
-  liftIO $ pure conn
+withConn = asks envDBConnection >>= liftIO . pure
 
 -- Implement logging for the application environment.
 instance HasLog (Env m) Message m where
