@@ -1,4 +1,3 @@
-{-# LANGUAGE AllowAmbiguousTypes       #-}
 {-# LANGUAGE DeriveAnyClass            #-}
 {-# LANGUAGE DeriveGeneric             #-}
 {-# LANGUAGE FunctionalDependencies    #-}
@@ -14,12 +13,13 @@
 
 {- signatures of beam-related functions are incredibly verbose, so let's settle for partial type signatures.
    Sometimes it is straight up impossible to write the types down because of ambiguous types .-}
-{-# OPTIONS_GHC -fno-warn-partial-type-signatures -fno-warn-missing-signatures #-}
 
 -- | This module contains the operations that can be performed on the database.
 
 module Database.BikeShare.Operations
      ( InsertStatusResult (..)
+     , cteStationStatus
+     , formatCteStatus
      , getRowsToDeactivate
      , insertStationInformation
      , insertStationStatus
@@ -50,11 +50,12 @@ module Database.BikeShare.Operations
      , separateNewerStatusRecords
      ) where
 
+import qualified Data.List as List
 import           API.Types                                ( _status_last_reported, _status_station_id,
                                                             status_station_id )
 import qualified API.Types                                as AT
 
-import           Control.Lens                             hiding ( (<.) )
+import           Control.Lens                             hiding ( reuse, (<.) )
 
 import           Data.ByteString                          ( ByteString )
 import           Data.Int                                 ( Int32 )
@@ -63,7 +64,7 @@ import           Data.Maybe                               ( fromMaybe )
 import qualified Data.Text                                as Text
 
 import           Database.Beam
-import           Database.Beam.Backend                    ( BeamSqlBackend )
+import           Database.Beam.Backend                    ( BeamSqlBackend, BeamSqlBackendExpressionSyntax )
 import           Database.Beam.Backend.SQL.BeamExtensions
 import           Database.Beam.Postgres
 import qualified Database.Beam.Postgres                   as Pg
@@ -76,6 +77,7 @@ import           Database.BikeShare.Utils
 import           Database.PostgreSQL.Simple               ( Connection, Only (..), query_ )
 
 import           GHC.Exts                                 ( IsString, fromString )
+import Database.Beam.Backend.SQL (BeamSqlBackendIsString)
 
 
 debug :: Bool
@@ -443,3 +445,135 @@ queryTableSize :: Connection            -- ^ Connection to the database.
 queryTableSize conn tableName = do
   [Only size] <- query_ conn $ fromString ("SELECT pg_size_pretty(pg_total_relation_size('" ++ tableName ++ "'))")
   return size
+
+{-
+In this version, `cteWithDiff` is a list of triples `(StationStatusT Identity, prev_avail, diff)`, where `diff` is iconic availability difference.
+`sumIconic` calculates the sum of `diff` over the entire list, and the final result is a list with each row containing the station status, previous iconic availability, and the sum of iconic availability differences.
+-}
+
+
+
+
+formatCteStatus :: [(StationStatusT Identity, Int32, Int32, Int32)] -> IO ()
+formatCteStatus bar = pPrintCompact $ map (\(s, l, o, p) ->
+                                             ( s ^. d_status_id & unSerial
+                                             , s ^. d_status_station_id
+                                             , maybe "" show (s ^. d_status_last_reported)
+                                             , "Avail # iconic: " <> show (fromIntegral $ s ^. vehicle_types_available_iconic :: Int)
+                                             , "Prev # iconic:  " <> show (fromIntegral l :: Int)
+                                             , "o?:  " <> show (fromIntegral o :: Int)
+                                             , "p?:  " <> show (fromIntegral p :: Int)
+                                             )
+                                          ) bar
+
+-- | TODO: parameterize over column.
+cteStationStatus :: Connection -> Int -> Int -> IO [(StationStatusT Identity, Int32, Int32, Int32)]
+cteStationStatus conn station_id id_threshold =
+  runBeamPostgresDebug' conn $ do
+    cteWithDiff <- runSelectReturningList $ selectWith $ do
+      cte <- selecting $ do
+        let statusForStation = filter_ (\s -> s ^. d_status_station_id ==. val_ (fromIntegral station_id) &&.
+                                              s ^. d_status_id         >=. val_ (fromIntegral id_threshold))
+                                       (all_ (bikeshareDb ^. bikeshareStationStatus))
+          in withWindow_ (\row -> frame_ (partitionBy_ (row ^. d_status_station_id)) (orderPartitionBy_ (asc_ $ row ^. d_status_id)) noBounds_)
+                         (\row w -> (row, lagWithDefault_ (row ^. vehicle_types_available_iconic) (val_ 1) (row ^. vehicle_types_available_iconic) `over_` w))
+                         statusForStation
+      dockings <- selecting $ do
+        -- Only rows where the availability increased.
+        let increments = filter_ (\(s, prevAvail) -> s ^. vehicle_types_available_iconic >. prevAvail)
+                         (reuse cte)
+              -- Delta between current and previous iconic availability.
+              in withWindow_ (\(row, prev) -> frame_ (partitionBy_ (row ^. d_status_station_id)) noOrder_ noBounds_)
+                              (\(row, prev) w -> row ^. vehicle_types_available_iconic - prev)
+                              increments
+      undockings <- selecting $ do
+        -- Only rows where the availability increased.
+        let increments = filter_ (\(s, prevAvail) -> s ^. vehicle_types_available_iconic <. prevAvail)
+                         (reuse cte)
+              -- Delta between current and previous iconic availability.
+              in withWindow_ (\(row, prev) -> frame_ (partitionBy_ (row ^. d_status_station_id)) noOrder_ noBounds_)
+                              (\(row, prev) w -> row ^. vehicle_types_available_iconic - prev)
+                              increments
+      pure $ do
+        -- Rows where current iconic availability is greater than in the previous row (i.e. dockings).
+        -- Tuple of (row, previous iconic availability, iconic availability difference).
+        counts <- filter_ (\(s, prev_avail) -> s ^. vehicle_types_available_iconic /=. prev_avail)
+                          (reuse cte)
+
+        -- Rows where the delta was positive.
+        docked <- filter_ (\delta -> delta >. val_ 0)
+                          (reuse dockings)
+        undocked <- filter_ (\delta -> delta <. val_ 0)
+                    (reuse undockings)
+        -- undocked <- filter_ (\(delta) -> delta <. (val_ 0))
+        --                     (reuse dockings)
+        let diff = (counts ^. _1 . vehicle_types_available_iconic) - (counts ^. _2)
+
+        -- End of cteWithDiff
+        pure (counts ^. _1, counts ^. _2, docked, undocked)
+
+    pure [(status, prevAvail, docked', undocked') | (status, prevAvail, docked', undocked') <- cteWithDiff]
+
+
+-- | Data type representing the type of statistic to query.
+data AvailabilityCountChanged where
+  Undocked      :: AvailabilityCountChanged -- ^ Bike undocked (ride began at this station)
+  Docked        :: AvailabilityCountChanged -- ^ Bike docked   (ride ended at this station)
+  deriving (Show, Eq)
+
+-- cteStationStatus' :: Connection -> AvailabilityCountChanged -> Int -> Int -> IO [(StationStatusT Identity, Int32, Int32, Int32)]
+cteStationStatus' conn statisticType station_id id_threshold =
+  runBeamPostgresDebug' conn $ do
+    cteWithDiff <- runSelectReturningList $ selectWith $ do
+      cte <- selecting $ do
+        let statusForStation = filter_ (\s -> s ^. d_status_station_id ==.  fromIntegral station_id &&.
+                                              s ^. d_status_id         >=.  fromIntegral id_threshold)
+                                       (all_ (bikeshareDb ^. bikeshareStationStatus))
+          in withWindow_ (\row -> frame_ (partitionBy_ (row ^. d_status_station_id)) (orderPartitionBy_ (asc_ $ row ^. d_status_id)) noBounds_)
+                         (\row w -> (row, lagWithDefault_ (row ^. vehicle_types_available_iconic) 1 (row ^. vehicle_types_available_iconic) `over_` w))
+                         statusForStation
+      dockings <- selecting $ do
+        -- Only rows where the availability increased.
+        let increments = filter_ (\(s, prevAvail) -> s ^. vehicle_types_available_iconic `deltaOp_` prevAvail)
+                         (reuse cte)
+              -- Delta between current and previous iconic availability.
+              in withWindow_ (\(row, prev) -> frame_ (partitionBy_ (row ^. d_status_station_id)) noOrder_ noBounds_)
+                             (\(row, prev) w -> (row, row ^. vehicle_types_available_iconic - prev))
+                             increments
+      undockings <- selecting $ do
+        -- Only rows where the availability increased.
+        let increments = filter_ (\(s, prevAvail) -> s ^. vehicle_types_available_iconic <. prevAvail)
+                         (reuse cte)
+              -- Delta between current and previous iconic availability.
+              in withWindow_ (\(row, prev) -> frame_ (partitionBy_ (row ^. d_status_station_id)) noOrder_ noBounds_)
+                             (\(row, prev) w -> (row, row ^. vehicle_types_available_iconic - prev))
+                             increments
+
+      pure $ do
+        counts <- reuse cte -- [(status, previous availability)]
+
+        -- Rows where the delta was either:
+        -- - positive ('deltaOp_': '(>.)')
+        -- - negative ('deltaOp_': '(<.)')
+        -- ... depending on the statisticType paramater.
+        changed <- filter_ (\(s, delta) -> delta `deltaOp_` 0)
+                           (reuse dockings)
+
+        guard_ ((counts ^. _1 . d_status_id) ==. (changed ^. _1 . d_status_id))
+
+        -- End of cteWithDiff
+        pure changed
+    pure cteWithDiff
+  where
+    infixl 4 `deltaOp_` -- same as '(<.)' and '(>.)'.
+    deltaOp_ :: (BeamSqlBackend be) => QGenExpr context be s a -> QGenExpr context be s a -> QGenExpr context be s Bool
+    deltaOp_ = case statisticType of
+      Undocked -> (<.)
+      Docked   -> (>.)
+
+
+-- conn <- mkDbParams "haskbike" >>= uncurry5 connectDbName
+-- res <- cteStationStatus conn 7148 1890764
+-- res <- cteStationStatus <$> (mkDbParams "haskbike" >>= uncurry5 connectDbName) <*> pure 7148 <*> pure 1890764 >>= liftIO
+-- res ^.. traverse . _4
+-- listFrequency s = map (\x -> ([head x], length x)) . List.group . List.sort $ s

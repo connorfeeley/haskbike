@@ -37,6 +37,7 @@ import           Prelude                       hiding ( log )
 import           System.Console.ANSI
 
 import           UnliftIO                      ( MonadIO, MonadUnliftIO, liftIO )
+import Database.BikeShare.Utils (pPrintCompact)
 
 
 
@@ -72,8 +73,14 @@ dispatchDebug options = do
   log D $ "Status table size: " <> toStrict (pack statusTableSizeText)
   liftIO $ putStrLn $ "Status table size: " <> statusTableSizeText <> " rows."
 
+  -- TODO: calculate number of dockings and undockings
+  -- cteStationStatus conn 7148 1890764 :: IO [(StationStatusT Identity, Int32, Int32)]
+  res <- cteStationStatus <$> withConn <*> pure 7148 <*> pure 1890764 >>= liftIO
+
   liftIO $ do
     cliOut $ formatDatabaseStats numStatusRows infoTableSize statusTableSize
+    pPrintCompact $ "Length of result: " <> show (length res)
+    formatCteStatus (take 10 res)
 
 
 formatDatabaseStats :: Int32 -> Maybe String -> Maybe String -> [Text]
