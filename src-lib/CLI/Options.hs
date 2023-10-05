@@ -1,11 +1,11 @@
 -- | Command-line options.
 module CLI.Options where
 
-import           Database.Utils
+import           Database.BikeShare.Utils
 
 import           Options.Applicative
 
-import           Prelude             hiding ( log )
+import           Prelude                  hiding ( log )
 
 
 -- | Top-level options.

@@ -8,27 +8,27 @@ import           CLI.Utils
 
 import           Control.Lens
 
-import           Data.Int               ( Int32 )
-import           Data.Text.Lazy         ( Text, chunksOf, intercalate, pack, reverse, toStrict, unlines, unpack,
-                                          unwords )
-import           Data.Time              ( LocalTime (..), TimeZone )
+import           Data.Int                      ( Int32 )
+import           Data.Text.Lazy                ( Text, chunksOf, intercalate, pack, reverse, toStrict, unlines, unpack,
+                                                 unwords )
+import           Data.Time                     ( LocalTime (..), TimeZone )
 
-import           Database.BikeShare     ( StationStatus, d_status_last_reported, d_status_num_bikes_available,
-                                          d_status_num_bikes_disabled, d_status_num_docks_available,
-                                          d_status_num_docks_disabled, d_status_station_id,
-                                          vehicle_types_available_efit, vehicle_types_available_efit_g5,
-                                          vehicle_types_available_iconic )
-import           Database.Operations
+import           Database.BikeShare            ( StationStatus, d_status_last_reported, d_status_num_bikes_available,
+                                                 d_status_num_bikes_disabled, d_status_num_docks_available,
+                                                 d_status_num_docks_disabled, d_status_station_id,
+                                                 vehicle_types_available_efit, vehicle_types_available_efit_g5,
+                                                 vehicle_types_available_iconic )
+import           Database.BikeShare.Operations
 
 import           Fmt
 
-import           Prelude                hiding ( log, reverse, unlines, unwords )
+import           Prelude                       hiding ( log, reverse, unlines, unwords )
 
-import           ReportTime             ( reportToLocal )
+import           ReportTime                    ( reportToLocal )
 
 import           System.Console.ANSI
 
-import           UnliftIO               ( liftIO )
+import           UnliftIO                      ( liftIO )
 
 
 -- | Helper function to show a value as 'Text'.

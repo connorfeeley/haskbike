@@ -1,8 +1,6 @@
-{-# LANGUAGE ScopedTypeVariables #-}
-
 -- | Utility functions for database operations.
 
-module Database.Utils
+module Database.BikeShare.Utils
      ( connectDbName
      , connectProductionDb
      , connectTestDb
@@ -17,14 +15,14 @@ module Database.Utils
      , uncurry5
      ) where
 
-import           Data.String                ( fromString )
+import           Data.String                   ( fromString )
 
 import           Database.Beam
 import           Database.Beam.Postgres
-import           Database.Migrations        ( migrateDB )
+import           Database.BikeShare.Migrations ( migrateDB )
 import           Database.PostgreSQL.Simple
 
-import           System.Environment         ( lookupEnv )
+import           System.Environment            ( lookupEnv )
 
 import           Text.Pretty.Simple
 
@@ -87,8 +85,6 @@ setupProductionDatabase = setupDatabaseName dbnameProduction
 -- | Setup the named database.
 setupDatabaseName :: String -> IO Connection
 setupDatabaseName name = do
-  pPrintString "Reinitializing database."
-
   -- Connect to named database, drop all tables, and execute migrations.
   mkDbParams dbnameProduction >>= uncurry5 connectDbName >>= dropTables >>= migrateDatabase
 

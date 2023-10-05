@@ -1,27 +1,27 @@
 -- | Test the client functions.
-
-{-# LANGUAGE ScopedTypeVariables #-}
-
 module TestClient where
 
 import           API.Client
 
 import           AppEnv
 
-import qualified CLI.Poll          as Poll
+import qualified CLI.Poll                 as Poll
 
-import           Colog             ( Message, WithLog, pattern W )
+import           Colog                    ( Message, WithLog, log, pattern I, pattern W )
 
-import           Control.Exception ( SomeException, try )
-import           Control.Monad     ( void )
+import           Control.Exception        ( SomeException, try )
+import           Control.Monad            ( void )
 
-import           Data.Time         ( getCurrentTimeZone )
+import           Data.Text                ( intercalate, intersperse, pack, unwords )
+import           Data.Time                ( getCurrentTimeZone )
 
-import           Database.Utils
+import           Database.BikeShare.Utils
+
+import           Prelude                  hiding ( log, unwords )
 
 import           Test.Tasty.HUnit
 
-import           UnliftIO          ( MonadIO, MonadUnliftIO, liftIO, timeout )
+import           UnliftIO                 ( MonadIO, MonadUnliftIO, liftIO, timeout )
 
 -- | Mark a test as expected to fail.
 markAsExpectedFailure :: IO () -> IO ()
@@ -52,9 +52,23 @@ unit_parseSystemPricingPlans = void $ runQueryWithEnv systemPricingPlans
 unit_poll :: IO ()
 unit_poll = do
   timeZone <- getCurrentTimeZone
-  runApp (mainEnv W timeZone) doPoll
+
+  -- Establish a connection to the database, drop all tables, and re-initialize it.
+  dbParams@(name, host, port, username, password) <- mkDbParams dbnameTest
+  conn <- connectDbName name host port username password >>= dropTables >>= migrateDatabase
+
+  -- Create the application environment.
+  let env = mainEnv W timeZone conn
+
+  -- Log the database connection parameters.
+  runApp env (log I $ "Connected to database using: " <> unwords [ "dbname=" <> pack name
+                                                                 , pack host
+                                                                 , pack port
+                                                                 , pack username
+                                                                 , pack "password=***" -- Don't log the password.
+                                                                 ])
+  runApp env doPoll
   where
     doPoll :: (App ~ m, WithLog env Message m, MonadIO m, MonadUnliftIO m) => m ()
     doPoll = void $ timeout 1000000 $ do -- Terminate after 1 second
-      conn <- liftIO $ setupDatabaseName dbnameTest
-      void $ Poll.pollClient conn
+      void Poll.pollClient

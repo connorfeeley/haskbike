@@ -11,32 +11,32 @@ import           CLI.Options
 import           CLI.QueryFormat
 import           CLI.Utils
 
-import           Colog                       ( Message, WithLog, log, pattern D, pattern I )
+import           Colog                         ( Message, WithLog, log, pattern D, pattern I )
 
-import           Control.Monad.Reader        ( asks, void, when )
+import           Control.Monad.Reader          ( asks, void, when )
 
-import           Data.Int                    ( Int32 )
-import qualified Data.List                   as List
-import           Data.Maybe                  ( fromMaybe )
+import           Data.Int                      ( Int32 )
+import qualified Data.List                     as List
+import           Data.Maybe                    ( fromMaybe )
 import           Data.Proxy
-import           Data.Text.Lazy              ( Text, pack, toStrict, unpack )
+import           Data.Text.Lazy                ( Text, pack, toStrict, unpack )
 
 import           Database.Beam
 import           Database.Beam.Schema.Tables
-import           Database.BikeShare          ( StationStatus, StationStatusT, bikeshareStationStatus,
-                                               d_status_last_reported, d_status_num_bikes_available,
-                                               d_status_num_bikes_disabled, d_status_num_docks_available,
-                                               d_status_num_docks_disabled, d_status_station_id,
-                                               vehicle_types_available_efit, vehicle_types_available_efit_g5,
-                                               vehicle_types_available_iconic )
-import           Database.Operations
-import           Database.PostgreSQL.Simple  ( Connection, query_ )
+import           Database.BikeShare            ( StationStatus, StationStatusT, bikeshareStationStatus,
+                                                 d_status_last_reported, d_status_num_bikes_available,
+                                                 d_status_num_bikes_disabled, d_status_num_docks_available,
+                                                 d_status_num_docks_disabled, d_status_station_id,
+                                                 vehicle_types_available_efit, vehicle_types_available_efit_g5,
+                                                 vehicle_types_available_iconic )
+import           Database.BikeShare.Operations
+import           Database.PostgreSQL.Simple    ( Connection, query_ )
 
-import           Prelude                     hiding ( log )
+import           Prelude                       hiding ( log )
 
 import           System.Console.ANSI
 
-import           UnliftIO                    ( MonadIO, MonadUnliftIO, liftIO )
+import           UnliftIO                      ( MonadIO, MonadUnliftIO, liftIO )
 
 
 
