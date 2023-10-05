@@ -185,17 +185,17 @@ library
                     , CLI.Options
                     , API.Types
                     , ReportTime
-                    , Database.Types
+                    , Database.BikeShare.Types
                     , Database.BikeShare
-                    , Database.Migrations
-                    , Database.Utils
-                    , Database.Operations
+                    , Database.BikeShare.Migrations
+                    , Database.BikeShare.Utils
+                    , Database.BikeShare.Operations
 
     -- Modules included in this library but not exported.
     other-modules:    API.StationInformation
                     , API.StationStatus
-                    , Database.StationInformation
-                    , Database.StationStatus
+                    , Database.BikeShare.StationInformation
+                    , Database.BikeShare.StationStatus
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
