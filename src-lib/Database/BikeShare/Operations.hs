@@ -3,14 +3,14 @@
 {-# LANGUAGE DeriveGeneric             #-}
 {-# LANGUAGE FunctionalDependencies    #-}
 {-# LANGUAGE LambdaCase                #-}
-{-# LANGUAGE ScopedTypeVariables       #-}
-{-# LANGUAGE TemplateHaskell           #-}
-{-# LANGUAGE TypeApplications          #-}
 {-# LANGUAGE MultiWayIf                #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE OverloadedStrings         #-}
 {-# LANGUAGE PartialTypeSignatures     #-}
 {-# LANGUAGE Rank2Types                #-}
+{-# LANGUAGE ScopedTypeVariables       #-}
+{-# LANGUAGE TemplateHaskell           #-}
+{-# LANGUAGE TypeApplications          #-}
 
 
 {- signatures of beam-related functions are incredibly verbose, so let's settle for partial type signatures.
@@ -24,7 +24,6 @@ module Database.BikeShare.Operations
      , getRowsToDeactivate
      , insertStationInformation
      , insertStationStatus
-     , queryTableSize
      , printDisabledDocks
      , queryDisabledDocks
      , queryRowCount
@@ -38,6 +37,7 @@ module Database.BikeShare.Operations
      , queryStationStatusBetween
      , queryStationStatusFields
      , queryStationStatusLatest
+     , queryTableSize
        -- types
      , FilterStatusResult (..)
        -- lenses
@@ -68,13 +68,13 @@ import           Database.Beam.Backend                    ( BeamSqlBackend )
 import           Database.Beam.Backend.SQL.BeamExtensions
 import           Database.Beam.Postgres
 import qualified Database.Beam.Postgres                   as Pg
-import           Database.Beam.Postgres.Syntax            ( PgExpressionSyntax(..), emit )
+import           Database.Beam.Postgres.Syntax            ( PgExpressionSyntax (..), emit )
 import           Database.Beam.Query
 import           Database.Beam.Query.CTE
 import           Database.Beam.Query.CustomSQL
 import           Database.BikeShare
-import           Database.PostgreSQL.Simple               ( Connection, Only (..), query_ )
 import           Database.BikeShare.Utils
+import           Database.PostgreSQL.Simple               ( Connection, Only (..), query_ )
 
 import           GHC.Exts                                 ( IsString, fromString )
 

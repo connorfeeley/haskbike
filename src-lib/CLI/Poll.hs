@@ -6,34 +6,34 @@ module CLI.Poll
 
 import           API.Client
 import           API.ResponseWrapper
-import           API.Types              ( StationStatusResponse, status_stations )
+import           API.Types                     ( StationStatusResponse, status_stations )
 
 import           AppEnv
 
-import           CLI.Options            ( PollOptions (..) )
+import           CLI.Options                   ( PollOptions (..) )
 
-import           Colog                  ( Message, WithLog, log, logException, pattern D, pattern E, pattern I )
+import           Colog                         ( Message, WithLog, log, logException, pattern D, pattern E, pattern I )
 
-import           Control.Concurrent     ( threadDelay )
+import           Control.Concurrent            ( threadDelay )
 import           Control.Concurrent.STM
 import           Control.Lens
-import           Control.Monad          ( void )
-import           Control.Monad.Cont     ( forever )
+import           Control.Monad                 ( void )
+import           Control.Monad.Cont            ( forever )
 
-import qualified Data.Text              as Text
+import qualified Data.Text                     as Text
 import           Data.Time
 
-import           Database.BikeShare     ( d_status_last_reported, d_status_station_id )
+import           Database.BikeShare            ( d_status_last_reported, d_status_station_id )
 import           Database.BikeShare.Operations
 
 import           Fmt
 
-import           Prelude                hiding ( log )
+import           Prelude                       hiding ( log )
 
-import           ReportTime             ( localToPosix, localToSystem )
+import           ReportTime                    ( localToPosix, localToSystem )
 
-import           UnliftIO               ( MonadIO, MonadUnliftIO, liftIO )
-import           UnliftIO.Async         ( concurrently_ )
+import           UnliftIO                      ( MonadIO, MonadUnliftIO, liftIO )
+import           UnliftIO.Async                ( concurrently_ )
 
 
 -- | Dispatch CLI arguments to the poller.

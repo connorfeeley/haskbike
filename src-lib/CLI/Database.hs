@@ -13,31 +13,31 @@ import           AppEnv
 
 import           CLI.Options
 
-import           Colog                  ( Message, WithLog, log, pattern D, pattern E, pattern I, pattern W )
+import           Colog                         ( Message, WithLog, log, pattern D, pattern E, pattern I, pattern W )
 
 import           Control.Lens
-import           Control.Monad          ( unless, void, (<=<) )
-import           Control.Monad.IO.Class ( MonadIO (liftIO) )
-import           Control.Monad.Reader   ( asks, lift )
+import           Control.Monad                 ( unless, void, (<=<) )
+import           Control.Monad.IO.Class        ( MonadIO (liftIO) )
+import           Control.Monad.Reader          ( asks, lift )
 
-import           Data.Foldable          ( for_ )
-import qualified Data.Text              as Text
+import           Data.Foldable                 ( for_ )
+import qualified Data.Text                     as Text
 
-import           Database.Beam.Postgres ( Connection )
-import           Database.BikeShare     ( bikeshareStationInformation, bikeshareStationStatus )
+import           Database.Beam.Postgres        ( Connection )
+import           Database.BikeShare            ( bikeshareStationInformation, bikeshareStationStatus )
 import           Database.BikeShare.Migrations
 import           Database.BikeShare.Operations
 import           Database.BikeShare.Utils
 
 import           Options.Applicative
 
-import           Prelude                hiding ( log )
+import           Prelude                       hiding ( log )
 
-import           Servant.Client         ( ClientError )
+import           Servant.Client                ( ClientError )
 
-import           System.Exit            ( exitFailure, exitSuccess )
+import           System.Exit                   ( exitFailure, exitSuccess )
 
-import           UnliftIO               ( MonadUnliftIO )
+import           UnliftIO                      ( MonadUnliftIO )
 
 
 -- | Helper functions.

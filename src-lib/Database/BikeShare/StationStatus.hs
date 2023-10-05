@@ -64,11 +64,11 @@ import           Database.Beam.Backend                      ( BeamBackend, HasSq
                                                               SqlSerial (..) )
 import           Database.Beam.Postgres                     ( Postgres )
 import           Database.Beam.Postgres.Syntax              ( pgTextType )
+import           Database.BikeShare.StationInformation
 import           Database.PostgreSQL.Simple.FromField       ( Field (typeOid), FromField (..), ResultError (..),
                                                               returnError, typoid )
 import           Database.PostgreSQL.Simple.ToField         ( ToField (..) )
 import           Database.PostgreSQL.Simple.TypeInfo.Static ( text )
-import           Database.BikeShare.StationInformation
 
 import           ReportTime
 

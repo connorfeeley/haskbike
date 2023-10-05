@@ -17,14 +17,14 @@ module Database.BikeShare.Utils
      , uncurry5
      ) where
 
-import           Data.String                ( fromString )
+import           Data.String                   ( fromString )
 
 import           Database.Beam
 import           Database.Beam.Postgres
-import           Database.BikeShare.Migrations        ( migrateDB )
+import           Database.BikeShare.Migrations ( migrateDB )
 import           Database.PostgreSQL.Simple
 
-import           System.Environment         ( lookupEnv )
+import           System.Environment            ( lookupEnv )
 
 import           Text.Pretty.Simple
 
