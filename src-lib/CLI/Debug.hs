@@ -18,8 +18,11 @@ import           Control.Monad.Reader        ( asks, void, when )
 import           Data.Int                    ( Int32 )
 import qualified Data.List                   as List
 import           Data.Maybe                  ( fromMaybe )
+import           Data.Proxy
 import           Data.Text.Lazy              ( Text, pack, toStrict, unpack )
 
+import           Database.Beam
+import           Database.Beam.Schema.Tables
 import           Database.BikeShare          ( StationStatus, StationStatusT, bikeshareStationStatus,
                                                d_status_last_reported, d_status_num_bikes_available,
                                                d_status_num_bikes_disabled, d_status_num_docks_available,
@@ -34,9 +37,6 @@ import           Prelude                     hiding ( log )
 import           System.Console.ANSI
 
 import           UnliftIO                    ( MonadIO, MonadUnliftIO, liftIO )
-import Data.Proxy
-import Database.Beam
-import Database.Beam.Schema.Tables
 
 
 
@@ -84,7 +84,7 @@ formatDatabaseStats numStatusRows infoTableSize statusTableSize =
                                           ]
   where
     statusRowsText :: Text
-    statusRowsText    = boldCode <> colouredText Vivid White " # status entries:  " <> resetIntens <> prettyNum (fromIntegral numStatusRows)
+    statusRowsText = boldCode <> colouredText Vivid White " # status entries:  " <> resetIntens <> prettyNum (fromIntegral numStatusRows)
     tableSizeText :: Text -> Maybe String -> Text
     tableSizeText tableName (Just size) = boldCode <> colouredText Vivid White tableName <> " table size:  " <> resetIntens <> pack size
     tableSizeText tableName Nothing     = boldCode <> colouredText Vivid White tableName <> " table size:  " <> resetIntens <> colouredText Vivid Red "ERROR"
