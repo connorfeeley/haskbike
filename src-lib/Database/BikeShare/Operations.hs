@@ -58,7 +58,6 @@ import           API.Types                                ( _status_last_reporte
                                                             status_station_id )
 import qualified API.Types                                as AT
 
-import           Control.Applicative
 import           Control.Lens                             hiding ( reuse, (<.) )
 
 import           Data.Int                                 ( Int32 )
@@ -415,7 +414,7 @@ formatCteStatus bar = pPrintCompact $ map (\(s, l) ->
 
 data StatusQuery = StatusQuery
   { _status_query_station_id :: Int32
-  , _status_query_threshold  :: StatusThreshold
+  , _status_query_thresholds :: [StatusThreshold] -- Update from single StatusThreshold to list
   } deriving (Show, Eq)
 
 data StatusThreshold =
@@ -430,8 +429,10 @@ thresholdCondition (SinceTime time_threshold) status =
   status ^. d_status_last_reported >=. val_ (Just time_threshold)
 
 filterFor_ :: StatusQuery -> StationStatusT (QExpr Postgres s) -> QExpr Postgres s Bool
-filterFor_ (StatusQuery stationId threshold) status =
-  (status ^. d_status_station_id ==. fromIntegral stationId) &&. thresholdCondition threshold status
+filterFor_ (StatusQuery stationId thresholds) status =
+  let stationCondition = status ^. d_status_station_id ==. val_ (fromIntegral stationId)
+      thresholdConditions = map (`thresholdCondition` status) thresholds
+  in foldr (&&.) stationCondition thresholdConditions
 
 -- | Data type representing the type of statistic to query.
 data AvailabilityCountChanged where
@@ -442,7 +443,7 @@ data AvailabilityCountChanged where
 -- | TODO: parameterize over column.
 cteStationStatus' :: Connection -> AvailabilityCountChanged -> StatusQuery -> IO [(StationStatusT Identity, Int32)]
 cteStationStatus' conn statisticType conditions =
-  runBeamPostgresDebug' conn $ do
+  runBeamPostgres' conn $ do
     runSelectReturningList $ selectWith $ do
       cte <- selecting $ do
         let statusForStation = filter_ (filterFor_ conditions)

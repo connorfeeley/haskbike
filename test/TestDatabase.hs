@@ -16,6 +16,7 @@ module TestDatabase
      , unit_insertStationInformationApi
      , unit_insertStationStatus
      , unit_insertStationStatusApi
+     , unit_queryDockingUndockingCount
      , unit_queryStationByIdAndName
      , unit_queryStationStatus
      , unit_queryStationStatusBetween
@@ -406,3 +407,58 @@ unit_queryStationStatusBetween = do
     (reportTime (fromGregorian 2000 01 01) (TimeOfDay 00 00 00))  -- Arbitrary date
   assertEqual "Expected number of status records for #7001 with backwards time parameters" 0 (length statusBetweenBackwards)
 
+
+-- | HUnit test to query all status records for a station between two times.
+unit_queryDockingUndockingCount :: IO ()
+unit_queryDockingUndockingCount = do
+  conn <- setupDatabaseName dbnameTest
+  initDBWithAllTestData conn
+
+  -- Test dataset has 5 rows for station 7000, 3 rows for 7006, 5 for 7012, and 5 rows for 7148:
+-- |   id | station | reported               | iconic |
+-- |------+---------+------------------------+--------|
+-- |    1 |    7000 | 2023-09-15 17:14:50-04 |      0 |
+-- |  705 |    7000 | 2023-09-15 17:19:10-04 |      0 |
+-- | 1309 |    7000 | 2023-09-15 17:23:29-04 |      5 |
+-- | 1849 |    7000 | 2023-09-15 17:32:06-04 |     26 |
+-- | 2746 |    7000 | 2023-09-15 17:36:27-04 |     29 |
+-- |------+---------+------------------------+--------|
+-- |    7 |    7006 | 2023-09-15 17:17:15-04 |     13 |
+-- | 1164 |    7006 | 2023-09-15 17:21:36-04 |     10 |
+-- | 1855 |    7006 | 2023-09-15 17:34:31-04 |      7 |
+-- |------+---------+------------------------+--------|
+-- |   12 |    7012 | 2023-09-15 17:14:33-04 |     10 |
+-- |  710 |    7012 | 2023-09-15 17:18:52-04 |     11 |
+-- | 1317 |    7012 | 2023-09-15 17:23:09-04 |     13 |
+-- | 1860 |    7012 | 2023-09-15 17:31:47-04 |     12 |
+-- | 2749 |    7012 | 2023-09-15 17:36:06-04 |     12 |
+-- |------+---------+------------------------+--------|
+-- |  136 |    7148 | 2023-09-15 17:14:12-04 |     17 |
+-- |  757 |    7148 | 2023-09-15 17:18:40-04 |     17 |
+-- | 1411 |    7148 | 2023-09-15 17:23:08-04 |     17 |
+-- | 1983 |    7148 | 2023-09-15 17:32:07-04 |     19 |
+-- | 2849 |    7148 | 2023-09-15 17:36:37-04 |     19 |
+
+  let queryConditions = StatusQuery 7000 [OldestID 0]
+  dockings   <- cteStationStatus' conn Docked queryConditions
+  undockings <- cteStationStatus' conn Undocked queryConditions
+  assertEqual "Expected number of dockings at station 7000"   29   (sum $ dockings ^.. traverse . _2)
+  assertEqual "Expected number of undockings at station 7000"  0   (sum $ undockings ^.. traverse . _2)
+
+  let queryConditions = StatusQuery 7006 [OldestID 0]
+  dockings   <- cteStationStatus' conn Docked queryConditions
+  undockings <- cteStationStatus' conn Undocked queryConditions
+  assertEqual "Expected number of dockings at station 7006"     0  (sum $ dockings ^.. traverse . _2)
+  assertEqual "Expected number of undockings at station 7006" (-6) (sum $ undockings ^.. traverse . _2)
+
+  let queryConditions = StatusQuery 7012 [OldestID 0]
+  dockings   <- cteStationStatus' conn Docked queryConditions
+  undockings <- cteStationStatus' conn Undocked queryConditions
+  assertEqual "Expected number of dockings at station 7012"     3  (sum $ dockings ^.. traverse . _2)
+  assertEqual "Expected number of undockings at station 7012" (-1) (sum $ undockings ^.. traverse . _2)
+
+  let queryConditions = StatusQuery 7148 [OldestID 0]
+  dockings   <- cteStationStatus' conn Docked queryConditions
+  undockings <- cteStationStatus' conn Undocked queryConditions
+  assertEqual "Expected number of dockings at station 7148"     2  (sum $ dockings ^.. traverse . _2)
+  assertEqual "Expected number of undockings at station 7148"   0  (sum $ undockings ^.. traverse . _2)

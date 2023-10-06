@@ -76,7 +76,7 @@ dispatchDebug options = do
 
   -- TODO: calculate number of dockings and undockings
   -- cteStationStatus conn 7148 1890764 :: IO [(StationStatusT Identity, Int32, Int32)]
-  let queryConditions = StatusQuery 7148 (OldestID 1890764)
+  let queryConditions = StatusQuery 7148 [OldestID 1890764]
   dockings <- cteStationStatus' <$> withConn <*> pure Docked <*> pure queryConditions >>= liftIO
   undockings <- cteStationStatus' <$> withConn <*> pure Undocked <*> pure queryConditions >>= liftIO
 
