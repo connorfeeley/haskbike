@@ -62,6 +62,7 @@ Flag DEBUG
 
 -- Linker (use gold) common warning flags.
 common compile-flags
+    ghc-options: -Wall
   if os(linux)
     ghc-options:       -optl-fuse-ld=gold
     ld-options:        -fuse-ld=gold
