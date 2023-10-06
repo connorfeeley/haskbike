@@ -136,8 +136,8 @@ unit_queryStationStatus = do
   assertEqual "Inserted station status"      5 (length $ inserted_status ^. insert_inserted)
 
   -- Query station status.
-  assertEqual "Query status (limit: 1000)" 5 . length =<< queryStationStatus  conn 1000
-  assertEqual "Query status (limit: none)" 5 . length =<< queryStationStatus' conn
+  assertEqual "Query status (limit: 1000)" 5 . length =<< queryStationStatus  conn (Just 1000)
+  assertEqual "Query status (limit: none)" 5 . length =<< queryStationStatus  conn Nothing
 
 
 -- | HUnit test for inserting station information, with data from the actual API.
