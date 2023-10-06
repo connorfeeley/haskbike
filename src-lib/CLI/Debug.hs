@@ -13,6 +13,7 @@ import           CLI.Utils
 
 import           Colog                         ( Message, WithLog, log, pattern D, pattern I )
 
+import           Control.Lens
 import           Control.Monad.Reader          ( asks, void, when )
 
 import           Data.Int                      ( Int32 )
@@ -30,6 +31,7 @@ import           Database.BikeShare            ( StationStatus, StationStatusT, 
                                                  vehicle_types_available_efit, vehicle_types_available_efit_g5,
                                                  vehicle_types_available_iconic )
 import           Database.BikeShare.Operations
+import           Database.BikeShare.Utils      ( pPrintCompact )
 import           Database.PostgreSQL.Simple    ( Connection, query_ )
 
 import           Prelude                       hiding ( log )
@@ -37,7 +39,6 @@ import           Prelude                       hiding ( log )
 import           System.Console.ANSI
 
 import           UnliftIO                      ( MonadIO, MonadUnliftIO, liftIO )
-import Database.BikeShare.Utils (pPrintCompact)
 
 
 
@@ -75,12 +76,20 @@ dispatchDebug options = do
 
   -- TODO: calculate number of dockings and undockings
   -- cteStationStatus conn 7148 1890764 :: IO [(StationStatusT Identity, Int32, Int32)]
-  res <- cteStationStatus <$> withConn <*> pure 7148 <*> pure 1890764 >>= liftIO
+  let queryConditions = StatusQuery 7148 (OldestID 1890764)
+  dockings <- cteStationStatus' <$> withConn <*> pure Docked <*> pure queryConditions >>= liftIO
+  undockings <- cteStationStatus' <$> withConn <*> pure Undocked <*> pure queryConditions >>= liftIO
 
   liftIO $ do
     cliOut $ formatDatabaseStats numStatusRows infoTableSize statusTableSize
-    pPrintCompact $ "Length of result: " <> show (length res)
-    formatCteStatus (take 10 res)
+
+    formatCteStatus dockings
+    pPrintCompact $ "Length of dockings: " <> show (length dockings)
+    pPrintCompact $ "Sum: " <> show (sum $ dockings ^.. traverse . _2)
+
+    formatCteStatus undockings
+    pPrintCompact $ "Length of undockings: " <> show (length undockings)
+    pPrintCompact $ "Sum: " <> show (sum $ undockings ^.. traverse . _2)
 
 
 formatDatabaseStats :: Int32 -> Maybe String -> Maybe String -> [Text]
