@@ -51,6 +51,8 @@ newtype ReportTime where
   deriving (FromBackendRow Postgres) via LocalTime
   deriving (HasSqlEqualityCheck Postgres) via LocalTime
   deriving (HasDefaultSqlDataType Postgres) via LocalTime
+  deriving (HasSqlTime) via LocalTime
+  deriving (HasSqlDate) via LocalTime
 
 instance Num ReportTime where
     fromInteger i = ReportTime $ utcToLocalTime reportTimeZone . posixSecondsToUTCTime . secondsToNominalDiffTime . fromIntegral $ i
