@@ -15,8 +15,8 @@ module Database.BikeShare.Operations.Dockings
      ( AvailabilityCountChanged (..)
      , StatusQuery (..)
      , StatusThreshold (..)
-     , cteStationStatus'
-     , formatCteStatus
+     , formatDockingEventsCount
+     , queryDockingEventsCount
      ) where
 
 import           Control.Lens                             hiding ( reuse, (<.) )
@@ -30,15 +30,6 @@ import           Database.Beam.Postgres
 import           Database.BikeShare
 import           Database.BikeShare.Utils
 
-
-formatCteStatus :: [(StationStatusT Identity, Int32)] -> IO ()
-formatCteStatus bar = pPrintCompact $ map (\(s, l) ->
-                                             ( s ^. d_status_id & unSerial
-                                             , s ^. d_status_station_id
-                                             , s ^. d_status_last_reported
-                                             , l
-                                             )
-                                          ) bar
 
 data StatusQuery = StatusQuery
   { _status_query_station_id :: Int32
@@ -69,8 +60,8 @@ data AvailabilityCountChanged where
   deriving (Show, Eq)
 
 -- | TODO: parameterize over column.
-cteStationStatus' :: Connection -> AvailabilityCountChanged -> StatusQuery -> IO [(StationStatusT Identity, Int32)]
-cteStationStatus' conn statisticType conditions =
+queryDockingEventsCount :: Connection -> AvailabilityCountChanged -> StatusQuery -> IO [(StationStatusT Identity, Int32)]
+queryDockingEventsCount conn statisticType conditions =
   runBeamPostgres' conn $ runSelectReturningList $ selectWith $ do
   cte <- selecting $ do
     let statusForStation = filter_ (filterFor_ conditions)
@@ -107,8 +98,11 @@ cteStationStatus' conn statisticType conditions =
       Undocked -> (<.)
       Docked   -> (>.)
 
--- conn <- mkDbParams "haskbike" >>= uncurry5 connectDbName
--- res <- cteStationStatus conn 7148 1890764
--- res <- cteStationStatus <$> (mkDbParams "haskbike" >>= uncurry5 connectDbName) <*> pure 7148 <*> pure 1890764 >>= liftIO
--- res ^.. traverse . _4
--- listFrequency s = map (\x -> ([head x], length x)) . List.group . List.sort $ s
+formatDockingEventsCount :: [(StationStatusT Identity, Int32)] -> IO ()
+formatDockingEventsCount events = pPrintCompact $ map (\(s, l) ->
+                                             ( s ^. d_status_id & unSerial
+                                             , s ^. d_status_station_id
+                                             , s ^. d_status_last_reported
+                                             , l
+                                             )
+                                          ) events

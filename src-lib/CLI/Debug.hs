@@ -64,17 +64,17 @@ dispatchDebug _options = do
 
   -- Calculate number of dockings and undockings
   let queryConditions = StatusQuery 7148 [OldestID 1890764]
-  dockings <- cteStationStatus' <$> withConn <*> pure Docked <*> pure queryConditions >>= liftIO
-  undockings <- cteStationStatus' <$> withConn <*> pure Undocked <*> pure queryConditions >>= liftIO
+  dockings <- queryDockingEventsCount <$> withConn <*> pure Docked <*> pure queryConditions >>= liftIO
+  undockings <- queryDockingEventsCount <$> withConn <*> pure Undocked <*> pure queryConditions >>= liftIO
 
   liftIO $ do
     cliOut $ formatDatabaseStats numStatusRows infoTableSize statusTableSize
 
-    formatCteStatus dockings
+    formatDockingEventsCount dockings
     pPrintCompact $ "Length of dockings: " <> show (length dockings)
     pPrintCompact $ "Sum: " <> show (sum $ dockings ^.. traverse . _2)
 
-    formatCteStatus undockings
+    formatDockingEventsCount undockings
     pPrintCompact $ "Length of undockings: " <> show (length undockings)
     pPrintCompact $ "Sum: " <> show (sum $ undockings ^.. traverse . _2)
 

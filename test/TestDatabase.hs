@@ -447,7 +447,7 @@ unit_queryDockingUndockingCount = do
   where
     conditions stationId = StatusQuery stationId [OldestID 0]
     checkConditions conn stationId expectDockings expectUndocking = do
-      dockings   <- cteStationStatus' conn Docked   (conditions stationId)
-      undockings <- cteStationStatus' conn Undocked (conditions stationId)
+      dockings   <- queryDockingEventsCount conn Docked   (conditions stationId)
+      undockings <- queryDockingEventsCount conn Undocked (conditions stationId)
       assertEqual ("Expected number of dockings at station " ++ show stationId)   expectDockings  (sum $ dockings ^.. traverse . _2)
       assertEqual ("Expected number of undockings at station " ++ show stationId) expectUndocking (sum $ undockings ^.. traverse . _2)
