@@ -28,6 +28,7 @@ module TestDatabase
 import           API.ResponseWrapper           ( response_data )
 import           API.Types                     ( StationInformationResponse, StationStatusResponse, _info_stations,
                                                  info_stations, status_station_id, status_stations )
+import qualified API.Types                     as AT
 
 import           Control.Lens
 
@@ -457,7 +458,7 @@ unit_queryDockingUndockingCount = do
 
 checkConditions :: Connection -> Int32 -> [StatusThreshold] -> Int32 -> Int32 -> IO ()
 checkConditions conn stationId thresholds expectDockings expectUndocking = do
-  dockings   <- queryDockingEventsCount conn (StatusVariationQuery stationId Docking   thresholds)
-  undockings <- queryDockingEventsCount conn (StatusVariationQuery stationId Undocking thresholds)
+  dockings   <- queryDockingEventsCount conn (StatusVariationQuery stationId Docking   AT.Iconic thresholds)
+  undockings <- queryDockingEventsCount conn (StatusVariationQuery stationId Undocking AT.Iconic thresholds)
   assertEqual ("Expected number of dockings at station " ++ show stationId)   expectDockings  (sum $ dockings ^.. traverse . _2)
   assertEqual ("Expected number of undockings at station " ++ show stationId) expectUndocking (sum $ undockings ^.. traverse . _2)

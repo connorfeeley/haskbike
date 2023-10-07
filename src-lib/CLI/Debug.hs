@@ -5,6 +5,8 @@ module CLI.Debug
      ( dispatchDebug
      ) where
 
+import qualified API.Types                     as AT
+
 import           AppEnv
 
 import           CLI.Options
@@ -21,7 +23,7 @@ import           Data.Text.Lazy                ( Text, pack, toStrict )
 
 import           Database.Beam
 import           Database.Beam.Schema.Tables
-import           Database.BikeShare            ( StationStatusT, bikeshareStationStatus )
+import           Database.BikeShare
 import           Database.BikeShare.Operations
 import           Database.BikeShare.Utils      ( pPrintCompact )
 
@@ -78,7 +80,7 @@ dispatchDebug _options = do
     pPrintCompact $ "Sum: " <> show (sum $ undockings ^.. traverse . _2)
   where
     queryCondition :: AvailabilityCountVariation -> StatusVariationQuery
-    queryCondition variation = StatusVariationQuery 7148 variation [ OldestID 1890764 ]
+    queryCondition variation = StatusVariationQuery 7148 variation AT.Iconic [ OldestID 1890764 ]
 
 formatDatabaseStats :: Int32 -> Maybe String -> Maybe String -> [Text]
 formatDatabaseStats numStatusRows infoTableSize statusTableSize =

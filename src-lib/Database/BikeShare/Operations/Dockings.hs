@@ -19,6 +19,8 @@ module Database.BikeShare.Operations.Dockings
      , queryDockingEventsCount
      ) where
 
+import qualified API.Types                                as AT
+
 import           Control.Lens                             hiding ( reuse, (<.) )
 
 import           Data.Int                                 ( Int32 )
@@ -35,9 +37,10 @@ import           Database.BikeShare.Utils
 data StatusVariationQuery where
   StatusVariationQuery :: { _status_query_station_id    :: Int32
                           , _status_query_variation     :: AvailabilityCountVariation
+                          , _status_query_bike_type     :: AT.TorontoVehicleType
                           , _status_query_thresholds    :: [StatusThreshold]
                           } -> StatusVariationQuery
-  deriving (Show, Eq)
+  -- deriving (Show, Eq)
 
 -- | Varient representing the type of threshold to apply to the query.
 data StatusThreshold where
@@ -60,7 +63,7 @@ thresholdCondition (LatestTime time_threshold) status =
 
 -- | Construct a filter expression for a 'StatusQuery'.
 filterFor_ :: StatusVariationQuery -> StationStatusT (QExpr Postgres s) -> QExpr Postgres s Bool
-filterFor_ (StatusVariationQuery stationId _ thresholds) status =
+filterFor_ (StatusVariationQuery stationId _ bike_type thresholds) status =
   let stationCondition = status ^. d_status_station_id ==. val_ (fromIntegral stationId)
       thresholdConditions = map (`thresholdCondition` status) thresholds
   in foldr (&&.) stationCondition thresholdConditions
@@ -71,23 +74,28 @@ data AvailabilityCountVariation where
   Docking        :: AvailabilityCountVariation -- ^ Bike docked   (ride ended at this station)
   deriving (Show, Eq)
 
--- | TODO: parameterize over column.
+
 queryDockingEventsCount :: Connection -> StatusVariationQuery -> IO [(StationStatusT Identity, Int32)]
-queryDockingEventsCount conn variation =
-  runBeamPostgres' conn $ runSelectReturningList $ selectWith $ do
+queryDockingEventsCount conn variation@(StatusVariationQuery stationId queryVariation bikeType thresholds) =
+  let bikeType' = case bikeType of
+        AT.Iconic -> vehicle_types_available_iconic
+        AT.Boost  -> vehicle_types_available_boost
+        AT.EFit   -> vehicle_types_available_efit
+        AT.EFitG5 -> vehicle_types_available_efit_g5
+  in runBeamPostgres' conn $ runSelectReturningList $ selectWith $ do
   cte <- selecting $ do
     let statusForStation = filter_ (filterFor_ variation)
                                    (all_ (bikeshareDb ^. bikeshareStationStatus))
       in withWindow_ (\row -> frame_ (partitionBy_ (row ^. d_status_station_id)) (orderPartitionBy_ (asc_ $ row ^. d_status_id)) noBounds_)
-                     (\row w -> (row, lagWithDefault_ (row ^. vehicle_types_available_iconic) (val_ 1) (row ^. vehicle_types_available_iconic) `over_` w))
+                     (\row w -> (row, lagWithDefault_ (row ^. bikeType') (val_ 1) (row ^. bikeType') `over_` w))
                      statusForStation
   dockings <- selecting $ do
     -- Only rows where the availability increased.
-    let increments = filter_ (\(s, prevAvail) -> s ^. vehicle_types_available_iconic `deltaOp_` prevAvail)
+    let increments = filter_ (\(s, prevAvail) -> s ^. bikeType' `deltaOp_` prevAvail)
                      (reuse cte)
           -- Delta between current and previous iconic availability.
           in withWindow_ (\(row, _prev) -> frame_ (partitionBy_ (row ^. d_status_station_id)) noOrder_ noBounds_)
-                         (\(row, prev) _w -> (row, row ^. vehicle_types_available_iconic - prev))
+                         (\(row, prev) _w -> (row, row ^. bikeType' - prev))
                          increments
 
   pure $ do
