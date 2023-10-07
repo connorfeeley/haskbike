@@ -34,6 +34,7 @@ import           Control.Lens
 import           Data.Aeson                    ( FromJSON, eitherDecode )
 import qualified Data.ByteString.Lazy          as BL
 import           Data.Functor                  ( void )
+import           Data.Int                      ( Int32 )
 
 import           Database.Beam.Postgres
 import           Database.BikeShare
@@ -439,15 +440,21 @@ unit_queryDockingUndockingCount = do
   -- | 1983 |    7148 | 2023-09-15 17:32:07-04 |     19 |
   -- | 2849 |    7148 | 2023-09-15 17:36:37-04 |     19 |
 
-  --                   station  dockings undockings
-  checkConditions conn 7000     29         0
-  checkConditions conn 7006      0       (-6)
-  checkConditions conn 7012      3       (-1)
-  checkConditions conn 7148      2         0
+
+  --                   station  thresholds     dockings undockings
+  checkConditions conn 7000     thresholds7000 29         0
+  checkConditions conn 7006     thresholds7006  0       (-6)
+  checkConditions conn 7012     thresholds7012  3       (-1)
+  checkConditions conn 7148     thresholds7148  2         0
   where
-    conditions stationId = StatusQuery stationId [OldestID 0]
-    checkConditions conn stationId expectDockings expectUndocking = do
-      dockings   <- queryDockingEventsCount conn Docked   (conditions stationId)
-      undockings <- queryDockingEventsCount conn Undocked (conditions stationId)
-      assertEqual ("Expected number of dockings at station " ++ show stationId)   expectDockings  (sum $ dockings ^.. traverse . _2)
-      assertEqual ("Expected number of undockings at station " ++ show stationId) expectUndocking (sum $ undockings ^.. traverse . _2)
+    thresholds7000 = [ OldestID 1 ]
+    thresholds7006 = [ OldestID 1 ]
+    thresholds7012 = [ OldestID 1 ]
+    thresholds7148 = [ OldestID 1 ]
+
+checkConditions :: Connection -> Int32 -> [StatusThreshold] -> Int32 -> Int32 -> IO ()
+checkConditions conn stationId thresholds expectDockings expectUndocking = do
+  dockings   <- queryDockingEventsCount conn Docked   (StatusQuery stationId thresholds)
+  undockings <- queryDockingEventsCount conn Undocked (StatusQuery stationId thresholds)
+  assertEqual ("Expected number of dockings at station " ++ show stationId)   expectDockings  (sum $ dockings ^.. traverse . _2)
+  assertEqual ("Expected number of undockings at station " ++ show stationId) expectUndocking (sum $ undockings ^.. traverse . _2)

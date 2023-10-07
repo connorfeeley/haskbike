@@ -31,21 +31,30 @@ import           Database.BikeShare
 import           Database.BikeShare.Utils
 
 
+-- | Data type representing a query for station status dockings or undockings.
 data StatusQuery = StatusQuery
   { _status_query_station_id :: Int32
   , _status_query_thresholds :: [StatusThreshold] -- Update from single StatusThreshold to list
   } deriving (Show, Eq)
 
-data StatusThreshold =
-    OldestID Int32
-  | SinceTime ReportTime
+-- | Varient representing the type of threshold to apply to the query.
+data StatusThreshold where
+  OldestID      :: Int32        -> StatusThreshold
+  NewestID      :: Int32        -> StatusThreshold
+  SinceTime     :: ReportTime   -> StatusThreshold
+  BeforeTime    :: ReportTime   -> StatusThreshold
   deriving (Show, Eq)
 
+-- | Convert a 'StatusQuery' to a filter expression.
 thresholdCondition :: StatusThreshold -> StationStatusT (QExpr Postgres s) -> QExpr Postgres s Bool
 thresholdCondition (OldestID id_threshold) status =
   status ^. d_status_id >=. val_ (fromIntegral id_threshold)
+thresholdCondition (NewestID id_threshold) status =
+  status ^. d_status_id <=. val_ (fromIntegral id_threshold)
 thresholdCondition (SinceTime time_threshold) status =
   status ^. d_status_last_reported >=. val_ (Just time_threshold)
+thresholdCondition (BeforeTime time_threshold) status =
+  status ^. d_status_last_reported <=. val_ (Just time_threshold)
 
 filterFor_ :: StatusQuery -> StationStatusT (QExpr Postgres s) -> QExpr Postgres s Bool
 filterFor_ (StatusQuery stationId thresholds) status =
