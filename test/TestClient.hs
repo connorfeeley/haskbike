@@ -12,7 +12,7 @@ import           Colog                    ( Message, WithLog, log, pattern I, pa
 import           Control.Exception        ( SomeException, try )
 import           Control.Monad            ( void )
 
-import           Data.Text                ( intercalate, intersperse, pack, unwords )
+import           Data.Text                ( pack, unwords )
 import           Data.Time                ( getCurrentTimeZone )
 
 import           Database.BikeShare.Utils
@@ -21,7 +21,8 @@ import           Prelude                  hiding ( log, unwords )
 
 import           Test.Tasty.HUnit
 
-import           UnliftIO                 ( MonadIO, MonadUnliftIO, liftIO, timeout )
+import           UnliftIO                 ( MonadIO, MonadUnliftIO, timeout )
+
 
 -- | Mark a test as expected to fail.
 markAsExpectedFailure :: IO () -> IO ()
@@ -54,7 +55,7 @@ unit_poll = do
   timeZone <- getCurrentTimeZone
 
   -- Establish a connection to the database, drop all tables, and re-initialize it.
-  dbParams@(name, host, port, username, password) <- mkDbParams dbnameTest
+  (name, host, port, username, password) <- mkDbParams dbnameTest
   conn <- connectDbName name host port username password >>= dropTables >>= migrateDatabase
 
   -- Create the application environment.
