@@ -47,6 +47,9 @@ import           ReportTime
 
 import           Test.Tasty.HUnit
 
+setupTestDatabase :: IO Connection
+setupTestDatabase = connectDbName dbnameTest "" "" "" "" >>= dropTables >>= migrateDatabase
+
 
 -- | Helper function to decode a JSON file.
 decodeFile :: FromJSON a => FilePath -- ^ Path to the JSON file.
@@ -94,7 +97,7 @@ initDBWithAllTestData conn = do
 unit_insertStationInformation :: IO ()
 unit_insertStationInformation = do
   -- Connect to the database.
-  conn <- setupDatabaseName dbnameTest
+  conn <- setupTestDatabase
 
   stationInformationResponse <- getDecodedFileInformation "test/json/station_information.json"
 
@@ -108,7 +111,7 @@ unit_insertStationInformation = do
 unit_insertStationStatus :: IO ()
 unit_insertStationStatus = do
   -- Connect to the database.
-  conn <- setupDatabaseName dbnameTest
+  conn <- setupTestDatabase
 
   info    <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
   status  <- getDecodedFileStatus      "test/json/station_status.json"
@@ -125,7 +128,7 @@ unit_insertStationStatus = do
 unit_queryStationStatus :: IO ()
 unit_queryStationStatus = do
   -- Connect to the database.
-  conn <- setupDatabaseName dbnameTest
+  conn <- setupTestDatabase
 
   info    <- getDecodedFileInformation  "test/json/station_information.json"
   status  <- getDecodedFileStatus       "test/json/station_status.json"
@@ -146,7 +149,7 @@ unit_queryStationStatus = do
 unit_insertStationInformationApi :: IO ()
 unit_insertStationInformationApi = do
   -- Connect to the database.
-  conn <- setupDatabaseName dbnameTest
+  conn <- setupTestDatabase
 
   info    <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
 
@@ -158,7 +161,7 @@ unit_insertStationInformationApi = do
 unit_insertStationStatusApi :: IO ()
 unit_insertStationStatusApi = do
   -- Connect to the database.
-  conn <- setupDatabaseName dbnameTest
+  conn <- setupTestDatabase
 
   status  <- getDecodedFileStatus "docs/json/2.3/station_status-1.json"
 
@@ -172,7 +175,7 @@ unit_insertStationStatusApi = do
 unit_insertStationApi :: IO ()
 unit_insertStationApi = do
   -- Connect to the database.
-  conn <- setupDatabaseName dbnameTest
+  conn <- setupTestDatabase
 
   info    <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
   status  <- getDecodedFileStatus      "docs/json/2.3/station_status-1.json"
@@ -198,7 +201,7 @@ Between /station_status-1/ and /station_status-2/, station 7000 reported new dat
 -}
 unit_getRowsToDeactivate :: IO ()
 unit_getRowsToDeactivate = do
-  conn <- setupDatabaseName dbnameTest
+  conn <- setupTestDatabase
 
   -- Separate API status records into those that are newer than in the database entry and those that are unchanged.
   rows_to_deactivate <- doGetRowsToDeactivate conn
@@ -239,7 +242,7 @@ Between /station_status-1/ and /station_status-2/, station 7000 reported new dat
 -}
 unit_separateNewerStatusRecords :: IO ()
 unit_separateNewerStatusRecords = do
-  conn <- setupDatabaseName dbnameTest
+  conn <- setupTestDatabase
 
   -- Separate API status records into those that are newer than in the database entry and those that are unchanged.
   api_update_plan <- doSeparateNewerStatusRecords conn
@@ -274,7 +277,7 @@ doSeparateNewerStatusRecords conn = do
 -- | HUnit test to assert that changed station status are inserted.
 unit_separateNewerStatusRecordsInsert :: IO ()
 unit_separateNewerStatusRecordsInsert = do
-  conn <- setupDatabaseName dbnameTest
+  conn <- setupTestDatabase
 
   {-
   - Insert information and status data (1)
@@ -312,7 +315,7 @@ doSeparateNewerStatusRecordsInsertOnce conn = do
 -- | HUnit test to assert that reinserting already-deactivated rows is a no-op.
 unit_separateNewerStatusRecordsInsertTwice :: IO ()
 unit_separateNewerStatusRecordsInsertTwice = do
-  conn <- setupDatabaseName dbnameTest
+  conn <- setupTestDatabase
 
   {-
   - Insert information and status data (1)
@@ -359,7 +362,7 @@ doSeparateNewerStatusRecordsInsertTwice conn = do
 -- | HUnit test to validate that a station ID can be looked up by its name, and vice-versa.
 unit_queryStationByIdAndName :: IO ()
 unit_queryStationByIdAndName = do
-  conn <- setupDatabaseName dbnameTest
+  conn <- setupTestDatabase
   info <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
   void $ insertStationInformation conn $ info ^. response_data . info_stations
 
@@ -376,7 +379,7 @@ unit_queryStationByIdAndName = do
 -- | HUnit test to query all status records for a station between two times.
 unit_queryStationStatusBetween :: IO ()
 unit_queryStationStatusBetween = do
-  conn <- setupDatabaseName dbnameTest
+  conn <- setupTestDatabase
   initDBWithAllTestData conn
 
   -- First status for #7001 was inserted at 2023-09-15 17:16:58; last status at 2023-09-15 17:35:00.
@@ -412,7 +415,7 @@ unit_queryStationStatusBetween = do
 -- | HUnit test to query all status records for a station between two times.
 unit_queryDockingUndockingCount :: IO ()
 unit_queryDockingUndockingCount = do
-  conn <- setupDatabaseName dbnameTest
+  conn <- setupTestDatabase
   initDBWithAllTestData conn
 
   -- Test dataset has 5 rows for station 7000, 3 rows for 7006, 5 for 7012, and 5 rows for 7148:

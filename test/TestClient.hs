@@ -55,7 +55,7 @@ unit_poll = do
   timeZone <- getCurrentTimeZone
 
   -- Establish a connection to the database, drop all tables, and re-initialize it.
-  (name, host, port, username, password) <- mkDbParams dbnameTest
+  (name, host, port, username, password) <- pure (dbnameTest, "", "", "", "")
   conn <- connectDbName name host port username password >>= dropTables >>= migrateDatabase
 
   -- Create the application environment.

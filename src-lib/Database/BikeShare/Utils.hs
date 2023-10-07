@@ -88,10 +88,10 @@ uncurry5 fn (a, b, c, d, e) = fn a b c d e
 
 mkDbParams :: String -> IO (String, String, String, String, String)
 mkDbParams name = do
-  envPgDbHostParam <- mkParam "host=localhost" "host=" =<< lookupEnv "HASKBIKE_PGDBHOST"
-  envPgDbPortParam <- mkParam "port=5432" "port=" =<< lookupEnv "HASKBIKE_PGDBPORT"
-  envUsername <- mkParam "" "user="  =<< lookupEnv "HASKBIKE_USERNAME"
-  envPassword <- mkParam "" "password=" =<< lookupEnv "HASKBIKE_PASSWORD"
+  envPgDbHostParam <- mkParam "host=localhost" "host="     =<< lookupEnv "HASKBIKE_PGDBHOST"
+  envPgDbPortParam <- mkParam "port=5432"      "port="     =<< lookupEnv "HASKBIKE_PGDBPORT"
+  envUsername      <- mkParam ""               "user="     =<< lookupEnv "HASKBIKE_USERNAME"
+  envPassword      <- mkParam ""               "password=" =<< lookupEnv "HASKBIKE_PASSWORD"
 
   pure (name, envPgDbHostParam, envPgDbPortParam, envUsername, envPassword)
   where
