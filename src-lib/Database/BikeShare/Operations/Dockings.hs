@@ -12,9 +12,9 @@
 -- | This module contains operations to query the number of dockings and undockings for a station.
 
 module Database.BikeShare.Operations.Dockings
-     ( AvailabilityCountChanged (..)
-     , StatusQuery (..)
+     ( AvailabilityCountVariation (..)
      , StatusThreshold (..)
+     , StatusVariationQuery (..)
      , formatDockingEventsCount
      , queryDockingEventsCount
      ) where
@@ -32,48 +32,51 @@ import           Database.BikeShare.Utils
 
 
 -- | Data type representing a query for station status dockings or undockings.
-data StatusQuery = StatusQuery
-  { _status_query_station_id :: Int32
-  , _status_query_thresholds :: [StatusThreshold] -- Update from single StatusThreshold to list
-  } deriving (Show, Eq)
+data StatusVariationQuery where
+  StatusVariationQuery :: { _status_query_station_id    :: Int32
+                          , _status_query_variation     :: AvailabilityCountVariation
+                          , _status_query_thresholds    :: [StatusThreshold]
+                          } -> StatusVariationQuery
+  deriving (Show, Eq)
 
 -- | Varient representing the type of threshold to apply to the query.
 data StatusThreshold where
   OldestID      :: Int32        -> StatusThreshold
   NewestID      :: Int32        -> StatusThreshold
-  SinceTime     :: ReportTime   -> StatusThreshold
-  BeforeTime    :: ReportTime   -> StatusThreshold
+  EarliestTime  :: ReportTime   -> StatusThreshold
+  LatestTime    :: ReportTime   -> StatusThreshold
   deriving (Show, Eq)
 
--- | Convert a 'StatusQuery' to a filter expression.
+-- | Convert a 'StatusQuery' to a fragment of a filter expression.
 thresholdCondition :: StatusThreshold -> StationStatusT (QExpr Postgres s) -> QExpr Postgres s Bool
 thresholdCondition (OldestID id_threshold) status =
   status ^. d_status_id >=. val_ (fromIntegral id_threshold)
 thresholdCondition (NewestID id_threshold) status =
   status ^. d_status_id <=. val_ (fromIntegral id_threshold)
-thresholdCondition (SinceTime time_threshold) status =
+thresholdCondition (EarliestTime time_threshold) status =
   status ^. d_status_last_reported >=. val_ (Just time_threshold)
-thresholdCondition (BeforeTime time_threshold) status =
+thresholdCondition (LatestTime time_threshold) status =
   status ^. d_status_last_reported <=. val_ (Just time_threshold)
 
-filterFor_ :: StatusQuery -> StationStatusT (QExpr Postgres s) -> QExpr Postgres s Bool
-filterFor_ (StatusQuery stationId thresholds) status =
+-- | Construct a filter expression for a 'StatusQuery'.
+filterFor_ :: StatusVariationQuery -> StationStatusT (QExpr Postgres s) -> QExpr Postgres s Bool
+filterFor_ (StatusVariationQuery stationId _ thresholds) status =
   let stationCondition = status ^. d_status_station_id ==. val_ (fromIntegral stationId)
       thresholdConditions = map (`thresholdCondition` status) thresholds
   in foldr (&&.) stationCondition thresholdConditions
 
 -- | Data type representing the type of statistic to query.
-data AvailabilityCountChanged where
-  Undocked      :: AvailabilityCountChanged -- ^ Bike undocked (ride began at this station)
-  Docked        :: AvailabilityCountChanged -- ^ Bike docked   (ride ended at this station)
+data AvailabilityCountVariation where
+  Undocking      :: AvailabilityCountVariation -- ^ Bike undocked (ride began at this station)
+  Docking        :: AvailabilityCountVariation -- ^ Bike docked   (ride ended at this station)
   deriving (Show, Eq)
 
 -- | TODO: parameterize over column.
-queryDockingEventsCount :: Connection -> AvailabilityCountChanged -> StatusQuery -> IO [(StationStatusT Identity, Int32)]
-queryDockingEventsCount conn statisticType conditions =
+queryDockingEventsCount :: Connection -> StatusVariationQuery -> IO [(StationStatusT Identity, Int32)]
+queryDockingEventsCount conn variation =
   runBeamPostgres' conn $ runSelectReturningList $ selectWith $ do
   cte <- selecting $ do
-    let statusForStation = filter_ (filterFor_ conditions)
+    let statusForStation = filter_ (filterFor_ variation)
                                    (all_ (bikeshareDb ^. bikeshareStationStatus))
       in withWindow_ (\row -> frame_ (partitionBy_ (row ^. d_status_station_id)) (orderPartitionBy_ (asc_ $ row ^. d_status_id)) noBounds_)
                      (\row w -> (row, lagWithDefault_ (row ^. vehicle_types_available_iconic) (val_ 1) (row ^. vehicle_types_available_iconic) `over_` w))
@@ -103,9 +106,9 @@ queryDockingEventsCount conn statisticType conditions =
   where
     infixl 4 `deltaOp_` -- same as '(<.)' and '(>.)'.
     deltaOp_ :: (BeamSqlBackend be) => QGenExpr context be s a -> QGenExpr context be s a -> QGenExpr context be s Bool
-    deltaOp_ = case statisticType of
-      Undocked -> (<.)
-      Docked   -> (>.)
+    deltaOp_ = case _status_query_variation variation of
+      Undocking -> (<.)
+      Docking   -> (>.)
 
 formatDockingEventsCount :: [(StationStatusT Identity, Int32)] -> IO ()
 formatDockingEventsCount events = pPrintCompact $ map (\(s, l) ->

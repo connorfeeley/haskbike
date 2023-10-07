@@ -447,14 +447,14 @@ unit_queryDockingUndockingCount = do
   checkConditions conn 7012     thresholds7012  3       (-1)
   checkConditions conn 7148     thresholds7148  2         0
   where
-    thresholds7000 = [ OldestID 1 ]
-    thresholds7006 = [ OldestID 1 ]
-    thresholds7012 = [ OldestID 1 ]
-    thresholds7148 = [ OldestID 1 ]
+    thresholds7000  = [ OldestID    1, NewestID 2746, LatestTime (ReportTime $ read "2023-09-15 17:36:27.0") ]
+    thresholds7006  = [ OldestID    7, NewestID 1855, LatestTime (ReportTime $ read "2023-09-15 17:34:31.0") ]
+    thresholds7012  = [ OldestID   12, NewestID 2749, LatestTime (ReportTime $ read "2023-09-15 17:36:06.0") ]
+    thresholds7148  = [ OldestID  136, NewestID 2849, LatestTime (ReportTime $ read "2023-09-15 17:36:37.0") ]
 
 checkConditions :: Connection -> Int32 -> [StatusThreshold] -> Int32 -> Int32 -> IO ()
 checkConditions conn stationId thresholds expectDockings expectUndocking = do
-  dockings   <- queryDockingEventsCount conn Docked   (StatusQuery stationId thresholds)
-  undockings <- queryDockingEventsCount conn Undocked (StatusQuery stationId thresholds)
+  dockings   <- queryDockingEventsCount conn (StatusVariationQuery stationId Docking   thresholds)
+  undockings <- queryDockingEventsCount conn (StatusVariationQuery stationId Undocking thresholds)
   assertEqual ("Expected number of dockings at station " ++ show stationId)   expectDockings  (sum $ dockings ^.. traverse . _2)
   assertEqual ("Expected number of undockings at station " ++ show stationId) expectUndocking (sum $ undockings ^.. traverse . _2)
