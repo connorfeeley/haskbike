@@ -67,6 +67,7 @@ filterFor_ (StatusVariationQuery stationId _ bike_type thresholds) status =
   let stationCondition = status ^. d_status_station_id ==. val_ (fromIntegral stationId)
       thresholdConditions = map (`thresholdCondition` status) thresholds
   in foldr (&&.) stationCondition thresholdConditions
+  -- in foldr (&&.) (val_ True) thresholdConditions
 
 -- | Data type representing the type of statistic to query.
 data AvailabilityCountVariation where
@@ -75,21 +76,29 @@ data AvailabilityCountVariation where
   deriving (Show, Eq)
 
 
-queryDockingEventsCount :: Connection -> StatusVariationQuery -> IO [(StationStatusT Identity, Int32)]
+-- conn <- connectDbName dbnameTest "" "" "" ""
+-- queryDockingEventsCount conn (StatusVariationQuery 7148 Docking AT.Iconic [ OldestID 1890764 ])
+-- queryDockingEventsCount :: Connection -> StatusVariationQuery -> IO [(StationStatusT Identity, Maybe Int32)]
+-- queryDockingEventsCount :: Connection -> StatusVariationQuery -> IO [Maybe Int32]
+
+-- Query Docking counts for all stations:
+-- λ> res <- queryDockingEventsCount <$> (connectDbName dbnameTest "" "" "" "") <*> pure (StatusVariationQuery 7148 Docking AT.Iconic [ OldestID 0 ]) >>= liftIO
+-- λ> length res
+-- 165
 queryDockingEventsCount conn variation@(StatusVariationQuery stationId queryVariation bikeType thresholds) =
   let bikeType' = case bikeType of
         AT.Iconic -> vehicle_types_available_iconic
         AT.Boost  -> vehicle_types_available_boost
         AT.EFit   -> vehicle_types_available_efit
         AT.EFitG5 -> vehicle_types_available_efit_g5
-  in runBeamPostgres' conn $ runSelectReturningList $ selectWith $ do
+  in runBeamPostgresDebug' conn $ runSelectReturningList $ selectWith $ do
   cte <- selecting $ do
     let statusForStation = filter_ (filterFor_ variation)
                                    (all_ (bikeshareDb ^. bikeshareStationStatus))
       in withWindow_ (\row -> frame_ (partitionBy_ (row ^. d_status_station_id)) (orderPartitionBy_ (asc_ $ row ^. d_status_id)) noBounds_)
                      (\row w -> (row, lagWithDefault_ (row ^. bikeType') (val_ 1) (row ^. bikeType') `over_` w))
                      statusForStation
-  dockings <- selecting $ do
+  events <- selecting $ do
     -- Only rows where the availability increased.
     let increments = filter_ (\(s, prevAvail) -> s ^. bikeType' `deltaOp_` prevAvail)
                      (reuse cte)
@@ -98,19 +107,45 @@ queryDockingEventsCount conn variation@(StatusVariationQuery stationId queryVari
                          (\(row, prev) _w -> (row, row ^. bikeType' - prev))
                          increments
 
-  pure $ do
-    counts <- reuse cte -- [(status, previous availability)]
+    -- Rows where the delta was either:
+    -- - positive ('deltaOp_': '(>.)')
+    -- - negative ('deltaOp_': '(<.)')
+    -- ... depending on the statisticType paramater.
+  -- changed <- selecting $
+  --   filter_ (\(_s, delta) -> delta `deltaOp_` 0)
+  --           (reuse events)
+
+  -- changedDocking <- selecting $
+  --   filter_ (\(_s, delta) -> delta >. 0)
+  --           (reuse events)
 
     -- Rows where the delta was either:
     -- - positive ('deltaOp_': '(>.)')
     -- - negative ('deltaOp_': '(<.)')
     -- ... depending on the statisticType paramater.
-    changed <- filter_ (\(_s, delta) -> delta `deltaOp_` 0)
-                       (reuse dockings)
+  changed <- selecting $ do
+    let f = filter_ (\(_s, delta) -> delta `deltaOp_` 0)
+            (reuse events)
 
-    guard_ ((counts ^. _1 . d_status_id) ==. (changed ^. _1 . d_status_id))
+        agg = aggregate_ (\(status, delta) -> (group_ (status ^. d_status_station_id), fromMaybe_ 0 $ sum_ delta))
+                         f
+      -- in orderBy_ (\(sId, sum) -> asc_ sId) agg
+      -- in reuse events
+      in agg
 
-    pure changed
+  pure $ do
+    -- counts <- reuse cte -- [(status, previous availability)]
+
+    -- changed' <- reuse changed
+
+    dockingsSum <- reuse changed
+
+    -- guard_ ((counts ^. _1 . d_status_station_id) ==. (dockingsSum ^. _1))
+
+    pure dockingsSum
+    -- pure ( dockingsSum ^. _1 -- Status record
+    --      , dockingsSum ^. _2 -- Sum
+    --      )
   where
     infixl 4 `deltaOp_` -- same as '(<.)' and '(>.)'.
     deltaOp_ :: (BeamSqlBackend be) => QGenExpr context be s a -> QGenExpr context be s a -> QGenExpr context be s Bool

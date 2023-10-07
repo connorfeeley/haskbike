@@ -71,11 +71,11 @@ dispatchDebug _options = do
   liftIO $ do
     cliOut $ formatDatabaseStats numStatusRows infoTableSize statusTableSize
 
-    formatDockingEventsCount dockings
+    -- formatDockingEventsCount dockings
     pPrintCompact $ "Length of dockings: " <> show (length dockings)
     pPrintCompact $ "Sum: " <> show (sum $ dockings ^.. traverse . _2)
 
-    formatDockingEventsCount undockings
+    -- formatDockingEventsCount undockings
     pPrintCompact $ "Length of undockings: " <> show (length undockings)
     pPrintCompact $ "Sum: " <> show (sum $ undockings ^.. traverse . _2)
   where

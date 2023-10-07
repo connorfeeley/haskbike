@@ -49,7 +49,10 @@ import           ReportTime
 import           Test.Tasty.HUnit
 
 setupTestDatabase :: IO Connection
-setupTestDatabase = connectDbName dbnameTest "" "" "" "" >>= dropTables >>= migrateDatabase
+setupTestDatabase = connectTestDatabase >>= dropTables >>= migrateDatabase
+
+connectTestDatabase :: IO Connection
+connectTestDatabase = connectDbName dbnameTest "" "" "" ""
 
 
 -- | Helper function to decode a JSON file.
