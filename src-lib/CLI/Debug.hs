@@ -1,4 +1,5 @@
 {-# LANGUAGE PartialTypeSignatures #-}
+
 -- | CLI debug interface.
 module CLI.Debug
      ( dispatchDebug
@@ -6,46 +7,33 @@ module CLI.Debug
 
 import           AppEnv
 
-import           CLI.Database
 import           CLI.Options
 import           CLI.QueryFormat
-import           CLI.Utils
 
-import           Colog                         ( Message, WithLog, log, pattern D, pattern I )
+import           Colog                         ( log, pattern D )
 
 import           Control.Lens
-import           Control.Monad.Reader          ( asks, void, when )
 
 import           Data.Int                      ( Int32 )
-import qualified Data.List                     as List
 import           Data.Maybe                    ( fromMaybe )
 import           Data.Proxy
-import           Data.Text.Lazy                ( Text, pack, toStrict, unpack )
+import           Data.Text.Lazy                ( Text, pack, toStrict )
 
 import           Database.Beam
 import           Database.Beam.Schema.Tables
-import           Database.BikeShare            ( StationStatus, StationStatusT, bikeshareStationStatus,
-                                                 d_status_last_reported, d_status_num_bikes_available,
-                                                 d_status_num_bikes_disabled, d_status_num_docks_available,
-                                                 d_status_num_docks_disabled, d_status_station_id,
-                                                 vehicle_types_available_efit, vehicle_types_available_efit_g5,
-                                                 vehicle_types_available_iconic )
+import           Database.BikeShare            ( StationStatusT, bikeshareStationStatus )
 import           Database.BikeShare.Operations
 import           Database.BikeShare.Utils      ( pPrintCompact )
-import           Database.PostgreSQL.Simple    ( Connection, query_ )
 
 import           Prelude                       hiding ( log )
 
 import           System.Console.ANSI
 
-import           UnliftIO                      ( MonadIO, MonadUnliftIO, liftIO )
-
-
 
 -- | Dispatch CLI arguments for debugging.
 dispatchDebug :: DebugMiscOptions
               -> App ()
-dispatchDebug options = do
+dispatchDebug _options = do
   -- Get the number of rows in the station status table.
   numStatusRows <-
     log D "Querying number of rows in status table."
@@ -60,7 +48,7 @@ dispatchDebug options = do
   infoTableSize <- queryTableSize <$> withConn <*> pure "station_information" >>= liftIO
   let infoTableSizeText =
         maybe "Error: unable to determine station status table size."
-        (\tableSize -> "Status table uses " ++ show tableSize ++ " of storage.")
+        (\tableSize' -> "Status table uses " ++ show tableSize' ++ " of storage.")
         infoTableSize
 
   log D $ "Status table size: " <> toStrict (pack infoTableSizeText)
@@ -68,14 +56,13 @@ dispatchDebug options = do
   statusTableSize <- queryTableSize <$> withConn <*> pure "station_status" >>= liftIO
   let statusTableSizeText =
         maybe "Error: unable to determine station status table size."
-        (\tableSize -> "Status table uses " ++ show tableSize ++ " of storage.")
+        (\tableSize' -> "Status table uses " ++ show tableSize' ++ " of storage.")
         statusTableSize
 
   log D $ "Status table size: " <> toStrict (pack statusTableSizeText)
   liftIO $ putStrLn $ "Status table size: " <> statusTableSizeText <> " rows."
 
-  -- TODO: calculate number of dockings and undockings
-  -- cteStationStatus conn 7148 1890764 :: IO [(StationStatusT Identity, Int32, Int32)]
+  -- Calculate number of dockings and undockings
   let queryConditions = StatusQuery 7148 [OldestID 1890764]
   dockings <- cteStationStatus' <$> withConn <*> pure Docked <*> pure queryConditions >>= liftIO
   undockings <- cteStationStatus' <$> withConn <*> pure Undocked <*> pure queryConditions >>= liftIO

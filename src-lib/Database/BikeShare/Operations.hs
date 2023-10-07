@@ -19,12 +19,16 @@
 -- | This module contains the operations that can be performed on the database.
 
 module Database.BikeShare.Operations
-     ( InsertStatusResult (..)
-     , cteStationStatus'
-     , formatCteStatus
+     ( module Database.BikeShare.Operations.Dockings
+     , FilterStatusResult (..)
+     , InsertStatusResult (..)
+     , filter_newer
+     , filter_unchanged
      , getRowsToDeactivate
      , insertStationInformation
      , insertStationStatus
+     , insert_deactivated
+     , insert_inserted
      , printDisabledDocks
      , queryDisabledDocks
      , queryRowCount
@@ -38,19 +42,6 @@ module Database.BikeShare.Operations
      , queryStationStatusFields
      , queryStationStatusLatest
      , queryTableSize
-       -- types
-     , AvailabilityCountChanged (..)
-     , FilterStatusResult (..)
-     , StatusQuery (..)
-     , StatusThreshold (..)
-       -- lenses
-     , filter_newer
-     , filter_unchanged
-     , insert_deactivated
-     , insert_inserted
-       -- functions
-     , runBeamPostgres'
-     , runBeamPostgresDebug'
      , separateNewerStatusRecords
      ) where
 
@@ -65,37 +56,16 @@ import qualified Data.Map                                 as Map
 import qualified Data.Text                                as Text
 
 import           Database.Beam
-import           Database.Beam.Backend                    ( BeamSqlBackend )
 import           Database.Beam.Backend.SQL.BeamExtensions
 import           Database.Beam.Postgres
 import qualified Database.Beam.Postgres                   as Pg
 import           Database.BikeShare
 import           Database.BikeShare.Expressions
+import           Database.BikeShare.Operations.Dockings
 import           Database.BikeShare.Utils
 import           Database.PostgreSQL.Simple               ( Only (..), query_ )
 
 import           GHC.Exts                                 ( fromString )
-
-
-debug :: Bool
-debug = False
-
-
--- | Enable SQL debug output if DEBUG flag is set.
-runBeamPostgres' :: Connection  -- ^ Connection to the database.
-                 -> Pg a        -- ^ @MonadBeam@ in which we can run Postgres commands.
-                 -> IO a
-runBeamPostgres' =
-  if debug
-  then runBeamPostgresDebug'
-  else runBeamPostgres
-
-
--- | @runBeamPostgresDebug@ prefilled with @pPrintCompact@.
-runBeamPostgresDebug' :: Connection     -- ^ Connection to the database.
-                      -> Pg a           -- ^ @MonadBeam@ in which we can run Postgres commands.
-                      -> IO a
-runBeamPostgresDebug' = runBeamPostgresDebug pPrintCompact
 
 
 data FilterStatusResult where
@@ -394,94 +364,3 @@ queryTableSize :: Connection            -- ^ Connection to the database.
 queryTableSize conn tableName = do
   [Only size] <- query_ conn $ fromString ("SELECT pg_size_pretty(pg_total_relation_size('" ++ tableName ++ "'))")
   return size
-
-{-
-In this version, `cteWithDiff` is a list of triples `(StationStatusT Identity, prev_avail, diff)`, where `diff` is iconic availability difference.
-`sumIconic` calculates the sum of `diff` over the entire list, and the final result is a list with each row containing the station status, previous iconic availability, and the sum of iconic availability differences.
--}
-
-
-
-
-formatCteStatus :: [(StationStatusT Identity, Int32)] -> IO ()
-formatCteStatus bar = pPrintCompact $ map (\(s, l) ->
-                                             ( s ^. d_status_id & unSerial
-                                             , s ^. d_status_station_id
-                                             , s ^. d_status_last_reported
-                                             , l
-                                             )
-                                          ) bar
-
-data StatusQuery = StatusQuery
-  { _status_query_station_id :: Int32
-  , _status_query_thresholds :: [StatusThreshold] -- Update from single StatusThreshold to list
-  } deriving (Show, Eq)
-
-data StatusThreshold =
-    OldestID Int32
-  | SinceTime ReportTime
-  deriving (Show, Eq)
-
-thresholdCondition :: StatusThreshold -> StationStatusT (QExpr Postgres s) -> QExpr Postgres s Bool
-thresholdCondition (OldestID id_threshold) status =
-  status ^. d_status_id >=. val_ (fromIntegral id_threshold)
-thresholdCondition (SinceTime time_threshold) status =
-  status ^. d_status_last_reported >=. val_ (Just time_threshold)
-
-filterFor_ :: StatusQuery -> StationStatusT (QExpr Postgres s) -> QExpr Postgres s Bool
-filterFor_ (StatusQuery stationId thresholds) status =
-  let stationCondition = status ^. d_status_station_id ==. val_ (fromIntegral stationId)
-      thresholdConditions = map (`thresholdCondition` status) thresholds
-  in foldr (&&.) stationCondition thresholdConditions
-
--- | Data type representing the type of statistic to query.
-data AvailabilityCountChanged where
-  Undocked      :: AvailabilityCountChanged -- ^ Bike undocked (ride began at this station)
-  Docked        :: AvailabilityCountChanged -- ^ Bike docked   (ride ended at this station)
-  deriving (Show, Eq)
-
--- | TODO: parameterize over column.
-cteStationStatus' :: Connection -> AvailabilityCountChanged -> StatusQuery -> IO [(StationStatusT Identity, Int32)]
-cteStationStatus' conn statisticType conditions =
-  runBeamPostgres' conn $ do
-    runSelectReturningList $ selectWith $ do
-      cte <- selecting $ do
-        let statusForStation = filter_ (filterFor_ conditions)
-                                       (all_ (bikeshareDb ^. bikeshareStationStatus))
-          in withWindow_ (\row -> frame_ (partitionBy_ (row ^. d_status_station_id)) (orderPartitionBy_ (asc_ $ row ^. d_status_id)) noBounds_)
-                         (\row w -> (row, lagWithDefault_ (row ^. vehicle_types_available_iconic) (val_ 1) (row ^. vehicle_types_available_iconic) `over_` w))
-                         statusForStation
-      dockings <- selecting $ do
-        -- Only rows where the availability increased.
-        let increments = filter_ (\(s, prevAvail) -> s ^. vehicle_types_available_iconic `deltaOp_` prevAvail)
-                         (reuse cte)
-              -- Delta between current and previous iconic availability.
-              in withWindow_ (\(row, _prev) -> frame_ (partitionBy_ (row ^. d_status_station_id)) noOrder_ noBounds_)
-                             (\(row, prev) _w -> (row, row ^. vehicle_types_available_iconic - prev))
-                             increments
-
-      pure $ do
-        counts <- reuse cte -- [(status, previous availability)]
-
-        -- Rows where the delta was either:
-        -- - positive ('deltaOp_': '(>.)')
-        -- - negative ('deltaOp_': '(<.)')
-        -- ... depending on the statisticType paramater.
-        changed <- filter_ (\(_s, delta) -> delta `deltaOp_` 0)
-                           (reuse dockings)
-
-        guard_ ((counts ^. _1 . d_status_id) ==. (changed ^. _1 . d_status_id))
-
-        pure changed
-  where
-    infixl 4 `deltaOp_` -- same as '(<.)' and '(>.)'.
-    deltaOp_ :: (BeamSqlBackend be) => QGenExpr context be s a -> QGenExpr context be s a -> QGenExpr context be s Bool
-    deltaOp_ = case statisticType of
-      Undocked -> (<.)
-      Docked   -> (>.)
-
--- conn <- mkDbParams "haskbike" >>= uncurry5 connectDbName
--- res <- cteStationStatus conn 7148 1890764
--- res <- cteStationStatus <$> (mkDbParams "haskbike" >>= uncurry5 connectDbName) <*> pure 7148 <*> pure 1890764 >>= liftIO
--- res ^.. traverse . _4
--- listFrequency s = map (\x -> ([head x], length x)) . List.group . List.sort $ s

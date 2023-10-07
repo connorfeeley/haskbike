@@ -192,6 +192,7 @@ library
                     , Database.BikeShare.Migrations
                     , Database.BikeShare.Utils
                     , Database.BikeShare.Operations
+                    , Database.BikeShare.Operations.Dockings
                     , Database.BikeShare.Expressions
 
     -- Modules included in this library but not exported.

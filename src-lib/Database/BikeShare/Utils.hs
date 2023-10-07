@@ -10,6 +10,8 @@ module Database.BikeShare.Utils
      , migrateDatabase
      , mkDbParams
      , pPrintCompact
+     , runBeamPostgres'
+     , runBeamPostgresDebug'
      , setupDatabaseName
      , setupProductionDatabase
      , uncurry5
@@ -26,6 +28,26 @@ import           System.Environment            ( lookupEnv )
 
 import           Text.Pretty.Simple
 
+
+debug :: Bool
+debug = False
+
+
+-- | Enable SQL debug output if DEBUG flag is set.
+runBeamPostgres' :: Connection  -- ^ Connection to the database.
+                 -> Pg a        -- ^ @MonadBeam@ in which we can run Postgres commands.
+                 -> IO a
+runBeamPostgres' =
+  if debug
+  then runBeamPostgresDebug'
+  else runBeamPostgres
+
+
+-- | @runBeamPostgresDebug@ prefilled with @pPrintCompact@.
+runBeamPostgresDebug' :: Connection     -- ^ Connection to the database.
+                      -> Pg a           -- ^ @MonadBeam@ in which we can run Postgres commands.
+                      -> IO a
+runBeamPostgresDebug' = runBeamPostgresDebug pPrintCompact
 
 -- | Construct query to drop a table using cascade.
 dropCascade :: String -> Query
