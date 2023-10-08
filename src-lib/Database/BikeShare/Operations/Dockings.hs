@@ -66,8 +66,8 @@ filterFor_ :: StatusVariationQuery -> StationStatusT (QExpr Postgres s) -> QExpr
 filterFor_ (StatusVariationQuery stationId _ bike_type thresholds) status =
   let stationCondition = status ^. d_status_station_id ==. val_ (fromIntegral stationId)
       thresholdConditions = map (`thresholdCondition` status) thresholds
-  in foldr (&&.) stationCondition thresholdConditions
-  -- in foldr (&&.) (val_ True) thresholdConditions
+  -- in foldr (&&.) stationCondition thresholdConditions
+  in foldr (&&.) (val_ True) thresholdConditions
 
 -- | Data type representing the type of statistic to query.
 data AvailabilityCountVariation where
@@ -129,9 +129,7 @@ queryDockingEventsCount conn variation@(StatusVariationQuery stationId queryVari
 
         agg = aggregate_ (\(status, delta) -> (group_ (status ^. d_status_station_id), fromMaybe_ 0 $ sum_ delta))
                          f
-      -- in orderBy_ (\(sId, sum) -> asc_ sId) agg
-      -- in reuse events
-      in agg
+      in orderBy_ (\(sId, _sum) -> asc_ sId) agg
 
   pure $ do
     -- counts <- reuse cte -- [(status, previous availability)]

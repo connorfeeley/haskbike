@@ -65,6 +65,7 @@ dispatchDebug _options = do
   liftIO $ putStrLn $ "Status table size: " <> statusTableSizeText <> " rows."
 
   -- Calculate number of dockings and undockings
+  log D $ "Querying dockings and undockings." <> toStrict (pack statusTableSizeText)
   dockings   <- queryDockingEventsCount <$> withConn <*> pure (queryCondition Docking)   >>= liftIO
   undockings <- queryDockingEventsCount <$> withConn <*> pure (queryCondition Undocking) >>= liftIO
 
@@ -78,9 +79,14 @@ dispatchDebug _options = do
     -- formatDockingEventsCount undockings
     pPrintCompact $ "Length of undockings: " <> show (length undockings)
     pPrintCompact $ "Sum: " <> show (sum $ undockings ^.. traverse . _2)
+
+    pPrintCompact "Dockings:"
+    pPrintCompact dockings
+    pPrintCompact "Undockings:"
+    pPrintCompact undockings
   where
     queryCondition :: AvailabilityCountVariation -> StatusVariationQuery
-    queryCondition variation = StatusVariationQuery 7148 variation AT.Iconic [ OldestID 1890764 ]
+    queryCondition variation = StatusVariationQuery 7148 variation AT.Iconic [ OldestID 1890764, EarliestTime (ReportTime $ read "2023-10-07 00:00:00.00") ]
 
 formatDatabaseStats :: Int32 -> Maybe String -> Maybe String -> [Text]
 formatDatabaseStats numStatusRows infoTableSize statusTableSize =
