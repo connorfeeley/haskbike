@@ -32,6 +32,8 @@ import           Prelude                       hiding ( log )
 
 import           ReportTime                    ( localToPosix, localToSystem )
 
+import           TextShow                      ( showt )
+
 import           UnliftIO                      ( MonadIO, MonadUnliftIO, liftIO )
 import           UnliftIO.Async                ( concurrently_ )
 
@@ -59,7 +61,7 @@ statusRequester :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
                 -> m ()
 statusRequester queue interval_var = void . forever $ do
   interval <- liftIO $ readTVarIO interval_var
-  log D $ "Sleeping for " <> Text.pack (show interval) <> " microseconds."
+  log D $ "Sleeping for " <> showt (interval `div` 1000000) <> " seconds."
   liftIO $ threadDelay interval
   liftIO (runQueryWithEnv stationStatus) >>= \case
     Left err -> logException err
@@ -67,7 +69,7 @@ statusRequester queue interval_var = void . forever $ do
       currentTimeZone <- liftIO getCurrentTimeZone
       let time' = localToSystem currentTimeZone (result ^. response_last_updated)
       let ttl = result ^. response_ttl
-      log I $ "TTL=" <> Text.pack (show ttl) <> " | last updated=" <> Text.pack (show time')
+      log I $ "TTL=" <> showt ttl <> " | last updated=" <> Text.pack (show time')
       liftIO $ atomically $ writeTVar interval_var (ttl * 1000000)
       liftIO $ atomically $ writeTBQueue queue result
 
@@ -86,42 +88,26 @@ statusHandler queue last_updated = void . forever $ do
   if timeElapsed >= 0
     then -- Update last_updated variable.
       liftIO $ atomically $ writeTVar last_updated currentTime
-    else log E $ "last_updated went backwards: "
-      <> show previousTime <> " -> " <> show currentTime
-      <> "(" |++| show timeElapsed |++| ")"
+    else log E $ Text.unwords ["last_updated went backwards: ", "[" <> showt previousTime <> "]", " -> ", "[" <> showt currentTime <> "]", "(", showt timeElapsed, ")"]
 
   let status = response ^. (response_data . status_stations)
-  log I $ "TTL=" <> Text.pack (show (length status))
+  log D $ Text.unwords ["Received",  showt (length status),  "status records from API."]
 
   updated_api <- separateNewerStatusRecords <$> withConn <*> pure status >>= liftIO
 
   -- Insert the updated status.
   inserted_result <- insertStationStatus <$> withConn <*> pure (updated_api ^. filter_newer) >>= liftIO
 
-  let message_data =
-          zipWith
-              ( \updated inserted ->
-                  ( inserted ^.. d_status_station_id
-                  , updated ^.. d_status_last_reported
-                  , inserted ^.. d_status_last_reported
-                  )
-              )
-              (inserted_result ^. insert_deactivated)
-              (inserted_result ^. insert_inserted)
-  let messages =
-          map
-              ( \(sid, last_reported, last_reported') ->
-                  "ID: "
-                      ++ show sid
-                      ++ " "
-                      ++ show last_reported -- ID
-                      ++ "->"
-                      ++ show last_reported' -- [prev reported] -> [new reported]
-              )
-              message_data
-  mapM_ (log D . Text.pack) messages
-  log I $
-      "HANDLER: updated="
-          <> Text.pack (show (length $ inserted_result ^. insert_deactivated))
-          <> " inserted="
-          <> Text.pack (show (length $ inserted_result ^. insert_inserted))
+  -- Log each station ID updated.
+  mapM_ (log D . Text.pack . fmtLog) $
+    zipWith dataToTuple
+      (inserted_result ^. insert_deactivated)
+      (inserted_result ^. insert_inserted)
+
+  -- Log counts of rows inserted and activated.
+  log I $ "Updated " <> showt (length $ inserted_result ^. insert_deactivated)
+   <> " | Inserted " <> showt (length $ inserted_result ^. insert_inserted)
+
+  where
+    dataToTuple u i = (i ^. d_status_station_id, u ^. d_status_last_reported, i ^. d_status_last_reported)
+    fmtLog (sid, lr, lr') = "ID: " ++ show sid ++ " " ++ maybe "-" show lr ++ "->" ++ maybe "-" show lr'
