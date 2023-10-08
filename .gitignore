@@ -4,4 +4,8 @@
 *.hi
 *.o
 /TAGS
+
+# Ignore environment files (except example template)
 /.env
+/.env.*
+!/.env.template
