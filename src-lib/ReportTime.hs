@@ -16,6 +16,7 @@ module ReportTime
      , reportTimeType
      , reportTimeZone
      , reportToLocal
+     , systemToReport
        -- Re-exports for ReportTime constructors
      , Day (..)
      , TimeOfDay (..)
@@ -113,3 +114,14 @@ localToPosix = floor . utcTimeToPOSIXSeconds . localTimeToUTC reportTimeZone
 -- | Convert ReportTime to LocalTime
 reportToLocal :: ReportTime -> LocalTime
 reportToLocal (ReportTime localTime) = localTime
+
+systemToReport :: IO ReportTime
+systemToReport = do
+  currentTime <- getCurrentTime
+  currentTimeZone <- getCurrentTimeZone
+  -- pure $ ReportTime <$> currentTime
+  let currentLocal = utcToLocalTime currentTimeZone currentTime
+  pure $ ReportTime currentLocal
+  where
+    timezone = TimeZone 0 False "UTC"
+    -- timezone = reportTimeZone
