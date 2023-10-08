@@ -11,24 +11,26 @@ module AppEnv
      , mainEnv
      , mainLogAction
      , runApp
+     , runWithApp
      , simpleEnv
      ) where
 
-import           Colog                  ( HasLog (..), LogAction (..), Message, Msg (msgSeverity), Severity (..),
-                                          filterBySeverity, richMessageAction )
+import           Colog                    ( HasLog (..), LogAction (..), Message, Msg (msgSeverity), Severity (..),
+                                            filterBySeverity, richMessageAction )
 
-import           Control.Monad.IO.Class ( MonadIO )
-import           Control.Monad.Reader   ( MonadReader, ReaderT (..), asks )
+import           Control.Monad.IO.Class   ( MonadIO )
+import           Control.Monad.Reader     ( MonadReader, ReaderT (..), asks )
 
-import           Data.Time              ( TimeZone )
+import           Data.Time                ( TimeZone, getCurrentTimeZone )
 
-import           Database.Beam.Postgres ( Connection )
+import           Database.Beam.Postgres   ( Connection )
+import           Database.BikeShare.Utils ( connectDbName, dbnameProduction, mkDbParams, uncurry5 )
 
-import           GHC.Stack              ( HasCallStack )
+import           GHC.Stack                ( HasCallStack )
 
-import           Prelude                hiding ( log )
+import           Prelude                  hiding ( log )
 
-import           UnliftIO               ( MonadUnliftIO, liftIO )
+import           UnliftIO                 ( MonadUnliftIO, liftIO )
 
 -- Application environment
 data Env m where
@@ -92,3 +94,9 @@ mainLogAction severity = filterBySeverity severity msgSeverity richMessageAction
   -- | Helper function to run the application.
 runApp :: Env App -> App a -> IO a
 runApp env app = runReaderT (unApp app) env
+
+runWithApp :: App a -> IO a
+runWithApp app = do
+  conn <- mkDbParams dbnameProduction >>= uncurry5 connectDbName
+  currentTimeZone <- getCurrentTimeZone
+  runApp (mainEnv Info currentTimeZone conn) app

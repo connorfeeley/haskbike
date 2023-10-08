@@ -15,8 +15,10 @@ import           CLI.QueryFormat
 import           Colog                         ( log, pattern D )
 
 import           Control.Lens
+import           Control.Monad                 ( when )
 
 import           Data.Int                      ( Int32 )
+import           Data.List                     ( sortOn )
 import           Data.Maybe                    ( fromMaybe )
 import           Data.Proxy
 import           Data.Text.Lazy                ( Text, pack, toStrict )
@@ -28,6 +30,8 @@ import           Database.BikeShare.Operations
 import           Database.BikeShare.Utils      ( pPrintCompact )
 
 import           Prelude                       hiding ( log )
+
+import           ReportTime                    ( Day, TimeOfDay (TimeOfDay), fromGregorian, reportTime )
 
 import           System.Console.ANSI
 
@@ -65,12 +69,13 @@ dispatchDebug _options = do
   liftIO $ putStrLn $ "Status table size: " <> statusTableSizeText <> " rows."
 
   -- Calculate number of dockings and undockings
-  log D $ "Querying dockings and undockings." <> toStrict (pack statusTableSizeText)
-  dockings   <- queryDockingEventsCount <$> withConn <*> pure (queryCondition Docking)   >>= liftIO
-  undockings <- queryDockingEventsCount <$> withConn <*> pure (queryCondition Undocking) >>= liftIO
-
+  (undockings, dockings) <- eventsForDay (fromGregorian 2023 10 07)
   liftIO $ do
     cliOut $ formatDatabaseStats numStatusRows infoTableSize statusTableSize
+
+    when (length dockings < 10) (pPrintCompact "Dockings:" >> pPrintCompact dockings)
+
+    when (length undockings < 10) (pPrintCompact "Undockings:" >> pPrintCompact undockings)
 
     -- formatDockingEventsCount dockings
     pPrintCompact $ "Length of dockings: " <> show (length dockings)
@@ -79,14 +84,6 @@ dispatchDebug _options = do
     -- formatDockingEventsCount undockings
     pPrintCompact $ "Length of undockings: " <> show (length undockings)
     pPrintCompact $ "Sum: " <> show (sum $ undockings ^.. traverse . _2)
-
-    pPrintCompact "Dockings:"
-    pPrintCompact dockings
-    pPrintCompact "Undockings:"
-    pPrintCompact undockings
-  where
-    queryCondition :: AvailabilityCountVariation -> StatusVariationQuery
-    queryCondition variation = StatusVariationQuery 7148 variation AT.Iconic [ OldestID 1890764, EarliestTime (ReportTime $ read "2023-10-07 00:00:00.00") ]
 
 formatDatabaseStats :: Int32 -> Maybe String -> Maybe String -> [Text]
 formatDatabaseStats numStatusRows infoTableSize statusTableSize =
@@ -100,3 +97,17 @@ formatDatabaseStats numStatusRows infoTableSize statusTableSize =
     tableSizeText :: Text -> Maybe String -> Text
     tableSizeText tableName (Just size) = boldCode <> colouredText Vivid White tableName <> " table size:  " <> resetIntens <> pack size
     tableSizeText tableName Nothing     = boldCode <> colouredText Vivid White tableName <> " table size:  " <> resetIntens <> colouredText Vivid Red "ERROR"
+    sortOnSnd = sortOn snd
+
+eventsForDay :: Day -> App ([(Int32, Int32)], [(Int32, Int32)])
+eventsForDay day = do
+  -- Calculate number of dockings and undockings
+  log D $ "Querying dockings and undockings."
+  dockings   <- queryDockingEventsCount <$> withConn <*> pure (queryCondition Docking)   >>= liftIO
+  undockings <- queryDockingEventsCount <$> withConn <*> pure (queryCondition Undocking) >>= liftIO
+  pure (undockings, dockings)
+  where
+    queryCondition :: AvailabilityCountVariation -> StatusVariationQuery
+    queryCondition variation = StatusVariationQuery 7148 variation AT.Iconic [ EarliestTime (reportTime (fromGregorian 2023 10 06) (TimeOfDay 00 00 00))
+                                                                             , LatestTime   (reportTime (fromGregorian 2023 10 07) (TimeOfDay 00 00 00))
+                                                                             ]

@@ -36,7 +36,7 @@ import           Database.PostgreSQL.Simple.FromField ( FromField (..) )
 import           Database.PostgreSQL.Simple.ToField   ( ToField (..) )
 
 
--- | Subtract a number of hours from a LocalTime.
+-- | Add a number of hours from a LocalTime.
 addHours :: NominalDiffTime -> LocalTime -> LocalTime
 addHours h time' = utcToLocalTime reportTimeZone (addUTCTime (h*3600) (localTimeToUTC utc time'))
 
@@ -120,8 +120,8 @@ systemToReport = do
   currentTime <- getCurrentTime
   currentTimeZone <- getCurrentTimeZone
   -- pure $ ReportTime <$> currentTime
-  let currentLocal = utcToLocalTime currentTimeZone currentTime
+  let currentLocal = utcToLocalTime utcTimeZone currentTime
   pure $ ReportTime currentLocal
   where
-    timezone = TimeZone 0 False "UTC"
+    utcTimeZone = TimeZone 0 False "UTC"
     -- timezone = reportTimeZone
