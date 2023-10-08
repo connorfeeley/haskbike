@@ -82,7 +82,7 @@ data StationStatusT f where
                    , _d_status_num_bikes_disabled      :: Columnar f Int32
                    , _d_status_num_docks_available     :: Columnar f Int32
                    , _d_status_num_docks_disabled      :: Columnar f Int32
-                   , _d_status_last_reported           :: Columnar f (Maybe ReportTime)
+                   , _d_status_last_reported           :: Columnar f (Maybe ReportTime) -- In UTC time
                    , _d_status_is_charging_station     :: Columnar f Bool
                    , _d_status_status                  :: Columnar f BeamStationStatusString
                    , _d_status_is_installed            :: Columnar f Bool
