@@ -93,7 +93,7 @@
               inherit (pkgs)
                 stack
                 reuse
-                postgresql
+                postgresql_15
                 pgadmin
                 litecli
                 ;
