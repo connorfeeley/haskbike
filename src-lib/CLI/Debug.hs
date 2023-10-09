@@ -14,11 +14,9 @@ import           CLI.QueryFormat
 
 import           Colog                         ( log, pattern D )
 
-import           Control.Lens
 import           Control.Monad                 ( when )
 
 import           Data.Int                      ( Int32 )
-import           Data.List                     ( sortOn )
 import           Data.Maybe                    ( fromMaybe )
 import           Data.Proxy
 import           Data.Text.Lazy                ( Text, pack, toStrict )
@@ -27,7 +25,6 @@ import           Database.Beam
 import           Database.Beam.Schema.Tables
 import           Database.BikeShare
 import           Database.BikeShare.Operations
-import           Database.BikeShare.Utils      ( pPrintCompact )
 
 import           Prelude                       hiding ( log )
 
@@ -70,7 +67,7 @@ dispatchDebug _options = do
   liftIO $ putStrLn $ "Status table size: " <> statusTableSizeText <> " rows."
 
   -- Calculate number of dockings and undockings
-  eventSums <- eventsForDay (fromGregorian 2023 10 06) (fromGregorian 2023 10 07)
+  eventSums <- eventsForDay (fromGregorian 2023 10 06) (fromGregorian 2023 10 08)
   liftIO $ do
     cliOut $ formatDatabaseStats numStatusRows infoTableSize statusTableSize
 
