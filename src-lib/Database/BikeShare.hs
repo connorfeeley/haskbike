@@ -14,7 +14,7 @@ module Database.BikeShare
      ( BikeshareDb (..)
      , module Database.BikeShare.Types
      , bikeshareDb
-     , bikeshareDiagnostics
+       -- , bikeshareDiagnostics
      , bikeshareStationInformation
      , bikeshareStationStatus
      ) where
@@ -29,7 +29,7 @@ import           Database.BikeShare.Types
 data BikeshareDb f where
   BikeshareDb :: { _bikeshareStationInformation :: f (TableEntity StationInformationT)
                  , _bikeshareStationStatus      :: f (TableEntity StationStatusT)
-                 , _bikeshareDiagnostics        :: f (TableEntity DiagnosticsT)
+                 -- , _bikeshareDiagnostics        :: f (TableEntity DiagnosticsT)
                  } -> BikeshareDb f
   deriving (Generic, Database be)
 
@@ -77,19 +77,19 @@ bikeshareDb = defaultDbSettings `withDbModification`
       , _d_status_vehicle_types_available = vehicleTypeFields "vehicle_types_available"
       , _d_status_active                  = "active"
       }
-  , _bikeshareDiagnostics =
-    setEntityName "diagnostics" <> modifyTableFields tableModification
-      { _diagnosticId   = "id"
-      , _diagnosticTime = "time"
-      }
+  -- , _bikeshareDiagnostics =
+  --   setEntityName "diagnostics" <> modifyTableFields tableModification
+  --     { _diagnosticId   = "id"
+  --     , _diagnosticTime = "time"
+  --     }
   }
 
 -- Lenses
-bikeshareStationInformation     :: Lens' (BikeshareDb f) (f (TableEntity StationInformationT))
-bikeshareStationStatus          :: Lens' (BikeshareDb f) (f (TableEntity StationStatusT))
-bikeshareDiagnostics            :: Lens' (BikeshareDb f) (f (TableEntity DiagnosticsT))
+-- bikeshareStationInformation     :: Lens' (BikeshareDb f) (f (TableEntity StationInformationT))
+-- bikeshareStationStatus          :: Lens' (BikeshareDb f) (f (TableEntity StationStatusT))
+-- bikeshareDiagnostics            :: Lens' (BikeshareDb f) (f (TableEntity DiagnosticsT))
 BikeshareDb
   (TableLens bikeshareStationInformation)
   (TableLens bikeshareStationStatus)
-  (TableLens bikeshareDiagnostics)
+  -- (TableLens bikeshareDiagnostics)
   = dbLenses

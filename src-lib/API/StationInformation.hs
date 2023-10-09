@@ -151,6 +151,7 @@ data StationInformation where
                         , info_capacity                  :: Int
                         , info_is_charging_station       :: Bool
                         , info_rental_methods            :: [RentalMethod]
+                        , info_is_valet_station          :: Maybe Bool
                         , info_is_virtual_station        :: Bool
                         , info_groups                    :: [String]
                         , info_obcn                      :: String
@@ -173,6 +174,7 @@ instance ToJSON StationInformation where
            , "capacity"                 .= info_capacity                 station
            , "is_charging_station"      .= info_is_charging_station      station
            , "rental_methods"           .= info_rental_methods           station
+           , "is_valet_station"         .= info_is_valet_station         station
            , "is_virtual_station"       .= info_is_virtual_station       station
            , "groups"                   .= info_groups                   station
            , "obcn"                     .= info_obcn                     station
@@ -194,6 +196,7 @@ instance FromJSON StationInformation where
     <*> v .: "capacity"
     <*> v .: "is_charging_station"
     <*> v .: "rental_methods"
+    <*> v .:? "is_valet_station"
     <*> v .: "is_virtual_station"
     <*> v .: "groups"
     <*> v .: "obcn"
