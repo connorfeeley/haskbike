@@ -15,9 +15,7 @@ module Database.BikeShare.Operations.Dockings
      ( AvailabilityCountVariation (..)
      , StatusThreshold (..)
      , StatusVariationQuery (..)
-     , formatDockingEventsCount
      , queryDockingEventsCount
-     , sortDockingEventsCount
      ) where
 
 import qualified API.Types                as AT
@@ -25,8 +23,6 @@ import qualified API.Types                as AT
 import           Control.Lens             hiding ( reuse, (<.) )
 
 import           Data.Int                 ( Int32 )
-import           Data.List                ( sortOn )
-import           Data.Ord                 ( Down (Down) )
 
 import           Database.Beam
 import           Database.Beam.Postgres
@@ -131,19 +127,3 @@ queryDockingEventsCount conn variation@(StatusVariationQuery stationId queryVari
     let dockingsCount   = dockings' ^. _2
     let undockingsCount = undockings' ^. _2
     pure (stationInfo, (undockingsCount, dockingsCount))
-
--- | Print docking and undocking events (with index).
-formatDockingEventsCount :: [(StationInformation, (Int32, Int32))] -> IO ()
-formatDockingEventsCount events = pPrintCompact $ zipWith (\index' (info, (undockings, dockings)) ->
-                                                         ( "#" ++ show index'
-                                                         , info ^. info_station_id
-                                                         , info ^. info_name
-                                                         , undockings
-                                                         , dockings
-                                                         )
-                                                      ) [0..] events
-
--- | Sort docking and undocking events.
-sortDockingEventsCount :: AvailabilityCountVariation -> [(StationInformation, (Int32, Int32))] -> [(StationInformation, (Int32, Int32))]
-sortDockingEventsCount Undocking = sortOn (view $ _2 . _1)
-sortDockingEventsCount Docking   = sortOn (Down . view (_2 . _2))

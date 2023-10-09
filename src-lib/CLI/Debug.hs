@@ -14,10 +14,13 @@ import           CLI.QueryFormat
 
 import           Colog                         ( log, pattern D )
 
+import           Control.Lens
 import           Control.Monad                 ( when )
 
 import           Data.Int                      ( Int32 )
+import           Data.List                     ( sortOn )
 import           Data.Maybe                    ( fromMaybe )
+import           Data.Ord                      ( Down (Down) )
 import           Data.Proxy
 import           Data.Text.Lazy                ( Text, pack, toStrict )
 
@@ -25,12 +28,14 @@ import           Database.Beam
 import           Database.Beam.Schema.Tables
 import           Database.BikeShare
 import           Database.BikeShare.Operations
+import           Database.BikeShare.Utils
 
 import           Prelude                       hiding ( log )
 
 import           ReportTime                    ( Day, TimeOfDay (TimeOfDay), fromGregorian, reportTime )
 
 import           System.Console.ANSI
+
 
 
 -- | Dispatch CLI arguments for debugging.
@@ -103,3 +108,20 @@ eventsForDay earliestDay latestDay = do
     queryCondition variation = StatusVariationQuery 7148 variation AT.Iconic [ EarliestTime (reportTime earliestDay (TimeOfDay 00 00 00))
                                                                              , LatestTime   (reportTime latestDay   (TimeOfDay 00 00 00))
                                                                              ]
+
+
+-- | Print docking and undocking events (with index).
+formatDockingEventsCount :: [(StationInformation, (Int32, Int32))] -> IO ()
+formatDockingEventsCount events = pPrintCompact $ zipWith (\index' (info, (undockings, dockings)) ->
+                                                         ( "#" ++ show index'
+                                                         , info ^. info_station_id
+                                                         , info ^. info_name
+                                                         , undockings
+                                                         , dockings
+                                                         )
+                                                      ) [0..] events
+
+-- | Sort docking and undocking events.
+sortDockingEventsCount :: AvailabilityCountVariation -> [(StationInformation, (Int32, Int32))] -> [(StationInformation, (Int32, Int32))]
+sortDockingEventsCount Undocking = sortOn (view $ _2 . _1)
+sortDockingEventsCount Docking   = sortOn (Down . view (_2 . _2))
