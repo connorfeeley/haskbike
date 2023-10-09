@@ -14,7 +14,7 @@ import           CLI.QueryFormat
 
 import           Colog                         ( log, pattern D )
 
-import           Control.Lens
+import           Control.Lens                  hiding ( para )
 import           Control.Monad                 ( when )
 
 import           Data.Int                      ( Int32 )
@@ -22,7 +22,7 @@ import           Data.List                     ( sortOn )
 import           Data.Maybe                    ( fromMaybe )
 import           Data.Ord                      ( Down (Down) )
 import           Data.Proxy
-import           Data.Text.Lazy                ( Text, pack, toStrict )
+import           Data.Text.Lazy                ( Text, pack, toStrict, unpack )
 
 import           Database.Beam
 import           Database.Beam.Schema.Tables
@@ -35,6 +35,11 @@ import           Prelude                       hiding ( log )
 import           ReportTime                    ( Day, TimeOfDay (TimeOfDay), fromGregorian, reportTime )
 
 import           System.Console.ANSI
+
+import qualified Text.PrettyPrint.Boxes        as Box
+
+import           TextShow                      ( showt )
+
 
 
 
@@ -79,9 +84,9 @@ dispatchDebug _options = do
     when (length eventSums < 10) (putStrLn $ "Docking and undocking counts: " ++ show (length eventSums))
 
     putStrLn "Sorted by undockings:"
-    formatDockingEventsCount $ sortDockingEventsCount Undocking eventSums
+    formatDockingEventsCount' $ sortDockingEventsCount Undocking eventSums
     putStrLn "Sorted by dockings:"
-    formatDockingEventsCount $ sortDockingEventsCount Docking eventSums
+    formatDockingEventsCount' $ sortDockingEventsCount Docking eventSums
 
 formatDatabaseStats :: Int32 -> Maybe String -> Maybe String -> [Text]
 formatDatabaseStats numStatusRows infoTableSize statusTableSize =
@@ -111,8 +116,8 @@ eventsForDay earliestDay latestDay = do
 
 
 -- | Print docking and undocking events (with index).
-formatDockingEventsCount :: [(StationInformation, (Int32, Int32))] -> IO ()
-formatDockingEventsCount events = pPrintCompact $ zipWith (\index' (info, (undockings, dockings)) ->
+-- formatDockingEventsCount :: [(StationInformation, (Int32, Int32))] -> IO ()
+formatDockingEventsCount events = zipWith (\index' (info, (undockings, dockings)) ->
                                                          ( "#" ++ show index'
                                                          , info ^. info_station_id
                                                          , info ^. info_name
@@ -120,6 +125,34 @@ formatDockingEventsCount events = pPrintCompact $ zipWith (\index' (info, (undoc
                                                          , dockings
                                                          )
                                                       ) [0..] events
+
+-- | Print docking and undocking events (with index).
+formatDockingEventsCount' :: [(StationInformation, (Int32, Int32))] -> IO ()
+formatDockingEventsCount' events = Box.printBox table -- $ Box.vcat Box.center1 $ zipWith (\index' (info, (undockings, dockings)) ->
+                                                      --         Box.hsep 4 Box.center1 [ Box.para Box.top  5 $ show index'
+                                                      --                            , Box.para Box.top  7 $ show $ info ^. info_station_id
+                                                      --                            , Box.para Box.top 40 $ show $ info ^. info_name
+                                                      --                            , Box.para Box.top  7 $ show undockings
+                                                      --                            , Box.para Box.top  7 $ show dockings
+                                                      --                            ]
+                                                      -- ) [0..] events
+  where
+    columns = zipWith (\index' (info, (undockings, dockings)) ->
+                         ( index'
+                         , info ^. info_station_id
+                         , info ^. info_name
+                         , undockings
+                         , dockings
+                         )
+                      ) [0..] events
+    col1 = Box.vcat Box.left $ map (Box.text . showFn Dull Cyan   . show) (toListOf (traverse . _1) columns)
+    col2 = Box.vcat Box.left $ map (Box.text . showFn Dull Green  . show) (toListOf (traverse . _2) columns)
+    col3 = Box.vcat Box.left $ map (Box.text . showFn Vivid White . show) (toListOf (traverse . _3) columns)
+    col4 = Box.vcat Box.left $ map (Box.text . showFn Vivid Red   . show) (toListOf (traverse . _4) columns)
+    col5 = Box.vcat Box.left $ map (Box.text . showFn Vivid Blue  . show) (toListOf (traverse . _5) columns)
+    showFn intensity colour = unpack . colouredText intensity colour . pack
+    table = Box.hsep 1 Box.left [col1, col2, col3, col4, col5]
+
 
 -- | Sort docking and undocking events.
 sortDockingEventsCount :: AvailabilityCountVariation -> [(StationInformation, (Int32, Int32))] -> [(StationInformation, (Int32, Int32))]

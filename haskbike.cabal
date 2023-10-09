@@ -96,6 +96,7 @@ common common-depends
                     , ansi-terminal
                     , optparse-applicative
                     , time
+                    , boxes
 
 -- Dependencies needed by targets excercising the API.
 common api-depends
@@ -210,7 +211,6 @@ library
                     , colour
                     , text-show
                     , attoparsec
-                    , boxes
 
     -- Directories containing source files.
     hs-source-dirs:   src-lib
