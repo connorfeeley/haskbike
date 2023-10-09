@@ -17,17 +17,17 @@ module Database.BikeShare.Operations.Dockings
      , StatusVariationQuery (..)
      , formatDockingEventsCount
      , queryDockingEventsCount
+     , sortDockingEventsCount
      ) where
 
-import qualified API.Types                                as AT
+import qualified API.Types                as AT
 
-import           Control.Lens                             hiding ( reuse, (<.) )
+import           Control.Lens             hiding ( reuse, (<.) )
 
-import           Data.Int                                 ( Int32 )
+import           Data.Int                 ( Int32 )
+import           Data.List                ( sortOn )
 
 import           Database.Beam
-import           Database.Beam.Backend                    ( BeamSqlBackend )
-import           Database.Beam.Backend.SQL.BeamExtensions
 import           Database.Beam.Postgres
 import           Database.BikeShare
 import           Database.BikeShare.Utils
@@ -106,19 +106,7 @@ queryDockingEventsCount conn variation@(StatusVariationQuery stationId queryVari
           in withWindow_ (\(row, _prev) -> frame_ (partitionBy_ (row ^. d_status_info_id)) noOrder_ noBounds_)
                          (\(row, prev) _w -> (row, row ^. bikeType' - prev))
                          availNEqPrev
-  -- undockings <- selecting $ do
-  --   -- Only rows where the availability decreased.
-  --   let decrements = filter_ (\(s, prevAvail) -> s ^. bikeType' `deltaOp_` prevAvail)
-  --                    (reuse cte)
-  --         -- Delta between current and previous iconic availability.
-  --         in withWindow_ (\(row, _prev) -> frame_ (partitionBy_ (row ^. d_status_info_id)) noOrder_ noBounds_)
-  --                        (\(row, prev) _w -> (row, row ^. bikeType' - prev))
-  --                        decrements
 
-    -- Rows where the delta was either:
-    -- - positive ('deltaOp_': '(>.)')
-    -- - negative ('deltaOp_': '(<.)')
-    -- ... depending on the statisticType paramater.
   dockings <- selecting $ do
     let f = filter_ (\(_s, delta) -> delta >. 0)
             (reuse withDeltas)
@@ -142,19 +130,19 @@ queryDockingEventsCount conn variation@(StatusVariationQuery stationId queryVari
     let dockingsCount   = dockings' ^. _2
     let undockingsCount = undockings' ^. _2
     pure (stationInfo, (undockingsCount, dockingsCount))
-  where
-    infixl 4 `deltaOp_` -- same as '(<.)' and '(>.)'.
-    deltaOp_ :: (BeamSqlBackend be) => QGenExpr context be s a -> QGenExpr context be s a -> QGenExpr context be s Bool
-    deltaOp_ = case _status_query_variation variation of
-      Undocking -> (<.)
-      Docking   -> (>.)
 
+-- | Print docking and undocking events (with index).
 formatDockingEventsCount :: [(StationInformation, (Int32, Int32))] -> IO ()
-formatDockingEventsCount events = pPrintCompact $ map (\(info, (undockings, dockings)) ->
-                                                         ( info ^. info_id & unSerial
+formatDockingEventsCount events = pPrintCompact $ zipWith (\index' (info, (undockings, dockings)) ->
+                                                         ( "#" ++ show index'
                                                          , info ^. info_station_id
                                                          , info ^. info_name
                                                          , undockings
                                                          , dockings
                                                          )
-                                                      ) events
+                                                      ) [0..] events
+
+-- | Sort docking and undocking events.
+sortDockingEventsCount :: AvailabilityCountVariation -> [(StationInformation, (Int32, Int32))] -> [(StationInformation, (Int32, Int32))]
+sortDockingEventsCount Undocking = sortOn (view $ _2 . _1)
+sortDockingEventsCount Docking   = sortOn (view $ _2 . _2)

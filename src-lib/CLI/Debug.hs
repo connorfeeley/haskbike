@@ -76,7 +76,10 @@ dispatchDebug _options = do
 
     when (length eventSums < 10) (putStrLn $ "Docking and undocking counts: " ++ show (length eventSums))
 
-    formatDockingEventsCount eventSums
+    putStrLn "Sorted by undockings:"
+    formatDockingEventsCount $ sortDockingEventsCount Undocking eventSums
+    putStrLn "Sorted by dockings:"
+    formatDockingEventsCount $ sortDockingEventsCount Docking eventSums
 
 formatDatabaseStats :: Int32 -> Maybe String -> Maybe String -> [Text]
 formatDatabaseStats numStatusRows infoTableSize statusTableSize =
@@ -90,7 +93,6 @@ formatDatabaseStats numStatusRows infoTableSize statusTableSize =
     tableSizeText :: Text -> Maybe String -> Text
     tableSizeText tableName (Just size) = boldCode <> colouredText Vivid White tableName <> " table size:  " <> resetIntens <> pack size
     tableSizeText tableName Nothing     = boldCode <> colouredText Vivid White tableName <> " table size:  " <> resetIntens <> colouredText Vivid Red "ERROR"
-    sortOnSnd = sortOn snd
 
 -- | Get (undockings, dockings) for a day.
 eventsForDay :: Day -> Day -> App [(StationInformation, (Int32, Int32))]
