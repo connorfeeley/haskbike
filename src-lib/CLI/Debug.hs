@@ -47,17 +47,18 @@ dispatchDebug _options = do
     (queryRowCount <$> withConn <*> pure bikeshareStationStatus >>= liftIO)
 
   let tableSize = tableValuesNeeded (Proxy :: Proxy StationStatusT)
+
   log D $ "Number of rows in station_status table: " <> toStrict (pack $ show numStatusRows)
   liftIO $ putStrLn $ "The table contains " ++ show tableSize ++ " rows."
 
   -- Get the size of the station information table.
   infoTableSize <- queryTableSize <$> withConn <*> pure "station_information" >>= liftIO
   let infoTableSizeText =
-        maybe "Error: unable to determine station status table size."
-        (\tableSize' -> "Status table uses " ++ show tableSize' ++ " of storage.")
+        maybe "Error: unable to determine station info table size."
+        (\tableSize' -> "Info table uses " ++ show tableSize' ++ " of storage.")
         infoTableSize
 
-  log D $ "Status table size: " <> toStrict (pack infoTableSizeText)
+  log D $ "Info table size: " <> toStrict (pack infoTableSizeText)
 
   statusTableSize <- queryTableSize <$> withConn <*> pure "station_status" >>= liftIO
   let statusTableSizeText =
@@ -69,7 +70,7 @@ dispatchDebug _options = do
   liftIO $ putStrLn $ "Status table size: " <> statusTableSizeText <> " rows."
 
   -- Calculate number of dockings and undockings
-  (undockings, dockings) <- eventsForDay (fromGregorian 2023 10 07)
+  (undockings, dockings) <- eventsForDay (fromGregorian 2023 10 06) (fromGregorian 2023 10 07)
   liftIO $ do
     cliOut $ formatDatabaseStats numStatusRows infoTableSize statusTableSize
 
@@ -99,8 +100,9 @@ formatDatabaseStats numStatusRows infoTableSize statusTableSize =
     tableSizeText tableName Nothing     = boldCode <> colouredText Vivid White tableName <> " table size:  " <> resetIntens <> colouredText Vivid Red "ERROR"
     sortOnSnd = sortOn snd
 
-eventsForDay :: Day -> App ([(Int32, Int32)], [(Int32, Int32)])
-eventsForDay day = do
+-- | Get (undockings, dockings) for a day.
+eventsForDay :: Day -> Day -> App ([(Int32, Int32)], [(Int32, Int32)])
+eventsForDay earliestDay latestDay = do
   -- Calculate number of dockings and undockings
   log D $ "Querying dockings and undockings."
   dockings   <- queryDockingEventsCount <$> withConn <*> pure (queryCondition Docking)   >>= liftIO
@@ -108,6 +110,6 @@ eventsForDay day = do
   pure (undockings, dockings)
   where
     queryCondition :: AvailabilityCountVariation -> StatusVariationQuery
-    queryCondition variation = StatusVariationQuery 7148 variation AT.Iconic [ EarliestTime (reportTime (fromGregorian 2023 10 06) (TimeOfDay 00 00 00))
-                                                                             , LatestTime   (reportTime (fromGregorian 2023 10 07) (TimeOfDay 00 00 00))
+    queryCondition variation = StatusVariationQuery 7148 variation AT.Iconic [ EarliestTime (reportTime earliestDay (TimeOfDay 00 00 00))
+                                                                             , LatestTime   (reportTime latestDay   (TimeOfDay 00 00 00))
                                                                              ]
