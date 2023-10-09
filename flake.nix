@@ -87,7 +87,8 @@
                   hlint
                   doctest
                   stylish-haskell
-                  ;
+                  tasty-discover
+                ;
                 inherit (self'.packages)
                   haskbike-completions;
                 # Disable ghcid.
