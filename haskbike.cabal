@@ -210,6 +210,7 @@ library
                     , colour
                     , text-show
                     , attoparsec
+                    , boxes
 
     -- Directories containing source files.
     hs-source-dirs:   src-lib
