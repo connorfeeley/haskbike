@@ -124,6 +124,13 @@ queryDockingEventsCount conn variation@(StatusVariationQuery stationId queryVari
     undockings' <- reuse undockings
     stationInfo <- filter_ (\i -> i ^. info_station_id ==. dockings' ^. _1 &&. (i ^. info_station_id ==. undockings' ^. _1))
                    (all_ (bikeshareDb ^. bikeshareStationInformation))
-    let dockingsCount   = dockings' ^. _2
-    let undockingsCount = undockings' ^. _2
+    -- stationInfo' <- leftJoin_ (all_ (bikeshareDb ^. bikeshareStationInformation))
+    --                           (\i -> i ^. info_station_id ==. dockings' ^. _1 &&. (i ^. info_station_id ==. undockings' ^. _1))
+
+    undockings'' <- leftJoin_ (reuse undockings)
+                              (\d -> stationInfo ^. info_station_id ==. d ^. _1 &&. (stationInfo ^. info_station_id ==. d ^. _1))
+    dockings'' <- leftJoin_ (reuse dockings)
+                              (\d -> stationInfo ^. info_station_id ==. d ^. _1 &&. (stationInfo ^. info_station_id ==. d ^. _1))
+    let dockingsCount   = fromMaybe_ 0 $ dockings'' ^. _2
+    let undockingsCount = fromMaybe_ 0 $ undockings'' ^. _2
     pure (stationInfo, (undockingsCount, dockingsCount))
