@@ -2,7 +2,6 @@
 
 {-# LANGUAGE DataKinds          #-}
 {-# LANGUAGE ExplicitNamespaces #-}
-{-# LANGUAGE TypeOperators      #-}
 
 module API.DebugClient
      ( bikeShareAPIClient
@@ -24,11 +23,9 @@ import           API.Types                          ( StationInformationResponse
 
 import           BikeShareAPI
 
-import           Control.Exception                  ( Exception (displayException) )
 import           Control.Monad.Free
 
 import           Data.Aeson                         ( Object )
-import           Data.ByteString.Lazy
 
 import qualified Network.HTTP.Client                as HTTP
 import           Network.HTTP.Client.TLS            ( tlsManagerSettings )
@@ -37,9 +34,7 @@ import           Servant
 import           Servant.Client.Free
 import qualified Servant.Client.Internal.HttpClient as I
 
-import           System.Environment                 ( getArgs )
 
-import           Text.Pretty.Simple                 ( pPrintString )
 
 
 -- | The BikeShare API client.
@@ -98,8 +93,8 @@ systemPricingPlans  :: Free ClientF Object
 --     runQuery clientManager systemInformation  >>= handleResponse "System Information"
 --     runQuery clientManager systemPricingPlans >>= handleResponse "System Pricing Plans"
 
--- test :: IO ()
-test = case systemInformation of
+_test :: IO ()
+_test = case systemInformation of
     Pure n ->
         putStrLn $ "ERROR: got pure result: " ++ show n
     Free (Throw err) ->
@@ -110,12 +105,11 @@ test = case systemInformation of
         putStrLn $ "Making request: " ++ show req'
         res' <- HTTP.httpLbs req' mgr
         putStrLn $ "Got response: " ++ show res'
-        pure res'
         let res = I.clientResponseToResponse id res'
 
         case k res of
             Pure n ->
-                putStrLn $ "Expected 1764, got " -- ++ show n
+                putStrLn $ "Expected 1764, got " ++ show n
             _ ->
                 putStrLn "ERROR: didn't get a response"
 

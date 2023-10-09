@@ -44,6 +44,7 @@ parseOptions = Options
 data Command where
   Poll          :: !PollOptions         -> Command
   Query         :: !QueryOptions        -> Command
+  QueryApi      :: Command
   DebugMisc     :: !DebugMiscOptions    -> Command
   Reset         :: !ResetOptions        -> Command
   deriving (Show)

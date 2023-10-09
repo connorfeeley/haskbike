@@ -74,9 +74,9 @@ dispatchDebug _options = do
   liftIO $ do
     cliOut $ formatDatabaseStats numStatusRows infoTableSize statusTableSize
 
-    when (length dockings < 10) (pPrintCompact "Dockings:" >> pPrintCompact dockings)
+    when (length dockings < 10) (putStrLn "Dockings:" >> pPrintCompact dockings)
 
-    when (length undockings < 10) (pPrintCompact "Undockings:" >> pPrintCompact undockings)
+    when (length undockings < 10) (putStrLn "Undockings:" >> pPrintCompact undockings)
 
     -- formatDockingEventsCount dockings
     pPrintCompact $ "Length of dockings: " <> show (length dockings)

@@ -26,8 +26,6 @@ import           Data.Time
 import           Database.BikeShare            ( d_status_last_reported, d_status_station_id )
 import           Database.BikeShare.Operations
 
-import           Fmt
-
 import           Prelude                       hiding ( log )
 
 import           ReportTime                    ( localToPosix, localToSystem )
