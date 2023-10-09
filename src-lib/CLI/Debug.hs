@@ -78,15 +78,23 @@ dispatchDebug _options = do
 
   -- Calculate number of dockings and undockings
   eventSums <- eventsForDay (fromGregorian 2023 10 06) (fromGregorian 2023 10 08)
+  let differentials = sortOn snd $ map (\(sInfo, (undockings, dockings)) -> (sInfo, undockings + dockings)) eventSums
+
   liftIO $ do
     cliOut $ formatDatabaseStats numStatusRows infoTableSize statusTableSize
 
     when (length eventSums < 10) (putStrLn $ "Docking and undocking counts: " ++ show (length eventSums))
 
     putStrLn "Sorted by undockings:"
-    formatDockingEventsCount' $ sortDockingEventsCount Undocking eventSums
+    formatDockingEventsCount $ sortDockingEventsCount Undocking eventSums
     putStrLn "Sorted by dockings:"
-    formatDockingEventsCount' $ sortDockingEventsCount Docking eventSums
+    formatDockingEventsCount $ sortDockingEventsCount Docking eventSums
+
+    putStrLn "\nSorted by differentials (undockings >> dockings):"
+    formatDockingEventsDifferential $ take 50 $ sortOn (view _2) differentials
+    putStrLn "\nSorted by differentials (dockings >> undockings):"
+    formatDockingEventsDifferential $ take 50 $ sortOn (Down . view _2) differentials
+
 
 formatDatabaseStats :: Int32 -> Maybe String -> Maybe String -> [Text]
 formatDatabaseStats numStatusRows infoTableSize statusTableSize =
@@ -116,26 +124,8 @@ eventsForDay earliestDay latestDay = do
 
 
 -- | Print docking and undocking events (with index).
--- formatDockingEventsCount :: [(StationInformation, (Int32, Int32))] -> IO ()
-formatDockingEventsCount events = zipWith (\index' (info, (undockings, dockings)) ->
-                                                         ( "#" ++ show index'
-                                                         , info ^. info_station_id
-                                                         , info ^. info_name
-                                                         , undockings
-                                                         , dockings
-                                                         )
-                                                      ) [0..] events
-
--- | Print docking and undocking events (with index).
-formatDockingEventsCount' :: [(StationInformation, (Int32, Int32))] -> IO ()
-formatDockingEventsCount' events = Box.printBox table -- $ Box.vcat Box.center1 $ zipWith (\index' (info, (undockings, dockings)) ->
-                                                      --         Box.hsep 4 Box.center1 [ Box.para Box.top  5 $ show index'
-                                                      --                            , Box.para Box.top  7 $ show $ info ^. info_station_id
-                                                      --                            , Box.para Box.top 40 $ show $ info ^. info_name
-                                                      --                            , Box.para Box.top  7 $ show undockings
-                                                      --                            , Box.para Box.top  7 $ show dockings
-                                                      --                            ]
-                                                      -- ) [0..] events
+formatDockingEventsCount :: [(StationInformation, (Int32, Int32))] -> IO ()
+formatDockingEventsCount events = Box.printBox table
   where
     columns = zipWith (\index' (info, (undockings, dockings)) ->
                          ( index'
@@ -152,6 +142,25 @@ formatDockingEventsCount' events = Box.printBox table -- $ Box.vcat Box.center1 
     col5 = Box.vcat Box.left $ map (Box.text . showFn Vivid Blue  . show) (toListOf (traverse . _5) columns)
     showFn intensity colour = unpack . colouredText intensity colour . pack
     table = Box.hsep 1 Box.left [col1, col2, col3, col4, col5]
+
+-- | Print docking and undocking events (with index).
+formatDockingEventsDifferential :: [(StationInformation, Int32)] -> IO ()
+formatDockingEventsDifferential events = Box.printBox table
+  where
+    columns = zipWith (\index' (info, differential) ->
+                         ( index'
+                         , info ^. info_station_id
+                         , info ^. info_name
+                         , differential
+                         )
+                      ) [0..] events
+    col1 = Box.vcat Box.left $ map (Box.text . showFn Dull Cyan   . show) (toListOf (traverse . _1) columns)
+    col2 = Box.vcat Box.left $ map (Box.text . showFn Dull Green  . show) (toListOf (traverse . _2) columns)
+    col3 = Box.vcat Box.left $ map (Box.text . showFn Vivid White . show) (toListOf (traverse . _3) columns)
+    col4 = Box.vcat Box.left $ map (Box.text . showFn Vivid Red   . show) (toListOf (traverse . _4) columns)
+    showFn intensity colour = unpack . colouredText intensity colour . pack
+    table = Box.hsep 1 Box.left [col1, col2, col3, col4]
+
 
 
 -- | Sort docking and undocking events.
