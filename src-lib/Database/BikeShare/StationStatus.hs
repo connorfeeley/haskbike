@@ -30,6 +30,7 @@ module Database.BikeShare.StationStatus
      , d_status_active
      , d_status_id
      , d_status_info_id
+     , d_status_is_charging_station
      , d_status_last_reported
      , d_status_num_bikes_available
      , d_status_num_bikes_disabled

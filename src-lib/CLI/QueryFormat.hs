@@ -71,7 +71,7 @@ formatStationInfo (timeZone, name, status) =
             ]
     in [ formattedName name status
        , formattedLastReport timeZone $ reportToLocal <$> status ^. d_status_last_reported
-       , fmt $ "Charger:\t" |++| (status ^. d_status_is_charging_station) |++| ""
+       , "Charger:\t" <> formattedBool (status ^. d_status_is_charging_station)
        ] ++ map fmtAvailability pairs ++ bikeAvailability
 
 formattedName :: String -> StationStatus -> Text
@@ -89,6 +89,11 @@ formattedLastReport timeZone status = reportedText
       Just t  -> "[" <> showText t <> "]"
               <> boldCode <> "\t" <> "|" <> "\t" <> resetIntens
               <> italCode <> pack (formatTime' timeZone t) <> resetItal <> " (local)"
+
+formattedBool :: Bool -> Text
+formattedBool b = if b
+  then boldCode <> colouredText Vivid Green "Yes" <> resetIntens
+  else colouredText Dull White   "No"
 
 fmtAvailability :: (Text, Int32, Int32) -> Text
 fmtAvailability (name, avail, disabled)
