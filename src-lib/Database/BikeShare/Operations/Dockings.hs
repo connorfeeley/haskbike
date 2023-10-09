@@ -26,6 +26,7 @@ import           Control.Lens             hiding ( reuse, (<.) )
 
 import           Data.Int                 ( Int32 )
 import           Data.List                ( sortOn )
+import           Data.Ord                 ( Down (Down) )
 
 import           Database.Beam
 import           Database.Beam.Postgres
@@ -145,4 +146,4 @@ formatDockingEventsCount events = pPrintCompact $ zipWith (\index' (info, (undoc
 -- | Sort docking and undocking events.
 sortDockingEventsCount :: AvailabilityCountVariation -> [(StationInformation, (Int32, Int32))] -> [(StationInformation, (Int32, Int32))]
 sortDockingEventsCount Undocking = sortOn (view $ _2 . _1)
-sortDockingEventsCount Docking   = sortOn (view $ _2 . _2)
+sortDockingEventsCount Docking   = sortOn (Down . view (_2 . _2))
