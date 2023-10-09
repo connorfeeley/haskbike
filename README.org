@@ -326,6 +326,19 @@ createuser -s postgres
 createdb haskbike
 createdb haskbike-test
 #+end_src
+
+** Create Database Dump
+
+#+begin_src shell
+pg_dump -h "$HASKBIKE_PGDBHOST" -p "$HASKBIKE_PGDBPORT" -U "$HASKBIKE_USERNAME" -Fc -b -v -f "$(date +%Y-%m-%d-%H-%M)-dump.sql" -d haskbike
+#+end_src
+
+** Import Database Dump
+
+#+begin_src shell
+pg_restore -v -h <hostname> -U <username> -d <database_name> -j 2 <dumpfilelocation.sql>
+#+end_src
+
 ** Load completions
 With ~haskbike~ in =PATH=:
 
