@@ -43,6 +43,21 @@ import           Database.PostgreSQL.Simple.TypeInfo.Static ( text )
 
 import           ReportTime
 
+-- Parameterized depending on which table the entry is for.
+data DiagnosticEntry where
+  InfoTableDiagnostic     :: InfoDiagnosticEntry -> DiagnosticEntry
+  StatusTableDiagnostic   :: StatusDiagnosticEntry -> DiagnosticEntry
+  deriving (Generic, Show)
+
+data InfoDiagnosticEntry where
+  InfoDiagnosticEntry :: { } -> InfoDiagnosticEntry
+  deriving (Generic, Show)
+
+data StatusDiagnosticEntry where
+  StatusDiagnosticEntry :: { } -> StatusDiagnosticEntry
+  deriving (Generic, Show)
+
+
 -- | Declare a (Beam) table for the 'Diagnostics' type
 data DiagnosticsT f where
   Diagnostics :: { _diagnosticId       :: Columnar f (SqlSerial Int32)
