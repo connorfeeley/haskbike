@@ -104,7 +104,7 @@ formatDatabaseStats numStatusRows infoTableSize statusTableSize =
 eventsForDay :: Day -> Day -> App ([(Int32, Int32)], [(Int32, Int32)])
 eventsForDay earliestDay latestDay = do
   -- Calculate number of dockings and undockings
-  log D $ "Querying dockings and undockings."
+  log D "Querying dockings and undockings."
   dockings   <- queryDockingEventsCount <$> withConn <*> pure (queryCondition Docking)   >>= liftIO
   undockings <- queryDockingEventsCount <$> withConn <*> pure (queryCondition Undocking) >>= liftIO
   pure (undockings, dockings)

@@ -111,18 +111,6 @@ queryDockingEventsCount conn variation@(StatusVariationQuery stationId queryVari
     -- - positive ('deltaOp_': '(>.)')
     -- - negative ('deltaOp_': '(<.)')
     -- ... depending on the statisticType paramater.
-  -- changed <- selecting $
-  --   filter_ (\(_s, delta) -> delta `deltaOp_` 0)
-  --           (reuse events)
-
-  -- changedDocking <- selecting $
-  --   filter_ (\(_s, delta) -> delta >. 0)
-  --           (reuse events)
-
-    -- Rows where the delta was either:
-    -- - positive ('deltaOp_': '(>.)')
-    -- - negative ('deltaOp_': '(<.)')
-    -- ... depending on the statisticType paramater.
   changed <- selecting $ do
     let f = filter_ (\(_s, delta) -> delta `deltaOp_` 0)
             (reuse events)
@@ -131,19 +119,7 @@ queryDockingEventsCount conn variation@(StatusVariationQuery stationId queryVari
                          f
       in orderBy_ (\(sId, _sum) -> asc_ sId) agg
 
-  pure $ do
-    -- counts <- reuse cte -- [(status, previous availability)]
-
-    -- changed' <- reuse changed
-
-    dockingsSum <- reuse changed
-
-    -- guard_ ((counts ^. _1 . d_status_station_id) ==. (dockingsSum ^. _1))
-
-    pure dockingsSum
-    -- pure ( dockingsSum ^. _1 -- Status record
-    --      , dockingsSum ^. _2 -- Sum
-    --      )
+  pure $ reuse changed
   where
     infixl 4 `deltaOp_` -- same as '(<.)' and '(>.)'.
     deltaOp_ :: (BeamSqlBackend be) => QGenExpr context be s a -> QGenExpr context be s a -> QGenExpr context be s Bool
@@ -153,9 +129,9 @@ queryDockingEventsCount conn variation@(StatusVariationQuery stationId queryVari
 
 formatDockingEventsCount :: [(StationStatusT Identity, Int32)] -> IO ()
 formatDockingEventsCount events = pPrintCompact $ map (\(s, l) ->
-                                             ( s ^. d_status_id & unSerial
-                                             , s ^. d_status_station_id
-                                             , s ^. d_status_last_reported
-                                             , l
-                                             )
-                                          ) events
+                                                         ( s ^. d_status_id & unSerial
+                                                         , s ^. d_status_station_id
+                                                         , s ^. d_status_last_reported
+                                                         , l
+                                                         )
+                                                      ) events
