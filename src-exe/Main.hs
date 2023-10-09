@@ -19,7 +19,7 @@ import           Control.Lens
 import           Control.Monad            ( void )
 import           Control.Monad.IO.Class   ( MonadIO (liftIO) )
 
-import           Data.Text                ( intercalate, intersperse, pack, unwords )
+import           Data.Text                ( pack, unwords )
 import qualified Data.Text                as Text
 import           Data.Time                ( getCurrentTimeZone )
 
