@@ -98,31 +98,50 @@ queryDockingEventsCount conn variation@(StatusVariationQuery stationId queryVari
       in withWindow_ (\row -> frame_ (partitionBy_ (row ^. d_status_info_id)) (orderPartitionBy_ (asc_ $ row ^. d_status_id)) noBounds_)
                      (\row w -> (row, lagWithDefault_ (row ^. bikeType') (val_ 1) (row ^. bikeType') `over_` w))
                      statusForStation
-  events <- selecting $ do
+  withDeltas <- selecting $ do
     -- Only rows where the availability increased.
-    let increments = filter_ (\(s, prevAvail) -> s ^. bikeType' `deltaOp_` prevAvail)
+    let availNEqPrev = filter_ (\(s, prevAvail) -> s ^. bikeType' /=. prevAvail)
                      (reuse cte)
           -- Delta between current and previous iconic availability.
           in withWindow_ (\(row, _prev) -> frame_ (partitionBy_ (row ^. d_status_info_id)) noOrder_ noBounds_)
                          (\(row, prev) _w -> (row, row ^. bikeType' - prev))
-                         increments
+                         availNEqPrev
+  -- undockings <- selecting $ do
+  --   -- Only rows where the availability decreased.
+  --   let decrements = filter_ (\(s, prevAvail) -> s ^. bikeType' `deltaOp_` prevAvail)
+  --                    (reuse cte)
+  --         -- Delta between current and previous iconic availability.
+  --         in withWindow_ (\(row, _prev) -> frame_ (partitionBy_ (row ^. d_status_info_id)) noOrder_ noBounds_)
+  --                        (\(row, prev) _w -> (row, row ^. bikeType' - prev))
+  --                        decrements
 
     -- Rows where the delta was either:
     -- - positive ('deltaOp_': '(>.)')
     -- - negative ('deltaOp_': '(<.)')
     -- ... depending on the statisticType paramater.
-  changed <- selecting $ do
-    let f = filter_ (\(_s, delta) -> delta `deltaOp_` 0)
-            (reuse events)
+  dockings <- selecting $ do
+    let f = filter_ (\(_s, delta) -> delta >. 0)
+            (reuse withDeltas)
+
+        agg = aggregate_ (\(status, delta) -> (group_ (status ^. d_status_info_id), fromMaybe_ 0 $ sum_ delta))
+                         f
+      in orderBy_ (\(sId, _sum) -> asc_ sId) agg
+  undockings <- selecting $ do
+    let f = filter_ (\(_s, delta) -> delta <. 0)
+            (reuse withDeltas)
 
         agg = aggregate_ (\(status, delta) -> (group_ (status ^. d_status_info_id), fromMaybe_ 0 $ sum_ delta))
                          f
       in orderBy_ (\(sId, _sum) -> asc_ sId) agg
 
   pure $ do
-    changed' <- reuse changed
-    stationInfo <- filter_ (\i -> i ^. info_station_id ==. changed' ^. _1) (all_ (bikeshareDb ^. bikeshareStationInformation))
-    pure (stationInfo, changed')
+    dockings' <- reuse dockings
+    undockings' <- reuse undockings
+    stationInfo <- filter_ (\i -> i ^. info_station_id ==. dockings' ^. _1 &&. (i ^. info_station_id ==. undockings' ^. _1))
+                   (all_ (bikeshareDb ^. bikeshareStationInformation))
+    let dockingsCount   = dockings' ^. _2
+    let undockingsCount = undockings' ^. _2
+    pure (stationInfo, (undockingsCount, dockingsCount))
   where
     infixl 4 `deltaOp_` -- same as '(<.)' and '(>.)'.
     deltaOp_ :: (BeamSqlBackend be) => QGenExpr context be s a -> QGenExpr context be s a -> QGenExpr context be s Bool
@@ -130,11 +149,12 @@ queryDockingEventsCount conn variation@(StatusVariationQuery stationId queryVari
       Undocking -> (<.)
       Docking   -> (>.)
 
-formatDockingEventsCount :: [(StationStatusT Identity, Int32)] -> IO ()
-formatDockingEventsCount events = pPrintCompact $ map (\(s, l) ->
-                                                         ( s ^. d_status_id & unSerial
-                                                         , s ^. d_status_station_id
-                                                         , s ^. d_status_last_reported
-                                                         , l
+formatDockingEventsCount :: [(StationInformation, (Int32, Int32))] -> IO ()
+formatDockingEventsCount events = pPrintCompact $ map (\(info, (undockings, dockings)) ->
+                                                         ( info ^. info_id & unSerial
+                                                         , info ^. info_station_id
+                                                         , info ^. info_name
+                                                         , undockings
+                                                         , dockings
                                                          )
                                                       ) events

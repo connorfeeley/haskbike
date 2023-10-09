@@ -70,21 +70,13 @@ dispatchDebug _options = do
   liftIO $ putStrLn $ "Status table size: " <> statusTableSizeText <> " rows."
 
   -- Calculate number of dockings and undockings
-  (undockings, dockings) <- eventsForDay (fromGregorian 2023 10 06) (fromGregorian 2023 10 07)
+  eventSums <- eventsForDay (fromGregorian 2023 10 06) (fromGregorian 2023 10 07)
   liftIO $ do
     cliOut $ formatDatabaseStats numStatusRows infoTableSize statusTableSize
 
-    when (length dockings < 10) (putStrLn "Dockings:" >> pPrintCompact dockings)
+    when (length eventSums < 10) (putStrLn $ "Docking and undocking counts: " ++ show (length eventSums))
 
-    when (length undockings < 10) (putStrLn "Undockings:" >> pPrintCompact undockings)
-
-    -- formatDockingEventsCount dockings
-    pPrintCompact $ "Length of dockings: " <> show (length dockings)
-    pPrintCompact $ "Sum: " <> show (sum $ dockings ^.. traverse . _2)
-
-    -- formatDockingEventsCount undockings
-    pPrintCompact $ "Length of undockings: " <> show (length undockings)
-    pPrintCompact $ "Sum: " <> show (sum $ undockings ^.. traverse . _2)
+    formatDockingEventsCount eventSums
 
 formatDatabaseStats :: Int32 -> Maybe String -> Maybe String -> [Text]
 formatDatabaseStats numStatusRows infoTableSize statusTableSize =
@@ -101,13 +93,12 @@ formatDatabaseStats numStatusRows infoTableSize statusTableSize =
     sortOnSnd = sortOn snd
 
 -- | Get (undockings, dockings) for a day.
-eventsForDay :: Day -> Day -> App ([(Int32, Int32)], [(Int32, Int32)])
+eventsForDay :: Day -> Day -> App [(StationInformation, (Int32, Int32))]
 eventsForDay earliestDay latestDay = do
   -- Calculate number of dockings and undockings
   log D "Querying dockings and undockings."
-  dockings   <- queryDockingEventsCount <$> withConn <*> pure (queryCondition Docking)   >>= liftIO
-  undockings <- queryDockingEventsCount <$> withConn <*> pure (queryCondition Undocking) >>= liftIO
-  pure (undockings, dockings)
+  eventSums <- queryDockingEventsCount <$> withConn <*> pure (queryCondition Docking)   >>= liftIO
+  pure eventSums
   where
     queryCondition :: AvailabilityCountVariation -> StatusVariationQuery
     queryCondition variation = StatusVariationQuery 7148 variation AT.Iconic [ EarliestTime (reportTime earliestDay (TimeOfDay 00 00 00))
