@@ -13,7 +13,7 @@ module API.StationInformation
      , StationInformation (..)
      , StationInformationResponse
      , StationInformationResponseData (..)
-     , info_stations
+     , unInfoStations
      ) where
 
 import           API.ResponseWrapper
@@ -207,7 +207,7 @@ instance FromJSON StationInformation where
 
 -- | A wrapper type for the station information response.
 newtype StationInformationResponseData where
-  StationInformationResponseData :: { _info_stations :: [StationInformation] } -> StationInformationResponseData
+  StationInformationResponseData :: { _unInfoStations :: [StationInformation] } -> StationInformationResponseData
   deriving (Show, Generic)
 
 instance FromJSON StationInformationResponseData where

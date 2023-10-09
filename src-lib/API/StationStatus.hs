@@ -21,11 +21,11 @@ module API.StationStatus
      , status_num_docks_available
      , status_num_docks_disabled
      , status_station_id
-     , status_stations
      , status_status
      , status_traffic
      , status_vehicle_docks_available
      , status_vehicle_types_available
+     , unStatusStations
      ) where
 
 import           API.ResponseWrapper
@@ -201,7 +201,7 @@ instance FromJSON TorontoVehicleType where
 
 -- | A wrapper type for the station information response.
 newtype StationStatusResponseData where
-  StationStatusResponseData :: { _status_stations :: [StationStatus] } -> StationStatusResponseData
+  StationStatusResponseData :: { _unStatusStations :: [StationStatus] } -> StationStatusResponseData
   deriving (Show, Generic)
 
 instance FromJSON StationStatusResponseData where

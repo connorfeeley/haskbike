@@ -13,12 +13,11 @@ import           AppEnv
 
 import           CLI.Options
 
-import           Colog                         ( Message, WithLog, log, pattern D, pattern E, pattern I, pattern W )
+import           Colog                         ( Message, log, pattern D, pattern I, pattern W )
 
 import           Control.Lens
-import           Control.Monad                 ( unless, void, (<=<) )
+import           Control.Monad                 ( unless )
 import           Control.Monad.IO.Class        ( MonadIO (liftIO) )
-import           Control.Monad.Reader          ( asks, lift )
 
 import           Data.Foldable                 ( for_ )
 import qualified Data.Text                     as Text
@@ -37,7 +36,6 @@ import           Servant.Client                ( ClientError )
 
 import           System.Exit                   ( exitFailure, exitSuccess )
 
-import           UnliftIO                      ( MonadUnliftIO )
 
 
 -- | Helper functions.
@@ -51,7 +49,7 @@ reset name =
 
 -- | Setup the database.
 resetDb :: String -> App Connection
-resetDb name =
+resetDb _name =
   (dropTables <$> withConn)
   >> (migrateDatabase <$> withConn)
   >>= liftIO
@@ -99,7 +97,7 @@ handleStationInformation = do
   log D "Requested station information from API."
 
   for_ (rightToMaybe stationInfo) $ \response -> do
-        let stations = response ^. response_data . info_stations
+        let stations = response ^. response_data . unInfoStations
         log D "Inserting station information into database."
         numInfoRows <- insertStationInformation <$> withConn <*> pure stations >>= liftIO >>= report
         log D "Inserted station information into database."
@@ -123,7 +121,7 @@ handleStationStatus = do
   log D "Requested station status from API."
 
   for_ (rightToMaybe stationStatus) $ \response -> do
-        let stations = response ^. response_data . status_stations
+        let stations = response ^. response_data . unStatusStations
         log D "Inserting station status into database."
         numStatusRows <- insertStationStatus <$> withConn <*> pure stations >>= liftIO >>= report
         log D "Inserted station status into database."

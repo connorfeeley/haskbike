@@ -6,7 +6,7 @@ module CLI.Poll
 
 import           API.Client
 import           API.ResponseWrapper
-import           API.Types                     ( StationStatusResponse, status_stations )
+import           API.Types                     ( StationStatusResponse, unStatusStations )
 
 import           AppEnv
 
@@ -90,7 +90,7 @@ statusHandler queue last_updated = void . forever $ do
       liftIO $ atomically $ writeTVar last_updated currentTime
     else log E $ Text.unwords ["last_updated went backwards: ", "[" <> showt previousTime <> "]", " -> ", "[" <> showt currentTime <> "]", "(", showt timeElapsed, ")"]
 
-  let status = response ^. (response_data . status_stations)
+  let status = response ^. (response_data . unStatusStations)
   log D $ Text.unwords ["Received",  showt (length status),  "status records from API."]
 
   updated_api <- separateNewerStatusRecords <$> withConn <*> pure status >>= liftIO

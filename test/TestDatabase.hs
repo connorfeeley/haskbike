@@ -26,8 +26,8 @@ module TestDatabase
      ) where
 
 import           API.ResponseWrapper           ( response_data )
-import           API.Types                     ( StationInformationResponse, StationStatusResponse, _info_stations,
-                                                 info_stations, status_station_id, status_stations )
+import           API.Types                     ( StationInformationResponse, StationStatusResponse, _unInfoStations,
+                                                 status_station_id, unInfoStations, unStatusStations )
 import qualified API.Types                     as AT
 
 import           Control.Lens
@@ -88,12 +88,12 @@ initDBWithAllTestData :: Connection -- ^ Database connection
                       -> IO ()
 initDBWithAllTestData conn = do
   info <- getDecodedFileInformation  "docs/json/2.3/station_information-1.json"
-  void $ insertStationInformation   conn $ info   ^. response_data . info_stations
+  void $ insertStationInformation   conn $ info   ^. response_data . unInfoStations
 
   -- Insert test station status data 1-22.
   mapM_ (\i -> do
             statusResponse <- getDecodedFileStatus $ "docs/json/2.3/station_status-"+|i|+".json"
-            void $ insertStationStatus conn $ statusResponse ^. response_data . status_stations
+            void $ insertStationStatus conn $ statusResponse ^. response_data . unStatusStations
         ) [(1 :: Int) .. (22 :: Int)]
 
 
@@ -106,7 +106,7 @@ unit_insertStationInformation = do
   stationInformationResponse <- getDecodedFileInformation "test/json/station_information.json"
 
   -- Insert test data.
-  inserted_info <- insertStationInformation conn $ _info_stations $ stationInformationResponse ^. response_data
+  inserted_info <- insertStationInformation conn $ _unInfoStations $ stationInformationResponse ^. response_data
 
   assertEqual "Inserted station information" 6 (length inserted_info)
 
@@ -121,8 +121,8 @@ unit_insertStationStatus = do
   status  <- getDecodedFileStatus      "test/json/station_status.json"
 
   -- Insert test data.
-  inserted_info   <- insertStationInformation   conn $ info   ^. response_data . info_stations
-  inserted_status <- insertStationStatus conn $ status ^. response_data . status_stations
+  inserted_info   <- insertStationInformation   conn $ info   ^. response_data . unInfoStations
+  inserted_status <- insertStationStatus conn $ status ^. response_data . unStatusStations
 
   assertEqual "Inserted station information" 704 (length inserted_info)
   assertEqual "Inserted station status"        8 (length $ inserted_status ^. insert_inserted)
@@ -138,8 +138,8 @@ unit_queryStationStatus = do
   status  <- getDecodedFileStatus       "test/json/station_status.json"
 
   -- Insert test data.
-  inserted_info   <- insertStationInformation   conn $ info   ^. response_data . info_stations
-  inserted_status <- insertStationStatus conn $ status ^. response_data . status_stations
+  inserted_info   <- insertStationInformation   conn $ info   ^. response_data . unInfoStations
+  inserted_status <- insertStationStatus conn $ status ^. response_data . unStatusStations
 
   assertEqual "Inserted station information" 6 (length inserted_info)
   assertEqual "Inserted station status"      5 (length $ inserted_status ^. insert_inserted)
@@ -158,7 +158,7 @@ unit_insertStationInformationApi = do
   info    <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
 
   -- Insert test data.
-  void $ insertStationInformation conn $ info ^. response_data . info_stations
+  void $ insertStationInformation conn $ info ^. response_data . unInfoStations
 
 
 -- | HUnit test for inserting station status, with data from the actual API.
@@ -170,7 +170,7 @@ unit_insertStationStatusApi = do
   status  <- getDecodedFileStatus "docs/json/2.3/station_status-1.json"
 
   -- Should fail because station information has not been inserted.
-  inserted_status <- insertStationStatus conn $ status ^. response_data . status_stations
+  inserted_status <- insertStationStatus conn $ status ^. response_data . unStatusStations
 
   assertEqual "Inserted station status" [] $ inserted_status ^. insert_inserted
   assertEqual "Updated station status"  [] $ inserted_status ^. insert_deactivated
@@ -185,8 +185,8 @@ unit_insertStationApi = do
   status  <- getDecodedFileStatus      "docs/json/2.3/station_status-1.json"
 
   -- Insert test data.
-  inserted_info   <- insertStationInformation   conn $ info   ^. response_data . info_stations
-  inserted_status <- insertStationStatus conn $ status ^. response_data . status_stations
+  inserted_info   <- insertStationInformation   conn $ info   ^. response_data . unInfoStations
+  inserted_status <- insertStationStatus conn $ status ^. response_data . unStatusStations
 
   assertEqual "Inserted station information" 704 (length inserted_info)
   assertEqual "Inserted station status"      704 (length $ inserted_status ^. insert_inserted)
@@ -226,11 +226,11 @@ doGetRowsToDeactivate conn = do
   status_2  <- getDecodedFileStatus      "docs/json/2.3/station_status-2.json"
 
   -- Insert test data.
-  void $ insertStationInformation   conn $ info   ^. response_data . info_stations
-  void $ insertStationStatus conn $ status_1 ^. response_data . status_stations
+  void $ insertStationInformation   conn $ info   ^. response_data . unInfoStations
+  void $ insertStationStatus conn $ status_1 ^. response_data . unStatusStations
 
   -- Return stations that have reported since being inserted.
-  getRowsToDeactivate conn $ status_2 ^. response_data . status_stations
+  getRowsToDeactivate conn $ status_2 ^. response_data . unStatusStations
 
 
 {- | HUnit test for querying which station status have reported.
@@ -271,11 +271,11 @@ doSeparateNewerStatusRecords conn = do
   status_2  <- getDecodedFileStatus      "docs/json/2.3/station_status-2.json"
 
   -- Insert test data.
-  void $ insertStationInformation   conn $ info   ^. response_data . info_stations
-  void $ insertStationStatus conn $ status_1 ^. response_data . status_stations
+  void $ insertStationInformation   conn $ info   ^. response_data . unInfoStations
+  void $ insertStationStatus conn $ status_1 ^. response_data . unStatusStations
 
   -- Return maps of updated and same API statuses
-  separateNewerStatusRecords conn $ status_2 ^. response_data . status_stations
+  separateNewerStatusRecords conn $ status_2 ^. response_data . unStatusStations
 
 
 -- | HUnit test to assert that changed station status are inserted.
@@ -305,11 +305,11 @@ doSeparateNewerStatusRecordsInsertOnce conn = do
   status_2  <- getDecodedFileStatus      "docs/json/2.3/station_status-2.json"
 
   -- Insert test data.
-  void $ insertStationInformation   conn $ info   ^. response_data . info_stations
-  void $ insertStationStatus conn $ status_1 ^. response_data . status_stations
+  void $ insertStationInformation   conn $ info   ^. response_data . unInfoStations
+  void $ insertStationStatus conn $ status_1 ^. response_data . unStatusStations
 
   -- Find statuses that need to be updated (second round of data vs. first).
-  updated <- separateNewerStatusRecords conn $ status_2 ^. response_data . status_stations
+  updated <- separateNewerStatusRecords conn $ status_2 ^. response_data . unStatusStations
 
   -- Insert second round of test data (some of which have reported since the first round was inserted).
   insertStationStatus conn $ updated ^. filter_newer
@@ -345,19 +345,19 @@ doSeparateNewerStatusRecordsInsertTwice conn = do
   status_2  <- getDecodedFileStatus "docs/json/2.3/station_status-2.json"
 
   -- Insert first round of test data.
-  void $ insertStationInformation   conn $ info   ^. response_data . info_stations
-  void $ insertStationStatus conn $ status_1 ^. response_data . status_stations
+  void $ insertStationInformation   conn $ info   ^. response_data . unInfoStations
+  void $ insertStationStatus conn $ status_1 ^. response_data . unStatusStations
 
 
   -- Find status records that need to be updated (second round of data vs. first).
-  updated_1 <- separateNewerStatusRecords conn $ status_2 ^. response_data . status_stations
+  updated_1 <- separateNewerStatusRecords conn $ status_2 ^. response_data . unStatusStations
 
   -- Insert second round of test data (some of which have reported since the first round was inserted).
   void $ insertStationStatus conn $ updated_1 ^. filter_newer
 
 
   -- Find status records that need to be updated (second round of data vs. second).
-  updated_2 <- separateNewerStatusRecords conn $ status_2 ^. response_data . status_stations
+  updated_2 <- separateNewerStatusRecords conn $ status_2 ^. response_data . unStatusStations
 
   -- Insert second round of test data once again (nothing should have changed).
   insertStationStatus conn $ updated_2 ^. filter_newer
@@ -368,7 +368,7 @@ unit_queryStationByIdAndName :: IO ()
 unit_queryStationByIdAndName = do
   conn <- setupTestDatabase
   info <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
-  void $ insertStationInformation conn $ info ^. response_data . info_stations
+  void $ insertStationInformation conn $ info ^. response_data . unInfoStations
 
   assertEqual "Station ID for 'King St W / Joe Shuster Way'" (Just 7148) =<< queryStationId conn "King St W / Joe Shuster Way"
   assertEqual "Station ID for 'Wellesley Station Green P'" (Just 7001) =<< queryStationId conn "Wellesley Station Green P"
