@@ -28,7 +28,6 @@ import           Database.Beam
 import           Database.Beam.Schema.Tables
 import           Database.BikeShare
 import           Database.BikeShare.Operations
-import           Database.BikeShare.Utils
 
 import           Prelude                       hiding ( log )
 
@@ -37,10 +36,7 @@ import           ReportTime                    ( Day, TimeOfDay (TimeOfDay), fro
 import           System.Console.ANSI
 
 import qualified Text.PrettyPrint.Boxes        as Box
-
-import           TextShow                      ( showt )
-
-
+import           Text.PrettyPrint.Boxes        ( (/+/) )
 
 
 -- | Dispatch CLI arguments for debugging.
@@ -77,7 +73,7 @@ dispatchDebug _options = do
   liftIO $ putStrLn $ "Status table size: " <> statusTableSizeText <> " rows."
 
   -- Calculate number of dockings and undockings
-  eventSums <- eventsForDay (fromGregorian 2023 10 06) (fromGregorian 2023 10 08)
+  eventSums <- eventsForRange (fromGregorian 2023 0 06) (fromGregorian 2023 10 08)
   let differentials = sortOn snd $ map (\(sInfo, (undockings, dockings)) -> (sInfo, undockings + dockings)) eventSums
 
   liftIO $ do
@@ -110,18 +106,21 @@ formatDatabaseStats numStatusRows infoTableSize statusTableSize =
     tableSizeText tableName Nothing     = boldCode <> colouredText Vivid White tableName <> " table size:  " <> resetIntens <> colouredText Vivid Red "ERROR"
 
 -- | Get (undockings, dockings) for a day.
-eventsForDay :: Day -> Day -> App [(StationInformation, (Int32, Int32))]
-eventsForDay earliestDay latestDay = do
+eventsForRange :: Day -> Day -> App [(StationInformation, (Int32, Int32))]
+eventsForRange earliestDay latestDay = do
   -- Calculate number of dockings and undockings
   log D "Querying dockings and undockings."
-  eventSums <- queryDockingEventsCount <$> withConn <*> pure (queryCondition Docking)   >>= liftIO
-  pure eventSums
+  queryDockingEventsCount <$> withConn <*> pure (queryCondition Docking)   >>= liftIO
   where
     queryCondition :: AvailabilityCountVariation -> StatusVariationQuery
-    queryCondition variation = StatusVariationQuery 7148 variation AT.Iconic [ EarliestTime (reportTime earliestDay (TimeOfDay 00 00 00))
+    queryCondition variation = StatusVariationQuery 7148 variation AT.EFit [ EarliestTime (reportTime earliestDay (TimeOfDay 00 00 00))
                                                                              , LatestTime   (reportTime latestDay   (TimeOfDay 00 00 00))
                                                                              ]
 
+-- | Sort docking and undocking events.
+sortDockingEventsCount :: AvailabilityCountVariation -> [(StationInformation, (Int32, Int32))] -> [(StationInformation, (Int32, Int32))]
+sortDockingEventsCount Undocking = sortOn (view $ _2 . _1)
+sortDockingEventsCount Docking   = sortOn (Down . view (_2 . _2))
 
 -- | Print docking and undocking events (with index).
 formatDockingEventsCount :: [(StationInformation, (Int32, Int32))] -> IO ()
@@ -134,16 +133,17 @@ formatDockingEventsCount events = Box.printBox table
                          , undockings
                          , dockings
                          )
-                      ) [0..] events
-    col1 = Box.vcat Box.left $ map (Box.text . showFn Dull Cyan   . show) (toListOf (traverse . _1) columns)
-    col2 = Box.vcat Box.left $ map (Box.text . showFn Dull Green  . show) (toListOf (traverse . _2) columns)
-    col3 = Box.vcat Box.left $ map (Box.text . showFn Vivid White . show) (toListOf (traverse . _3) columns)
-    col4 = Box.vcat Box.left $ map (Box.text . showFn Vivid Red   . show) (toListOf (traverse . _4) columns)
-    col5 = Box.vcat Box.left $ map (Box.text . showFn Vivid Blue  . show) (toListOf (traverse . _5) columns)
-    showFn intensity colour = unpack . colouredText intensity colour . pack
+                      ) [1..] events
+    col1 = Box.vcat Box.left (showFn Dull Cyan  "#"          : map (showFn Dull Cyan   . show)        (toListOf (traverse . _1) columns))
+    col2 = Box.vcat Box.left (showFn Dull Green "ID"         : map (showFn Dull Green  . show)        (toListOf (traverse . _2) columns))
+    col3 = Box.vcat Box.left (showFn Dull White "Name"       : map (showFn Vivid White . read . show) (toListOf (traverse . _3) columns))
+    col4 = Box.vcat Box.left (showFn Dull Red   "Undockings" : map (showFn Vivid Red   . show)        (toListOf (traverse . _4) columns))
+    col5 = Box.vcat Box.left (showFn Dull Blue  "Dockings"   : map (showFn Vivid Blue  . show)        (toListOf (traverse . _5) columns))
+    showFn :: ColorIntensity -> Color -> String -> Box.Box
+    showFn intensity colour = Box.text . (unpack . colouredText intensity colour . pack)
     table = Box.hsep 1 Box.left [col1, col2, col3, col4, col5]
 
--- | Print docking and undocking events (with index).
+-- | Print difference between docking and undocking event counts.
 formatDockingEventsDifferential :: [(StationInformation, Int32)] -> IO ()
 formatDockingEventsDifferential events = Box.printBox table
   where
@@ -154,16 +154,9 @@ formatDockingEventsDifferential events = Box.printBox table
                          , differential
                          )
                       ) [0..] events
-    col1 = Box.vcat Box.left $ map (Box.text . showFn Dull Cyan   . show) (toListOf (traverse . _1) columns)
-    col2 = Box.vcat Box.left $ map (Box.text . showFn Dull Green  . show) (toListOf (traverse . _2) columns)
-    col3 = Box.vcat Box.left $ map (Box.text . showFn Vivid White . show) (toListOf (traverse . _3) columns)
-    col4 = Box.vcat Box.left $ map (Box.text . showFn Vivid Red   . show) (toListOf (traverse . _4) columns)
+    col1 = Box.vcat Box.left (Box.text (showFn Dull Cyan  "#")          : map (Box.text . showFn Dull Cyan   . show)        (toListOf (traverse . _1) columns))
+    col2 = Box.vcat Box.left (Box.text (showFn Dull Green "ID")         : map (Box.text . showFn Dull Green  . show)        (toListOf (traverse . _2) columns))
+    col3 = Box.vcat Box.left (Box.text (showFn Dull White "Name")       : map (Box.text . showFn Vivid White . read . show) (toListOf (traverse . _3) columns))
+    col4 = Box.vcat Box.left (Box.text (showFn Dull Red   "Difference") : map (Box.text . showFn Vivid Red   . show)        (toListOf (traverse . _4) columns))
     showFn intensity colour = unpack . colouredText intensity colour . pack
     table = Box.hsep 1 Box.left [col1, col2, col3, col4]
-
-
-
--- | Sort docking and undocking events.
-sortDockingEventsCount :: AvailabilityCountVariation -> [(StationInformation, (Int32, Int32))] -> [(StationInformation, (Int32, Int32))]
-sortDockingEventsCount Undocking = sortOn (view $ _2 . _1)
-sortDockingEventsCount Docking   = sortOn (Down . view (_2 . _2))
