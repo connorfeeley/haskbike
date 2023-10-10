@@ -13,6 +13,7 @@
 
 module Database.BikeShare.Operations.Dockings
      ( AvailabilityCountVariation (..)
+     , DockingEventsCount (..)
      , StatusThreshold (..)
      , StatusVariationQuery (..)
      , queryDockingEventsCount
@@ -73,17 +74,23 @@ data AvailabilityCountVariation where
   deriving (Show, Eq)
 
 
--- conn <- connectDbName dbnameTest "" "" "" ""
--- queryDockingEventsCount conn (StatusVariationQuery 7148 Docking AT.Iconic [ OldestID 1890764 ])
--- queryDockingEventsCount :: Connection -> StatusVariationQuery -> IO [(StationStatusT Identity, Maybe Int32)]
--- queryDockingEventsCount :: Connection -> StatusVariationQuery -> IO [Maybe Int32]
+-- | Wrapper for a station and its undocking and docking counts.
+data DockingEventsCount where
+  DockingEventsCount :: { station     :: StationInformation
+                        , undockings  :: Int
+                        , dockings    :: Int
+                        } -> DockingEventsCount
+  deriving (Generic, Show, Eq)
 
--- Query Docking counts for all stations:
--- λ> res <- queryDockingEventsCount <$> (connectDbName dbnameTest "" "" "" "") <*> pure (StatusVariationQuery 7148 Docking AT.Iconic [ OldestID 0 ]) >>= liftIO
--- λ> length res
--- 165
-queryDockingEventsCount :: Connection -> StatusVariationQuery -> IO [(StationInformationT Identity, (Int32, Int32))]
-queryDockingEventsCount conn variation@(StatusVariationQuery stationId queryVariation bikeType thresholds) =
+
+queryDockingEventsCount :: Connection -> StatusVariationQuery -> IO [DockingEventsCount]
+queryDockingEventsCount conn variation =  do
+  counts <- queryDockingEventsCountExpr conn variation
+  pure $ map (\(station, (undockings, dockings))
+              -> DockingEventsCount station (fromIntegral undockings) (fromIntegral dockings)
+             ) counts
+queryDockingEventsCountExpr :: Connection -> StatusVariationQuery -> IO [(StationInformation, (Int32, Int32))]
+queryDockingEventsCountExpr conn variation@(StatusVariationQuery stationId queryVariation bikeType thresholds) =
   let bikeType' = case bikeType of
         AT.Iconic -> vehicle_types_available_iconic
         AT.Boost  -> vehicle_types_available_boost

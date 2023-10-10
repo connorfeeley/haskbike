@@ -36,7 +36,6 @@ import           ReportTime                    ( Day, TimeOfDay (TimeOfDay), fro
 import           System.Console.ANSI
 
 import qualified Text.PrettyPrint.Boxes        as Box
-import           Text.PrettyPrint.Boxes        ( (/+/) )
 
 
 -- | Dispatch CLI arguments for debugging.
@@ -74,7 +73,7 @@ dispatchDebug _options = do
 
   -- Calculate number of dockings and undockings
   eventSums <- eventsForRange (fromGregorian 2023 0 06) (fromGregorian 2023 10 08)
-  let differentials = sortOn snd $ map (\(sInfo, (undockings, dockings)) -> (sInfo, undockings + dockings)) eventSums
+  let differentials = sortOn snd $ map (\counts -> (station counts, undockings counts + dockings counts)) eventSums
 
   liftIO $ do
     cliOut $ formatDatabaseStats numStatusRows infoTableSize statusTableSize
@@ -106,11 +105,11 @@ formatDatabaseStats numStatusRows infoTableSize statusTableSize =
     tableSizeText tableName Nothing     = boldCode <> colouredText Vivid White tableName <> " table size:  " <> resetIntens <> colouredText Vivid Red "ERROR"
 
 -- | Get (undockings, dockings) for a day.
-eventsForRange :: Day -> Day -> App [(StationInformation, (Int32, Int32))]
+eventsForRange :: Day -> Day -> App [DockingEventsCount]
 eventsForRange earliestDay latestDay = do
   -- Calculate number of dockings and undockings
   log D "Querying dockings and undockings."
-  queryDockingEventsCount <$> withConn <*> pure (queryCondition Docking)   >>= liftIO
+  queryDockingEventsCount <$> withConn <*> pure (queryCondition Docking) >>= liftIO
   where
     queryCondition :: AvailabilityCountVariation -> StatusVariationQuery
     queryCondition variation = StatusVariationQuery 7148 variation AT.EFit [ EarliestTime (reportTime earliestDay (TimeOfDay 00 00 00))
@@ -118,20 +117,20 @@ eventsForRange earliestDay latestDay = do
                                                                              ]
 
 -- | Sort docking and undocking events.
-sortDockingEventsCount :: AvailabilityCountVariation -> [(StationInformation, (Int32, Int32))] -> [(StationInformation, (Int32, Int32))]
-sortDockingEventsCount Undocking = sortOn (view $ _2 . _1)
-sortDockingEventsCount Docking   = sortOn (Down . view (_2 . _2))
+sortDockingEventsCount :: AvailabilityCountVariation -> [DockingEventsCount] -> [DockingEventsCount]
+sortDockingEventsCount Undocking = sortOn undockings
+sortDockingEventsCount Docking   = sortOn (Down . dockings)
 
 -- | Print docking and undocking events (with index).
-formatDockingEventsCount :: [(StationInformation, (Int32, Int32))] -> IO ()
+formatDockingEventsCount :: [DockingEventsCount] -> IO ()
 formatDockingEventsCount events = Box.printBox table
   where
-    columns = zipWith (\index' (info, (undockings, dockings)) ->
-                         ( index'
-                         , info ^. info_station_id
-                         , info ^. info_name
-                         , undockings
-                         , dockings
+    columns = zipWith (\index' counts ->
+                         ( index' :: Int
+                         , station counts ^. info_station_id
+                         , station counts ^. info_name
+                         , undockings counts
+                         , dockings counts
                          )
                       ) [1..] events
     col1 = Box.vcat Box.left (showFn Dull Cyan  "#"          : map (showFn Dull Cyan   . show)        (toListOf (traverse . _1) columns))
@@ -144,11 +143,11 @@ formatDockingEventsCount events = Box.printBox table
     table = Box.hsep 1 Box.left [col1, col2, col3, col4, col5]
 
 -- | Print difference between docking and undocking event counts.
-formatDockingEventsDifferential :: [(StationInformation, Int32)] -> IO ()
+formatDockingEventsDifferential :: [(StationInformation, Int)] -> IO ()
 formatDockingEventsDifferential events = Box.printBox table
   where
     columns = zipWith (\index' (info, differential) ->
-                         ( index'
+                         ( index' :: Int
                          , info ^. info_station_id
                          , info ^. info_name
                          , differential
