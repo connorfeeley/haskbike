@@ -376,20 +376,4 @@ queryAllStationsStatusBeforeTime :: Connection          -- ^ Connection to the d
                                  -> IO [StationStatus]  -- ^ Latest 'StationStatus' for each station before given time.
 queryAllStationsStatusBeforeTime conn latestTime = runBeamPostgresDebug' conn $ do
   runSelectReturningList $ selectWith $ do
-    stationStatus <- selecting $
-      filter_ (\status -> _d_status_last_reported status <=. just_ (val_ latestTime)) (all_ (bikeshareDb ^. bikeshareStationStatus))
-    cte <- selecting $ do
-        let maxReported = aggregate_ (\s -> ( group_ s
-                                            , group_ (_d_status_station_id s)
-                                            , group_ (_d_status_last_reported s)
-                                            ))
-                          (reuse stationStatus)
-
-          in withWindow_ (\(status, sStationId, sReported) -> frame_ (partitionBy_ sStationId) (orderPartitionBy_ (desc_ sReported)) noBounds_)
-                         (\(status, sStationId, sReported) w ->
-                            (status, sStationId, sReported, max_ sReported `over_` w))
-                         maxReported
-    pure $ do
-      statusWithMaxReported <- filter_ (\(_status, _sSID, sReported, sReportedMax) -> fromMaybe_ (val_ Nothing) sReportedMax ==. sReported)
-                               (reuse cte)
-      pure (statusWithMaxReported ^. _1)
+    queryAllStationsStatusBeforeTimeExpr latestTime

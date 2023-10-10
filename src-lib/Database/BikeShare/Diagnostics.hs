@@ -20,26 +20,13 @@ module Database.BikeShare.Diagnostics
      , PrimaryKey (DiagnosticsId)
      ) where
 
-import qualified API.Types                                  as API.T
 
 import           Control.Lens
 
-import qualified Data.ByteString.Char8                      as B
-import           Data.Coerce                                ( coerce )
 import           Data.Int
-import qualified Data.Text                                  as Text
-import           Data.Vector                                ( fromList, toList )
-import qualified Data.Vector                                as Vector
 
 import           Database.Beam
-import           Database.Beam.Backend                      ( BeamBackend, HasSqlValueSyntax (sqlValueSyntax),
-                                                              SqlSerial )
-import           Database.Beam.Postgres                     ( Postgres )
-import           Database.Beam.Postgres.Syntax              ( pgTextType )
-import           Database.PostgreSQL.Simple.FromField       ( Field (typeOid), FromField (..), ResultError (..),
-                                                              returnError, typoid )
-import           Database.PostgreSQL.Simple.ToField         ( ToField (..) )
-import           Database.PostgreSQL.Simple.TypeInfo.Static ( text )
+import           Database.Beam.Backend ( SqlSerial )
 
 import           ReportTime
 

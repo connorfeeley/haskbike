@@ -37,7 +37,6 @@ import           Data.Aeson           ( FromJSON (parseJSON), KeyValue ((.=)), T
 import           Data.Attoparsec.Text ( Parser, choice, parseOnly, string )
 import           Data.Either          ( fromRight )
 import           Data.Functor         ( ($>) )
-import           Data.Text            ( pack )
 import qualified Data.Text            as Text
 import           Data.Time
 

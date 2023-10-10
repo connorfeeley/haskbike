@@ -4,6 +4,7 @@ module Database.BikeShare.Expressions
      ( disabledDocksExpr
      , infoByIdExpr
      , insertStationInformationExpr
+     , queryAllStationsStatusBeforeTimeExpr
      , queryStationIdExpr
      , queryStationIdLikeExpr
      , queryStationStatusExpr
@@ -76,3 +77,26 @@ queryStationIdLikeExpr station_name = do
   info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
   guard_ (_info_name info `like_` val_ (Text.pack station_name))
   pure info
+
+
+-- | Expression to query the latest statuses for all stations before a given time.
+queryAllStationsStatusBeforeTimeExpr :: ReportTime          -- ^ Latest time to return records for.
+                                     -> With Postgres BikeshareDb (Q Postgres BikeshareDb s (StationStatusT (QGenExpr QValueContext Postgres s)))
+queryAllStationsStatusBeforeTimeExpr latestTime = do
+  stationStatus <- selecting $
+    filter_ (\status -> _d_status_last_reported status <=. just_ (val_ latestTime)) (all_ (bikeshareDb ^. bikeshareStationStatus))
+  cte <- selecting $ do
+      let maxReported = aggregate_ (\s -> ( group_ s
+                                          , group_ (_d_status_station_id s)
+                                          , group_ (_d_status_last_reported s)
+                                          ))
+                        (reuse stationStatus)
+
+        in withWindow_ (\(status, sStationId, sReported) -> frame_ (partitionBy_ sStationId) (orderPartitionBy_ (desc_ sReported)) noBounds_)
+                       (\(status, sStationId, sReported) w ->
+                          (status, sStationId, sReported, max_ sReported `over_` w))
+                       maxReported
+  pure $ do
+    statusWithMaxReported <- filter_ (\(_status, _sSID, sReported, sReportedMax) -> fromMaybe_ (val_ Nothing) sReportedMax ==. sReported)
+                             (reuse cte)
+    pure (statusWithMaxReported ^. _1)

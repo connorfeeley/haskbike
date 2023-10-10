@@ -19,7 +19,7 @@ module Database.BikeShare
      , bikeshareStationStatus
      ) where
 
-import           Control.Lens
+
 
 import           Database.Beam
 import           Database.BikeShare.Types
