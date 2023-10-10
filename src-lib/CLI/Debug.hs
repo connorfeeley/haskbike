@@ -79,7 +79,6 @@ dispatchDebug _options = do
   let differentials = sortOn snd $ map (\counts -> (station counts, undockings counts + dockings counts)) eventSums
 
   -- res <- queryAllStationsStatusBeforeTime <$> withConn <*> pure (reportTime (fromGregorian 2023 09 25) (TimeOfDay 14 00 00)) >>= liftIO
-  res' <- mapM (\day -> queryAllStationsStatusBeforeTime <$> withConn <*> pure (reportTime (fromGregorian 2023 10 day) (TimeOfDay 14 00 00)) >>= liftIO) [1..2]
   let dayTimePairs = dayTimes
 
   countsAtTimes <- mapM (uncurry bikeCountsAtMoment) dayTimes

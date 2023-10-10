@@ -87,11 +87,12 @@ queryAllStationsStatusBeforeTimeExpr :: ReportTime
                                      -> With Postgres BikeshareDb (Q Postgres BikeshareDb _ _)
 queryAllStationsStatusBeforeTimeExpr latestTime = do
   stationsWithMaxTime <- selecting $
-    aggregate_ (\s -> (group_ (_d_status_station_id s), max_ (_d_status_last_reported s))) $
+    aggregate_ (\s -> (group_ (_d_status_info_id s), max_ (_d_status_last_reported s))) $
                filter_ (\status -> _d_status_last_reported status <=. just_ (val_ latestTime))
                (all_ (bikeshareDb ^. bikeshareStationStatus))
   pure $ do
     (stationId, maxTime) <- reuse stationsWithMaxTime
     stationStatus <- all_ (bikeshareDb ^. bikeshareStationStatus)
-    guard_' ((_d_status_station_id stationStatus ==?. stationId) &&?. (_d_status_last_reported stationStatus ==?. fromMaybe_ (val_ Nothing) maxTime))
+    guard_' ((_d_status_info_id stationStatus ==?. stationId) &&?.
+             (_d_status_last_reported stationStatus ==?. fromMaybe_ (val_ Nothing) maxTime))
     pure stationStatus
