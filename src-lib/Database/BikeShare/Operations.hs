@@ -30,6 +30,7 @@ module Database.BikeShare.Operations
      , insert_deactivated
      , insert_inserted
      , printDisabledDocks
+     , queryAllStationsStatusBeforeTime
      , queryDisabledDocks
      , queryRowCount
      , queryStationId
@@ -368,56 +369,27 @@ queryTableSize conn tableName = do
   [Only size] <- query_ conn $ fromString ("SELECT pg_size_pretty(pg_total_relation_size('" ++ tableName ++ "'))")
   return size
 
--- | Expression to query the statuses for a station between two times.
-latestStatusBetween :: Connection -> Int32 -> ReportTime -> ReportTime -> IO [(Int32, StationStatus)]
-latestStatusBetween conn station_id start_time end_time =
-  runBeamPostgresDebug' conn $ runSelectReturningList $ selectWith $ do
-  stationStatus <- selecting $ do
-    filter_ (\status -> (status ^. d_status_last_reported) <. val_ (Just end_time) &&. status ^. d_status_info_id ==. val_ station_id)
-            (all_ (bikeshareDb ^. bikeshareStationStatus))
-
-  cte <- selecting $ do
-    -- stationInfo <- -- filter_ (\i -> i ^. info_station_id ==. val_ station_id)
-    --                all_ (bikeshareDb ^. bikeshareStationInformation)
-    -- let statusForStation = filter_ (\status -> (status ^. d_status_last_reported) <=. end_time)
-    --                                (all_ (bikeshareDb ^. bikeshareStationStatus))
-    agg <- limit_ 1 $ aggregate_ (\status -> (group_ (status ^. d_status_station_id), group_ (status)))
-                      (orderBy_ (\s -> desc_ $ s ^. d_status_id) $ reuse stationStatus)
-    -- orderBy_ (\s -> asc_ $ s ^. d_status_id)
-    --             (reuse stationStatus)
-    stationStatus' <- reuse stationStatus
-    -- foo <- leftJoin_ (stationStatus') (\status -> (status ^. d_status_info_id) ==. (agg ^. _1))
-    -- guard_ ((stationStatus' ^. d_status_info_id) ==. (agg ^. _1))
-    pure (agg)
-  -- pure $ do
-  --   cte' <- reuse cte
-  pure $ reuse cte
 
 -- | Query the latest statuses for all stations before a given time.
-queryAllStationsStatusBeforeTime :: Connection   -- ^ Connection to the database.
-                                 -> ReportTime   -- ^ Timestamp.
-                                 -> IO _         -- ^ Latest 'StationStatus' for each station before given time.
+queryAllStationsStatusBeforeTime :: Connection          -- ^ Connection to the database.
+                                 -> ReportTime          -- ^ Latest time to return records for.
+                                 -> IO [StationStatus]  -- ^ Latest 'StationStatus' for each station before given time.
 queryAllStationsStatusBeforeTime conn latestTime = runBeamPostgresDebug' conn $ do
   runSelectReturningList $ selectWith $ do
     stationStatus <- selecting $
       filter_ (\status -> _d_status_last_reported status <=. just_ (val_ latestTime)) (all_ (bikeshareDb ^. bikeshareStationStatus))
     cte <- selecting $ do
-        let maxReported = aggregate_ (\s -> ( group_ (_d_status_id s)
+        let maxReported = aggregate_ (\s -> ( group_ s
                                             , group_ (_d_status_station_id s)
                                             , group_ (_d_status_last_reported s)
                                             ))
                           (reuse stationStatus)
 
-          in withWindow_ (\(sId, sStationId, sReported) -> frame_ (partitionBy_ sStationId) (orderPartitionBy_ (desc_ sReported)) noBounds_)
-                         (\(sId, sStationId, sReported) w ->
-                            (sId, sStationId, sReported, max_ sReported `over_` w))
+          in withWindow_ (\(status, sStationId, sReported) -> frame_ (partitionBy_ sStationId) (orderPartitionBy_ (desc_ sReported)) noBounds_)
+                         (\(status, sStationId, sReported) w ->
+                            (status, sStationId, sReported, max_ sReported `over_` w))
                          maxReported
     pure $ do
-      -- stationStatus' <- orderBy_ (asc_ . _d_status_station_id) (reuse stationStatus)
-      filter_ (\(sId, sSID, sReported, sReportedMax) ->
-                        -- sId ==. (stationStatus' ^. d_status_id ) &&.
-                        -- sSID ==. (stationStatus' ^. d_status_station_id ) &&.
-                        -- sReported ==. (stationStatus' ^. d_status_last_reported) &&.
-                        fromMaybe_ (val_ Nothing) sReportedMax ==. sReported
-                     )
-              (reuse cte)
+      statusWithMaxReported <- filter_ (\(_status, _sSID, sReported, sReportedMax) -> fromMaybe_ (val_ Nothing) sReportedMax ==. sReported)
+                               (reuse cte)
+      pure (statusWithMaxReported ^. _1)
