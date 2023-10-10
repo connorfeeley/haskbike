@@ -82,6 +82,7 @@ data AvailabilityCountVariation where
 -- λ> res <- queryDockingEventsCount <$> (connectDbName dbnameTest "" "" "" "") <*> pure (StatusVariationQuery 7148 Docking AT.Iconic [ OldestID 0 ]) >>= liftIO
 -- λ> length res
 -- 165
+queryDockingEventsCount :: Connection -> StatusVariationQuery -> IO [(StationInformationT Identity, (Int32, Int32))]
 queryDockingEventsCount conn variation@(StatusVariationQuery stationId queryVariation bikeType thresholds) =
   let bikeType' = case bikeType of
         AT.Iconic -> vehicle_types_available_iconic
@@ -96,46 +97,32 @@ queryDockingEventsCount conn variation@(StatusVariationQuery stationId queryVari
                      (\row w -> (row, lagWithDefault_ (row ^. bikeType') (val_ 1) (row ^. bikeType') `over_` w))
                      statusForStation
   withDeltas <- selecting $ do
-    -- Only rows where the availability increased.
-    let availNEqPrev = filter_ (\(s, prevAvail) -> s ^. bikeType' /=. prevAvail)
-                     (reuse cte)
-          -- Delta between current and previous iconic availability.
-          in withWindow_ (\(row, _prev) -> frame_ (partitionBy_ (row ^. d_status_info_id)) noOrder_ noBounds_)
-                         (\(row, prev) _w -> (row, row ^. bikeType' - prev))
-                         availNEqPrev
+    -- Delta between current and previous iconic availability.
+    withWindow_ (\(row, _prev) -> frame_ (partitionBy_ (row ^. d_status_info_id)) noOrder_ noBounds_)
+                   (\(row, prev) _w -> (row, row ^. bikeType' - prev))
+                   (reuse cte)
 
   dockings <- selecting $ do
-    let f = filter_ (\(_s, delta) -> delta >. 0)
+    let increased = filter_ (\(_s, delta) -> delta >=. 0)
             (reuse withDeltas)
 
         agg = aggregate_ (\(status, delta) -> (group_ (status ^. d_status_info_id), fromMaybe_ 0 $ sum_ delta))
-                         f
+                         increased
       in orderBy_ (\(sId, _sum) -> asc_ sId) agg
   undockings <- selecting $ do
-    let f = filter_ (\(_s, delta) -> delta <. 0)
+    let decreased = filter_ (\(_s, delta) -> delta <=. 0)
             (reuse withDeltas)
 
         agg = aggregate_ (\(status, delta) -> (group_ (status ^. d_status_info_id), fromMaybe_ 0 $ sum_ delta))
-                         f
+                         decreased
       in orderBy_ (\(sId, _sum) -> asc_ sId) agg
 
   pure $ do
     dockings' <- reuse dockings
     undockings' <- reuse undockings
-    -- WARNING: Required, or else result is massive.
+    -- NOTE: Required, or else result is massive.
     stationInfo <- filter_ (\i -> i ^. info_station_id ==. dockings' ^. _1 &&. (i ^. info_station_id ==. undockings' ^. _1))
                    (all_ (bikeshareDb ^. bikeshareStationInformation))
-    -- stationInfo' <- leftJoin_ (all_ (bikeshareDb ^. bikeshareStationInformation))
-    --                           (\i -> i ^. info_station_id ==. dockings' ^. _1 &&. (i ^. info_station_id ==. undockings' ^. _1))
-
-    -- undockings'' <- leftJoin_' (reuse undockings)
-    --                           (\d -> stationInfo ^. info_station_id ==?. d ^. _1)
-    -- dockings'' <- leftJoin_' (reuse dockings)
-    --                           (\d -> stationInfo ^. info_station_id ==?. d ^. _1)
-    -- stationInfo' <- filter_ (\i -> i ^. info_station_id ==. dockings'' ^. _1 &&. (i ^. info_station_id ==. undockings'' ^. _1))
-    --                (all_ (bikeshareDb ^. bikeshareStationInformation))
-    -- let dockingsCount   = fromMaybe_ 0 $ dockings' ^. _2
-    -- let undockingsCount = fromMaybe_ 0 $ undockings' ^. _2
     let dockingsCount   = dockings' ^. _2
     let undockingsCount = undockings' ^. _2
     pure (stationInfo, (undockingsCount, dockingsCount))
