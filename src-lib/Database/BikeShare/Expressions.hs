@@ -15,13 +15,9 @@ import qualified API.Types              as AT
 import           Control.Lens           hiding ( reuse, (<.) )
 
 import           Data.Int               ( Int32 )
-import           Data.Maybe             ( fromMaybe )
 import qualified Data.Text              as Text
 
 import           Database.Beam
-import           Database.Beam.Backend
-import           Database.Beam.Query
-import           Database.Beam.Query.Internal
 import           Database.Beam.Postgres
 import           Database.BikeShare
 

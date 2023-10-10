@@ -61,9 +61,8 @@ thresholdCondition (LatestTime time_threshold) status =
 
 -- | Construct a filter expression for a 'StatusQuery'.
 filterFor_ :: StatusVariationQuery -> StationStatusT (QExpr Postgres s) -> QExpr Postgres s Bool
-filterFor_ (StatusVariationQuery stationId _ _ thresholds) status =
-  let stationCondition = status ^. d_status_station_id ==. val_ (fromIntegral stationId)
-      thresholdConditions = map (`thresholdCondition` status) thresholds
+filterFor_ (StatusVariationQuery _ _ _ thresholds) status =
+  let thresholdConditions = map (`thresholdCondition` status) thresholds
   -- in foldr (&&.) stationCondition thresholdConditions
   in foldr (&&.) (val_ True) thresholdConditions
 
@@ -91,7 +90,7 @@ queryDockingEventsCount conn variation =  do
               -> DockingEventsCount station variation (fromIntegral undockings) (fromIntegral dockings)
              ) counts
 queryDockingEventsCountExpr :: Connection -> StatusVariationQuery -> IO [(StationInformation, (Int32, Int32))]
-queryDockingEventsCountExpr conn variation@(StatusVariationQuery stationId queryVariation bikeType thresholds) =
+queryDockingEventsCountExpr conn variation@(StatusVariationQuery _ _ bikeType _) =
   let bikeType' = case bikeType of
         AT.Iconic -> vehicle_types_available_iconic
         AT.Boost  -> vehicle_types_available_boost
@@ -112,14 +111,14 @@ queryDockingEventsCountExpr conn variation@(StatusVariationQuery stationId query
 
   dockings <- selecting $ do
     let increased = filter_ (\(_s, delta) -> delta >=. 0)
-            (reuse withDeltas)
+                    (reuse withDeltas)
 
         agg = aggregate_ (\(status, delta) -> (group_ (status ^. d_status_info_id), fromMaybe_ 0 $ sum_ delta))
                          increased
       in orderBy_ (\(sId, _sum) -> asc_ sId) agg
   undockings <- selecting $ do
     let decreased = filter_ (\(_s, delta) -> delta <=. 0)
-            (reuse withDeltas)
+                    (reuse withDeltas)
 
         agg = aggregate_ (\(status, delta) -> (group_ (status ^. d_status_info_id), fromMaybe_ 0 $ sum_ delta))
                          decreased
