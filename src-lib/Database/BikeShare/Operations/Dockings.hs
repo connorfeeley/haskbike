@@ -38,7 +38,7 @@ data StatusVariationQuery where
                           , _status_query_bike_type     :: AT.TorontoVehicleType
                           , _status_query_thresholds    :: [StatusThreshold]
                           } -> StatusVariationQuery
-  -- deriving (Show, Eq)
+  deriving (Generic, Show, Eq)
 
 -- | Varient representing the type of threshold to apply to the query.
 data StatusThreshold where
@@ -61,7 +61,7 @@ thresholdCondition (LatestTime time_threshold) status =
 
 -- | Construct a filter expression for a 'StatusQuery'.
 filterFor_ :: StatusVariationQuery -> StationStatusT (QExpr Postgres s) -> QExpr Postgres s Bool
-filterFor_ (StatusVariationQuery stationId _ bike_type thresholds) status =
+filterFor_ (StatusVariationQuery stationId _ _ thresholds) status =
   let stationCondition = status ^. d_status_station_id ==. val_ (fromIntegral stationId)
       thresholdConditions = map (`thresholdCondition` status) thresholds
   -- in foldr (&&.) stationCondition thresholdConditions
@@ -77,6 +77,7 @@ data AvailabilityCountVariation where
 -- | Wrapper for a station and its undocking and docking counts.
 data DockingEventsCount where
   DockingEventsCount :: { station     :: StationInformation
+                        , variation   :: StatusVariationQuery
                         , undockings  :: Int
                         , dockings    :: Int
                         } -> DockingEventsCount
@@ -87,7 +88,7 @@ queryDockingEventsCount :: Connection -> StatusVariationQuery -> IO [DockingEven
 queryDockingEventsCount conn variation =  do
   counts <- queryDockingEventsCountExpr conn variation
   pure $ map (\(station, (undockings, dockings))
-              -> DockingEventsCount station (fromIntegral undockings) (fromIntegral dockings)
+              -> DockingEventsCount station variation (fromIntegral undockings) (fromIntegral dockings)
              ) counts
 queryDockingEventsCountExpr :: Connection -> StatusVariationQuery -> IO [(StationInformation, (Int32, Int32))]
 queryDockingEventsCountExpr conn variation@(StatusVariationQuery stationId queryVariation bikeType thresholds) =

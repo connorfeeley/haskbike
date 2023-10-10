@@ -459,11 +459,11 @@ unit_queryDockingUndockingCount = do
     thresholds7012  = [ OldestID   12, NewestID 2749, LatestTime (ReportTime $ read "2023-09-15 17:36:06.0") ]
     thresholds7148  = [ OldestID  136, NewestID 2849, LatestTime (ReportTime $ read "2023-09-15 17:36:37.0") ]
 
-checkConditions :: Connection -> Int32 -> [StatusThreshold] -> Int32 -> Int32 -> IO ()
+checkConditions :: Connection -> Int32 -> [StatusThreshold] -> Int -> Int -> IO ()
 checkConditions conn stationId thresholds expectDockings expectUndockings = do
-  eventCountsForStation <- findInList stationId <$> queryDockingEventsCount conn (StatusVariationQuery stationId Docking   AT.Iconic thresholds)
-  assertEqual ("Expected number of undockings at station " ++ show stationId) (Just expectUndockings)  (eventCountsForStation ^? _Just . _1)
-  assertEqual ("Expected number of dockings at station " ++ show stationId)   (Just expectDockings)    (eventCountsForStation ^? _Just . _2)
+  eventCountsForStation <- findInList stationId <$> queryDockingEventsCount conn (StatusVariationQuery stationId Docking AT.Iconic thresholds)
+  assertEqual ("Expected number of undockings at station " ++ show stationId) (Just expectUndockings)  (undockings <$> eventCountsForStation)
+  assertEqual ("Expected number of dockings at station "   ++ show stationId) (Just expectDockings)    (dockings   <$> eventCountsForStation)
 
-findInList :: Int32 -> [(StationInformation, (b, c))] -> Maybe (b, c)
-findInList key tuples = tuples ^? folded . filtered (\(k, _) -> k ^. info_station_id == key) . _2
+findInList :: Int32 -> [DockingEventsCount] -> Maybe DockingEventsCount
+findInList key tuples = tuples ^? folded . filtered (\k -> station k ^. info_station_id == key)
