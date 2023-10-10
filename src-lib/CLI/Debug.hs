@@ -9,6 +9,7 @@ import qualified API.Types                     as AT
 
 import           AppEnv
 
+import           CLI.Events
 import           CLI.Options
 import           CLI.QueryFormat
 
@@ -28,6 +29,8 @@ import           Database.Beam
 import           Database.Beam.Schema.Tables
 import           Database.BikeShare
 import           Database.BikeShare.Operations
+
+import           Fmt
 
 import           Prelude                       hiding ( log )
 
@@ -75,20 +78,28 @@ dispatchDebug _options = do
   eventSums <- eventsForRange (fromGregorian 2023 0 06) (fromGregorian 2023 10 08)
   let differentials = sortOn snd $ map (\counts -> (station counts, undockings counts + dockings counts)) eventSums
 
-  liftIO $ do
-    cliOut $ formatDatabaseStats numStatusRows infoTableSize statusTableSize
+  -- res <- queryAllStationsStatusBeforeTime <$> withConn <*> pure (reportTime (fromGregorian 2023 09 25) (TimeOfDay 14 00 00)) >>= liftIO
+  res' <- mapM (\day -> queryAllStationsStatusBeforeTime <$> withConn <*> pure (reportTime (fromGregorian 2023 10 day) (TimeOfDay 14 00 00)) >>= liftIO) [1..2]
+  let dayTimePairs = dayTimes
 
-    when (length eventSums < 10) (putStrLn $ "Docking and undocking counts: " ++ show (length eventSums))
+  countsAtTimes <- mapM (uncurry bikeCountsAtMoment) dayTimes
+  (liftIO . formatBikeCounts) countsAtTimes
+  pure ()
 
-    putStrLn "Sorted by undockings:"
-    formatDockingEventsCount $ sortDockingEventsCount Undocking eventSums
-    putStrLn "Sorted by dockings:"
-    formatDockingEventsCount $ sortDockingEventsCount Docking eventSums
+  -- liftIO $ do
+  --   cliOut $ formatDatabaseStats numStatusRows infoTableSize statusTableSize
 
-    putStrLn "\nSorted by differentials (undockings >> dockings):"
-    formatDockingEventsDifferential $ take 50 $ sortOn (view _2) differentials
-    putStrLn "\nSorted by differentials (dockings >> undockings):"
-    formatDockingEventsDifferential $ take 50 $ sortOn (Down . view _2) differentials
+  --   when (length eventSums < 10) (putStrLn $ "Docking and undocking counts: " ++ show (length eventSums))
+
+  --   putStrLn "Sorted by undockings:"
+  --   formatDockingEventsCount $ sortDockingEventsCount Undocking eventSums
+  --   putStrLn "Sorted by dockings:"
+  --   formatDockingEventsCount $ sortDockingEventsCount Docking eventSums
+
+  --   putStrLn "\nSorted by differentials (undockings >> dockings):"
+  --   formatDockingEventsDifferential $ take 50 $ sortOn (view _2) differentials
+  --   putStrLn "\nSorted by differentials (dockings >> undockings):"
+  --   formatDockingEventsDifferential $ take 50 $ sortOn (Down . view _2) differentials
 
 
 formatDatabaseStats :: Int32 -> Maybe String -> Maybe String -> [Text]

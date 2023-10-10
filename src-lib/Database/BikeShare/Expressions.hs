@@ -1,3 +1,4 @@
+{-# LANGUAGE PartialTypeSignatures #-}
 -- | This module contains expressions for querying the database.
 
 module Database.BikeShare.Expressions
@@ -11,15 +12,17 @@ module Database.BikeShare.Expressions
      , statusBetweenExpr
      ) where
 
-import qualified API.Types              as AT
+import qualified API.Types               as AT
 
-import           Control.Lens           hiding ( reuse, (<.) )
+import           Control.Lens            hiding ( reuse, (<.) )
 
-import           Data.Int               ( Int32 )
-import qualified Data.Text              as Text
+import           Data.Int                ( Int32 )
+import qualified Data.Text               as Text
 
 import           Database.Beam
+import           Database.Beam.Backend   ( BeamSql99CommonTableExpressionBackend )
 import           Database.Beam.Postgres
+import           Database.Beam.Query.CTE ( QAnyScope )
 import           Database.BikeShare
 
 
@@ -80,23 +83,15 @@ queryStationIdLikeExpr station_name = do
 
 
 -- | Expression to query the latest statuses for all stations before a given time.
-queryAllStationsStatusBeforeTimeExpr :: ReportTime          -- ^ Latest time to return records for.
-                                     -> With Postgres BikeshareDb (Q Postgres BikeshareDb s (StationStatusT (QGenExpr QValueContext Postgres s)))
+queryAllStationsStatusBeforeTimeExpr :: ReportTime
+                                     -> With Postgres BikeshareDb (Q Postgres BikeshareDb _ _)
 queryAllStationsStatusBeforeTimeExpr latestTime = do
-  stationStatus <- selecting $
-    filter_ (\status -> _d_status_last_reported status <=. just_ (val_ latestTime)) (all_ (bikeshareDb ^. bikeshareStationStatus))
-  cte <- selecting $ do
-      let maxReported = aggregate_ (\s -> ( group_ s
-                                          , group_ (_d_status_station_id s)
-                                          , group_ (_d_status_last_reported s)
-                                          ))
-                        (reuse stationStatus)
-
-        in withWindow_ (\(status, sStationId, sReported) -> frame_ (partitionBy_ sStationId) (orderPartitionBy_ (desc_ sReported)) noBounds_)
-                       (\(status, sStationId, sReported) w ->
-                          (status, sStationId, sReported, max_ sReported `over_` w))
-                       maxReported
+  stationsWithMaxTime <- selecting $
+    aggregate_ (\s -> (group_ (_d_status_station_id s), max_ (_d_status_last_reported s))) $
+               filter_ (\status -> _d_status_last_reported status <=. just_ (val_ latestTime))
+               (all_ (bikeshareDb ^. bikeshareStationStatus))
   pure $ do
-    statusWithMaxReported <- filter_ (\(_status, _sSID, sReported, sReportedMax) -> fromMaybe_ (val_ Nothing) sReportedMax ==. sReported)
-                             (reuse cte)
-    pure (statusWithMaxReported ^. _1)
+    (stationId, maxTime) <- reuse stationsWithMaxTime
+    stationStatus <- all_ (bikeshareDb ^. bikeshareStationStatus)
+    guard_' ((_d_status_station_id stationStatus ==?. stationId) &&?. (_d_status_last_reported stationStatus ==?. fromMaybe_ (val_ Nothing) maxTime))
+    pure stationStatus

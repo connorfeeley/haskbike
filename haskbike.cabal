@@ -183,6 +183,7 @@ library
                     , CLI.Poll
                     , CLI.Query
                     , CLI.Debug
+                    , CLI.Events
                     , CLI.QueryFormat
                     , CLI.Database
                     , CLI.Options
