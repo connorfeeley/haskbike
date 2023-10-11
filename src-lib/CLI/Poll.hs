@@ -13,23 +13,24 @@ import           AppEnv
 
 import           CLI.Options                   ( PollOptions (..) )
 
-import           Colog                         ( Message, WithLog, log, logException, pattern D, pattern E, pattern I )
+import           Colog                         ( Message, WithLog, log, logException, pattern D, pattern I, pattern W )
 
 import           Control.Concurrent            ( threadDelay )
 import           Control.Concurrent.STM
 import           Control.Lens
 import           Control.Monad                 ( void )
-import           Control.Monad.Cont            ( forever, lift )
+import           Control.Monad.Cont            ( forever )
 
 import qualified Data.Text                     as Text
-import           Data.Time
 
 import           Database.BikeShare            ( d_status_last_reported, d_status_station_id )
 import           Database.BikeShare.Operations
 
+import           Fmt
+
 import           Prelude                       hiding ( log )
 
-import           ReportTime                    ( localToPosix, localToSystem )
+import           ReportTime                    ( localToPosix )
 
 import           TextShow                      ( showt )
 
@@ -56,8 +57,8 @@ pollClient = do
   log I "Done."
   where
     spawnStatus queueStatusResp ttl lastUpdated = concurrently_
-                  (statusRequester queueStatusResp ttl)
-                  (statusHandler queueStatusResp lastUpdated)
+                  (statusRequester queueStatusResp ttl  lastUpdated)
+                  (statusHandler queueStatusResp)
     spawnInfo   infoQueueResp ttl lastUpdated = concurrently_
                   (informationRequester infoQueueResp ttl lastUpdated)
                   (informationHandler infoQueueResp)
@@ -65,44 +66,32 @@ pollClient = do
 
 -- | Thread action to request station information from API.
 statusRequester :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
-                => TBQueue StationStatusResponse -- ^ Queue of responses
-                -> TVar Int                      -- ^ Interval between requests
+                => TBQueue StationStatusResponse -- ^ Queue of responses.
+                -> TVar Int                      -- ^ Interval between requests in seconds.
+                -> TVar Int                      -- ^ Last updated time.
                 -> m ()
-statusRequester queue interval_var = void . forever $ do
-  interval <- liftIO $ readTVarIO interval_var
-  log D $ "(Status) Sleeping for " <> showt (interval `div` 1000000) <> " seconds."
-  liftIO $ threadDelay interval
+statusRequester queue intervalSecsVar lastUpdated = void . forever $ do
+  intervalSecs <- liftIO $ readTVarIO intervalSecsVar
   liftIO (runQueryWithEnv stationStatus) >>= \case
     Left err -> logException err
     Right result -> do
-      currentTimeZone <- liftIO getCurrentTimeZone
-      let time' = localToSystem currentTimeZone (result ^. response_last_updated)
-      let ttl = result ^. response_ttl
-      log I $ "Status TTL=" <> showt ttl <> " | last updated=" <> Text.pack (show time')
-      liftIO $ atomically $ writeTVar interval_var (ttl * 1000000)
+      extendBy <- handleTimeElapsed "Status" result lastUpdated
+      handleTTL "Status" result intervalSecsVar extendBy
+
       liftIO $ atomically $ writeTBQueue queue result
+
+      log D $ format "(Status) Sleeping for {} seconds." intervalSecs
+      liftIO $ threadDelay (intervalSecs * 1000000)
 
 
 -- | Thread action to handle API response for station status query.
 statusHandler :: TBQueue StationStatusResponse  -- ^ Queue of responses
-              -> TVar Int                       -- ^ Last updated time
               -> App ()
-statusHandler queue last_updated = void . forever $ do
+statusHandler queue = void . forever $ do
   response <- liftIO $ atomically $ readTBQueue queue
-  let currentTime = localToPosix $ response ^. response_last_updated
-
-  previousTime <- liftIO $ readTVarIO last_updated
-
-  let timeElapsed = currentTime - previousTime
-
-  -- Check if last_updated went backwards
-  if timeElapsed >= 0
-    then -- Update last_updated variable.
-      liftIO $ atomically $ writeTVar last_updated currentTime
-    else log E $ Text.unwords ["(Status) last_updated went backwards: ", "[" <> showt previousTime <> "]", " -> ", "[" <> showt currentTime <> "]", "(", showt timeElapsed, ")"]
 
   let status = response ^. (response_data . unStatusStations)
-  log D $ Text.unwords ["Received",  showt (length status),  "status records from API."]
+  log I $ format "(Status) Received {} status records from API." (length status)
 
   updated_api <- separateNewerStatusRecords <$> withConn <*> pure status >>= liftIO
 
@@ -116,53 +105,67 @@ statusHandler queue last_updated = void . forever $ do
       (inserted_result ^. insert_inserted)
 
   -- Log counts of rows inserted and activated.
-  log I $ "(Status) Updated " <> showt (length $ inserted_result ^. insert_deactivated)
-   <> " | Inserted " <> showt (length $ inserted_result ^. insert_inserted)
+  log I $ format "(Status) Updated: {} | Inserted: {}"
+    (length $ inserted_result ^. insert_deactivated)
+    (length $ inserted_result ^. insert_inserted)
 
   where
     dataToTuple u i = (i ^. d_status_station_id, u ^. d_status_last_reported, i ^. d_status_last_reported)
-    fmtLog (sid, lr, lr') = "ID: " ++ show sid ++ " " ++ maybe "-" show lr ++ "->" ++ maybe "-" show lr'
+    fmtLog (sid, lr, lr') = format "ID: {} {} {}" sid (maybe "-" show lr) (maybe "-" show lr')
+
 
 -- | Handle last_updated field in response.
-handleTimeElapsed :: (WithLog env Message m, MonadIO m, MonadUnliftIO m) => LocalTime -> TVar Int -> m ()
-handleTimeElapsed currentTime last_updated = do
-  let currentTime' = localToPosix currentTime
-  previousTime <- liftIO $ readTVarIO last_updated
+handleTimeElapsed :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
+                  => Text.Text         -- ^ Log prefix
+                  -> ResponseWrapper a -- ^ TTL from API response.
+                  -> TVar Int          -- ^ TVar holding last_updated between threads.
+                  -> m (Maybe Int)     -- ^ Optional number of seconds extend TTL by, if last_updated went backwards.
+handleTimeElapsed logPrefix apiResult lastUpdatedVar = do
+  let currentTime' = localToPosix $ apiResult ^. response_last_updated
+  previousTime <- liftIO $ readTVarIO lastUpdatedVar
   let timeElapsed = currentTime' - previousTime
 
   -- Check if last_updated went backwards
   if timeElapsed >= 0
-    then -- Update last_updated variable.
-      liftIO $ atomically $ writeTVar last_updated currentTime'
-    else log E $ Text.unwords [ "(Info)", "last_updated went backwards: "
-                              , "[" <> showt previousTime <> "]"
-                              , " -> "
-                              , "[" <> showt currentTime' <> "]"
-                              , "(", showt timeElapsed, ")"
-                              ]
+    then do -- Update last_updated variable.
+      liftIO $ atomically $ writeTVar lastUpdatedVar currentTime'
+      pure Nothing
+    else do
+      log W $ format "{} last_updated went backwards: {} [{}] -> [{}]" logPrefix previousTime currentTime' timeElapsed
+      pure (Just (-timeElapsed))
+
+
+-- | Handle last_updated field in response.
+handleTTL :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
+          => Text.Text         -- ^ Log prefix
+          -> ResponseWrapper a -- ^ TTL from API response.
+          -> TVar Int          -- ^ TVar holding TTL.
+          -> Maybe Int         -- ^ Optional number of seconds to extend TTL by.
+          -> m ()
+handleTTL logPrefix apiResult ttlVar extendBy = do
+  let ttlSecs = apiResult ^. response_ttl
+  log I $ format "({}) TTL={}" logPrefix (showt ttlSecs)
+  liftIO $ atomically $ writeTVar ttlVar ttlSecs
 
 
 -- | Thread action to request station information from API.
 informationRequester :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
-                     => TBQueue StationInformationResponse -- ^ Queue of responses
-                     -> TVar Int                           -- ^ Interval between requests
-                     -> TVar Int                           -- ^ Last updated time
+                     => TBQueue StationInformationResponse -- ^ Queue of responses.
+                     -> TVar Int                           -- ^ Interval between requests, in seconds.
+                     -> TVar Int                           -- ^ Last updated time.
                      -> m ()
-informationRequester queue interval_var lastUpdated = void . forever $ do
-  interval <- liftIO $ readTVarIO interval_var
-  log D $ "(Info) Sleeping for " <> showt (interval `div` 1000000) <> " seconds."
+informationRequester queue intervalSecsVar lastUpdated = void . forever $ do
+  intervalSecs <- liftIO $ readTVarIO intervalSecsVar
   liftIO (runQueryWithEnv stationInformation) >>= \case
     Left err -> logException err
     Right result -> do
-      currentTimeZone <- liftIO getCurrentTimeZone
-      let time' = localToSystem currentTimeZone (result ^. response_last_updated)
-      let ttl = result ^. response_ttl
-      log I $ "(Info) TTL=" <> showt ttl <> " | last updated=" <> Text.pack (show time')
+      extendBy <- handleTimeElapsed "Info" result lastUpdated
+      handleTTL "Info" result intervalSecsVar extendBy
 
-      handleTimeElapsed (result ^. response_last_updated) lastUpdated
-
-      liftIO $ atomically $ writeTVar interval_var (ttl * 1000000)
       liftIO $ atomically $ writeTBQueue queue result
+
+      log D $ format "(Info) Sleeping for {} seconds." intervalSecs
+      liftIO $ threadDelay (intervalSecs * 1000000)
 
 -- | Thread action to handle API response for station information query.
 informationHandler :: TBQueue StationInformationResponse  -- ^ Queue of responses
@@ -171,7 +174,7 @@ informationHandler queue = void . forever $ do
   response <- liftIO $ atomically $ readTBQueue queue
 
   let info = response ^. (response_data . unInfoStations)
-  log D $ Text.unwords ["(Info)", "Received",  showt (length info),  "info records from API."]
+  log I $ format "(Info) Received {} info records from API." (length info)
 
   -- Insert the station information (updating existing records, if existing).
   inserted_result <- insertStationInformation <$> withConn <*> pure info >>= liftIO
@@ -180,7 +183,7 @@ informationHandler queue = void . forever $ do
   mapM_ (log D . Text.pack . fmtLog) inserted_result
 
   -- Log counts of rows inserted and activated.
-  log I $ "(Info) Updated/inserted " <> showt (length inserted_result)
+  log I $ format "(Info) Updated/inserted {} records into database." (length inserted_result)
 
   where
-    fmtLog inserted = "ID: " ++ show inserted
+    fmtLog inserted = format "ID: {}" (show inserted)
