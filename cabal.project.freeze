@@ -38,6 +38,7 @@ constraints: any.Glob ==0.10.2,
              any.blaze-markup ==0.8.2.8,
              any.blaze-textual ==0.2.3.1,
              any.boring ==0.2.1,
+             any.boxes ==0.1.5,
              any.bsb-http-chunked ==0.0.0.4,
              any.bytebuild ==0.3.13.0,
              any.byteorder ==1.0.4,
@@ -239,4 +240,4 @@ constraints: any.Glob ==0.10.2,
              any.x509-validation ==1.6.12,
              any.zigzag ==0.0.1.0,
              any.zlib ==0.6.3.0
-index-state: hackage.haskell.org 2023-09-22T15:42:26Z
+index-state: hackage.haskell.org 2023-10-04T17:12:14Z
