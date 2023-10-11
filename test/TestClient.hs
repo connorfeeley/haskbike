@@ -7,7 +7,7 @@ import           AppEnv
 
 import qualified CLI.Poll                 as Poll
 
-import           Colog                    ( Message, WithLog, log, pattern I, pattern W )
+import           Colog                    ( log, pattern I, pattern W )
 
 import           Control.Exception        ( SomeException, try )
 import           Control.Monad            ( void )
@@ -21,7 +21,7 @@ import           Prelude                  hiding ( log, unwords )
 
 import           Test.Tasty.HUnit
 
-import           UnliftIO                 ( MonadIO, MonadUnliftIO, timeout )
+import           UnliftIO                 ( timeout )
 
 
 -- | Mark a test as expected to fail.
@@ -59,7 +59,7 @@ unit_poll = do
   conn <- connectDbName name host port username password >>= dropTables >>= migrateDatabase
 
   -- Create the application environment.
-  let env = mainEnv W timeZone conn
+  let env = mainEnv W False timeZone conn
 
   -- Log the database connection parameters.
   runApp env (log I $ "Connected to database using: " <> unwords [ "dbname=" <> pack name
@@ -70,6 +70,6 @@ unit_poll = do
                                                                  ])
   runApp env doPoll
   where
-    doPoll :: (App ~ m, WithLog env Message m, MonadIO m, MonadUnliftIO m) => m ()
+    doPoll :: App ()
     doPoll = void $ timeout 1000000 $ do -- Terminate after 1 second
       void Poll.pollClient

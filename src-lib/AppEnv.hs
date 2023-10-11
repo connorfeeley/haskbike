@@ -21,12 +21,14 @@ import           Colog                    ( HasLog (..), LogAction (..), Message
                                             filterBySeverity, richMessageAction )
 
 import           Control.Monad.IO.Class   ( MonadIO )
-import           Control.Monad.Reader     ( MonadReader, ReaderT (..), asks )
+import           Control.Monad.Reader     ( MonadReader (ask), ReaderT (..), asks )
 
 import           Data.Time                ( TimeZone, getCurrentTimeZone )
 
-import           Database.Beam.Postgres   ( Connection, Pg, runBeamPostgres )
-import           Database.BikeShare.Utils ( connectDbName, dbnameProduction, mkDbParams, uncurry5 )
+import           Database.Beam.Postgres   ( Connection, Pg, runBeamPostgres, runBeamPostgresDebug )
+import           Database.BikeShare.Utils ( connectDbName, mkDbParams, uncurry5 )
+
+import           Formatting
 
 import           GHC.Stack                ( HasCallStack )
 
@@ -37,6 +39,7 @@ import           UnliftIO                 ( MonadUnliftIO, liftIO )
 -- Application environment
 data Env m where
   Env :: { envLogAction    :: !(LogAction m Message)
+         , envLogDatabase  :: !Bool
          , envMinSeverity  :: !Severity
          , envTimeZone     :: !TimeZone
          , envDBConnection :: !Connection
@@ -59,7 +62,10 @@ withConn = asks envDBConnection >>= liftIO . pure
 withPostgres :: (WithAppEnv (Env env) Message m) => Pg a -> m a
 withPostgres action = do
   conn <- withConn
-  liftIO $ runBeamPostgres conn action
+  logDatabase <- asks envLogDatabase
+  liftIO $
+    if logDatabase then runBeamPostgresDebug pPrintCompact conn action
+    else runBeamPostgres conn action
 
 -- Implement logging for the application environment.
 instance HasLog (Env m) Message m where
@@ -79,18 +85,20 @@ newtype App a = App
 -- | Simple environment for the main application.
 simpleEnv :: TimeZone -> Connection -> Env App
 simpleEnv timeZone conn = Env { envLogAction    = mainLogAction Info
+                              , envLogDatabase  = False
                               , envMinSeverity  = Info
                               , envTimeZone     = timeZone
                               , envDBConnection = conn
                               }
 
 -- | Environment for the main application.
-mainEnv :: Severity -> TimeZone -> Connection -> Env App
-mainEnv sev timeZone conn = Env { envLogAction    = mainLogAction sev
-                                , envMinSeverity  = Info
-                                , envTimeZone     = timeZone
-                                , envDBConnection = conn
-                                }
+mainEnv :: Severity -> Bool -> TimeZone -> Connection -> Env App
+mainEnv sev logDatabase timeZone conn = Env { envLogAction    = mainLogAction sev
+                                            , envLogDatabase  = logDatabase
+                                            , envMinSeverity  = Info
+                                            , envTimeZone     = timeZone
+                                            , envDBConnection = conn
+                                            }
 
 -- | Log action for the main application.
 mainLogAction :: (MonadIO m)
@@ -106,4 +114,4 @@ runWithApp :: String -> App a -> IO a
 runWithApp dbname app = do
   conn <- mkDbParams dbname >>= uncurry5 connectDbName
   currentTimeZone <- getCurrentTimeZone
-  runApp (mainEnv Info currentTimeZone conn) app
+  runApp (mainEnv Info False currentTimeZone conn) app

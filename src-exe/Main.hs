@@ -53,7 +53,7 @@ main = do
   conn <- connectDbName name host port username password
 
   -- Create the application environment.
-  let env = mainEnv (logLevel options) timeZone conn
+  let env = mainEnv (logLevel options) (logDatabase options) timeZone conn
 
   -- Log the database connection parameters.
   runApp env (log I $ "Connected to database using: " <> logParams)
@@ -61,6 +61,10 @@ main = do
   -- Run the application.
   runApp env (appMain options)
   where
+    -- | Log database operations when running in ultra-verbose (-vvv) mode.
+    logDatabase options = length (optVerbose options) >= 3
+
+    -- | Logging action for stdout.
     logStdoutAction :: LogAction IO Message
     logStdoutAction = cmap fmtMessage logTextStdout
 
