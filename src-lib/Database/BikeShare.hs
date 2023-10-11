@@ -56,6 +56,7 @@ bikeshareDb = defaultDbSettings `withDbModification`
       , _info_nearby_distance        = "nearby_distance"
       , _info_bluetooth_id           = "bluetooth_id"
       , _info_ride_code_support      = "ride_code_support"
+      , _info_active                 = "active"
       }
   , _bikeshareStationStatus =
     setEntityName "station_status" <> modifyTableFields tableModification

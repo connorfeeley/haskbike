@@ -6,7 +6,8 @@ module CLI.Poll
 
 import           API.Client
 import           API.ResponseWrapper
-import           API.Types                     ( StationStatusResponse, unStatusStations )
+import           API.Types                     ( StationInformationResponse, StationStatusResponse, unInfoStations,
+                                                 unStatusStations )
 
 import           AppEnv
 
@@ -43,15 +44,22 @@ dispatchPoll _options = pollClient
 
 pollClient :: App ()
 pollClient = do
-  (ttl, last_updated, queue_resp) <- liftIO $
-    (,,) <$> newTVarIO 0 <*> newTVarIO 0 <*> newTBQueueIO 4
+  (statusTtl, statusLastUpdated, statusQueueResp, infoTtl, infoLastUpdated, infoQueueResp) <- liftIO $
+    (,,,,,) <$> newTVarIO 0 <*> newTVarIO 0 <*> newTBQueueIO 4 <*> newTVarIO 0 <*> newTVarIO 0 <*> newTBQueueIO 4
 
   log I "Polling API for status updates."
   void $
     concurrently_
-      (statusRequester queue_resp ttl)
-      (statusHandler queue_resp last_updated)
+      (spawnStatus statusQueueResp statusTtl statusLastUpdated)
+      (spawnInfo infoQueueResp infoTtl infoLastUpdated)
   log I "Done."
+  where
+    spawnStatus queueStatusResp ttl lastUpdated = concurrently_
+                  (statusRequester queueStatusResp ttl)
+                  (statusHandler queueStatusResp lastUpdated)
+    spawnInfo   infoQueueResp ttl lastUpdated = concurrently_
+                  (informationRequester infoQueueResp ttl)
+                  (informationHandler infoQueueResp lastUpdated)
 
 statusRequester :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
                 => TBQueue StationStatusResponse -- ^ Queue of responses
@@ -109,3 +117,52 @@ statusHandler queue last_updated = void . forever $ do
   where
     dataToTuple u i = (i ^. d_status_station_id, u ^. d_status_last_reported, i ^. d_status_last_reported)
     fmtLog (sid, lr, lr') = "ID: " ++ show sid ++ " " ++ maybe "-" show lr ++ "->" ++ maybe "-" show lr'
+
+informationRequester :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
+                     => TBQueue StationInformationResponse -- ^ Queue of responses
+                     -> TVar Int                      -- ^ Interval between requests
+                     -> m ()
+informationRequester queue interval_var = void . forever $ do
+  interval <- liftIO $ readTVarIO interval_var
+  log D $ "Sleeping for " <> showt (interval `div` 1000000) <> " seconds."
+  liftIO (runQueryWithEnv stationInformation) >>= \case
+    Left err -> logException err
+    Right result -> do
+      currentTimeZone <- liftIO getCurrentTimeZone
+      let time' = localToSystem currentTimeZone (result ^. response_last_updated)
+      let ttl = result ^. response_ttl
+      log I $ "TTL=" <> showt ttl <> " | last updated=" <> Text.pack (show time')
+      liftIO $ atomically $ writeTVar interval_var (ttl * 1000000)
+      liftIO $ atomically $ writeTBQueue queue result
+
+informationHandler :: TBQueue StationInformationResponse  -- ^ Queue of responses
+                   -> TVar Int                            -- ^ Last updated time
+                   -> App ()
+informationHandler queue last_updated = void . forever $ do
+  response <- liftIO $ atomically $ readTBQueue queue
+  let currentTime = localToPosix $ response ^. response_last_updated
+
+  previousTime <- liftIO $ readTVarIO last_updated
+
+  let timeElapsed = currentTime - previousTime
+
+  -- Check if last_updated went backwards
+  if timeElapsed >= 0
+    then -- Update last_updated variable.
+      liftIO $ atomically $ writeTVar last_updated currentTime
+    else log E $ Text.unwords ["last_updated went backwards: ", "[" <> showt previousTime <> "]", " -> ", "[" <> showt currentTime <> "]", "(", showt timeElapsed, ")"]
+
+  let info = response ^. (response_data . unInfoStations)
+  log D $ Text.unwords ["Received",  showt (length info),  "info records from API."]
+
+  -- Insert the station information (updating existing records, if existing).
+  inserted_result <- insertStationInformation <$> withConn <*> pure info >>= liftIO
+
+  -- Log each station ID updated.
+  mapM_ (log D . Text.pack . fmtLog) inserted_result
+
+  -- Log counts of rows inserted and activated.
+  log I $ "Updated/inserted " <> showt (length inserted_result)
+
+  where
+    fmtLog inserted = "ID: " ++ show inserted

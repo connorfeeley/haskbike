@@ -51,7 +51,6 @@ import           API.Types                                ( _status_last_reporte
 import qualified API.Types                                as AT
 
 import           Control.Lens                             hiding ( reuse, (<.) )
-import           Control.Monad                            ( join )
 
 import           Data.Int                                 ( Int32 )
 import qualified Data.Map                                 as Map
@@ -69,7 +68,7 @@ import           Database.PostgreSQL.Simple               ( Only (..), query_ )
 
 import           GHC.Exts                                 ( fromString )
 
-import           ReportTime
+
 
 
 data FilterStatusResult where

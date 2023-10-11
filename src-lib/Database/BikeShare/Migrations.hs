@@ -38,6 +38,7 @@ initialSetup = BikeshareDb
         , _info_nearby_distance        = field "nearby_distance"        double notNull
         , _info_bluetooth_id           = field "bluetooth_id"           (varchar (Just 100)) notNull
         , _info_ride_code_support      = field "ride_code_support"      boolean notNull
+        , _info_active                 = field "active"                 boolean notNull
         })
   <*> (createTable "station_status" $ StationStatus
         { _d_status_id                      = field "id"                      PG.serial notNull unique

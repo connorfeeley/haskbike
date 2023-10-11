@@ -12,17 +12,18 @@ module Database.BikeShare.Expressions
      , statusBetweenExpr
      ) where
 
-import qualified API.Types               as AT
+import qualified API.Types                                as AT
 
-import           Control.Lens            hiding ( reuse, (<.) )
+import           Control.Lens                             hiding ( reuse, (<.) )
 
-import           Data.Int                ( Int32 )
-import qualified Data.Text               as Text
+import           Data.Int                                 ( Int32 )
+import qualified Data.Text                                as Text
 
 import           Database.Beam
-import           Database.Beam.Backend   ( BeamSql99CommonTableExpressionBackend )
+import           Database.Beam.Backend.SQL.BeamExtensions ( BeamHasInsertOnConflict (anyConflict, onConflictDoNothing),
+                                                            insertOnConflict )
 import           Database.Beam.Postgres
-import           Database.Beam.Query.CTE ( QAnyScope )
+import           Database.Beam.Postgres.Full              ( onConflict )
 import           Database.BikeShare
 
 
@@ -48,8 +49,10 @@ infoByIdExpr stationIds =
 -- | Insert station information into the database.
 insertStationInformationExpr :: [AT.StationInformation] -> SqlInsert Postgres StationInformationT
 insertStationInformationExpr stations =
-  insert (bikeshareDb ^. bikeshareStationInformation) $
-  insertExpressions $ map fromJSONToBeamStationInformation stations
+  insertOnConflict (bikeshareDb ^. bikeshareStationInformation)
+  (insertExpressions (map fromJSONToBeamStationInformation stations))
+  anyConflict
+  onConflictDoNothing
 
 disabledDocksExpr :: Q Postgres BikeshareDb s (QGenExpr QValueContext Postgres s Text.Text, QGenExpr QValueContext Postgres s Int32)
 disabledDocksExpr = do
