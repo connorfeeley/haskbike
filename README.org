@@ -356,3 +356,10 @@ eval "$(haskbike --bash-completion-script haskbike)"
 #+end_src
 
 /Note: can be added to =PATH= by adding ~PATH_add dist-newstyle/build/*/ghc-*/haskbike-*/x/haskbike/build/haskbike~ to ~.envrc~./
+
+** Migrations
+*** Added ~station_information.active~ column
+#+begin_src sql
+ALTER TABLE station_information
+ADD COLUMN active BOOLEAN DEFAULT true;
+#+end_src
