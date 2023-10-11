@@ -7,6 +7,7 @@ module AppEnv
      , Env (..)
      , Message
      , WithAppEnv
+     , liftIO
      , mainEnv
      , mainLogAction
      , runApp
@@ -101,8 +102,8 @@ mainLogAction severity = filterBySeverity severity msgSeverity richMessageAction
 runApp :: Env App -> App a -> IO a
 runApp env app = runReaderT (unApp app) env
 
-runWithApp :: App a -> IO a
-runWithApp app = do
-  conn <- mkDbParams dbnameProduction >>= uncurry5 connectDbName
+runWithApp :: String -> App a -> IO a
+runWithApp dbname app = do
+  conn <- mkDbParams dbname >>= uncurry5 connectDbName
   currentTimeZone <- getCurrentTimeZone
   runApp (mainEnv Info currentTimeZone conn) app

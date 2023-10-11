@@ -93,10 +93,10 @@ statusHandler queue = void . forever $ do
   let status = response ^. (response_data . unStatusStations)
   log I $ format "(Status) Received {} status records from API." (length status)
 
-  updated_api <- separateNewerStatusRecords <$> withConn <*> pure status >>= liftIO
+  updated_api <- separateNewerStatusRecords status
 
   -- Insert the updated status.
-  inserted_result <- insertStationStatus <$> withConn <*> pure (updated_api ^. filter_newer) >>= liftIO
+  inserted_result <- insertStationStatus (updated_api ^. filter_newer)
 
   -- Log each station ID updated.
   mapM_ (log D . Text.pack . fmtLog) $
@@ -177,7 +177,7 @@ informationHandler queue = void . forever $ do
   log I $ format "(Info) Received {} info records from API." (length info)
 
   -- Insert the station information (updating existing records, if existing).
-  inserted_result <- insertStationInformation <$> withConn <*> pure info >>= liftIO
+  inserted_result <- insertStationInformation info
 
   -- Log each station ID updated.
   mapM_ (log D . Text.pack . fmtLog) inserted_result

@@ -46,7 +46,7 @@ queryByStationId stationId = do
   log I $ toStrict $ "Querying station ID '" <> (pack . show) stationId <> "'"
 
   -- Try to lookup station name from the ID.
-  name <- queryStationName <$> withConn <*> pure stationId >>= liftIO
+  name <- queryStationName stationId
   -- Maybe tuple of (id, name)
   let station_pair = fmap (stationId,) name
 
@@ -69,7 +69,7 @@ queryByStationName stationMatch = do
         PrefixMatch   query -> ("Prefix",   nameTransformer ""  query "%")
         SuffixMatch   query -> ("Suffix",   nameTransformer "%" query "")
 
-  results <- queryStationIdLike <$> withConn <*> pure (snd transformer) >>= liftIO
+  results <- queryStationIdLike (snd transformer)
   log D $ toStrict $ fst transformer <> ": "    <> (pack . show) results
 
   resultsText <- mapM (queryStatus (unpack $ fst transformer)) results

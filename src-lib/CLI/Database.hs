@@ -85,7 +85,7 @@ handleStationInformation = do
   for_ (rightToMaybe stationInfo) $ \response -> do
         let stations = response ^. response_data . unInfoStations
         log D "Inserting station information into database."
-        insertStationInformation <$> withConn <*> pure stations >>= liftIO >>= report
+        insertStationInformation stations >>= report
         log D "Inserted station information into database."
   where
     report = log I . ("Stations inserted: " <>) . Text.pack . show . length
@@ -109,7 +109,7 @@ handleStationStatus = do
   for_ (rightToMaybe stationStatus') $ \response -> do
         let stations = response ^. response_data . unStatusStations
         log D "Inserting station status into database."
-        insertStationStatus <$> withConn <*> pure stations >>= liftIO >>= report
+        insertStationStatus stations >>= report
         log D "Inserted station status into database."
   where
     report = log I . ("Status updated: " <>) . Text.pack . show .
