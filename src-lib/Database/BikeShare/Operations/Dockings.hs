@@ -19,16 +19,17 @@ module Database.BikeShare.Operations.Dockings
      , queryDockingEventsCount
      ) where
 
-import qualified API.Types                as AT
+import qualified API.Types              as AT
 
-import           Control.Lens             hiding ( reuse, (<.) )
+import           AppEnv
 
-import           Data.Int                 ( Int32 )
+import           Control.Lens           hiding ( reuse, (<.) )
+
+import           Data.Int               ( Int32 )
 
 import           Database.Beam
 import           Database.Beam.Postgres
 import           Database.BikeShare
-import           Database.BikeShare.Utils
 
 
 -- | Data type representing a query for station status dockings or undockings.
@@ -83,20 +84,20 @@ data DockingEventsCount where
   deriving (Generic, Show, Eq)
 
 
-queryDockingEventsCount :: Connection -> StatusVariationQuery -> IO [DockingEventsCount]
-queryDockingEventsCount conn variation =  do
-  counts <- queryDockingEventsCountExpr conn variation
+queryDockingEventsCount :: StatusVariationQuery -> App [DockingEventsCount]
+queryDockingEventsCount variation =  do
+  counts <- queryDockingEventsCountExpr variation
   pure $ map (\(station, (undockings, dockings))
               -> DockingEventsCount station variation (fromIntegral undockings) (fromIntegral dockings)
              ) counts
-queryDockingEventsCountExpr :: Connection -> StatusVariationQuery -> IO [(StationInformation, (Int32, Int32))]
-queryDockingEventsCountExpr conn variation@(StatusVariationQuery _ _ bikeType _) =
+queryDockingEventsCountExpr :: StatusVariationQuery -> App [(StationInformation, (Int32, Int32))]
+queryDockingEventsCountExpr variation@(StatusVariationQuery _ _ bikeType _) =
   let bikeType' = case bikeType of
         AT.Iconic -> vehicle_types_available_iconic
         AT.Boost  -> vehicle_types_available_boost
         AT.EFit   -> vehicle_types_available_efit
         AT.EFitG5 -> vehicle_types_available_efit_g5
-  in runBeamPostgresDebug' conn $ runSelectReturningList $ selectWith $ do
+  in withPostgres $ runSelectReturningList $ selectWith $ do
   cte <- selecting $ do
     let statusForStation = filter_ (filterFor_ variation)
                                    (all_ (bikeshareDb ^. bikeshareStationStatus))

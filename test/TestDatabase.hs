@@ -86,9 +86,8 @@ getDecodedFileStatus = getDecodedFile
 
 
 -- | Initialize empty database from the test station information response and all 22 station status responses.
-initDBWithAllTestData :: Connection -- ^ Database connection
-                      -> IO ()
-initDBWithAllTestData conn = do
+initDBWithAllTestData :: IO ()
+initDBWithAllTestData = do
   info <- getDecodedFileInformation  "docs/json/2.3/station_information-1.json"
   void $ runWithApp dbnameTest $ insertStationInformation $ info   ^. response_data . unInfoStations
 
@@ -103,7 +102,7 @@ initDBWithAllTestData conn = do
 unit_insertStationInformation :: IO ()
 unit_insertStationInformation = do
   -- Connect to the database.
-  conn <- setupTestDatabase
+  setupTestDatabase
 
   stationInformationResponse <- getDecodedFileInformation "test/json/station_information.json"
 
@@ -117,7 +116,7 @@ unit_insertStationInformation = do
 unit_insertStationStatus :: IO ()
 unit_insertStationStatus = do
   -- Connect to the database.
-  conn <- setupTestDatabase
+  setupTestDatabase
 
   info    <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
   status  <- getDecodedFileStatus      "test/json/station_status.json"
@@ -134,7 +133,7 @@ unit_insertStationStatus = do
 unit_queryStationStatus :: IO ()
 unit_queryStationStatus = do
   -- Connect to the database.
-  conn <- setupTestDatabase
+  setupTestDatabase
 
   info    <- getDecodedFileInformation  "test/json/station_information.json"
   status  <- getDecodedFileStatus       "test/json/station_status.json"
@@ -155,7 +154,7 @@ unit_queryStationStatus = do
 unit_insertStationInformationApi :: IO ()
 unit_insertStationInformationApi = do
   -- Connect to the database.
-  conn <- setupTestDatabase
+  setupTestDatabase
 
   info    <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
 
@@ -167,7 +166,7 @@ unit_insertStationInformationApi = do
 unit_insertStationStatusApi :: IO ()
 unit_insertStationStatusApi = do
   -- Connect to the database.
-  conn <- setupTestDatabase
+  setupTestDatabase
 
   status  <- getDecodedFileStatus "docs/json/2.3/station_status-1.json"
 
@@ -181,7 +180,7 @@ unit_insertStationStatusApi = do
 unit_insertStationApi :: IO ()
 unit_insertStationApi = do
   -- Connect to the database.
-  conn <- setupTestDatabase
+  setupTestDatabase
 
   info    <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
   status  <- getDecodedFileStatus      "docs/json/2.3/station_status-1.json"
@@ -207,10 +206,10 @@ Between /station_status-1/ and /station_status-2/, station 7000 reported new dat
 -}
 unit_getRowsToDeactivate :: IO ()
 unit_getRowsToDeactivate = do
-  conn <- setupTestDatabase
+  setupTestDatabase
 
   -- Separate API status records into those that are newer than in the database entry and those that are unchanged.
-  rows_to_deactivate <- doGetRowsToDeactivate conn
+  rows_to_deactivate <- doGetRowsToDeactivate
 
   assertEqual "Expected number of rows that would be deactivated" 302 (length rows_to_deactivate)
 
@@ -221,8 +220,8 @@ unit_getRowsToDeactivate = do
 
 
 -- | Query updated station status and return a list of database statuses.
-doGetRowsToDeactivate :: Connection -> IO [StationStatusT Identity]
-doGetRowsToDeactivate conn = do
+doGetRowsToDeactivate :: IO [StationStatusT Identity]
+doGetRowsToDeactivate = do
   info      <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
   status_1  <- getDecodedFileStatus      "docs/json/2.3/station_status-1.json"
   status_2  <- getDecodedFileStatus      "docs/json/2.3/station_status-2.json"
@@ -248,10 +247,10 @@ Between /station_status-1/ and /station_status-2/, station 7000 reported new dat
 -}
 unit_separateNewerStatusRecords :: IO ()
 unit_separateNewerStatusRecords = do
-  conn <- setupTestDatabase
+  setupTestDatabase
 
   -- Separate API status records into those that are newer than in the database entry and those that are unchanged.
-  api_update_plan <- doSeparateNewerStatusRecords conn
+  api_update_plan <- doSeparateNewerStatusRecords
 
   assertEqual "API status records newer than database entry"      302 (length $ api_update_plan ^. filter_newer)
   assertEqual "API status recrods unchanged from database entry"  407 (length $ api_update_plan ^. filter_unchanged)
@@ -266,8 +265,8 @@ unit_separateNewerStatusRecords = do
 
 
 -- | Query updated station status and return a list of API statuses.
-doSeparateNewerStatusRecords :: Connection -> IO FilterStatusResult
-doSeparateNewerStatusRecords conn = do
+doSeparateNewerStatusRecords :: IO FilterStatusResult
+doSeparateNewerStatusRecords = do
   info      <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
   status_1  <- getDecodedFileStatus      "docs/json/2.3/station_status-1.json"
   status_2  <- getDecodedFileStatus      "docs/json/2.3/station_status-2.json"
@@ -283,7 +282,7 @@ doSeparateNewerStatusRecords conn = do
 -- | HUnit test to assert that changed station status are inserted.
 unit_separateNewerStatusRecordsInsert :: IO ()
 unit_separateNewerStatusRecordsInsert = do
-  conn <- setupTestDatabase
+  setupTestDatabase
 
   {-
   - Insert information and status data (1)
@@ -291,7 +290,7 @@ unit_separateNewerStatusRecordsInsert = do
   - Check if inserting status data (2) would result in updates
   - Returns (updated, same)
   -}
-  updated <- doSeparateNewerStatusRecordsInsertOnce conn
+  updated <- doSeparateNewerStatusRecordsInsertOnce
 
   -- Assert that the same number of status rows are inserted as were updated.
   assertEqual "Deactivated status rows"     302 (length $ updated ^. insert_deactivated)
@@ -299,9 +298,8 @@ unit_separateNewerStatusRecordsInsert = do
   assertEqual "Same number inserted as updated" (length $ updated ^. insert_inserted) (length $ updated ^. insert_deactivated)
 
 -- | Insert station statuses (1) into a database, then (2).
-doSeparateNewerStatusRecordsInsertOnce :: Connection        -- ^ Database connection
-                                   -> IO InsertStatusResult -- ^ Result of inserting updated station statuses.
-doSeparateNewerStatusRecordsInsertOnce conn = do
+doSeparateNewerStatusRecordsInsertOnce :: IO InsertStatusResult -- ^ Result of inserting updated station statuses.
+doSeparateNewerStatusRecordsInsertOnce = do
   info      <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
   status_1  <- getDecodedFileStatus      "docs/json/2.3/station_status-1.json"
   status_2  <- getDecodedFileStatus      "docs/json/2.3/station_status-2.json"
@@ -321,7 +319,7 @@ doSeparateNewerStatusRecordsInsertOnce conn = do
 -- | HUnit test to assert that reinserting already-deactivated rows is a no-op.
 unit_separateNewerStatusRecordsInsertTwice :: IO ()
 unit_separateNewerStatusRecordsInsertTwice = do
-  conn <- setupTestDatabase
+  setupTestDatabase
 
   {-
   - Insert information and status data (1)
@@ -329,7 +327,7 @@ unit_separateNewerStatusRecordsInsertTwice = do
   - Check if inserting status data (2) would result in updates
   - Returns (updated, same)
   -}
-  updated <- doSeparateNewerStatusRecordsInsertTwice conn
+  updated <- doSeparateNewerStatusRecordsInsertTwice
 
   -- Assert that the no status rows are inserted or deactivated on the second iteration.
   assertEqual "Deactivated status rows"       0 (length $ updated ^. insert_deactivated)
@@ -339,9 +337,8 @@ unit_separateNewerStatusRecordsInsertTwice = do
 
 -- FIXME: test fails
 -- | Insert station statuses (1) into a database, then (2), then (2) again.
-doSeparateNewerStatusRecordsInsertTwice :: Connection        -- ^ Database connection
-                                        -> IO InsertStatusResult -- ^ Result of inserting updated station statuses.
-doSeparateNewerStatusRecordsInsertTwice conn = do
+doSeparateNewerStatusRecordsInsertTwice :: IO InsertStatusResult -- ^ Result of inserting updated station statuses.
+doSeparateNewerStatusRecordsInsertTwice = do
   info      <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
   status_1  <- getDecodedFileStatus "docs/json/2.3/station_status-1.json"
   status_2  <- getDecodedFileStatus "docs/json/2.3/station_status-2.json"
@@ -368,7 +365,7 @@ doSeparateNewerStatusRecordsInsertTwice conn = do
 -- | HUnit test to validate that a station ID can be looked up by its name, and vice-versa.
 unit_queryStationByIdAndName :: IO ()
 unit_queryStationByIdAndName = do
-  conn <- setupTestDatabase
+  setupTestDatabase
   info <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
   void $ runWithApp dbnameTest $ insertStationInformation $ info ^. response_data . unInfoStations
 
@@ -379,14 +376,14 @@ unit_queryStationByIdAndName = do
     , (7050,"Richmond St E / Jarvis St Green P")
     , (7112,"Liberty St / Fraser Ave Green P")
     , (7789,"75 Holly St - Green P")
-    ] =<< (runWithApp dbnameTest $ queryStationIdLike "%Green P")
+    ] =<< runWithApp dbnameTest (queryStationIdLike "%Green P")
 
 
 -- | HUnit test to query all status records for a station between two times.
 unit_queryStationStatusBetween :: IO ()
 unit_queryStationStatusBetween = do
-  conn <- setupTestDatabase
-  initDBWithAllTestData conn
+  setupTestDatabase
+  initDBWithAllTestData
 
   -- First status for #7001 was inserted at 2023-09-15 17:16:58; last status at 2023-09-15 17:35:00.
   statusBetweenAll <- runWithApp dbnameTest $ queryStationStatusBetween 7001
@@ -421,8 +418,8 @@ unit_queryStationStatusBetween = do
 -- | HUnit test to query all status records for a station between two times.
 unit_queryDockingUndockingCount :: IO ()
 unit_queryDockingUndockingCount = do
-  conn <- setupTestDatabase
-  initDBWithAllTestData conn
+  setupTestDatabase
+  initDBWithAllTestData
 
   -- Test dataset has 5 rows for station 7000, 3 rows for 7006, 5 for 7012, and 5 rows for 7148:
   -- |   id | station | reported               | iconic |
@@ -451,19 +448,19 @@ unit_queryDockingUndockingCount = do
 
 
   --                   station  thresholds     dockings undockings
-  checkConditions conn 7000     thresholds7000 29         0
-  checkConditions conn 7006     thresholds7006  0       (-6)
-  checkConditions conn 7012     thresholds7012  3       (-1)
-  checkConditions conn 7148     thresholds7148  2         0
+  checkConditions 7000     thresholds7000 29         0
+  checkConditions 7006     thresholds7006  0       (-6)
+  checkConditions 7012     thresholds7012  3       (-1)
+  checkConditions 7148     thresholds7148  2         0
   where
     thresholds7000  = [ OldestID    1, NewestID 2746, LatestTime (ReportTime $ read "2023-09-15 17:36:27.0") ]
     thresholds7006  = [ OldestID    7, NewestID 1855, LatestTime (ReportTime $ read "2023-09-15 17:34:31.0") ]
     thresholds7012  = [ OldestID   12, NewestID 2749, LatestTime (ReportTime $ read "2023-09-15 17:36:06.0") ]
     thresholds7148  = [ OldestID  136, NewestID 2849, LatestTime (ReportTime $ read "2023-09-15 17:36:37.0") ]
 
-checkConditions :: Connection -> Int32 -> [StatusThreshold] -> Int -> Int -> IO ()
-checkConditions conn stationId thresholds expectDockings expectUndockings = do
-  eventCountsForStation <- findInList stationId <$> queryDockingEventsCount conn (StatusVariationQuery stationId Docking AT.Iconic thresholds)
+checkConditions :: Int32 -> [StatusThreshold] -> Int -> Int -> IO ()
+checkConditions stationId thresholds expectDockings expectUndockings = do
+  eventCountsForStation <- findInList stationId <$> runWithApp dbnameTest (queryDockingEventsCount (StatusVariationQuery stationId Docking AT.Iconic thresholds))
   assertEqual ("Expected number of undockings at station " ++ show stationId) (Just expectUndockings)  (undockings <$> eventCountsForStation)
   assertEqual ("Expected number of dockings at station "   ++ show stationId) (Just expectDockings)    (dockings   <$> eventCountsForStation)
 

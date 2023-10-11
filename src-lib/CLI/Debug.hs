@@ -25,12 +25,9 @@ import           Data.Ord                      ( Down (Down) )
 import           Data.Proxy
 import           Data.Text.Lazy                ( Text, pack, toStrict, unpack )
 
-import           Database.Beam
 import           Database.Beam.Schema.Tables
 import           Database.BikeShare
 import           Database.BikeShare.Operations
-
-import           Fmt
 
 import           Prelude                       hiding ( log )
 
@@ -77,27 +74,24 @@ dispatchDebug _options = do
   eventSums <- eventsForRange (fromGregorian 2023 0 06) (fromGregorian 2023 10 08)
   let differentials = sortOn snd $ map (\counts -> (station counts, undockings counts + dockings counts)) eventSums
 
-  -- res <- queryAllStationsStatusBeforeTime <$> withConn <*> pure (reportTime (fromGregorian 2023 09 25) (TimeOfDay 14 00 00)) >>= liftIO
-  let dayTimePairs = dayTimes
-
+  -- Get number of bikes by type in the system, every two hours.
   countsAtTimes <- mapM (uncurry bikeCountsAtMoment) dayTimes
   (liftIO . formatBikeCounts) countsAtTimes
-  pure ()
 
-  -- liftIO $ do
-  --   cliOut $ formatDatabaseStats numStatusRows infoTableSize statusTableSize
+  liftIO $ do
+    cliOut $ formatDatabaseStats numStatusRows infoTableSize statusTableSize
 
-  --   when (length eventSums < 10) (putStrLn $ "Docking and undocking counts: " ++ show (length eventSums))
+    when (length eventSums < 10) (putStrLn $ "Docking and undocking counts: " ++ show (length eventSums))
 
-  --   putStrLn "Sorted by undockings:"
-  --   formatDockingEventsCount $ sortDockingEventsCount Undocking eventSums
-  --   putStrLn "Sorted by dockings:"
-  --   formatDockingEventsCount $ sortDockingEventsCount Docking eventSums
+    putStrLn "Sorted by undockings:"
+    formatDockingEventsCount $ sortDockingEventsCount Undocking eventSums
+    putStrLn "Sorted by dockings:"
+    formatDockingEventsCount $ sortDockingEventsCount Docking eventSums
 
-  --   putStrLn "\nSorted by differentials (undockings >> dockings):"
-  --   formatDockingEventsDifferential $ take 50 $ sortOn (view _2) differentials
-  --   putStrLn "\nSorted by differentials (dockings >> undockings):"
-  --   formatDockingEventsDifferential $ take 50 $ sortOn (Down . view _2) differentials
+    putStrLn "\nSorted by differentials (undockings >> dockings):"
+    formatDockingEventsDifferential $ take 50 $ sortOn (view _2) differentials
+    putStrLn "\nSorted by differentials (dockings >> undockings):"
+    formatDockingEventsDifferential $ take 50 $ sortOn (Down . view _2) differentials
 
 
 formatDatabaseStats :: Int32 -> Maybe String -> Maybe String -> [Text]
@@ -118,7 +112,7 @@ eventsForRange :: Day -> Day -> App [DockingEventsCount]
 eventsForRange earliestDay latestDay = do
   -- Calculate number of dockings and undockings
   log D "Querying dockings and undockings."
-  queryDockingEventsCount <$> withConn <*> pure (queryCondition Docking) >>= liftIO
+  queryDockingEventsCount (queryCondition Docking)
   where
     queryCondition :: AvailabilityCountVariation -> StatusVariationQuery
     queryCondition variation = StatusVariationQuery 7148 variation AT.EFit [ EarliestTime (reportTime earliestDay (TimeOfDay 00 00 00))
