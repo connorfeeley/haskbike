@@ -34,7 +34,7 @@ import           Database.BikeShare
 
 -- | Data type representing a query for station status dockings or undockings.
 data StatusVariationQuery where
-  StatusVariationQuery :: { _status_query_station_id    :: Int32
+  StatusVariationQuery :: { _status_query_station_id    :: Maybe Int32
                           , _status_query_variation     :: AvailabilityCountVariation
                           , _status_query_bike_type     :: AT.TorontoVehicleType
                           , _status_query_thresholds    :: [StatusThreshold]
@@ -60,12 +60,16 @@ thresholdCondition (EarliestTime time_threshold) status =
 thresholdCondition (LatestTime time_threshold) status =
   status ^. d_status_last_reported <=. val_ (Just time_threshold)
 
+stationIdCondition :: Maybe Int32 -> StationStatusT (QExpr Postgres s) -> QExpr Postgres s Bool
+stationIdCondition (Just stationId) status =
+  status ^. d_status_info_id ==. val_ stationId
+stationIdCondition Nothing _ = val_ True
+
 -- | Construct a filter expression for a 'StatusQuery'.
 filterFor_ :: StatusVariationQuery -> StationStatusT (QExpr Postgres s) -> QExpr Postgres s Bool
-filterFor_ (StatusVariationQuery _ _ _ thresholds) status =
+filterFor_ (StatusVariationQuery stationId _ _ thresholds) status =
   let thresholdConditions = map (`thresholdCondition` status) thresholds
-  -- in foldr (&&.) stationCondition thresholdConditions
-  in foldr (&&.) (val_ True) thresholdConditions
+  in foldr (&&.) (stationIdCondition stationId status) thresholdConditions
 
 -- | Data type representing the type of statistic to query.
 data AvailabilityCountVariation where

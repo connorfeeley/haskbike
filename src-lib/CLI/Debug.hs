@@ -125,9 +125,14 @@ eventsForRange earliestDay latestDay = do
   queryDockingEventsCount (queryCondition Docking)
   where
     queryCondition :: AvailabilityCountVariation -> StatusVariationQuery
-    queryCondition variation = StatusVariationQuery 7148 variation AT.EFit [ EarliestTime (reportTime earliestDay (TimeOfDay 00 00 00))
-                                                                           , LatestTime   (reportTime latestDay   (TimeOfDay 00 00 00))
-                                                                           ]
+    queryCondition variation =
+      StatusVariationQuery
+      Nothing -- or (Just 7001) for only one station (7001)
+      variation
+      AT.EFit
+      [ EarliestTime (reportTime earliestDay (TimeOfDay 00 00 00))
+      , LatestTime   (reportTime latestDay   (TimeOfDay 00 00 00))
+      ]
 
 -- | Sort docking and undocking events.
 sortDockingEventsCount :: AvailabilityCountVariation -> [DockingEventsCount] -> [DockingEventsCount]
