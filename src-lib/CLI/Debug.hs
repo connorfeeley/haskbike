@@ -13,7 +13,7 @@ import           CLI.Events
 import           CLI.Options
 import           CLI.QueryFormat
 
-import           Colog                         ( log, pattern D )
+import           Colog                         ( log, pattern D, pattern I )
 
 import           Control.Lens                  hiding ( para )
 import           Control.Monad                 ( when )
@@ -37,6 +37,8 @@ import           System.Console.ANSI
 
 import qualified Text.PrettyPrint.Boxes        as Box
 
+import           UnliftIO                      ( pooledMapConcurrentlyN )
+
 
 -- | Dispatch CLI arguments for debugging.
 dispatchDebug :: DebugMiscOptions
@@ -50,7 +52,7 @@ dispatchDebug _options = do
   let tableSize = tableValuesNeeded (Proxy :: Proxy StationStatusT)
 
   log D $ "Number of rows in station_status table: " <> toStrict (pack $ show numStatusRows)
-  liftIO $ putStrLn $ "The table contains " ++ show tableSize ++ " rows."
+  liftIO $ putStrLn $ "Info table contains " ++ show tableSize ++ " rows."
 
   -- Get the size of the station information table.
   infoTableSize <- queryTableSize "station_information"
@@ -68,14 +70,19 @@ dispatchDebug _options = do
         statusTableSize
 
   log D $ "Status table size: " <> toStrict (pack statusTableSizeText)
-  liftIO $ putStrLn $ "Status table size: " <> statusTableSizeText <> " rows."
+  liftIO $ putStrLn $ "Status table contains " ++ show tableSize ++ " rows."
 
   -- Calculate number of dockings and undockings
+  log I "Calculating number of dockings and undockings."
   eventSums <- eventsForRange (fromGregorian 2023 0 06) (fromGregorian 2023 10 08)
   let differentials = sortOn snd $ map (\counts -> (station counts, undockings counts + dockings counts)) eventSums
 
   -- Get number of bikes by type in the system, every two hours.
-  countsAtTimes <- mapM (uncurry bikeCountsAtMoment) dayTimes
+  log I "Getting number of bikes by type in the system."
+
+  -- TODO: use pooledMapConcurrently (automatic # of threads) instead?
+  -- Run queries concurrently (with a thread pool of 5).
+  countsAtTimes <- pooledMapConcurrentlyN 5 (uncurry bikeCountsAtMoment) dayTimes
   (liftIO . formatBikeCounts) countsAtTimes
 
   liftIO $ do
@@ -132,6 +139,7 @@ formatDockingEventsCount events = Box.printBox table
                          ( index' :: Int
                          , station counts ^. info_station_id
                          , station counts ^. info_name
+                         , station counts ^. info_is_charging_station
                          , undockings counts
                          , dockings counts
                          )
@@ -139,11 +147,12 @@ formatDockingEventsCount events = Box.printBox table
     col1 = Box.vcat Box.left (showFn Dull Cyan  "#"          : map (showFn Dull Cyan   . show)        (toListOf (traverse . _1) columns))
     col2 = Box.vcat Box.left (showFn Dull Green "ID"         : map (showFn Dull Green  . show)        (toListOf (traverse . _2) columns))
     col3 = Box.vcat Box.left (showFn Dull White "Name"       : map (showFn Vivid White . read . show) (toListOf (traverse . _3) columns))
-    col4 = Box.vcat Box.left (showFn Dull Red   "Undockings" : map (showFn Vivid Red   . show)        (toListOf (traverse . _4) columns))
-    col5 = Box.vcat Box.left (showFn Dull Blue  "Dockings"   : map (showFn Vivid Blue  . show)        (toListOf (traverse . _5) columns))
+    col4 = Box.vcat Box.left (showFn Dull Red   "Charger"    : map (showFn Vivid Red   . show)        (toListOf (traverse . _4) columns))
+    col5 = Box.vcat Box.left (showFn Dull Red   "Undockings" : map (showFn Vivid Red   . show)        (toListOf (traverse . _5) columns))
+    col6 = Box.vcat Box.left (showFn Dull Blue  "Dockings"   : map (showFn Vivid Blue  . show)        (toListOf (traverse . _6) columns))
     showFn :: ColorIntensity -> Color -> String -> Box.Box
     showFn intensity colour = Box.text . (unpack . colouredText intensity colour . pack)
-    table = Box.hsep 1 Box.left [col1, col2, col3, col4, col5]
+    table = Box.hsep 1 Box.left [col1, col2, col3, col4, col5, col6]
 
 -- | Print difference between docking and undocking event counts.
 formatDockingEventsDifferential :: [(StationInformation, Int)] -> IO ()

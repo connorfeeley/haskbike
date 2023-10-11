@@ -11,6 +11,8 @@ import           AppEnv
 
 import           CLI.QueryFormat
 
+import           Colog
+
 import           Control.Lens                  hiding ( para )
 
 import           Data.Int                      ( Int32 )
@@ -20,6 +22,8 @@ import           Data.Time                     ( addDays )
 import           Database.Beam
 import           Database.BikeShare
 import           Database.BikeShare.Operations
+
+import           Fmt
 
 import           Prelude                       hiding ( log )
 
@@ -32,6 +36,8 @@ import qualified Text.PrettyPrint.Boxes        as Box
 
 bikeCountsAtMoment :: Day -> TimeOfDay -> App (Day, TimeOfDay, Int32, Int32, Int32, Int32)
 bikeCountsAtMoment day timeOfDay = do
+
+  log I $ format "Getting number of bikes by type in the system on {} at {}" day timeOfDay
   statusForMoment <- queryAllStationsStatusBeforeTime (reportTime day timeOfDay)
   pure ( day
        , timeOfDay
