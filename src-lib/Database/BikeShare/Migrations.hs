@@ -80,7 +80,7 @@ allowDestructive = defaultUpToDateHooks
   { runIrreversibleHook = pure True }
 
 migrateDB :: Database.Beam.Postgres.Connection -> IO (Maybe (CheckedDatabaseSettings Postgres BikeshareDb))
-migrateDB conn = runBeamPostgresDebug pPrintCompact conn $
+migrateDB conn = runBeamPostgres conn $
   bringUpToDateWithHooks
     allowDestructive
     PG.migrationBackend
