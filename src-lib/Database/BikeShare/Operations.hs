@@ -94,25 +94,23 @@ data InsertStatusResult where
 makeLenses ''InsertStatusResult
 
 -- | Query database for disabled docks, returning tuples of (name, num_docks_disabled).
-queryDisabledDocks :: Connection              -- ^ Connection to the database.
-                   -> IO [(Text.Text, Int32)] -- ^ List of tuples of (name, num_docks_disabled).
-queryDisabledDocks conn = do
-  runBeamPostgres' conn $ runSelectReturningList $ select disabledDocksExpr
+queryDisabledDocks :: App [(Text.Text, Int32)] -- ^ List of tuples of (name, num_docks_disabled).
+queryDisabledDocks = do
+  withPostgres $ runSelectReturningList $ select disabledDocksExpr
 
 -- | Helper function to print disabled docks.
-printDisabledDocks :: Connection -> IO ()
-printDisabledDocks conn = queryDisabledDocks conn >>= pPrintCompact
+printDisabledDocks :: App ()
+printDisabledDocks = queryDisabledDocks >>= pPrintCompact
 
 -- | Query database for station status.
-queryStationStatus :: Connection                               -- ^ Connection to the database.
-                   -> Maybe Integer                            -- ^ Limit number of rows returned.
-                   -> IO [(StationInformation, StationStatus)] -- ^ List of tuples of (station information, station status).
-queryStationStatus conn limit =
-  runBeamPostgres' conn $ runSelectReturningList $ select $
+queryStationStatus :: Maybe Integer                            -- ^ Limit number of rows returned.
+                   -> App [(StationInformation, StationStatus)] -- ^ List of tuples of (station information, station status).
+queryStationStatus limit =
+  withPostgres $ runSelectReturningList $ select $
   queryStationStatusExpr limit
 
-queryStationStatusFields conn =
-  runBeamPostgres' conn $ runSelectReturningList $ select $ do
+queryStationStatusFields =
+  withPostgres $ runSelectReturningList $ select $ do
   info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
   status <- all_ (bikeshareDb ^. bikeshareStationStatus)
   guard_ (_d_status_info_id status `references_` info)
@@ -125,17 +123,15 @@ queryStationStatusFields conn =
 
 
 {- | Query database for all station information. -}
-queryStationInformation:: Connection              -- ^ Connection to the database.
-                       -> IO [StationInformation] -- ^ List of station information.
-queryStationInformation conn =
-  runBeamPostgres' conn $ runSelectReturningList $ select $ all_ (bikeshareDb ^. bikeshareStationInformation)
+queryStationInformation :: App [StationInformation] -- ^ List of station information.
+queryStationInformation =
+  withPostgres $ runSelectReturningList $ select $ all_ (bikeshareDb ^. bikeshareStationInformation)
 
 {- | Query database for station information corresponding to a list of station IDs. -}
-queryStationInformationByIds :: Connection              -- ^ Connection to the database.
-                             -> [Int]                   -- ^ List of station IDs to query.
-                             -> IO [StationInformation] -- ^ List of station information.
-queryStationInformationByIds conn ids =
-  runBeamPostgres' conn $ runSelectReturningList $ select $ do
+queryStationInformationByIds :: [Int]                   -- ^ List of station IDs to query.
+                             -> App [StationInformation] -- ^ List of station information.
+queryStationInformationByIds ids =
+  withPostgres $ runSelectReturningList $ select $ do
   info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
   guard_ (_info_station_id info `in_` ids')
   pure info
@@ -143,21 +139,19 @@ queryStationInformationByIds conn ids =
     ids' = fromIntegral <$> ids
 
 -- | Insert station information into the database.
-insertStationInformation :: Connection              -- ^ Connection to the database.
-                         -> [AT.StationInformation] -- ^ List of 'StationInformation' from the API response.
-                         -> IO [StationInformation] -- ^ List of 'StationInformation' that where inserted.
-insertStationInformation conn stations =
-  runBeamPostgres' conn $ runInsertReturningList $ insertStationInformationExpr stations
+insertStationInformation :: [AT.StationInformation]  -- ^ List of 'StationInformation' from the API response.
+                         -> App [StationInformation] -- ^ List of 'StationInformation' that where inserted.
+insertStationInformation stations =
+  withPostgres $ runInsertReturningList $ insertStationInformationExpr stations
 
 -- | Find the corresponding active rows in the database corresponding to each element of a list of *newer* 'AT.StationStatus' records.
-getRowsToDeactivate :: Connection         -- ^ Connection to the database.
-                    -> [AT.StationStatus] -- ^ List of 'AT.StationStatus' from the API response.
-                    -> IO [StationStatus] -- ^ List of 'StationStatus' rows that would need to be deactivated, if the statuses from the API were inserted.
-getRowsToDeactivate conn api_status
+getRowsToDeactivate :: [AT.StationStatus]  -- ^ List of 'AT.StationStatus' from the API response.
+                    -> App [StationStatus] -- ^ List of 'StationStatus' rows that would need to be deactivated, if the statuses from the API were inserted.
+getRowsToDeactivate api_status
   | null api_status = return []
   | otherwise = do
     -- Select using common table expressions (selectWith).
-    runBeamPostgres' conn $ runSelectReturningList $ selectWith $ do
+    withPostgres $ runSelectReturningList $ selectWith $ do
       -- Common table expression for 'StationStatus'.
       common_status <- selecting $ do
         info <- infoByIdExpr (map (fromIntegral . _status_station_id) api_status)
@@ -184,12 +178,11 @@ Separate API 'AT.StationStatus' into two lists:
 - one containing statuses that are newer than in the database statuses
 - one containing statuses that are the same as in the database statuses
 -}
-separateNewerStatusRecords :: Connection         -- ^ Connection to the database.
-                           -> [AT.StationStatus] -- ^ List of 'AT.StationStatus' from the API response.
-                           -> IO FilterStatusResult
-separateNewerStatusRecords conn api_status = do
+separateNewerStatusRecords :: [AT.StationStatus] -- ^ List of 'AT.StationStatus' from the API response.
+                           -> App FilterStatusResult
+separateNewerStatusRecords api_status = do
   -- Find rows that would need to be deactivated if the statuses from the API were inserted.
-  statuses_would_deactivate <- getRowsToDeactivate conn api_status
+  statuses_would_deactivate <- getRowsToDeactivate api_status
 
   -- Map of all API statuses, keyed on station ID.
   let api_status_map                = Map.fromList $ map (\ss -> (               ss ^. status_station_id,   ss)) api_status
@@ -210,27 +203,26 @@ separateNewerStatusRecords conn api_status = do
 {- |
 Insert updated station status into the database.
 -}
-insertStationStatus :: Connection         -- ^ Connection to the database.
-                    -> [AT.StationStatus] -- ^ List of 'AT.StationStatus' from the API response.
-                    -> IO InsertStatusResult
-insertStationStatus conn api_status
+insertStationStatus :: [AT.StationStatus] -- ^ List of 'AT.StationStatus' from the API response.
+                    -> App InsertStatusResult
+insertStationStatus api_status
   | null api_status = return $ InsertStatusResult [] []
   | otherwise = do
-    info_ids <- map (fromIntegral . _info_station_id) <$> queryStationInformationByIds conn status_ids
+    info_ids <- map (fromIntegral . _info_station_id) <$> queryStationInformationByIds status_ids
 
     let status = filter (\ss -> fromIntegral (_status_station_id ss) `elem` info_ids) api_status
 
-    statuses_to_deactivate <- getRowsToDeactivate conn status
-    updated_statuses <- deactivateOldStatus conn statuses_to_deactivate
+    statuses_to_deactivate <- getRowsToDeactivate status
+    updated_statuses <- deactivateOldStatus statuses_to_deactivate
     let updated_status_ids = map (fromIntegral . _d_status_station_id) updated_statuses
-    inserted_statuses <- insertNewStatus conn $
+    inserted_statuses <- insertNewStatus $
       filter (\ss -> ss ^. status_station_id `elem` updated_status_ids) status
 
     -- Select arbitrary (in this case, last [by ID]) status record for each station ID.
-    distinct_by_id <- selectDistinctByStationId conn status
+    distinct_by_id <- selectDistinctByStationId status
 
     -- Insert new records corresponding to station IDs which did not already exist in the station_status table.
-    new_status <- insertNewStatus conn $
+    new_status <- insertNewStatus $
       filter (\ss -> ss ^. status_station_id `notElem` map (fromIntegral . _d_status_station_id) distinct_by_id &&
                      ss ^. status_station_id `elem` info_ids
              ) status
@@ -241,45 +233,43 @@ insertStationStatus conn api_status
   where
     status_ids = fromIntegral <$> api_status ^.. traverse . status_station_id
 
-    selectDistinctByStationId conn' status
+    selectDistinctByStationId status
       | null status = return []
-      | otherwise = runBeamPostgres' conn' $ runSelectReturningList $
+      | otherwise = withPostgres $ runSelectReturningList $
         select $ Pg.pgNubBy_ _d_status_info_id $ orderBy_ (\s -> desc_ $ s ^. d_status_info_id)
         (all_ (bikeshareDb ^. bikeshareStationStatus))
 
-    deactivateOldStatus conn' status
+    deactivateOldStatus status
       | null status = return []
-      | otherwise = runBeamPostgres' conn' $ runUpdateReturningList $
+      | otherwise = withPostgres $ runUpdateReturningList $
           update (bikeshareDb ^. bikeshareStationStatus)
           (\c -> _d_status_active c <-. val_ False)
           (\c -> _d_status_id c `in_` map (val_ . _d_status_id) status)
 
-    insertNewStatus conn' status
+    insertNewStatus status
       | null status = return []
-      | otherwise = runBeamPostgres' conn' $ runInsertReturningList $
+      | otherwise = withPostgres $ runInsertReturningList $
           insert (bikeshareDb ^. bikeshareStationStatus) $
           insertExpressions $ map fromJSONToBeamStationStatus status
 
 {- |
 Query the statuses for a station between two times.
 -}
-queryStationStatusBetween :: Connection         -- ^ Connection to the database.
-                          -> Int                -- ^ Station ID.
-                          -> ReportTime         -- ^ Start time.
-                          -> ReportTime         -- ^ End time.
-                          -> IO [StationStatus] -- ^ List of 'StationStatus' for the given station between the given times.
-queryStationStatusBetween conn station_id start_time end_time =
-  runBeamPostgres' conn $ runSelectReturningList $ select $
+queryStationStatusBetween :: Int                 -- ^ Station ID.
+                          -> ReportTime          -- ^ Start time.
+                          -> ReportTime          -- ^ End time.
+                          -> App [StationStatus] -- ^ List of 'StationStatus' for the given station between the given times.
+queryStationStatusBetween station_id start_time end_time =
+  withPostgres $ runSelectReturningList $ select $
   statusBetweenExpr (fromIntegral station_id) start_time end_time
 
 {- |
 Query the station name given a station ID.
 -}
-queryStationName :: Connection        -- ^ Connection to the database.
-                 -> Int               -- ^ Station ID.
-                 -> IO (Maybe String) -- ^ Station name assosicated with the given station ID.
-queryStationName conn station_id = do
-  info <- runBeamPostgres' conn $ runSelectReturningOne $ select $ infoByIdExpr [fromIntegral station_id]
+queryStationName :: Int               -- ^ Station ID.
+                 -> App (Maybe String) -- ^ Station name assosicated with the given station ID.
+queryStationName station_id = do
+  info <- withPostgres $ runSelectReturningOne $ select $ infoByIdExpr [fromIntegral station_id]
 
   let station_name = info ^. _Just . info_name
 
@@ -292,19 +282,18 @@ Query the station ID for given a station name, using SQL `=` semantics.
 == __Examples__
 Get ID for "King St W / Joe Shuster Way":
 
->>> queryStationId conn "King St W / Joe Shuster Way"
+>>> queryStationId "King St W / Joe Shuster Way"
 Just 7148
 
 Get ID for "Wellesley Station Green P":
 
->>> queryStationId conn "Wellesley Station Green P"
+>>> queryStationId "Wellesley Station Green P"
 Just 7001
 -}
-queryStationId :: Connection        -- ^ Connection to the database.
-                 -> String          -- ^ Station ID.
-                 -> IO (Maybe Int)  -- ^ Station ID assosicated with the given station name, if found.
-queryStationId conn station_name = do
-  info <- runBeamPostgres' conn $ runSelectReturningOne $ select $ queryStationIdExpr station_name
+queryStationId :: String           -- ^ Station ID.
+               -> App (Maybe Int)  -- ^ Station ID assosicated with the given station name, if found.
+queryStationId station_name = do
+  info <- withPostgres $ runSelectReturningOne $ select $ queryStationIdExpr station_name
 
   pure $ fromIntegral <$> info ^? _Just . info_station_id
 
@@ -315,7 +304,7 @@ queryStationId conn station_name = do
 
 Search for station names ending with "Green P":
 
->>> queryStationIdLike conn "%Green P"
+>>> queryStationIdLike "%Green P"
 [ (7001,"Wellesley Station Green P")
 , (7050,"Richmond St E / Jarvis St Green P")
 , (7112,"Liberty St / Fraser Ave Green P")
@@ -323,16 +312,15 @@ Search for station names ending with "Green P":
 
 Search for station names containing "Joe Shuster":
 
->>> queryStationIdLike conn "%Joe Shuster%"
+>>> queryStationIdLike "%Joe Shuster%"
 [(7148,"King St W / Joe Shuster Way")]
 
 __Return:__ Tuples of (station ID, station name) matching the searched name, using SQL `LIKE` semantics.
 -}
-queryStationIdLike :: Connection          -- ^ Connection to the database.
-                   -> String              -- ^ Station ID.
-                   -> IO [(Int, String)]  -- ^ Tuples of (station ID, name) for stations that matched the query.
-queryStationIdLike conn station_name = do
-  info <- runBeamPostgres' conn $ runSelectReturningList $ select $ queryStationIdLikeExpr station_name
+queryStationIdLike :: String               -- ^ Station ID.
+                   -> App [(Int, String)]  -- ^ Tuples of (station ID, name) for stations that matched the query.
+queryStationIdLike station_name = do
+  info <- withPostgres $ runSelectReturningList $ select $ queryStationIdLikeExpr station_name
 
   -- Return tuples of (station_id, station_name)
   pure $ map (\si -> ( si ^. info_station_id & fromIntegral
