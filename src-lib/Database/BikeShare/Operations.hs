@@ -172,8 +172,8 @@ getRowsToDeactivate conn api_status
                                     ) api_status
         -- Select from station status where the last reported time is older than in the API response.
         status <- Database.Beam.reuse common_status
-        guard_ (_d_status_station_id    status ==. fst api_values &&. -- Station ID
-                _d_status_active        status ==. val_ True      &&. -- Status record is active
+        guard_ (_d_status_info_id       status ==. StationInformationId (fst api_values) &&. -- Station ID
+                _d_status_active        status ==. val_ True                             &&. -- Status record is active
                 _d_status_last_reported status <.  snd api_values)    -- Last reported time is older than in the API response
         pure status
 
@@ -220,18 +220,16 @@ insertStationStatus conn api_status
 
     statuses_to_deactivate <- getRowsToDeactivate conn status
     updated_statuses <- deactivateOldStatus conn statuses_to_deactivate
+    let updated_status_ids = map (fromIntegral . _d_status_station_id) updated_statuses
     inserted_statuses <- insertNewStatus conn $
-      filter (\ss -> ss ^. status_station_id `elem`
-                     map (fromIntegral . _d_status_station_id) updated_statuses
-             ) status
+      filter (\ss -> ss ^. status_station_id `elem` updated_status_ids) status
 
     -- Select arbitrary (in this case, last [by ID]) status record for each station ID.
     distinct_by_id <- selectDistinctByStationId conn status
 
     -- Insert new records corresponding to station IDs which did not already exist in the station_status table.
     new_status <- insertNewStatus conn $
-      filter (\ss -> ss ^. status_station_id `notElem`
-                     map (fromIntegral . _d_status_station_id) distinct_by_id &&
+      filter (\ss -> ss ^. status_station_id `notElem` map (fromIntegral . _d_status_station_id) distinct_by_id &&
                      ss ^. status_station_id `elem` info_ids
              ) status
 
@@ -243,8 +241,9 @@ insertStationStatus conn api_status
 
     selectDistinctByStationId conn' status
       | null status = return []
-      | otherwise = runBeamPostgres' conn' $ runSelectReturningList $ select $ Pg.pgNubBy_ _d_status_station_id $ orderBy_ (desc_ . _d_status_station_id) $
-      all_ (bikeshareDb ^. bikeshareStationStatus)
+      | otherwise = runBeamPostgres' conn' $ runSelectReturningList $
+        select $ Pg.pgNubBy_ _d_status_info_id $ orderBy_ (\s -> desc_ $ s ^. d_status_info_id)
+        (all_ (bikeshareDb ^. bikeshareStationStatus))
 
     deactivateOldStatus conn' status
       | null status = return []
