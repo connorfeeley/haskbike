@@ -13,11 +13,10 @@ import           AppEnv
 
 import           CLI.Options
 
-import           Colog                         ( Message, log, pattern D, pattern I, pattern W )
+import           Colog                         ( log, pattern D, pattern I, pattern W )
 
 import           Control.Lens
 import           Control.Monad                 ( unless )
-import           Control.Monad.IO.Class        ( MonadIO (liftIO) )
 
 import           Data.Foldable                 ( for_ )
 import qualified Data.Text                     as Text

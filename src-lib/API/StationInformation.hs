@@ -158,7 +158,7 @@ data StationInformation where
                         , info_nearby_distance           :: Double
                         , info_bluetooth_id              :: String
                         , info_ride_code_support         :: Bool
-                        -- , info_rental_uris               :: RentalURIs
+                        , info_rental_uris               :: RentalURIs
                         } -> StationInformation
   deriving (Show, Eq, Generic)
 
@@ -181,7 +181,7 @@ instance ToJSON StationInformation where
            , "nearby_distance"          .= info_nearby_distance          station
            , "_bluetooth_id"            .= info_bluetooth_id             station
            , "_ride_code_support"       .= info_ride_code_support        station
-           -- , "rental_uris"              .= info_rental_uris              station
+           , "rental_uris"              .= info_rental_uris              station
            ]
 
 instance FromJSON StationInformation where
@@ -203,7 +203,7 @@ instance FromJSON StationInformation where
     <*> v .: "nearby_distance"
     <*> v .: "_bluetooth_id"
     <*> v .: "_ride_code_support"
-    -- <*> v .: "rental_uris"
+    <*> v .: "rental_uris"
 
 -- | A wrapper type for the station information response.
 newtype StationInformationResponseData where

@@ -118,7 +118,7 @@ reportToLocal (ReportTime localTime) = localTime
 systemToReport :: IO ReportTime
 systemToReport = do
   currentTime <- getCurrentTime
-  currentTimeZone <- getCurrentTimeZone
+  -- currentTimeZone <- getCurrentTimeZone
   -- pure $ ReportTime <$> currentTime
   let currentLocal = utcToLocalTime utcTimeZone currentTime
   pure $ ReportTime currentLocal

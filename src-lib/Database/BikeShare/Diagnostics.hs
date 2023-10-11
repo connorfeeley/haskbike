@@ -18,6 +18,9 @@ module Database.BikeShare.Diagnostics
      , DiagnosticsId
      , DiagnosticsT (..)
      , PrimaryKey (DiagnosticsId)
+       -- Lenses
+     , diagnosticId
+     , diagnosticTime
      ) where
 
 

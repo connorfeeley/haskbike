@@ -21,6 +21,8 @@ module Database.BikeShare
 
 
 
+import           Control.Lens
+
 import           Database.Beam
 import           Database.BikeShare.Types
 
@@ -50,12 +52,14 @@ bikeshareDb = defaultDbSettings `withDbModification`
       , _info_capacity               = "capacity"
       , _info_is_charging_station    = "is_charging_station"
       , _info_rental_methods         = "rental_methods"
+      , _info_is_valet_station       = "is_valet_station"
       , _info_is_virtual_station     = "is_virtual_station"
       , _info_groups                 = "groups"
       , _info_obcn                   = "obcn"
       , _info_nearby_distance        = "nearby_distance"
       , _info_bluetooth_id           = "bluetooth_id"
       , _info_ride_code_support      = "ride_code_support"
+      , _info_rental_uris            = "rental_uris"
       , _info_active                 = "active"
       }
   , _bikeshareStationStatus =
@@ -86,9 +90,6 @@ bikeshareDb = defaultDbSettings `withDbModification`
   }
 
 -- Lenses
--- bikeshareStationInformation     :: Lens' (BikeshareDb f) (f (TableEntity StationInformationT))
--- bikeshareStationStatus          :: Lens' (BikeshareDb f) (f (TableEntity StationStatusT))
--- bikeshareDiagnostics            :: Lens' (BikeshareDb f) (f (TableEntity DiagnosticsT))
 BikeshareDb
   (TableLens bikeshareStationInformation)
   (TableLens bikeshareStationStatus)

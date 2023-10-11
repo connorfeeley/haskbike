@@ -16,6 +16,8 @@ module Database.BikeShare.Utils
      , uncurry5
      ) where
 
+import           Control.Monad                 ( void )
+
 import           Data.String                   ( fromString )
 
 import           Database.Beam.Postgres
@@ -104,9 +106,9 @@ setupProductionDatabase = setupDatabaseName dbnameProduction
 
 -- | Setup the named database.
 setupDatabaseName :: String -> IO Connection
-setupDatabaseName name = do
+setupDatabaseName dbname = do
   -- Connect to named database, drop all tables, and execute migrations.
-  mkDbParams dbnameProduction >>= uncurry5 connectDbName >>= dropTables >>= migrateDatabase
+  mkDbParams dbname >>= uncurry5 connectDbName >>= dropTables >>= migrateDatabase
 
 -- | Drop all tables in the named database.
 dropTables :: Connection -> IO Connection
@@ -123,6 +125,5 @@ dropTables conn = do
 migrateDatabase :: Connection -> IO Connection
 migrateDatabase conn = do
   -- Initialize the database.
-  _ <- migrateDB conn
-
+  void $ migrateDB conn
   pure conn

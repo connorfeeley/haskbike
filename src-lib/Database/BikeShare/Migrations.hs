@@ -11,8 +11,6 @@ import           Database.Beam.Postgres
 import qualified Database.Beam.Postgres.Migrate as PG
 import           Database.BikeShare
 
-import           Formatting
-
 
 referenceInformationTable :: BeamMigrateSqlBackend be => Constraint be
 referenceInformationTable = Constraint $ referencesConstraintSyntax "station_information" ["station_id"]
@@ -35,12 +33,14 @@ initialSetup = BikeshareDb
         , _info_capacity               = field "capacity"               int notNull
         , _info_is_charging_station    = field "is_charging_station"    boolean notNull
         , _info_rental_methods         = field "rental_methods"         (unboundedArray rentalMethod)
+        , _info_is_valet_station       = field "is_valet_station"       boolean notNull
         , _info_is_virtual_station     = field "is_virtual_station"     boolean notNull
         , _info_groups                 = field "groups"                 (unboundedArray (varchar (Just 100)))
         , _info_obcn                   = field "obcn"                   (varchar (Just 100)) notNull
         , _info_nearby_distance        = field "nearby_distance"        double notNull
         , _info_bluetooth_id           = field "bluetooth_id"           (varchar (Just 100)) notNull
         , _info_ride_code_support      = field "ride_code_support"      boolean notNull
+        , _info_rental_uris            = field "rental_uris"            (unboundedArray (varchar (Just 100)))
         , _info_active                 = field "active"                 boolean notNull
         })
   <*> (createTable "station_status" $ StationStatus
