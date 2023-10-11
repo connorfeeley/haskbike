@@ -51,7 +51,7 @@ resetUnder  = pack $ setSGRCode [ SetUnderlining       NoUnderline     ]
 -- | Lookup local time zone.
 fmtStationStatus :: TimeZone -> (Int, String) -> App [Text]
 fmtStationStatus currentTimeZone' (id', name') = do
-  latest <- queryStationStatusLatest <$> withConn <*> pure id' >>= liftIO
+  latest <- queryStationStatusLatest id'
   let status = fmap (currentTimeZone', name', ) latest
   pure $ formatStationStatusResult status
 

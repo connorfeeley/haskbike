@@ -48,8 +48,7 @@ dispatchDebug _options = do
   -- Get the number of rows in the station status table.
   numStatusRows <-
     log D "Querying number of rows in status table."
-    >> fromMaybe (0 :: Int32) <$>
-    (queryRowCount <$> withConn <*> pure bikeshareStationStatus >>= liftIO)
+    >> fromMaybe (0 :: Int32) <$> queryRowCount bikeshareStationStatus
 
   let tableSize = tableValuesNeeded (Proxy :: Proxy StationStatusT)
 

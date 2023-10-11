@@ -71,7 +71,7 @@ handleReset options resetOptions = do
 handleInformation :: App ()
 handleInformation = do
   log D "Querying station information from database."
-  numInfoRows <- queryRowCount <$> withConn <*> pure bikeshareStationInformation >>= liftIO
+  numInfoRows <- queryRowCount bikeshareStationInformation
   log D "Queried station information from database."
   unless (null numInfoRows) handleStationInformation
 
@@ -95,7 +95,7 @@ handleStationInformation = do
 handleStatus :: App ()
 handleStatus = do
   log D "Querying station status from database."
-  numStatusRows <- queryRowCount <$> withConn <*> pure bikeshareStationStatus >>= liftIO
+  numStatusRows <- queryRowCount bikeshareStationStatus
   log D "Queried station status from database."
   unless (null numStatusRows) handleStationStatus
 
