@@ -9,7 +9,6 @@ module Database.BikeShare.Utils
      , dropTables
      , migrateDatabase
      , mkDbParams
-     , pPrintCompact
      , runBeamPostgres'
      , runBeamPostgresDebug'
      , setupDatabaseName
@@ -19,14 +18,13 @@ module Database.BikeShare.Utils
 
 import           Data.String                   ( fromString )
 
-import           Database.Beam
 import           Database.Beam.Postgres
 import           Database.BikeShare.Migrations ( migrateDB )
 import           Database.PostgreSQL.Simple
 
-import           System.Environment            ( lookupEnv )
+import           Formatting
 
-import           Text.Pretty.Simple
+import           System.Environment            ( lookupEnv )
 
 
 debug :: Bool
@@ -121,16 +119,10 @@ dropTables conn = do
 
   pure conn
 
--- | Drop all tables in the named database.
+-- | Run database migrations.
 migrateDatabase :: Connection -> IO Connection
 migrateDatabase conn = do
   -- Initialize the database.
   _ <- migrateDB conn
 
   pure conn
-
--- | pPrint with compact output.
-pPrintCompact :: (MonadIO m, Show a) => a -> m ()
-pPrintCompact = pPrintOpt CheckColorTty pPrintCompactOpt
-  where
-    pPrintCompactOpt = defaultOutputOptionsDarkBg { outputOptionsCompact = True }

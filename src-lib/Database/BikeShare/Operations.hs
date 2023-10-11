@@ -66,9 +66,9 @@ import           Database.BikeShare.Operations.Dockings
 import           Database.BikeShare.Utils
 import           Database.PostgreSQL.Simple               ( Only (..), query_ )
 
+import           Formatting
+
 import           GHC.Exts                                 ( fromString )
-
-
 
 
 data FilterStatusResult where

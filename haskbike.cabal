@@ -189,6 +189,7 @@ library
                     , CLI.Options
                     , API.Types
                     , ReportTime
+                    , Formatting
                     , Database.BikeShare.Types
                     , Database.BikeShare
                     , Database.BikeShare.Migrations

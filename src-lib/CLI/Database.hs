@@ -28,6 +28,8 @@ import           Database.BikeShare.Migrations
 import           Database.BikeShare.Operations
 import           Database.BikeShare.Utils
 
+import           Formatting
+
 import           Options.Applicative
 
 import           Prelude                       hiding ( log )
@@ -35,7 +37,6 @@ import           Prelude                       hiding ( log )
 import           Servant.Client                ( ClientError )
 
 import           System.Exit                   ( exitSuccess )
-
 
 
 -- | Helper functions.
