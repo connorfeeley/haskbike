@@ -340,7 +340,7 @@ queryStationIdLike conn station_name = do
                      )) info
 
 -- | Query the latest status for a station.
-queryStationStatusLatest :: Int                      -- ^ Station ID.
+queryStationStatusLatest :: Int                       -- ^ Station ID.
                          -> App (Maybe StationStatus) -- ^ Latest 'StationStatus' for the given station.
 queryStationStatusLatest station_id = withPostgres $ runSelectReturningOne $ select $ do
   info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
