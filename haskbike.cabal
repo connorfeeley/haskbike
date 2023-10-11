@@ -62,6 +62,7 @@ Flag DEBUG
 
 -- Linker (use gold) common warning flags.
 common compile-flags
+    ghc-options: -Wall
   if os(linux)
     ghc-options:       -optl-fuse-ld=gold
     ld-options:        -fuse-ld=gold
@@ -95,6 +96,7 @@ common common-depends
                     , ansi-terminal
                     , optparse-applicative
                     , time
+                    , boxes
 
 -- Dependencies needed by targets excercising the API.
 common api-depends
@@ -181,22 +183,27 @@ library
                     , CLI.Poll
                     , CLI.Query
                     , CLI.Debug
+                    , CLI.Events
                     , CLI.QueryFormat
                     , CLI.Database
                     , CLI.Options
                     , API.Types
                     , ReportTime
+                    , Formatting
                     , Database.BikeShare.Types
                     , Database.BikeShare
                     , Database.BikeShare.Migrations
                     , Database.BikeShare.Utils
                     , Database.BikeShare.Operations
+                    , Database.BikeShare.Operations.Dockings
+                    , Database.BikeShare.Expressions
 
     -- Modules included in this library but not exported.
     other-modules:    API.StationInformation
                     , API.StationStatus
                     , Database.BikeShare.StationInformation
                     , Database.BikeShare.StationStatus
+                    , Database.BikeShare.Diagnostics
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:

@@ -66,43 +66,49 @@
           # basePackages = pkgs.haskellPackages;
           basePackages = pkgs.haskell.packages.ghc928;
 
-          devShell = {
-            # Enabled by default
-            enable = true;
+          devShell =
+            let
+              postgres = pkgs.postgresql_15.withPackages (ps: with ps; [ postgis ]);
+            in
+            {
+              # Enabled by default
+              enable = true;
 
-            # Programs you want to make available in the shell.
-            # Default programs can be disabled by setting to 'null'
-            tools = hp: {
-              ### Haskell tools.
-              inherit (hp)
-                haskell-language-server
-                implicit-hie
-                floskell
-                hasktags
-                cabal-install
-                hlint
-                doctest
-                stylish-haskell
+              # Programs you want to make available in the shell.
+              # Default programs can be disabled by setting to 'null'
+              tools = hp: {
+                ### Haskell tools.
+                inherit (hp)
+                  haskell-language-server
+                  implicit-hie
+                  floskell
+                  hasktags
+                  cabal-install
+                  hlint
+                  doctest
+                  stylish-haskell
+                  tasty-discover
                 ;
-              inherit (self'.packages)
-                haskbike-completions;
-              # Disable ghcid.
-              # ghcid = null;
+                inherit (self'.packages)
+                  haskbike-completions;
+                # Disable ghcid.
+                # ghcid = null;
 
-              ### Other tools.
-              inherit (pkgs)
-                stack
-                reuse
-                postgresql
-                pgadmin
-                litecli
-                ;
+                ### Other tools.
+                inherit (pkgs)
+                  stack
+                  reuse
+                  pgadmin
+                  litecli
+                  ;
+                # PostgreSQL with extensions
+                inherit postgres;
 
-              treefmt = config.treefmt.build.wrapper;
-            } // config.treefmt.build.programs;
+                treefmt = config.treefmt.build.wrapper;
+              } // config.treefmt.build.programs;
 
-            hlsCheck.enable = false;
-          };
+              hlsCheck.enable = false;
+            };
         };
 
         # haskell-flake doesn't set the default package, but you can do it here.

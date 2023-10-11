@@ -21,11 +21,11 @@ module API.StationStatus
      , status_num_docks_available
      , status_num_docks_disabled
      , status_station_id
-     , status_stations
      , status_status
      , status_traffic
      , status_vehicle_docks_available
      , status_vehicle_types_available
+     , unStatusStations
      ) where
 
 import           API.ResponseWrapper
@@ -37,7 +37,6 @@ import           Data.Aeson           ( FromJSON (parseJSON), KeyValue ((.=)), T
 import           Data.Attoparsec.Text ( Parser, choice, parseOnly, string )
 import           Data.Either          ( fromRight )
 import           Data.Functor         ( ($>) )
-import           Data.Text            ( pack )
 import qualified Data.Text            as Text
 import           Data.Time
 
@@ -81,7 +80,7 @@ data StationStatus where
                    , _status_num_bikes_disabled          :: Int
                    , _status_num_docks_available         :: Int
                    , _status_num_docks_disabled          :: Int
-                   , _status_last_reported               :: Maybe LocalTime
+                   , _status_last_reported               :: Maybe LocalTime -- In UTC time
                    , _status_is_charging_station         :: Bool
                    , _status_status                      :: StationStatusString
                    , _status_is_installed                :: Bool
@@ -95,20 +94,20 @@ data StationStatus where
 
 instance ToJSON StationStatus where
   toJSON station =
-    object [ "station_id"               .= show (_status_station_id              station)
-           , "num_bikes_available"      .= _status_num_bikes_available           station
-           , "num_bikes_disabled"       .= _status_num_bikes_disabled            station
-           , "num_docks_available"      .= _status_num_docks_available           station
-           , "num_docks_disabled"       .= _status_num_docks_disabled            station
-           , "last_reported"            .= fmap localToPosix (_status_last_reported   station)
-           , "is_charging_station"      .= _status_is_charging_station           station
-           , "status"                   .= _status_status                        station
-           , "is_installed"             .= _status_is_installed                  station
-           , "is_renting"               .= _status_is_renting                    station
-           , "is_returning"             .= _status_is_returning                  station
-           , "traffic"                  .= _status_traffic                       station
-           , "vehicle_docks_available"  .= _status_vehicle_docks_available       station
-           , "vehicle_types_available"  .= _status_vehicle_types_available       station
+    object [ "station_id"               .=  show (_status_station_id                 station)
+           , "num_bikes_available"      .= _status_num_bikes_available               station
+           , "num_bikes_disabled"       .= _status_num_bikes_disabled                station
+           , "num_docks_available"      .= _status_num_docks_available               station
+           , "num_docks_disabled"       .= _status_num_docks_disabled                station
+           , "last_reported"            .=  fmap localToPosix (_status_last_reported station)
+           , "is_charging_station"      .= _status_is_charging_station               station
+           , "status"                   .= _status_status                            station
+           , "is_installed"             .= _status_is_installed                      station
+           , "is_renting"               .= _status_is_renting                        station
+           , "is_returning"             .= _status_is_returning                      station
+           , "traffic"                  .= _status_traffic                           station
+           , "vehicle_docks_available"  .= _status_vehicle_docks_available           station
+           , "vehicle_types_available"  .= _status_vehicle_types_available           station
            ]
 instance FromJSON StationStatus where
   parseJSON = withObject "StationStatus" $ \v -> StationStatus
@@ -201,7 +200,7 @@ instance FromJSON TorontoVehicleType where
 
 -- | A wrapper type for the station information response.
 newtype StationStatusResponseData where
-  StationStatusResponseData :: { _status_stations :: [StationStatus] } -> StationStatusResponseData
+  StationStatusResponseData :: { _unStatusStations :: [StationStatus] } -> StationStatusResponseData
   deriving (Show, Generic)
 
 instance FromJSON StationStatusResponseData where

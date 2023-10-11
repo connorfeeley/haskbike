@@ -11,6 +11,9 @@ import           Database.Beam.Postgres
 import qualified Database.Beam.Postgres.Migrate as PG
 import           Database.BikeShare
 
+import           Formatting
+
+
 referenceInformationTable :: BeamMigrateSqlBackend be => Constraint be
 referenceInformationTable = Constraint $ referencesConstraintSyntax "station_information" ["station_id"]
                             Nothing
@@ -38,6 +41,7 @@ initialSetup = BikeshareDb
         , _info_nearby_distance        = field "nearby_distance"        double notNull
         , _info_bluetooth_id           = field "bluetooth_id"           (varchar (Just 100)) notNull
         , _info_ride_code_support      = field "ride_code_support"      boolean notNull
+        , _info_active                 = field "active"                 boolean notNull
         })
   <*> (createTable "station_status" $ StationStatus
         { _d_status_id                      = field "id"                      PG.serial notNull unique
@@ -76,7 +80,7 @@ allowDestructive = defaultUpToDateHooks
   { runIrreversibleHook = pure True }
 
 migrateDB :: Database.Beam.Postgres.Connection -> IO (Maybe (CheckedDatabaseSettings Postgres BikeshareDb))
-migrateDB conn = runBeamPostgres conn $
+migrateDB conn = runBeamPostgresDebug pPrintCompact conn $
   bringUpToDateWithHooks
     allowDestructive
     PG.migrationBackend

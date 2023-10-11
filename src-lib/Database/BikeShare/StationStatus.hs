@@ -30,6 +30,7 @@ module Database.BikeShare.StationStatus
      , d_status_active
      , d_status_id
      , d_status_info_id
+     , d_status_is_charging_station
      , d_status_last_reported
      , d_status_num_bikes_available
      , d_status_num_bikes_disabled
@@ -82,7 +83,7 @@ data StationStatusT f where
                    , _d_status_num_bikes_disabled      :: Columnar f Int32
                    , _d_status_num_docks_available     :: Columnar f Int32
                    , _d_status_num_docks_disabled      :: Columnar f Int32
-                   , _d_status_last_reported           :: Columnar f (Maybe ReportTime)
+                   , _d_status_last_reported           :: Columnar f (Maybe ReportTime) -- In UTC time
                    , _d_status_is_charging_station     :: Columnar f Bool
                    , _d_status_status                  :: Columnar f BeamStationStatusString
                    , _d_status_is_installed            :: Columnar f Bool

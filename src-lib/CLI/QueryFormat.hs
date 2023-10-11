@@ -13,11 +13,11 @@ import           Data.Text.Lazy                ( Text, chunksOf, intercalate, pa
                                                  unwords )
 import           Data.Time                     ( LocalTime (..), TimeZone )
 
-import           Database.BikeShare            ( StationStatus, d_status_last_reported, d_status_num_bikes_available,
-                                                 d_status_num_bikes_disabled, d_status_num_docks_available,
-                                                 d_status_num_docks_disabled, d_status_station_id,
-                                                 vehicle_types_available_efit, vehicle_types_available_efit_g5,
-                                                 vehicle_types_available_iconic )
+import           Database.BikeShare            ( StationStatus, d_status_is_charging_station, d_status_last_reported,
+                                                 d_status_num_bikes_available, d_status_num_bikes_disabled,
+                                                 d_status_num_docks_available, d_status_num_docks_disabled,
+                                                 d_status_station_id, vehicle_types_available_efit,
+                                                 vehicle_types_available_efit_g5, vehicle_types_available_iconic )
 import           Database.BikeShare.Operations
 
 import           Fmt
@@ -69,7 +69,10 @@ formatStationInfo (timeZone, name, status) =
     pairs = [ ("Docks:\t", status ^. d_status_num_docks_available, status ^. d_status_num_docks_disabled)
             , ("Bikes:\t", status ^. d_status_num_bikes_available, status ^. d_status_num_bikes_disabled)
             ]
-    in [formattedName name status, formattedLastReport timeZone $ reportToLocal <$> status ^. d_status_last_reported] ++ map fmtAvailability pairs ++ bikeAvailability
+    in [ formattedName name status
+       , formattedLastReport timeZone $ reportToLocal <$> status ^. d_status_last_reported
+       , "Charger:\t" <> formattedBool (status ^. d_status_is_charging_station)
+       ] ++ map fmtAvailability pairs ++ bikeAvailability
 
 formattedName :: String -> StationStatus -> Text
 formattedName name status =
@@ -86,6 +89,11 @@ formattedLastReport timeZone status = reportedText
       Just t  -> "[" <> showText t <> "]"
               <> boldCode <> "\t" <> "|" <> "\t" <> resetIntens
               <> italCode <> pack (formatTime' timeZone t) <> resetItal <> " (local)"
+
+formattedBool :: Bool -> Text
+formattedBool b = if b
+  then boldCode <> colouredText Vivid Green "Yes" <> resetIntens
+  else colouredText Dull White   "No"
 
 fmtAvailability :: (Text, Int32, Int32) -> Text
 fmtAvailability (name, avail, disabled)

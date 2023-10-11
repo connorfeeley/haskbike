@@ -9,7 +9,8 @@ module Database.BikeShare.Utils
      , dropTables
      , migrateDatabase
      , mkDbParams
-     , pPrintCompact
+     , runBeamPostgres'
+     , runBeamPostgresDebug'
      , setupDatabaseName
      , setupProductionDatabase
      , uncurry5
@@ -17,15 +18,34 @@ module Database.BikeShare.Utils
 
 import           Data.String                   ( fromString )
 
-import           Database.Beam
 import           Database.Beam.Postgres
 import           Database.BikeShare.Migrations ( migrateDB )
 import           Database.PostgreSQL.Simple
 
+import           Formatting
+
 import           System.Environment            ( lookupEnv )
 
-import           Text.Pretty.Simple
 
+debug :: Bool
+debug = False
+
+
+-- | Enable SQL debug output if DEBUG flag is set.
+runBeamPostgres' :: Connection  -- ^ Connection to the database.
+                 -> Pg a        -- ^ @MonadBeam@ in which we can run Postgres commands.
+                 -> IO a
+runBeamPostgres' =
+  if debug
+  then runBeamPostgresDebug'
+  else runBeamPostgres
+
+
+-- | @runBeamPostgresDebug@ prefilled with @pPrintCompact@.
+runBeamPostgresDebug' :: Connection     -- ^ Connection to the database.
+                      -> Pg a           -- ^ @MonadBeam@ in which we can run Postgres commands.
+                      -> IO a
+runBeamPostgresDebug' = runBeamPostgresDebug pPrintCompact
 
 -- | Construct query to drop a table using cascade.
 dropCascade :: String -> Query
@@ -66,10 +86,10 @@ uncurry5 fn (a, b, c, d, e) = fn a b c d e
 
 mkDbParams :: String -> IO (String, String, String, String, String)
 mkDbParams name = do
-  envPgDbHostParam <- mkParam "host=localhost" "host=" =<< lookupEnv "HASKBIKE_PGDBHOST"
-  envPgDbPortParam <- mkParam "port=5432" "port=" =<< lookupEnv "HASKBIKE_PGDBPORT"
-  envUsername <- mkParam "" "user="  =<< lookupEnv "HASKBIKE_USERNAME"
-  envPassword <- mkParam "" "password=" =<< lookupEnv "HASKBIKE_PASSWORD"
+  envPgDbHostParam <- mkParam "host=localhost" "host="     =<< lookupEnv "HASKBIKE_PGDBHOST"
+  envPgDbPortParam <- mkParam "port=5432"      "port="     =<< lookupEnv "HASKBIKE_PGDBPORT"
+  envUsername      <- mkParam ""               "user="     =<< lookupEnv "HASKBIKE_USERNAME"
+  envPassword      <- mkParam ""               "password=" =<< lookupEnv "HASKBIKE_PASSWORD"
 
   pure (name, envPgDbHostParam, envPgDbPortParam, envUsername, envPassword)
   where
@@ -99,16 +119,10 @@ dropTables conn = do
 
   pure conn
 
--- | Drop all tables in the named database.
+-- | Run database migrations.
 migrateDatabase :: Connection -> IO Connection
 migrateDatabase conn = do
   -- Initialize the database.
   _ <- migrateDB conn
 
   pure conn
-
--- | pPrint with compact output.
-pPrintCompact :: (MonadIO m, Show a) => a -> m ()
-pPrintCompact = pPrintOpt CheckColorTty pPrintCompactOpt
-  where
-    pPrintCompactOpt = defaultOutputOptionsDarkBg { outputOptionsCompact = True }

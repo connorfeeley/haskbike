@@ -16,6 +16,7 @@ module ReportTime
      , reportTimeType
      , reportTimeZone
      , reportToLocal
+     , systemToReport
        -- Re-exports for ReportTime constructors
      , Day (..)
      , TimeOfDay (..)
@@ -35,7 +36,7 @@ import           Database.PostgreSQL.Simple.FromField ( FromField (..) )
 import           Database.PostgreSQL.Simple.ToField   ( ToField (..) )
 
 
--- | Subtract a number of hours from a LocalTime.
+-- | Add a number of hours from a LocalTime.
 addHours :: NominalDiffTime -> LocalTime -> LocalTime
 addHours h time' = utcToLocalTime reportTimeZone (addUTCTime (h*3600) (localTimeToUTC utc time'))
 
@@ -51,6 +52,8 @@ newtype ReportTime where
   deriving (FromBackendRow Postgres) via LocalTime
   deriving (HasSqlEqualityCheck Postgres) via LocalTime
   deriving (HasDefaultSqlDataType Postgres) via LocalTime
+  deriving (HasSqlTime) via LocalTime
+  deriving (HasSqlDate) via LocalTime
 
 instance Num ReportTime where
     fromInteger i = ReportTime $ utcToLocalTime reportTimeZone . posixSecondsToUTCTime . secondsToNominalDiffTime . fromIntegral $ i
@@ -111,3 +114,14 @@ localToPosix = floor . utcTimeToPOSIXSeconds . localTimeToUTC reportTimeZone
 -- | Convert ReportTime to LocalTime
 reportToLocal :: ReportTime -> LocalTime
 reportToLocal (ReportTime localTime) = localTime
+
+systemToReport :: IO ReportTime
+systemToReport = do
+  currentTime <- getCurrentTime
+  currentTimeZone <- getCurrentTimeZone
+  -- pure $ ReportTime <$> currentTime
+  let currentLocal = utcToLocalTime utcTimeZone currentTime
+  pure $ ReportTime currentLocal
+  where
+    utcTimeZone = TimeZone 0 False "UTC"
+    -- timezone = reportTimeZone

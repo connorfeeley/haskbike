@@ -26,8 +26,24 @@ module Database.BikeShare.StationInformation
      , StationInformationT (..)
      , fromBeamStationInformationToJSON
      , fromJSONToBeamStationInformation
+     , info_address
+     , info_altitude
+     , info_bluetooth_id
+     , info_capacity
+     , info_groups
+     , info_id
+     , info_is_charging_station
+     , info_is_virtual_station
+     , info_lat
+     , info_lon
      , info_name
+     , info_nearby_distance
+     , info_obcn
+     , info_physical_configuration
+     , info_rental_methods
+     , info_ride_code_support
      , info_station_id
+       -- , info_rental_uris
      , physicalConfiguration
      , rentalMethod
      ) where
@@ -73,6 +89,7 @@ data StationInformationT f where
                         , _info_nearby_distance           :: Columnar f Double
                         , _info_bluetooth_id              :: Columnar f Text.Text
                         , _info_ride_code_support         :: Columnar f Bool
+                        , _info_active                    :: Columnar f Bool
                         -- , _station_rental_uris               :: Columnar f API.T.RentalURIs
                         } -> StationInformationT f
   deriving (Generic, Beamable)
@@ -109,24 +126,26 @@ info_obcn                   :: Lens' (StationInformationT f) (C f Text.Text)
 info_nearby_distance        :: Lens' (StationInformationT f) (C f Double)
 info_bluetooth_id           :: Lens' (StationInformationT f) (C f Text.Text)
 info_ride_code_support      :: Lens' (StationInformationT f) (C f Bool)
+info_active                 :: Lens' (StationInformationT f) (C f Bool)
 
-StationInformation (LensFor info_id)                     _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
-StationInformation _ (LensFor info_station_id)             _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
-StationInformation _ _ (LensFor info_name)                   _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
-StationInformation _ _ _ (LensFor info_physical_configuration) _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
-StationInformation _ _ _ _ (LensFor info_lat)                    _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
-StationInformation _ _ _ _ _ (LensFor info_lon)                    _ _ _ _ _ _ _ _ _ _ _ = tableLenses
-StationInformation _ _ _ _ _ _ (LensFor info_altitude)               _ _ _ _ _ _ _ _ _ _ = tableLenses
-StationInformation _ _ _ _ _ _ _ (LensFor info_address)                _ _ _ _ _ _ _ _ _ = tableLenses
-StationInformation _ _ _ _ _ _ _ _ (LensFor info_capacity)               _ _ _ _ _ _ _ _ = tableLenses
-StationInformation _ _ _ _ _ _ _ _ _ (LensFor info_is_charging_station)    _ _ _ _ _ _ _ = tableLenses
-StationInformation _ _ _ _ _ _ _ _ _ _ (LensFor info_rental_methods)         _ _ _ _ _ _ = tableLenses
-StationInformation _ _ _ _ _ _ _ _ _ _ _ (LensFor info_is_virtual_station)     _ _ _ _ _ = tableLenses
-StationInformation _ _ _ _ _ _ _ _ _ _ _ _ (LensFor info_groups)                 _ _ _ _ = tableLenses
-StationInformation _ _ _ _ _ _ _ _ _ _ _ _ _ (LensFor info_obcn)                   _ _ _ = tableLenses
-StationInformation _ _ _ _ _ _ _ _ _ _ _ _ _ _ (LensFor info_nearby_distance)        _ _ = tableLenses
-StationInformation _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (LensFor info_bluetooth_id)           _ = tableLenses
-StationInformation _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (LensFor info_ride_code_support)      = tableLenses
+StationInformation (LensFor info_id)                     _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
+StationInformation _ (LensFor info_station_id)             _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
+StationInformation _ _ (LensFor info_name)                   _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
+StationInformation _ _ _ (LensFor info_physical_configuration) _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
+StationInformation _ _ _ _ (LensFor info_lat)                    _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
+StationInformation _ _ _ _ _ (LensFor info_lon)                    _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
+StationInformation _ _ _ _ _ _ (LensFor info_altitude)               _ _ _ _ _ _ _ _ _ _ _ = tableLenses
+StationInformation _ _ _ _ _ _ _ (LensFor info_address)                _ _ _ _ _ _ _ _ _ _ = tableLenses
+StationInformation _ _ _ _ _ _ _ _ (LensFor info_capacity)               _ _ _ _ _ _ _ _ _ = tableLenses
+StationInformation _ _ _ _ _ _ _ _ _ (LensFor info_is_charging_station)    _ _ _ _ _ _ _ _ = tableLenses
+StationInformation _ _ _ _ _ _ _ _ _ _ (LensFor info_rental_methods)         _ _ _ _ _ _ _ = tableLenses
+StationInformation _ _ _ _ _ _ _ _ _ _ _ (LensFor info_is_virtual_station)     _ _ _ _ _ _ = tableLenses
+StationInformation _ _ _ _ _ _ _ _ _ _ _ _ (LensFor info_groups)                 _ _ _ _ _ = tableLenses
+StationInformation _ _ _ _ _ _ _ _ _ _ _ _ _ (LensFor info_obcn)                   _ _ _ _ = tableLenses
+StationInformation _ _ _ _ _ _ _ _ _ _ _ _ _ _ (LensFor info_nearby_distance)        _ _ _ = tableLenses
+StationInformation _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (LensFor info_bluetooth_id)           _ _ = tableLenses
+StationInformation _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (LensFor info_ride_code_support)      _ = tableLenses
+StationInformation _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (LensFor info_active)                 = tableLenses
 
 -- | Newtype wrapper for RentalMethod to allow us to define a custom FromBackendRow instance.
 -- Don't want to implement database-specific code for the underlying RentalMethod type.
@@ -212,6 +231,7 @@ fromJSONToBeamStationInformation (API.T.StationInformation
                                   capacity
                                   is_charging_station
                                   rental_methods
+                                  _is_valet_station
                                   is_virtual_station
                                   groups
                                   obcn
@@ -231,12 +251,15 @@ fromJSONToBeamStationInformation (API.T.StationInformation
                      , _info_capacity                  = fromIntegral capacity
                      , _info_is_charging_station       = val_ is_charging_station
                      , _info_rental_methods            = val_ $ fromList (coerce rental_methods :: [BeamRentalMethod])
+                     -- FIXME: missing handling for is_valet_station
+                     -- , _info_is_valet_station          = val_ is_valet_station
                      , _info_is_virtual_station        = val_ is_virtual_station
                      , _info_groups                    = val_ $ fromList $ fmap Text.pack groups
                      , _info_obcn                      = val_ $ Text.pack obcn
                      , _info_nearby_distance           = val_ nearby_distance
                      , _info_bluetooth_id              = val_ $ Text.pack bluetooth_id
                      , _info_ride_code_support         = val_ ride_code_support
+                     , _info_active                    = val_ True
                      -- , _info_rental_uris               = val_ ""
                      }
 
@@ -254,29 +277,34 @@ fromBeamStationInformationToJSON (StationInformation
                                   capacity
                                   is_charging_station
                                   rental_methods
+                                  -- FIXME: missing handling for is_valet_station
+                                  -- is_valet_station
                                   is_virtual_station
                                   groups
                                   obcn
                                   nearby_distance
                                   bluetooth_id
                                   ride_code_support
+                                  active
                                   -- rental_uris
                                  ) =
   API.T.StationInformation { API.T.info_station_id                = fromIntegral station_id
-                        , API.T.info_name                      = show name
-                        , API.T.info_physical_configuration    = coerce physical_configuration :: API.T.PhysicalConfiguration
-                        , API.T.info_lat                       = lat
-                        , API.T.info_lon                       = lon
-                        , API.T.info_altitude                  = altitude
-                        , API.T.info_address                   = Text.unpack address
-                        , API.T.info_capacity                  = fromIntegral capacity
-                        , API.T.info_is_charging_station       = is_charging_station
-                        , API.T.info_rental_methods            = coerce (toList rental_methods) :: [API.T.RentalMethod]
-                        , API.T.info_is_virtual_station        = is_virtual_station
-                        , API.T.info_groups                    = Text.unpack <$> toList groups
-                        , API.T.info_obcn                      = Text.unpack obcn
-                        , API.T.info_nearby_distance           = nearby_distance
-                        , API.T.info_bluetooth_id              = Text.unpack bluetooth_id
-                        , API.T.info_ride_code_support         = ride_code_support
-                        -- , API.T.info_rental_uris               = API.T.RentalURIs { API.T.rental_uris_android = "", API.T.rental_uris_ios = "", API.T.rental_uris_web = "" }
-                        }
+                           , API.T.info_name                      = show name
+                           , API.T.info_physical_configuration    = coerce physical_configuration :: API.T.PhysicalConfiguration
+                           , API.T.info_lat                       = lat
+                           , API.T.info_lon                       = lon
+                           , API.T.info_altitude                  = altitude
+                           , API.T.info_address                   = Text.unpack address
+                           , API.T.info_capacity                  = fromIntegral capacity
+                           , API.T.info_is_charging_station       = is_charging_station
+                           , API.T.info_rental_methods            = coerce (toList rental_methods) :: [API.T.RentalMethod]
+                           -- FIXME: missing handling for is_valet_station
+                           , API.T.info_is_valet_station          = Nothing
+                           , API.T.info_is_virtual_station        = is_virtual_station
+                           , API.T.info_groups                    = Text.unpack <$> toList groups
+                           , API.T.info_obcn                      = Text.unpack obcn
+                           , API.T.info_nearby_distance           = nearby_distance
+                           , API.T.info_bluetooth_id              = Text.unpack bluetooth_id
+                           , API.T.info_ride_code_support         = ride_code_support
+                           -- , API.T.info_rental_uris               = API.T.RentalURIs { API.T.rental_uris_android = "", API.T.rental_uris_ios = "", API.T.rental_uris_web = "" }
+                           }

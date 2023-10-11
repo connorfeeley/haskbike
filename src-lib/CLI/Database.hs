@@ -13,12 +13,11 @@ import           AppEnv
 
 import           CLI.Options
 
-import           Colog                         ( Message, WithLog, log, pattern D, pattern E, pattern I, pattern W )
+import           Colog                         ( Message, log, pattern D, pattern I, pattern W )
 
 import           Control.Lens
-import           Control.Monad                 ( unless, void, (<=<) )
+import           Control.Monad                 ( unless )
 import           Control.Monad.IO.Class        ( MonadIO (liftIO) )
-import           Control.Monad.Reader          ( asks, lift )
 
 import           Data.Foldable                 ( for_ )
 import qualified Data.Text                     as Text
@@ -29,37 +28,18 @@ import           Database.BikeShare.Migrations
 import           Database.BikeShare.Operations
 import           Database.BikeShare.Utils
 
+import           Formatting
+
 import           Options.Applicative
 
 import           Prelude                       hiding ( log )
 
 import           Servant.Client                ( ClientError )
 
-import           System.Exit                   ( exitFailure, exitSuccess )
-
-import           UnliftIO                      ( MonadUnliftIO )
+import           System.Exit                   ( exitSuccess )
 
 
 -- | Helper functions.
-
--- | Reset the database.
-reset :: String -> App ()
-reset name =
-  log W "Resetting database."
-  >> resetDb name
-  >> handleInformation
-
--- | Setup the database.
-resetDb :: String -> App Connection
-resetDb name =
-  (dropTables <$> withConn)
-  >> (migrateDatabase <$> withConn)
-  >>= liftIO
-
--- | Get the database name from the CLI options.
-dbname :: Options -> String
-dbname = optDatabase
-
 
 -- | Dispatch CLI arguments to the database interface.
 dispatchDatabase :: Options -> App Connection
@@ -68,7 +48,7 @@ dispatchDatabase options = do
     Poll _pollOptions
       | optEnableMigration options -> do
           log D "Migrating database."
-          mig <- withConn >>= liftIO . migrateDB
+          withConn >>= liftIO . migrateDB
           log D "Migrated database."
           withConn >>= liftIO . pure
       | otherwise -> withConn >>= liftIO . pure
@@ -79,9 +59,13 @@ dispatchDatabase options = do
 -- | Handle the 'Reset' command.
 handleReset :: (App ~ m, WithAppEnv env Message m)  => Options -> ResetOptions -> m Connection
 handleReset options resetOptions = do
+  pPrintCompact options
+  pPrintCompact resetOptions
   if optResetOnly resetOptions
-    then reset (dbname options) >> liftIO exitSuccess
-    else reset (dbname options) >> liftIO exitFailure
+    then log W "Only resetting database..." >> withConn >>= liftIO . dropTables >> log W "Database reset; exiting." >> liftIO exitSuccess
+    else log W "Resetting database..."      >> withConn >>= liftIO . dropTables >> log W "Database reset." >>
+         log W "Migrating database." >> withConn >>= liftIO . migrateDB >> log W "Migrations performed." >>
+         log I "Initializing database." >> handleInformation >> liftIO exitSuccess
 
 -- | Helper for station information request.
 handleInformation :: App ()
@@ -99,9 +83,9 @@ handleStationInformation = do
   log D "Requested station information from API."
 
   for_ (rightToMaybe stationInfo) $ \response -> do
-        let stations = response ^. response_data . info_stations
+        let stations = response ^. response_data . unInfoStations
         log D "Inserting station information into database."
-        numInfoRows <- insertStationInformation <$> withConn <*> pure stations >>= liftIO >>= report
+        insertStationInformation <$> withConn <*> pure stations >>= liftIO >>= report
         log D "Inserted station information into database."
   where
     report = log I . ("Stations inserted: " <>) . Text.pack . show . length
@@ -119,13 +103,13 @@ handleStatus = do
 handleStationStatus :: App ()
 handleStationStatus = do
   log D "Requesting station status from API."
-  stationStatus <- liftIO (runQueryWithEnv stationStatus :: IO (Either ClientError StationStatusResponse))
+  stationStatus' <- liftIO (runQueryWithEnv stationStatus :: IO (Either ClientError StationStatusResponse))
   log D "Requested station status from API."
 
-  for_ (rightToMaybe stationStatus) $ \response -> do
-        let stations = response ^. response_data . status_stations
+  for_ (rightToMaybe stationStatus') $ \response -> do
+        let stations = response ^. response_data . unStatusStations
         log D "Inserting station status into database."
-        numStatusRows <- insertStationStatus <$> withConn <*> pure stations >>= liftIO >>= report
+        insertStationStatus <$> withConn <*> pure stations >>= liftIO >>= report
         log D "Inserted station status into database."
   where
     report = log I . ("Status updated: " <>) . Text.pack . show .

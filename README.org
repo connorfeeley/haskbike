@@ -246,6 +246,9 @@ GRANT postgres_ro_group TO postgres_ro;
 
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON SEQUENCES TO postgres_ro_group;
 
+-- Allow reading stats
+GRANT pg_read_all_stats to postgres_ro;
+
 --
 -- Superuser
 --
@@ -310,11 +313,30 @@ psql -d haskbike -c "SELECT * FROM station_information"
 pg_ctl -D '/opt/homebrew/var/postgresql@14/' -l /tmp/logfile start
 #+end_src
 
+** Initialize Postgres Directory
+
+#+begin_src shell
+initdb -D '/opt/homebrew/var/postgresql@15/'
+createuser -s postgres
+#+end_src
+
 ** Create Database
 
 #+begin_src shell :noeval
 createdb haskbike
 createdb haskbike-test
+#+end_src
+
+** Create Database Dump
+
+#+begin_src shell
+pg_dump -h "$HASKBIKE_PGDBHOST" -p "$HASKBIKE_PGDBPORT" -U "$HASKBIKE_USERNAME" -Fc -b -v -f "$(date +%Y-%m-%d-%H-%M)-dump.sql" -d haskbike
+#+end_src
+
+** Import Database Dump
+
+#+begin_src shell
+pg_restore -v -h <hostname> -U <username> -d <database_name> -j 2 <dumpfilelocation.sql>
 #+end_src
 
 ** Load completions

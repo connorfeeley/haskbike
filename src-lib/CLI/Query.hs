@@ -8,9 +8,8 @@ import           AppEnv
 import           CLI.Database
 import           CLI.Options
 import           CLI.QueryFormat
-import           CLI.Utils
 
-import           Colog                         ( Message, WithLog, log, pattern D, pattern I )
+import           Colog                         ( log, pattern D, pattern I )
 
 import           Control.Monad.Reader          ( asks, when )
 
@@ -18,16 +17,11 @@ import qualified Data.List                     as List
 import           Data.Maybe                    ( fromMaybe )
 import           Data.Text.Lazy                ( Text, pack, toStrict, unlines, unpack )
 
-import           Database.BikeShare            ( StationStatus, d_status_last_reported, d_status_num_bikes_available,
-                                                 d_status_num_bikes_disabled, d_status_num_docks_available,
-                                                 d_status_num_docks_disabled, d_status_station_id,
-                                                 vehicle_types_available_efit, vehicle_types_available_efit_g5,
-                                                 vehicle_types_available_iconic )
 import           Database.BikeShare.Operations
 
 import           Prelude                       hiding ( log, unlines )
 
-import           UnliftIO                      ( MonadIO, MonadUnliftIO, liftIO )
+import           UnliftIO                      ( liftIO )
 
 
 -- | Dispatch CLI arguments to the query interface.
@@ -75,7 +69,6 @@ queryByStationName stationMatch = do
         PrefixMatch   query -> ("Prefix",   nameTransformer ""  query "%")
         SuffixMatch   query -> ("Suffix",   nameTransformer "%" query "")
 
-  let st = snd transformer
   results <- queryStationIdLike <$> withConn <*> pure (snd transformer) >>= liftIO
   log D $ toStrict $ fst transformer <> ": "    <> (pack . show) results
 

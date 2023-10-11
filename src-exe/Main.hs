@@ -12,14 +12,13 @@ import           CLI.Options
 import           CLI.Poll
 import           CLI.Query
 
-import           Colog                    ( HasLog (logActionL), Message, Severity (..), WithLog, log, logMsg,
-                                            pattern I, pattern W, unLogAction, usingLoggerT )
+import           Colog                    ( LogAction, Message, Severity (..), WithLog, cmap, fmtMessage, log,
+                                            logTextStdout, pattern I, unLogAction, usingLoggerT )
 
-import           Control.Lens
 import           Control.Monad            ( void )
 import           Control.Monad.IO.Class   ( MonadIO (liftIO) )
 
-import           Data.Text                ( intercalate, intersperse, pack, unwords )
+import           Data.Text                ( pack, unwords )
 import qualified Data.Text                as Text
 import           Data.Time                ( getCurrentTimeZone )
 
@@ -41,23 +40,30 @@ main = do
   timeZone <- getCurrentTimeZone
 
   -- Establish a connection to the database.
-  dbParams@(name, host, port, username, password) <- mkDbParams (optDatabase options)
+  (name, host, port, username, password) <- mkDbParams (optDatabase options)
+  let logParams = unwords [ "dbname=" <> pack name
+                          , pack host
+                          , pack port
+                          , pack username
+                          , pack "password=***" -- Don't log the password.
+                          ]
+
+  usingLoggerT logStdoutAction $
+    log I $ "Connecting to database using: " <> logParams
   conn <- connectDbName name host port username password
 
   -- Create the application environment.
   let env = mainEnv (logLevel options) timeZone conn
 
   -- Log the database connection parameters.
-  runApp env (log I $ "Connected to database using: " <> unwords [ "dbname=" <> pack name
-                                                                 , pack host
-                                                                 , pack port
-                                                                 , pack username
-                                                                 , pack "password=***" -- Don't log the password.
-                                                                 ])
+  runApp env (log I $ "Connected to database using: " <> logParams)
 
   -- Run the application.
   runApp env (appMain options)
   where
+    logStdoutAction :: LogAction IO Message
+    logStdoutAction = cmap fmtMessage logTextStdout
+
     opts :: ParserInfo Options
     opts = info (parseOptions <**> helper)
            ( fullDesc
