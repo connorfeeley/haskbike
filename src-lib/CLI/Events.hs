@@ -7,32 +7,20 @@ module CLI.Events
      , formatBikeCounts
      ) where
 
-import qualified API.Types                     as AT
 
 import           AppEnv
 
-import           CLI.Options
 import           CLI.QueryFormat
 
-import           Colog                         ( log, pattern D )
-
 import           Control.Lens                  hiding ( para )
-import           Control.Monad                 ( when )
 
 import           Data.Int                      ( Int32 )
-import           Data.List                     ( sortOn )
-import           Data.Maybe                    ( fromMaybe )
-import           Data.Ord                      ( Down (Down) )
-import           Data.Proxy
-import           Data.Text.Lazy                ( Text, pack, toStrict, unpack )
+import           Data.Text.Lazy                ( pack, unpack )
 import           Data.Time                     ( addDays )
 
 import           Database.Beam
-import           Database.Beam.Schema.Tables
 import           Database.BikeShare
 import           Database.BikeShare.Operations
-
-import           Fmt
 
 import           Prelude                       hiding ( log )
 
@@ -45,7 +33,7 @@ import qualified Text.PrettyPrint.Boxes        as Box
 
 bikeCountsAtMoment :: Day -> TimeOfDay -> App (Day, TimeOfDay, Int32, Int32, Int32, Int32)
 bikeCountsAtMoment day timeOfDay = do
-  statusForMoment <- queryAllStationsStatusBeforeTime <$> withConn <*> pure (reportTime day timeOfDay) >>= liftIO
+  statusForMoment <- queryAllStationsStatusBeforeTime (reportTime day timeOfDay)
   pure ( day
        , timeOfDay
        , totalBoost statusForMoment

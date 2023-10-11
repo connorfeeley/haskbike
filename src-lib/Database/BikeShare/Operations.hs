@@ -50,6 +50,8 @@ import           API.Types                                ( _status_last_reporte
                                                             status_station_id )
 import qualified API.Types                                as AT
 
+import           AppEnv
+
 import           Control.Lens                             hiding ( reuse, (<.) )
 
 import           Data.Int                                 ( Int32 )
@@ -369,9 +371,19 @@ queryTableSize conn tableName = do
 
 
 -- | Query the latest statuses for all stations before a given time.
-queryAllStationsStatusBeforeTime :: Connection          -- ^ Connection to the database.
-                                 -> ReportTime          -- ^ Latest time to return records for.
-                                 -> IO [StationStatus]  -- ^ Latest 'StationStatus' for each station before given time.
-queryAllStationsStatusBeforeTime conn latestTime = runBeamPostgresDebug' conn $ do
+queryAllStationsStatusBeforeTime :: (WithAppEnv (Env env) Message m)
+                                 => ReportTime          -- ^ Latest time to return records for.
+                                 -> m [StationStatus]  -- ^ Latest 'StationStatus' for each station before given time.
+queryAllStationsStatusBeforeTime latestTime = withPostgres $ do
   runSelectReturningList $ selectWith $ do
     queryAllStationsStatusBeforeTimeExpr latestTime
+
+-- -- | Enable SQL debug output if DEBUG flag is set.
+-- runBeamPostgres' ::
+--                  => Connection  -- ^ Connection to the database.
+--                  -> Pg a        -- ^ @MonadBeam@ in which we can run Postgres commands.
+--                  -> IO a
+-- runBeamPostgres' conn q =
+--   if debug
+--   then runBeamPostgresDebug' conn q
+--   else runBeamPostgres conn q

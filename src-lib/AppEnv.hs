@@ -5,14 +5,15 @@
 module AppEnv
      ( App
      , Env (..)
+     , Message
      , WithAppEnv
-     , withConn
-       -- , HasConnection(..)
      , mainEnv
      , mainLogAction
      , runApp
      , runWithApp
      , simpleEnv
+     , withConn
+     , withPostgres
      ) where
 
 import           Colog                    ( HasLog (..), LogAction (..), Message, Msg (msgSeverity), Severity (..),
@@ -23,7 +24,7 @@ import           Control.Monad.Reader     ( MonadReader, ReaderT (..), asks )
 
 import           Data.Time                ( TimeZone, getCurrentTimeZone )
 
-import           Database.Beam.Postgres   ( Connection )
+import           Database.Beam.Postgres   ( Connection, Pg, runBeamPostgres )
 import           Database.BikeShare.Utils ( connectDbName, dbnameProduction, mkDbParams, uncurry5 )
 
 import           GHC.Stack                ( HasCallStack )
@@ -53,6 +54,11 @@ type WithAppEnv env msg m = (MonadReader env m, HasLog env msg m, HasCallStack, 
 
 withConn :: (WithAppEnv (Env env) Message m) => m Connection
 withConn = asks envDBConnection >>= liftIO . pure
+
+withPostgres :: (WithAppEnv (Env env) Message m) => Pg a -> m a
+withPostgres action = do
+  conn <- withConn
+  liftIO $ runBeamPostgres conn action
 
 -- Implement logging for the application environment.
 instance HasLog (Env m) Message m where
