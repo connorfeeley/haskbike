@@ -23,11 +23,13 @@ import           Data.List                     ( sortOn )
 import           Data.Maybe                    ( fromMaybe )
 import           Data.Ord                      ( Down (Down) )
 import           Data.Proxy
-import           Data.Text.Lazy                ( Text, pack, toStrict, unpack )
+import           Data.Text.Lazy                ( Text, pack, unpack )
 
 import           Database.Beam.Schema.Tables
 import           Database.BikeShare
 import           Database.BikeShare.Operations
+
+import           Fmt
 
 import           Prelude                       hiding ( log )
 
@@ -51,31 +53,30 @@ dispatchDebug _options = do
 
   let tableSize = tableValuesNeeded (Proxy :: Proxy StationStatusT)
 
-  log D $ "Number of rows in station_status table: " <> toStrict (pack $ show numStatusRows)
-  liftIO $ putStrLn $ "Info table contains " ++ show tableSize ++ " rows."
+  log D $ format "Number of rows in station_status table: {}" numStatusRows
+  liftIO $ putStrLn $ format "Info table contains {} rows" tableSize
 
   -- Get the size of the station information table.
   infoTableSize <- queryTableSize "station_information"
   let infoTableSizeText =
-        maybe "Error: unable to determine station info table size."
-        (\tableSize' -> "Info table uses " ++ show tableSize' ++ " of storage.")
+        maybe ("Error: unable to determine station info table size." :: String)
+        (format "Info table uses {} of storage.")
         infoTableSize
 
-  log D $ "Info table size: " <> toStrict (pack infoTableSizeText)
+  log D $ format "Info table size: {}" infoTableSizeText
 
   statusTableSize <- queryTableSize "station_status"
   let statusTableSizeText =
-        maybe "Error: unable to determine station status table size."
-        (\tableSize' -> "Status table uses " ++ show tableSize' ++ " of storage.")
+        maybe ("Error: unable to determine station status table size." :: String)
+        (format "Status table uses {} of storage.")
         statusTableSize
 
-  log D $ "Status table size: " <> toStrict (pack statusTableSizeText)
-  liftIO $ putStrLn $ "Status table contains " ++ show tableSize ++ " rows."
+  log D $ format "Status table size: {}" statusTableSizeText
+  liftIO $ putStrLn $ format "Status table contains {} rows." tableSize
 
   -- Calculate number of dockings and undockings
   log I "Calculating number of dockings and undockings."
   eventSums <- eventsForRange (fromGregorian 2023 0 06) (fromGregorian 2023 10 08)
-  let differentials = sortOn snd $ map (\counts -> (station counts, undockings counts + dockings counts)) eventSums
 
   -- Get number of bikes by type in the system, every two hours.
   log I "Getting number of bikes by type in the system."
@@ -88,17 +89,19 @@ dispatchDebug _options = do
   liftIO $ do
     cliOut $ formatDatabaseStats numStatusRows infoTableSize statusTableSize
 
-    when (length eventSums < 10) (putStrLn $ "Docking and undocking counts: " ++ show (length eventSums))
+    when (length eventSums < 10) (putStrLn $ format "Docking and undocking counts: {}" (length eventSums))
 
-    putStrLn "Sorted by undockings:"
+    putStrLn "\nSorted by undockings:"
     formatDockingEventsCount $ sortDockingEventsCount Undocking eventSums
-    putStrLn "Sorted by dockings:"
+    putStrLn "\nSorted by dockings:"
     formatDockingEventsCount $ sortDockingEventsCount Docking eventSums
 
     putStrLn "\nSorted by differentials (undockings >> dockings):"
-    formatDockingEventsDifferential $ take 50 $ sortOn (view _2) differentials
+    formatDockingEventsDifferential $ take 50 $ sortOn (view _2) (sortEvents eventSums)
     putStrLn "\nSorted by differentials (dockings >> undockings):"
-    formatDockingEventsDifferential $ take 50 $ sortOn (Down . view _2) differentials
+    formatDockingEventsDifferential $ take 50 $ sortOn (Down . view _2) (sortEvents eventSums)
+  where
+    sortEvents = sortOn snd . map (\counts -> (station counts, undockings counts + dockings counts))
 
 
 formatDatabaseStats :: Int32 -> Maybe String -> Maybe String -> [Text]
@@ -144,15 +147,19 @@ formatDockingEventsCount events = Box.printBox table
                          , dockings counts
                          )
                       ) [1..] events
-    col1 = Box.vcat Box.left (showFn Dull Cyan  "#"          : map (showFn Dull Cyan   . show)        (toListOf (traverse . _1) columns))
-    col2 = Box.vcat Box.left (showFn Dull Green "ID"         : map (showFn Dull Green  . show)        (toListOf (traverse . _2) columns))
-    col3 = Box.vcat Box.left (showFn Dull White "Name"       : map (showFn Vivid White . read . show) (toListOf (traverse . _3) columns))
-    col4 = Box.vcat Box.left (showFn Dull Red   "Charger"    : map (showFn Vivid Red   . show)        (toListOf (traverse . _4) columns))
-    col5 = Box.vcat Box.left (showFn Dull Red   "Undockings" : map (showFn Vivid Red   . show)        (toListOf (traverse . _5) columns))
-    col6 = Box.vcat Box.left (showFn Dull Blue  "Dockings"   : map (showFn Vivid Blue  . show)        (toListOf (traverse . _6) columns))
+    table = Box.hsep 1 Box.left [col1, col2, col3, col4, col5, col6]
+    col1 = Box.vcat Box.left (showFn Dull Cyan   "#"          : map (showFn Dull Cyan   . show)        (toListOf (traverse . _1) columns))
+    col2 = Box.vcat Box.left (showFn Dull Green  "ID"         : map (showFn Dull Green  . show)        (toListOf (traverse . _2) columns))
+    col3 = Box.vcat Box.left (showFn Dull White  "Name"       : map (showFn Vivid White . read . show) (toListOf (traverse . _3) columns))
+    col4 = Box.vcat Box.left (showFn Dull Yellow "Charger"    : map showBoolFn                         (toListOf (traverse . _4) columns))
+    col5 = Box.vcat Box.left (showFn Dull Red    "Undockings" : map (showFn Vivid Red   . show)        (toListOf (traverse . _5) columns))
+    col6 = Box.vcat Box.left (showFn Dull Blue   "Dockings"   : map (showFn Vivid Blue  . show)        (toListOf (traverse . _6) columns))
+
     showFn :: ColorIntensity -> Color -> String -> Box.Box
     showFn intensity colour = Box.text . (unpack . colouredText intensity colour . pack)
-    table = Box.hsep 1 Box.left [col1, col2, col3, col4, col5, col6]
+
+    showBoolFn :: Bool -> Box.Box
+    showBoolFn value = if value then (showFn Vivid Yellow . show) value else (showFn Dull White . show) value
 
 -- | Print difference between docking and undocking event counts.
 formatDockingEventsDifferential :: [(StationInformation, Int)] -> IO ()

@@ -49,8 +49,8 @@ bikeCountsAtMoment day timeOfDay = do
 
 -- | Create a list of (Day, TimeOfDay).
 dayTimes :: [(Day, TimeOfDay)]
-dayTimes = [(addDays n refDay, TimeOfDay h 0 0) | n <- [0..17], h <- [0,2..22]]
-  where refDay = fromGregorian 2023 09 24  -- Replace with reference day.
+dayTimes = [(addDays n refDay, TimeOfDay h 0 0) | n <- [0..3], h <- [0,2..22]]
+  where refDay = fromGregorian 2023 10 8  -- Replace with reference day.
 
 
 totalBoost, totalIconic, totalEbikeEfit, totalEbikeEfitG5 :: Num (Columnar f Int32) => [StationStatusT f] -> Columnar f Int32
