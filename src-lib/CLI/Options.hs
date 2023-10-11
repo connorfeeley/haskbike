@@ -1,3 +1,5 @@
+{-# LANGUAGE RecordWildCards #-}
+
 -- | Command-line options.
 module CLI.Options where
 
@@ -6,6 +8,8 @@ import           Database.BikeShare.Utils
 import           Options.Applicative
 
 import           Prelude                  hiding ( log )
+
+import           ReportTime
 
 
 -- | Top-level options.
@@ -45,6 +49,7 @@ data Command where
   Poll          :: !PollOptions         -> Command
   Query         :: !QueryOptions        -> Command
   QueryApi      :: Command
+  Events        :: !EventsOptions       -> Command
   DebugMisc     :: !DebugMiscOptions    -> Command
   Reset         :: !ResetOptions        -> Command
   deriving (Show)
@@ -56,6 +61,8 @@ commandParser = subparser
                        (progDesc "Poll the API and insert new station status into database."))
   <> command "query" (info (Query <$> queryOptionsParser)
                       (progDesc "Query the database."))
+  <> command "events" (info (Events <$> eventsOptionsParser)
+                      (progDesc "Docking and undocking events."))
   <> command "debug" (info (DebugMisc <$> debugMiscOptionsParser)
                       (progDesc "Miscellaneous debugging faciilities."))
   <> command "reset" (info (Reset <$> resetOptionsParser)
@@ -140,20 +147,6 @@ parseStationName = exact <|> prefix <|> suffix <|> wildcard where
     ( metavar "STATION_NAME"
    <> help "Query stations where STATION_NAME appears anywhere in the name." )
 
--- | Options for the 'Events' command.
-data EventsOptions where
-  EventsOptions :: { optEventsLimit :: Maybe Int
-                   } -> EventsOptions
-  deriving (Show)
-
--- | Parser for 'Events'.
-eventsParser :: Parser EventsOptions
-eventsParser = EventsOptions
-  <$> argument auto
-  ( metavar "EVENTS_LIMIT"
- <> showDefault
- <> value Nothing
- <> help "Limit for number of events to return." )
 
 -- | Options for the 'Poll' command.
 data PollOptions where
@@ -176,3 +169,77 @@ debugMiscOptionsParser = DebugMiscOptions
   <$> switch
       ( long "foo"
      <> help "Foo. Foo foo foo bar." )
+
+-- | Options for the 'Events' command.
+-- data EventsOptions where
+--   EventsCounts  :: !(Maybe Int)         -> EventsOptions
+--   EventsRange   :: !EventRangeOptions   -> EventsOptions
+--   deriving (Show)
+
+data EventsOptions =
+  EventsOptions { optEventsSubcommand :: EventSubcommand
+                , optEventsLimit      :: Maybe Int
+                } deriving (Show)
+
+data EventSubcommand =
+    EventCounts EventCountOptions
+  | EventRange  EventRangeOptions
+  deriving (Show)
+
+data EventCountOptions =
+  EventCountOptions
+    { optEventsLimit' :: Maybe Int
+    } deriving (Show)
+
+data EventRangeOptions =
+  EventRangeOptions
+    { startDay  :: Maybe Day
+    , startTime :: Maybe TimeOfDay
+    , endDay    :: Maybe Day
+    , endTime   :: Maybe TimeOfDay
+    } deriving (Show)
+
+-- | Parser for 'EventsOptions'.
+eventsOptionsParser :: Parser EventsOptions
+eventsOptionsParser = EventsOptions
+  <$> subparser
+    (  command "counts" (info (EventCounts <$> eventsCountsLimit) (progDesc "Counts of docking and undocking events."))
+    <> command "range" (info (EventRange <$> eventRangeOptionsParser) (progDesc "Docking and undocking events within a date range."))
+    )
+  <*> argument auto
+    ( metavar "LIMIT"
+    <> showDefault
+    <> value (Just 10)
+    <> help "Limit the number of events displayed."
+    )
+
+eventsCountsLimit :: Parser EventCountOptions
+eventsCountsLimit = EventCountOptions
+  <$> argument (optional auto)
+    ( metavar "LIMIT"
+    <> showDefault
+    <> value (Just 10)
+    <> help "Limit the number of events displayed."
+    )
+
+eventRangeOptionsParser :: Parser EventRangeOptions
+eventRangeOptionsParser = do
+  startDay <- optional dayParser
+  startTime <- optional timeOfDay
+  endDay <- optional dayParser
+  endTime <- optional timeOfDay
+  return EventRangeOptions {..}
+
+dayParser :: Parser Day
+dayParser =
+  argument auto
+    ( metavar "DATE"
+    <> help "A date in the format yyyy-mm-dd."
+    )
+
+timeOfDay :: Parser TimeOfDay
+timeOfDay =
+  argument auto
+    ( metavar "TIME"
+    <> help "A time in the format HH:MM:SS."
+    )
