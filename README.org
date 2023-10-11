@@ -336,7 +336,7 @@ pg_dump -h "$HASKBIKE_PGDBHOST" -p "$HASKBIKE_PGDBPORT" -U "$HASKBIKE_USERNAME" 
 ** Import Database Dump
 
 #+begin_src shell
-pg_restore -v -h <hostname> -U <username> -d <database_name> -j 2 <dumpfilelocation.sql>
+pg_restore -v -h <hostname> -U <username> -d <database_name> -j 2 <dumpfilelocation.sql> --clean --create
 #+end_src
 
 ** Load completions
@@ -361,5 +361,11 @@ eval "$(haskbike --bash-completion-script haskbike)"
 *** Added ~station_information.active~ column
 #+begin_src sql
 ALTER TABLE station_information
-ADD COLUMN active BOOLEAN DEFAULT true;
+ADD COLUMN active BOOLEAN NOT NULL DEFAULT true;
+
+ALTER TABLE station_information
+ADD COLUMN is_valet_station BOOLEAN NOT NULL DEFAULT false;
+
+ALTER TABLE station_information
+ADD COLUMN rental_uris character varying(100)[] NOT NULL DEFAULT '{"", "", ""}';
 #+end_src
