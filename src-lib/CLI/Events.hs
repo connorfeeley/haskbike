@@ -1,5 +1,4 @@
-{-# LANGUAGE ParallelListComp #-}
--- |
+-- | This module contains the CLI functions to query the database for events.
 
 module CLI.Events
      ( bikeCountsAtMoment
@@ -60,11 +59,11 @@ formatBikeCounts allCounts = Box.printBox table
     col_day  = Box.vcat Box.left (showFn Dull White "Date"    : map (showFn Dull Green   . show) (toListOf (traverse . _1) allCounts))
     col_time = Box.vcat Box.left (showFn Dull White "Time"    : map (showFn Vivid White  . show) (toListOf (traverse . _2) allCounts))
 
-    col1 = Box.vcat Box.left (showFn Dull White  "Total"      : [(showFn Vivid Red    . show) (c + d + e +f) | (a, b, c, d, e, f) <- allCounts, let s = e])
-    col2 = Box.vcat Box.left (showFn Dull Green  "Mechanical" : [(showFn Vivid Green  . show) (c + d)        | (a, b, c, d, e, f) <- allCounts, let s = e])
-    col3 = Box.vcat Box.left (showFn Dull Red    "E-Bikes"    : [(showFn Vivid Red    . show) (f + s)        | (a, b, c, d, e, f) <- allCounts, let s = e])
-    col4 = Box.vcat Box.left (showFn Dull Yellow "E-Fit"      : [(showFn Dull Yellow  . show) e              | (a, b, c, d, e, f) <- allCounts, let s = e])
-    col5 = Box.vcat Box.left (showFn Dull Yellow "E-Fit G5"   : [(showFn Vivid Yellow . show) f              | (a, b, c, d, e, f) <- allCounts, let s = e])
+    col1 = Box.vcat Box.left (showFn Dull White  "Total"      : [(showFn Vivid Red    . show) (c + d + e +f) | (_, _, c, d, e, f) <- allCounts])
+    col2 = Box.vcat Box.left (showFn Dull Green  "Mechanical" : [(showFn Vivid Green  . show) (c + d)        | (_, _, c, d, _, _) <- allCounts])
+    col3 = Box.vcat Box.left (showFn Dull Red    "E-Bikes"    : [(showFn Vivid Red    . show) (e + f)        | (_, _, _, _, e, f) <- allCounts])
+    col4 = Box.vcat Box.left (showFn Dull Yellow "E-Fit"      : [(showFn Dull Yellow  . show) e              | (_, _, _, _, e, _) <- allCounts])
+    col5 = Box.vcat Box.left (showFn Dull Yellow "E-Fit G5"   : [(showFn Vivid Yellow . show) f              | (_, _, _, _, _, f) <- allCounts])
 
     showFn :: ColorIntensity -> Color -> String -> Box.Box
     showFn intensity colour = Box.text . (unpack . colouredText intensity colour . pack)

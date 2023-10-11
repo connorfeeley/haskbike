@@ -9,8 +9,7 @@ import           CLI.Utils
 import           Control.Lens
 
 import           Data.Int                      ( Int32 )
-import           Data.Text.Lazy                ( Text, chunksOf, intercalate, pack, reverse, toStrict, unlines, unpack,
-                                                 unwords )
+import           Data.Text.Lazy                ( Text, chunksOf, pack, reverse, unlines, unpack, unwords )
 import           Data.Time                     ( LocalTime (..), TimeZone )
 
 import           Database.BikeShare            ( StationStatus, d_status_is_charging_station, d_status_last_reported,
@@ -28,7 +27,6 @@ import           ReportTime                    ( reportToLocal )
 
 import           System.Console.ANSI
 
-import           UnliftIO                      ( liftIO )
 
 
 -- | Helper function to show a value as 'Text'.

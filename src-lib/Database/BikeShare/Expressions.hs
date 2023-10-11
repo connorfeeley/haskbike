@@ -1,4 +1,5 @@
 {-# LANGUAGE PartialTypeSignatures #-}
+
 -- | This module contains expressions for querying the database.
 
 module Database.BikeShare.Expressions
@@ -23,7 +24,6 @@ import           Database.Beam
 import           Database.Beam.Backend.SQL.BeamExtensions ( BeamHasInsertOnConflict (anyConflict, onConflictDoNothing),
                                                             insertOnConflict )
 import           Database.Beam.Postgres
-import           Database.Beam.Postgres.Full              ( onConflict )
 import           Database.BikeShare
 
 
@@ -87,7 +87,7 @@ queryStationIdLikeExpr station_name = do
 
 -- | Expression to query the latest statuses for all stations before a given time.
 queryAllStationsStatusBeforeTimeExpr :: ReportTime
-                                     -> With Postgres BikeshareDb (Q Postgres BikeshareDb _ _)
+                                     -> With Postgres BikeshareDb (Q Postgres BikeshareDb s (StationStatusT (QExpr Postgres s)))
 queryAllStationsStatusBeforeTimeExpr latestTime = do
   stationsWithMaxTime <- selecting $
     aggregate_ (\s -> (group_ (_d_status_info_id s), max_ (_d_status_last_reported s))) $

@@ -65,7 +65,6 @@ import qualified Database.Beam.Postgres                   as Pg
 import           Database.BikeShare
 import           Database.BikeShare.Expressions
 import           Database.BikeShare.Operations.Dockings
-import           Database.BikeShare.Utils
 import           Database.PostgreSQL.Simple               ( Only (..), query_ )
 
 import           Formatting

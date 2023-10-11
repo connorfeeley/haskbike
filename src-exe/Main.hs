@@ -12,11 +12,11 @@ import           CLI.Options
 import           CLI.Poll
 import           CLI.Query
 
-import           Colog                    ( LogAction, Message, Severity (..), WithLog, cmap, fmtMessage, log,
-                                            logTextStdout, pattern I, unLogAction, usingLoggerT )
+import           Colog                    ( LogAction, Severity (..), WithLog, cmap, fmtMessage, log, logTextStdout,
+                                            pattern E, pattern I, usingLoggerT )
 
 import           Control.Monad            ( void )
-import           Control.Monad.IO.Class   ( MonadIO (liftIO) )
+import           Control.Monad.IO.Class   ( MonadIO )
 
 import           Data.Text                ( pack, unwords )
 import qualified Data.Text                as Text
@@ -83,6 +83,7 @@ appMain options = do
   case optCommand options of
     (Poll p)      -> dispatchDatabase options >> dispatchPoll p
     (Query q)     -> dispatchDatabase options >> dispatchQuery q
+    QueryApi      -> log E "Not implemented."
     (DebugMisc d) -> dispatchDatabase options >> dispatchDebug d
     (Reset _)     -> void (dispatchDatabase options)
 

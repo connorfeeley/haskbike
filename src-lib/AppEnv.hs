@@ -21,7 +21,7 @@ import           Colog                    ( HasLog (..), LogAction (..), Message
                                             filterBySeverity, richMessageAction )
 
 import           Control.Monad.IO.Class   ( MonadIO )
-import           Control.Monad.Reader     ( MonadReader (ask), ReaderT (..), asks )
+import           Control.Monad.Reader     ( MonadReader, ReaderT (..), asks )
 
 import           Data.Time                ( TimeZone, getCurrentTimeZone )
 

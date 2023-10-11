@@ -13,7 +13,7 @@ import           AppEnv
 
 import           CLI.Options                   ( PollOptions (..) )
 
-import           Colog                         ( Message, WithLog, log, logException, pattern D, pattern I, pattern W )
+import           Colog                         ( WithLog, log, logException, pattern D, pattern I, pattern W )
 
 import           Control.Concurrent            ( threadDelay )
 import           Control.Concurrent.STM
@@ -21,6 +21,7 @@ import           Control.Lens
 import           Control.Monad                 ( void )
 import           Control.Monad.Cont            ( forever )
 
+import           Data.Maybe                    ( fromMaybe )
 import qualified Data.Text                     as Text
 
 import           Database.BikeShare            ( d_status_last_reported, d_status_station_id )
@@ -34,7 +35,7 @@ import           ReportTime                    ( localToPosix )
 
 import           TextShow                      ( showt )
 
-import           UnliftIO                      ( MonadIO, MonadUnliftIO, liftIO )
+import           UnliftIO                      ( MonadIO, MonadUnliftIO )
 import           UnliftIO.Async                ( concurrently_ )
 
 
@@ -71,14 +72,14 @@ statusRequester :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
                 -> TVar Int                      -- ^ Last updated time.
                 -> m ()
 statusRequester queue intervalSecsVar lastUpdated = void . forever $ do
-  intervalSecs <- liftIO $ readTVarIO intervalSecsVar
   liftIO (runQueryWithEnv stationStatus) >>= \case
     Left err -> logException err
     Right result -> do
+      liftIO $ atomically $ writeTBQueue queue result
+
       extendBy <- handleTimeElapsed "Status" result lastUpdated
       handleTTL "Status" result intervalSecsVar extendBy
-
-      liftIO $ atomically $ writeTBQueue queue result
+      intervalSecs <- liftIO $ readTVarIO intervalSecsVar
 
       log D $ format "(Status) Sleeping for {} seconds." intervalSecs
       liftIO $ threadDelay (intervalSecs * 1000000)
@@ -144,8 +145,8 @@ handleTTL :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
           -> m ()
 handleTTL logPrefix apiResult ttlVar extendBy = do
   let ttlSecs = apiResult ^. response_ttl
-  log I $ format "({}) TTL={}" logPrefix (showt ttlSecs)
-  liftIO $ atomically $ writeTVar ttlVar ttlSecs
+  log I $ format "({}) TTL={}{}" logPrefix (showt ttlSecs) (maybe "" (("+" ++) . show) extendBy)
+  liftIO $ atomically $ writeTVar ttlVar (ttlSecs + fromMaybe 0 extendBy)
 
 
 -- | Thread action to request station information from API.
@@ -155,14 +156,14 @@ informationRequester :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
                      -> TVar Int                           -- ^ Last updated time.
                      -> m ()
 informationRequester queue intervalSecsVar lastUpdated = void . forever $ do
-  intervalSecs <- liftIO $ readTVarIO intervalSecsVar
   liftIO (runQueryWithEnv stationInformation) >>= \case
     Left err -> logException err
     Right result -> do
+      liftIO $ atomically $ writeTBQueue queue result
+
       extendBy <- handleTimeElapsed "Info" result lastUpdated
       handleTTL "Info" result intervalSecsVar extendBy
-
-      liftIO $ atomically $ writeTBQueue queue result
+      intervalSecs <- liftIO $ readTVarIO intervalSecsVar
 
       log D $ format "(Info) Sleeping for {} seconds." intervalSecs
       liftIO $ threadDelay (intervalSecs * 1000000)
