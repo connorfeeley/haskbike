@@ -140,6 +140,21 @@ parseStationName = exact <|> prefix <|> suffix <|> wildcard where
     ( metavar "STATION_NAME"
    <> help "Query stations where STATION_NAME appears anywhere in the name." )
 
+-- | Options for the 'Events' command.
+data EventsOptions where
+  EventsOptions :: { optEventsLimit :: Maybe Int
+                   } -> EventsOptions
+  deriving (Show)
+
+-- | Parser for 'Events'.
+eventsParser :: Parser EventsOptions
+eventsParser = EventsOptions
+  <$> argument auto
+  ( metavar "EVENTS_LIMIT"
+ <> showDefault
+ <> value Nothing
+ <> help "Limit for number of events to return." )
+
 -- | Options for the 'Poll' command.
 data PollOptions where
   PollOptions :: { } -> PollOptions

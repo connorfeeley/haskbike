@@ -107,8 +107,8 @@ queryDockingEventsCountExpr variation@(StatusVariationQuery _ _ bikeType _) =
   withDeltas <- selecting $ do
     -- Delta between current and previous iconic availability.
     withWindow_ (\(row, _prev) -> frame_ (partitionBy_ (row ^. d_status_info_id)) noOrder_ noBounds_)
-                   (\(row, prev) _w -> (row, row ^. bikeType' - prev))
-                   (reuse cte)
+                (\(row, prev) _w -> (row, row ^. bikeType' - prev))
+                (reuse cte)
 
   dockings <- selecting $ do
     let increased = filter_ (\(_s, delta) -> delta >=. 0)

@@ -126,8 +126,8 @@ eventsForRange earliestDay latestDay = do
   where
     queryCondition :: AvailabilityCountVariation -> StatusVariationQuery
     queryCondition variation = StatusVariationQuery 7148 variation AT.EFit [ EarliestTime (reportTime earliestDay (TimeOfDay 00 00 00))
-                                                                             , LatestTime   (reportTime latestDay   (TimeOfDay 00 00 00))
-                                                                             ]
+                                                                           , LatestTime   (reportTime latestDay   (TimeOfDay 00 00 00))
+                                                                           ]
 
 -- | Sort docking and undocking events.
 sortDockingEventsCount :: AvailabilityCountVariation -> [DockingEventsCount] -> [DockingEventsCount]
