@@ -57,7 +57,7 @@ dispatchDebug _options = do
   liftIO $ putStrLn $ "The table contains " ++ show tableSize ++ " rows."
 
   -- Get the size of the station information table.
-  infoTableSize <- queryTableSize <$> withConn <*> pure "station_information" >>= liftIO
+  infoTableSize <- queryTableSize "station_information"
   let infoTableSizeText =
         maybe "Error: unable to determine station info table size."
         (\tableSize' -> "Info table uses " ++ show tableSize' ++ " of storage.")
@@ -65,7 +65,7 @@ dispatchDebug _options = do
 
   log D $ "Info table size: " <> toStrict (pack infoTableSizeText)
 
-  statusTableSize <- queryTableSize <$> withConn <*> pure "station_status" >>= liftIO
+  statusTableSize <- queryTableSize "station_status"
   let statusTableSizeText =
         maybe "Error: unable to determine station status table size."
         (\tableSize' -> "Status table uses " ++ show tableSize' ++ " of storage.")

@@ -362,28 +362,17 @@ queryRowCount conn table = runBeamPostgres' conn $ runSelectReturningOne $ selec
   aggregate_ (\_ -> as_ @Int32 countAll_) (all_ (bikeshareDb ^. table))
 
 -- | Function to query the size of a table.
-queryTableSize :: Connection            -- ^ Connection to the database.
-               -> String                -- ^ Name of the table.
-               -> IO (Maybe String)     -- ^ Size of the table.
-queryTableSize conn tableName = do
-  [Only size] <- query_ conn $ fromString ("SELECT pg_size_pretty(pg_total_relation_size('" ++ tableName ++ "'))")
+queryTableSize :: String                -- ^ Name of the table.
+               -> App (Maybe String)    -- ^ Size of the table.
+queryTableSize tableName = do
+  conn <- withConn
+  [Only size] <- liftIO $ query_ conn $ fromString ("SELECT pg_size_pretty(pg_total_relation_size('" ++ tableName ++ "'))")
   return size
 
 
 -- | Query the latest statuses for all stations before a given time.
-queryAllStationsStatusBeforeTime :: (WithAppEnv (Env env) Message m)
-                                 => ReportTime          -- ^ Latest time to return records for.
-                                 -> m [StationStatus]  -- ^ Latest 'StationStatus' for each station before given time.
+queryAllStationsStatusBeforeTime :: ReportTime        -- ^ Latest time to return records for.
+                                 -> App [StationStatus] -- ^ Latest 'StationStatus' for each station before given time.
 queryAllStationsStatusBeforeTime latestTime = withPostgres $ do
   runSelectReturningList $ selectWith $ do
     queryAllStationsStatusBeforeTimeExpr latestTime
-
--- -- | Enable SQL debug output if DEBUG flag is set.
--- runBeamPostgres' ::
---                  => Connection  -- ^ Connection to the database.
---                  -> Pg a        -- ^ @MonadBeam@ in which we can run Postgres commands.
---                  -> IO a
--- runBeamPostgres' conn q =
---   if debug
---   then runBeamPostgresDebug' conn q
---   else runBeamPostgres conn q

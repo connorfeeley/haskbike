@@ -50,7 +50,7 @@ data Env m where
 If you use this constraint, function call stack will be propagated and
 you will have access to code lines that log messages.
 -}
-type WithAppEnv env msg m = (MonadReader env m, HasLog env msg m, HasCallStack, MonadIO m, MonadUnliftIO m)
+type WithAppEnv env msg m = (MonadReader env m, HasLog env msg m, HasCallStack, MonadIO m, MonadUnliftIO m, MonadFail m)
 
 withConn :: (WithAppEnv (Env env) Message m) => m Connection
 withConn = asks envDBConnection >>= liftIO . pure
@@ -73,7 +73,7 @@ instance HasLog (Env m) Message m where
 -- Application type
 newtype App a = App
   { unApp :: ReaderT (Env App) IO a
-  } deriving newtype (Functor, Applicative, Monad, MonadIO, MonadUnliftIO, MonadReader (Env App))
+  } deriving newtype (Functor, Applicative, Monad, MonadIO, MonadUnliftIO, MonadReader (Env App), MonadFail)
 
 -- | Simple environment for the main application.
 simpleEnv :: TimeZone -> Connection -> Env App
