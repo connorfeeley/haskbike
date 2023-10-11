@@ -83,7 +83,7 @@ dispatchDebug _options = do
   -- TODO: use pooledMapConcurrently (automatic # of threads) instead?
   -- Run queries concurrently (with a thread pool of 5).
   countsAtTimes <- pooledMapConcurrentlyN 5 (uncurry bikeCountsAtMoment) dayTimes
-  (liftIO . formatBikeCounts) countsAtTimes
+  liftIO . formatBikeCounts $ countsAtTimes
 
   liftIO $ do
     cliOut $ formatDatabaseStats numStatusRows infoTableSize statusTableSize

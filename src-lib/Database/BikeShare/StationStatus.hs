@@ -219,6 +219,7 @@ stationStatusType :: DataType Postgres BeamStationStatusString
 stationStatusType = DataType pgTextType
 
 -- | Convert from the JSON StationStatus to the Beam StationStatus type
+fromJSONToBeamStationStatus :: AT.StationStatus -> StationStatusT (QExpr Postgres s)
 fromJSONToBeamStationStatus status =
   StationStatus { _d_status_id                       = default_
                 , _d_status_info_id                  = StationInformationId $ fromIntegral $ status ^. AT.status_station_id
@@ -251,21 +252,21 @@ fromJSONToBeamStationStatus status =
 fromBeamStationStatusToJSON :: StationStatus -> AT.StationStatus
 fromBeamStationStatusToJSON status =
   AT.StationStatus { AT._status_station_id                  = fromIntegral $ status^.d_status_station_id
-                      , AT._status_num_bikes_available      = fromIntegral $ status^.d_status_num_bikes_available
-                      , AT._status_num_bikes_disabled       = fromIntegral $ status^.d_status_num_bikes_disabled
-                      , AT._status_num_docks_available      = fromIntegral $ status^.d_status_num_docks_available
-                      , AT._status_num_docks_disabled       = fromIntegral $ status^.d_status_num_docks_disabled
-                      , AT._status_last_reported            = coerce $ status^.d_status_last_reported
-                      , AT._status_is_charging_station      = status^.d_status_is_charging_station
-                      , AT._status_status                   = coerce $ status^.d_status_status
-                      , AT._status_is_installed             = status^.d_status_is_installed
-                      , AT._status_is_renting               = status^.d_status_is_renting
-                      , AT._status_is_returning             = status^.d_status_is_returning
-                      , AT._status_traffic                  = fmap Text.unpack $ status^.d_status_traffic
-                      , AT._status_vehicle_docks_available  = [ AT.VehicleDock ["FIXME"] (fromIntegral $ status^.d_status_vehicle_docks_available) ]
-                      , AT._status_vehicle_types_available  = [ AT.VehicleType AT.Boost  (fromIntegral (status^.vehicle_types_available_boost))
-                                                              , AT.VehicleType AT.Iconic (fromIntegral (status^.vehicle_types_available_iconic))
-                                                              , AT.VehicleType AT.EFit   (fromIntegral (status^.vehicle_types_available_efit))
-                                                              , AT.VehicleType AT.EFitG5 (fromIntegral (status^.vehicle_types_available_efit_g5))
-                                                              ]
-                      }
+                   , AT._status_num_bikes_available      = fromIntegral $ status^.d_status_num_bikes_available
+                   , AT._status_num_bikes_disabled       = fromIntegral $ status^.d_status_num_bikes_disabled
+                   , AT._status_num_docks_available      = fromIntegral $ status^.d_status_num_docks_available
+                   , AT._status_num_docks_disabled       = fromIntegral $ status^.d_status_num_docks_disabled
+                   , AT._status_last_reported            = coerce $ status^.d_status_last_reported
+                   , AT._status_is_charging_station      = status^.d_status_is_charging_station
+                   , AT._status_status                   = coerce $ status^.d_status_status
+                   , AT._status_is_installed             = status^.d_status_is_installed
+                   , AT._status_is_renting               = status^.d_status_is_renting
+                   , AT._status_is_returning             = status^.d_status_is_returning
+                   , AT._status_traffic                  = fmap Text.unpack $ status^.d_status_traffic
+                   , AT._status_vehicle_docks_available  = [ AT.VehicleDock (map show [AT.Boost, AT.Iconic, AT.EFit, AT.EFitG5]) (fromIntegral $ status^.d_status_vehicle_docks_available) ]
+                   , AT._status_vehicle_types_available  = [ AT.VehicleType AT.Boost  (fromIntegral (status^.vehicle_types_available_boost))
+                                                           , AT.VehicleType AT.Iconic (fromIntegral (status^.vehicle_types_available_iconic))
+                                                           , AT.VehicleType AT.EFit   (fromIntegral (status^.vehicle_types_available_efit))
+                                                           , AT.VehicleType AT.EFitG5 (fromIntegral (status^.vehicle_types_available_efit_g5))
+                                                           ]
+                   }

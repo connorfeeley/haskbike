@@ -21,8 +21,6 @@ module Database.BikeShare
 
 
 
-import           Control.Lens
-
 import           Database.Beam
 import           Database.BikeShare.Types
 

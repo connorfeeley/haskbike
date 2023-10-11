@@ -21,8 +21,6 @@ import           Database.BikeShare.Operations
 
 import           Prelude                       hiding ( log, unlines )
 
-import           UnliftIO                      ( liftIO )
-
 
 -- | Dispatch CLI arguments to the query interface.
 dispatchQuery :: QueryOptions
