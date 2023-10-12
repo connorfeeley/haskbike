@@ -41,6 +41,7 @@ data StatusVariationQuery where
                           } -> StatusVariationQuery
   deriving (Generic, Show, Eq)
 
+
 -- | Varient representing the type of threshold to apply to the query.
 data StatusThreshold where
   OldestID      :: Int32        -> StatusThreshold
@@ -48,6 +49,7 @@ data StatusThreshold where
   EarliestTime  :: ReportTime   -> StatusThreshold
   LatestTime    :: ReportTime   -> StatusThreshold
   deriving (Show, Eq)
+
 
 -- | Convert a 'StatusQuery' to a fragment of a filter expression.
 thresholdCondition :: StatusThreshold -> StationStatusT (QExpr Postgres s) -> QExpr Postgres s Bool
@@ -60,16 +62,20 @@ thresholdCondition (EarliestTime time_threshold) status =
 thresholdCondition (LatestTime time_threshold) status =
   status ^. d_status_last_reported <=. val_ (Just time_threshold)
 
+
+-- | Construct a filter expression corresponding to the station ID.
 stationIdCondition :: Maybe Int32 -> StationStatusT (QExpr Postgres s) -> QExpr Postgres s Bool
 stationIdCondition (Just stationId) status =
   status ^. d_status_info_id ==. val_ stationId
 stationIdCondition Nothing _ = val_ True
+
 
 -- | Construct a filter expression for a 'StatusQuery'.
 filterFor_ :: StatusVariationQuery -> StationStatusT (QExpr Postgres s) -> QExpr Postgres s Bool
 filterFor_ (StatusVariationQuery stationId _ _ thresholds) status =
   let thresholdConditions = map (`thresholdCondition` status) thresholds
   in foldr (&&.) (stationIdCondition stationId status) thresholdConditions
+
 
 -- | Data type representing the type of statistic to query.
 data AvailabilityCountVariation where
@@ -94,6 +100,8 @@ queryDockingEventsCount variation =  do
   pure $ map (\(station, (undockings, dockings))
               -> DockingEventsCount station variation (fromIntegral undockings) (fromIntegral dockings)
              ) counts
+
+
 queryDockingEventsCountExpr :: StatusVariationQuery -> App [(StationInformation, (Int32, Int32))]
 queryDockingEventsCountExpr variation@(StatusVariationQuery _ _ bikeType _) =
   let bikeType' = case bikeType of
