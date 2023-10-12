@@ -100,7 +100,11 @@
                   reuse
                   pgadmin
                   litecli
-                  ;
+                  pgformatter
+                ;
+                inherit (pkgs.nodePackages)
+                  prettier
+                ;
                 # PostgreSQL with extensions
                 inherit postgres;
 
