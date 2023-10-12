@@ -29,7 +29,6 @@ import           Control.Lens           hiding ( reuse, (<.) )
 import           Data.Int               ( Int32 )
 
 import           Database.Beam
-import           Database.Beam.Backend  ( BeamSqlBackend )
 import           Database.Beam.Postgres
 import           Database.BikeShare
 
@@ -172,9 +171,11 @@ queryDockingEventsCountExpr variation =
          )
   where
     -- Aggregate expression for unidirectionally summing deltas (only where delta is positive, or only where delta is negative).
-    sumDeltasAggregate_ binOp = aggregate_ (\(status, dBoost, dIconic, dEFit, dEFitG5) -> ( group_ (status ^. d_status_info_id)
-                                                                              , fromMaybe_ 0 $ sum_ dIconic `filterWhere_` (dBoost  `binOp` 0)
-                                                                              , fromMaybe_ 0 $ sum_ dIconic `filterWhere_` (dIconic `binOp` 0)
-                                                                              , fromMaybe_ 0 $ sum_ dIconic `filterWhere_` (dEFit   `binOp` 0)
-                                                                              , fromMaybe_ 0 $ sum_ dIconic `filterWhere_` (dEFitG5 `binOp` 0)
-                                                                              ))
+    sumDeltasAggregate_ binOp =
+      aggregate_ (\(status, dBoost, dIconic, dEFit, dEFitG5) ->
+                     ( group_ (status ^. d_status_info_id)
+                     , fromMaybe_ 0 $ sum_ dBoost  `filterWhere_` (dBoost  `binOp` 0)
+                     , fromMaybe_ 0 $ sum_ dIconic `filterWhere_` (dIconic `binOp` 0)
+                     , fromMaybe_ 0 $ sum_ dEFit   `filterWhere_` (dEFit   `binOp` 0)
+                     , fromMaybe_ 0 $ sum_ dEFitG5 `filterWhere_` (dEFitG5 `binOp` 0)
+                     ))
