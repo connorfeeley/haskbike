@@ -21,6 +21,7 @@ import           Colog
 import           Control.Lens                  hiding ( para )
 import           Control.Monad                 ( when )
 
+import qualified Data.Char                     as Char
 import           Data.Int                      ( Int32 )
 import           Data.List                     ( sortOn )
 import           Data.Maybe                    ( fromMaybe )
@@ -68,19 +69,19 @@ dispatchEvents (EventCounts options) = do
   today <- liftIO $ utctDay <$> getCurrentTime
   let yesterday = previousDay today
 
+  -- 'eventsForRange' parameters:
   let stationId :: Maybe Int = Nothing -- Get event counts for all stations.
   let bikeType = Iconic
   let eventType = Docking
   let startDay' = fromMaybe yesterday startDay
   let endDay' = fromMaybe today endDay
-  log I $ format "Calculating number of {} {}s for (optional) station {} (limit: {})." (show bikeType) (show eventType) (maybeF stationId) (optEventsCountLimit options)
+
+  -- Get undocking/docking counts.
+  log I $ format "Calculating number of {} {}s for (optional) station {} (limit: {})." (showLower bikeType) (showLower eventType) (maybeF stationId) (optEventsCountLimit options)
   eventSums <- eventsForRange stationId bikeType eventType startDay' startTime endDay' endTime
 
-  -- Get number of bikes by type in the system, every two hours.
-  log I "Getting number of bikes by type in the system."
-
   liftIO $ do
-    when (length eventSums < 10) (putStrLn $ format "Docking and undocking counts: {}" (length eventSums))
+    when (length eventSums < 10) (putStrLn $ format "{} counts: {}" (show eventType) (length eventSums))
 
     formatDockingEventsCount $ takeMaybe limit $ sortDockingEventsCount eventType eventSums
 
@@ -88,8 +89,8 @@ dispatchEvents (EventCounts options) = do
     formatDockingEventsDifferential $ takeMaybe limit $ sortOnVariation eventType (sortedEventsBoth eventSums)
   where
     sortedMessage :: AvailabilityCountVariation -> String
-    sortedMessage Docking   = "dockings >> undockings"
-    sortedMessage Undocking = "undockings >> dockings"
+    sortedMessage Docking   = format "{} >> {}" (showLower Docking) (showLower Undocking)
+    sortedMessage Undocking = format "{} >> {}" (showLower Undocking) (showLower Docking)
 
     sortOnVariation :: AvailabilityCountVariation -> [(StationInformation, Int)] -> [(StationInformation, Int)]
     sortOnVariation eventType = case eventType of
@@ -106,6 +107,11 @@ dispatchEvents (EventCounts options) = do
     startTime, endTime :: TimeOfDay
     startTime = fromMaybe (TimeOfDay 00 00 00) (optEventsCountStartTime options)
     endTime   = fromMaybe (TimeOfDay 00 00 00) (optEventsCountEndTime options)
+
+
+-- | Show with lowercase output.
+showLower :: (Show a) => a -> String
+showLower = map Char.toLower . show
 
 -- | Add the undockings and dockings for each station together, and sort the resulting list.
 sortedEventsBoth :: [DockingEventsCount] -> [(StationInformation, Int)]
@@ -133,10 +139,12 @@ bikeCountsAtMoment day timeOfDay = do
        , totalEbikeEfitG5 statusForMoment
        )
 
+
 -- | Create a list of (Day, TimeOfDay).
 dayTimes :: [(Day, TimeOfDay)]
 dayTimes = [(addDays n refDay, TimeOfDay h 0 0) | n <- [0..3], h <- [0,2..22]]
   where refDay = fromGregorian 2023 10 8  -- Replace with reference day.
+
 
 
 totalBoost, totalIconic, totalEbikeEfit, totalEbikeEfitG5 :: Num (Columnar f Int32) => [StationStatusT f] -> Columnar f Int32
@@ -161,11 +169,12 @@ formatBikeCounts allCounts = Box.printBox table
     showFn intensity colour = Box.text . (unpack . colouredText intensity colour . pack)
     table = Box.hsep 2 Box.left [col_day, col_time, col1, col2, col3, col4, col5]
 
+
 -- | Get (undockings, dockings) for a day.
 eventsForRange :: Maybe Int -> AT.TorontoVehicleType -> AvailabilityCountVariation -> Day -> TimeOfDay -> Day -> TimeOfDay -> App [DockingEventsCount]
 eventsForRange stationId vehicleType variation earliestDay earliestTime latestDay latestTime = do
   -- Calculate number of dockings and undockings
-  log D "Querying dockings and undockings."
+  log D $ format "Querying {} events." (showLower variation)
   queryDockingEventsCount (queryCondition variation)
   where
     queryCondition :: AvailabilityCountVariation -> StatusVariationQuery
@@ -207,6 +216,7 @@ formatDockingEventsCount events = Box.printBox table
 
     showBoolFn :: Bool -> Box.Box
     showBoolFn value = if value then (showFn Vivid Yellow . show) value else (showFn Dull White . show) value
+
 
 -- | Print difference between docking and undocking event counts.
 formatDockingEventsDifferential :: [(StationInformation, Int)] -> IO ()
