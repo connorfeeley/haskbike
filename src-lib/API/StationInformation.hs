@@ -24,6 +24,7 @@ import           Data.Aeson
 import           Data.Attoparsec.Text ( Parser, choice, parseOnly, string )
 import           Data.Either          ( fromRight )
 import           Data.Functor         ( ($>) )
+import           Data.Maybe           ( fromMaybe )
 import           Data.Text            ( pack )
 import qualified Data.Text            as Text
 
@@ -135,9 +136,9 @@ instance ToJSON RentalURIs where
            ]
 instance FromJSON RentalURIs where
   parseJSON = withObject "RentalURIs" $ \v -> RentalURIs
-    <$> v .: "android"
-    <*> v .: "ios"
-    <*> v .: "web"
+    <$> fmap (fromMaybe "") (v .:? "android")
+    <*> fmap (fromMaybe "") (v .:? "ios")
+    <*> fmap (fromMaybe "") (v .:? "web")
 
 -- | A type representing a BikeShare station.
 data StationInformation where
