@@ -8,6 +8,7 @@ module CLI.Events
      ) where
 
 
+import           API.Types                     ( TorontoVehicleType (..) )
 import qualified API.Types                     as AT
 
 import           AppEnv
@@ -33,7 +34,7 @@ import           Database.BikeShare.Operations
 
 import           Fmt
 
-import           Formatting                    ( pPrintCompact )
+import           Formatting
 
 import           Prelude                       hiding ( log )
 
@@ -41,7 +42,6 @@ import           ReportTime                    ( Day, TimeOfDay (..), fromGregor
 
 import           System.Console.ANSI
 
-import           Text.Pretty.Simple            ( pShow )
 import qualified Text.PrettyPrint.Boxes        as Box
 
 import           UnliftIO
@@ -51,8 +51,7 @@ dispatchEvents :: EventSubcommand
                -> App ()
 dispatchEvents (EventRange options)  = do
   log I $ format "Getting counts of each bike time every two hours between {} and {}." firstDay lastDay
-  log D $ format "Options: {}" (pShow options)
-  pPrintCompact options
+  log D $ format "Options: {}" (pShowCompact options)
 
   -- Run queries concurrently (automatic thread pool size).
   countsAtTimes <- pooledMapConcurrently (uncurry bikeCountsAtMoment) dayTimes
@@ -60,12 +59,22 @@ dispatchEvents (EventRange options)  = do
   where
     firstDay = fromGregorian 2023 0 06
     lastDay  = fromGregorian 2023 10 08
+
 dispatchEvents (EventCounts options) = do
   -- Calculate number of dockings and undockings
-  log I $ format "Calculating number of dockings and undockings. Limit: {}." (optEventsCountLimit options)
-  log D $ format "Options: {}" (pShow options)
-  currentDay <- liftIO $ utctDay <$> getCurrentTime
-  eventSums <- eventsForRange (fromMaybe currentDay (optEventsCountStartDay options)) (fromMaybe currentDay (optEventsCountEndDay options))
+  log D $ format "Options: {}" (pShowCompact options)
+
+  -- Determine current day and previous day.
+  today <- liftIO $ utctDay <$> getCurrentTime
+  let yesterday = previousDay today
+
+  let stationId :: Maybe Int = Nothing -- Get event counts for all stations.
+  let bikeType = Iconic
+  let eventType = Docking
+  let startDay' = fromMaybe yesterday startDay
+  let endDay' = fromMaybe today endDay
+  log I $ format "Calculating number of {} {}s for (optional) station {} (limit: {})." (show bikeType) (show eventType) (maybeF stationId) (optEventsCountLimit options)
+  eventSums <- eventsForRange stationId bikeType eventType startDay' startTime endDay' endTime
 
   -- Get number of bikes by type in the system, every two hours.
   log I "Getting number of bikes by type in the system."
@@ -73,18 +82,38 @@ dispatchEvents (EventCounts options) = do
   liftIO $ do
     when (length eventSums < 10) (putStrLn $ format "Docking and undocking counts: {}" (length eventSums))
 
-    putStrLn "\nSorted by undockings:"
-    formatDockingEventsCount $ takeMaybe limit $ sortDockingEventsCount Undocking eventSums
-    putStrLn "\nSorted by dockings:"
-    formatDockingEventsCount $ takeMaybe limit $ sortDockingEventsCount Docking eventSums
+    formatDockingEventsCount $ takeMaybe limit $ sortDockingEventsCount eventType eventSums
 
-    putStrLn "\nSorted by differentials (undockings >> dockings):"
-    formatDockingEventsDifferential $ takeMaybe limit $ sortOn (view _2) (sortEvents eventSums)
-    putStrLn "\nSorted by differentials (dockings >> undockings):"
-    formatDockingEventsDifferential $ takeMaybe limit $ sortOn (Down . view _2) (sortEvents eventSums)
+    putStrLn $ format "\nSorted by differentials ({}):" (sortedMessage eventType)
+    formatDockingEventsDifferential $ takeMaybe limit $ sortOnVariation eventType (sortedEventsBoth eventSums)
   where
-    sortEvents = sortOn snd . map (\counts -> (station counts, undockings counts + dockings counts))
+    sortedMessage :: AvailabilityCountVariation -> String
+    sortedMessage Docking   = "dockings >> undockings"
+    sortedMessage Undocking = "undockings >> dockings"
+
+    sortOnVariation :: AvailabilityCountVariation -> [(StationInformation, Int)] -> [(StationInformation, Int)]
+    sortOnVariation eventType = case eventType of
+      Docking   -> sortOn (Down . view _2)
+      Undocking -> sortOn (view _2)
+
+    limit :: Maybe Int
     limit = optEventsCountLimit options
+
+    startDay, endDay :: Maybe Day
+    startDay = optEventsCountStartDay options
+    endDay = optEventsCountEndDay options
+
+    startTime, endTime :: TimeOfDay
+    startTime = fromMaybe (TimeOfDay 00 00 00) (optEventsCountStartTime options)
+    endTime   = fromMaybe (TimeOfDay 00 00 00) (optEventsCountEndTime options)
+
+-- | Add the undockings and dockings for each station together, and sort the resulting list.
+sortedEventsBoth :: [DockingEventsCount] -> [(StationInformation, Int)]
+sortedEventsBoth = map (\counts -> (station counts, undockings counts + dockings counts))
+
+-- | Given a 'Day', get the previous 'Day'.
+previousDay :: Day -> Day
+previousDay = addDays (-1)
 
 -- | Optionally take a number of elements from a list.
 takeMaybe :: Maybe Int -> [a] -> [a]
@@ -133,21 +162,19 @@ formatBikeCounts allCounts = Box.printBox table
     table = Box.hsep 2 Box.left [col_day, col_time, col1, col2, col3, col4, col5]
 
 -- | Get (undockings, dockings) for a day.
-eventsForRange :: Day -> Day -> App [DockingEventsCount]
-eventsForRange earliestDay latestDay = do
+eventsForRange :: Maybe Int -> AT.TorontoVehicleType -> AvailabilityCountVariation -> Day -> TimeOfDay -> Day -> TimeOfDay -> App [DockingEventsCount]
+eventsForRange stationId vehicleType variation earliestDay earliestTime latestDay latestTime = do
   -- Calculate number of dockings and undockings
   log D "Querying dockings and undockings."
-  queryDockingEventsCount (queryCondition Docking)
+  queryDockingEventsCount (queryCondition variation)
   where
     queryCondition :: AvailabilityCountVariation -> StatusVariationQuery
-    queryCondition variation =
+    queryCondition variation' =
       StatusVariationQuery
-      Nothing -- or (Just 7001) for only one station (7001)
-      variation
-      AT.EFit
-      [ EarliestTime (reportTime earliestDay (TimeOfDay 00 00 00))
-      , LatestTime   (reportTime latestDay   (TimeOfDay 00 00 00))
-      ]
+      (fromIntegral <$> stationId)
+      variation'
+      vehicleType
+      [ EarliestTime (reportTime earliestDay earliestTime) , LatestTime (reportTime latestDay latestTime) ]
 
 -- | Sort docking and undocking events.
 sortDockingEventsCount :: AvailabilityCountVariation -> [DockingEventsCount] -> [DockingEventsCount]
