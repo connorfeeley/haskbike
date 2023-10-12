@@ -222,8 +222,8 @@ eventsCountOptionsParser = do
   optEventsCountLimit <- eventsCountsLimit
   optEventsCountStartDay <- dayParser
   optEventsCountEndDay <- dayParser
-  optEventsCountStartTime <- optional timeOfDay
-  optEventsCountEndTime <- optional timeOfDay
+  optEventsCountStartTime <- optional timeOfDayParser
+  optEventsCountEndTime <- optional timeOfDayParser
   return EventCountOptions {..}
 
 eventsCountsLimit :: Parser (Maybe Int)
@@ -241,8 +241,8 @@ eventRangeOptionsParser :: Parser EventRangeOptions
 eventRangeOptionsParser = do
   startDay <- dayParser
   endDay <- dayParser
-  startTime <- optional timeOfDay
-  endTime <- optional timeOfDay
+  startTime <- optional timeOfDayParser
+  endTime <- optional timeOfDayParser
   return EventRangeOptions {..}
 
 dayParser :: Parser (Maybe Day)
@@ -252,8 +252,8 @@ dayParser =
     <> help "A date in the format yyyy-mm-dd."
     )
 
-timeOfDay :: Parser TimeOfDay
-timeOfDay =
+timeOfDayParser :: Parser TimeOfDay
+timeOfDayParser =
   argument auto
     ( metavar "TIME"
     <> help "A time in the format HH:MM:SS."

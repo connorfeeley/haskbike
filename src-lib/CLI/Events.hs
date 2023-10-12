@@ -51,6 +51,8 @@ dispatchEvents :: EventSubcommand
                -> App ()
 dispatchEvents (EventRange options)  = do
   log I $ format "Getting counts of each bike time every two hours between {} and {}." firstDay lastDay
+  log D $ format "Options: {}" (pShow options)
+  pPrintCompact options
 
   -- Run queries concurrently (automatic thread pool size).
   countsAtTimes <- pooledMapConcurrently (uncurry bikeCountsAtMoment) dayTimes
@@ -61,7 +63,7 @@ dispatchEvents (EventRange options)  = do
 dispatchEvents (EventCounts options) = do
   -- Calculate number of dockings and undockings
   log I $ format "Calculating number of dockings and undockings. Limit: {}." (optEventsCountLimit options)
-  pPrintCompact options
+  log D $ format "Options: {}" (pShow options)
   currentDay <- liftIO $ utctDay <$> getCurrentTime
   eventSums <- eventsForRange (fromMaybe currentDay (optEventsCountStartDay options)) (fromMaybe currentDay (optEventsCountEndDay options))
 
@@ -72,17 +74,22 @@ dispatchEvents (EventCounts options) = do
     when (length eventSums < 10) (putStrLn $ format "Docking and undocking counts: {}" (length eventSums))
 
     putStrLn "\nSorted by undockings:"
-    formatDockingEventsCount $ take limit $ sortDockingEventsCount Undocking eventSums
+    formatDockingEventsCount $ takeMaybe limit $ sortDockingEventsCount Undocking eventSums
     putStrLn "\nSorted by dockings:"
-    formatDockingEventsCount $ take limit $ sortDockingEventsCount Docking eventSums
+    formatDockingEventsCount $ takeMaybe limit $ sortDockingEventsCount Docking eventSums
 
     putStrLn "\nSorted by differentials (undockings >> dockings):"
-    formatDockingEventsDifferential $ take limit $ sortOn (view _2) (sortEvents eventSums)
+    formatDockingEventsDifferential $ takeMaybe limit $ sortOn (view _2) (sortEvents eventSums)
     putStrLn "\nSorted by differentials (dockings >> undockings):"
-    formatDockingEventsDifferential $ take limit $ sortOn (Down . view _2) (sortEvents eventSums)
+    formatDockingEventsDifferential $ takeMaybe limit $ sortOn (Down . view _2) (sortEvents eventSums)
   where
     sortEvents = sortOn snd . map (\counts -> (station counts, undockings counts + dockings counts))
-    limit = fromMaybe 50 (optEventsCountLimit options)
+    limit = optEventsCountLimit options
+
+-- | Optionally take a number of elements from a list.
+takeMaybe :: Maybe Int -> [a] -> [a]
+takeMaybe (Just limit) xs = take limit xs
+takeMaybe Nothing xs      = xs
 
 bikeCountsAtMoment :: Day -> TimeOfDay -> App (Day, TimeOfDay, Int32, Int32, Int32, Int32)
 bikeCountsAtMoment day timeOfDay = do

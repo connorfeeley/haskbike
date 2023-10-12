@@ -35,6 +35,7 @@ import           Control.Lens         hiding ( (.=) )
 import           Data.Aeson           ( FromJSON (parseJSON), KeyValue ((.=)), ToJSON (toJSON), Value (String), object,
                                         withObject, withText, (.:), (.:?) )
 import           Data.Attoparsec.Text ( Parser, choice, parseOnly, string )
+import           Data.Char            ( toUpper )
 import           Data.Either          ( fromRight )
 import           Data.Functor         ( ($>) )
 import qualified Data.Text            as Text
@@ -173,8 +174,9 @@ instance Show TorontoVehicleType where
   show EFit   = "EFIT"
   show EFitG5 = "EFIT G5"
 
+-- | Read instance for 'TorontoVehicleType' (case-insensitive).
 instance Read TorontoVehicleType where
-  readsPrec _ = fromRight [] . parseOnly parser . Text.pack
+  readsPrec _ = fromRight [] . parseOnly parser . Text.pack . map toUpper
     where
     parser :: Parser [(TorontoVehicleType, String)]
     parser = choice
