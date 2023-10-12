@@ -22,9 +22,10 @@ import           Control.Monad                 ( when )
 
 import           Data.Int                      ( Int32 )
 import           Data.List                     ( sortOn )
+import           Data.Maybe                    ( fromMaybe )
 import           Data.Ord                      ( Down (Down) )
 import           Data.Text.Lazy                ( pack, unpack )
-import           Data.Time                     ( addDays )
+import           Data.Time                     ( addDays, getCurrentTime, utctDay )
 
 import           Database.Beam
 import           Database.BikeShare
@@ -59,9 +60,10 @@ dispatchEvents (EventRange options)  = do
     lastDay  = fromGregorian 2023 10 08
 dispatchEvents (EventCounts options) = do
   -- Calculate number of dockings and undockings
-  log I $ format "Calculating number of dockings and undockings. Limit: {}." (optEventsLimit' options)
+  log I $ format "Calculating number of dockings and undockings. Limit: {}." (optEventsCountLimit options)
   pPrintCompact options
-  eventSums <- eventsForRange (fromGregorian 2023 0 06) (fromGregorian 2023 10 08)
+  currentDay <- liftIO $ utctDay <$> getCurrentTime
+  eventSums <- eventsForRange (fromMaybe currentDay (optEventsCountStartDay options)) (fromMaybe currentDay (optEventsCountEndDay options))
 
   -- Get number of bikes by type in the system, every two hours.
   log I "Getting number of bikes by type in the system."
@@ -70,16 +72,17 @@ dispatchEvents (EventCounts options) = do
     when (length eventSums < 10) (putStrLn $ format "Docking and undocking counts: {}" (length eventSums))
 
     putStrLn "\nSorted by undockings:"
-    formatDockingEventsCount $ sortDockingEventsCount Undocking eventSums
+    formatDockingEventsCount $ take limit $ sortDockingEventsCount Undocking eventSums
     putStrLn "\nSorted by dockings:"
-    formatDockingEventsCount $ sortDockingEventsCount Docking eventSums
+    formatDockingEventsCount $ take limit $ sortDockingEventsCount Docking eventSums
 
     putStrLn "\nSorted by differentials (undockings >> dockings):"
-    formatDockingEventsDifferential $ take 50 $ sortOn (view _2) (sortEvents eventSums)
+    formatDockingEventsDifferential $ take limit $ sortOn (view _2) (sortEvents eventSums)
     putStrLn "\nSorted by differentials (dockings >> undockings):"
-    formatDockingEventsDifferential $ take 50 $ sortOn (Down . view _2) (sortEvents eventSums)
+    formatDockingEventsDifferential $ take limit $ sortOn (Down . view _2) (sortEvents eventSums)
   where
     sortEvents = sortOn snd . map (\counts -> (station counts, undockings counts + dockings counts))
+    limit = fromMaybe 50 (optEventsCountLimit options)
 
 bikeCountsAtMoment :: Day -> TimeOfDay -> App (Day, TimeOfDay, Int32, Int32, Int32, Int32)
 bikeCountsAtMoment day timeOfDay = do

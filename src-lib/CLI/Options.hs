@@ -188,7 +188,7 @@ data EventSubcommand =
 
 data EventCountOptions =
   EventCountOptions
-    { optEventsLimit'         :: Maybe Int
+    { optEventsCountLimit     :: Maybe Int
     , optEventsCountStartDay  :: Maybe Day
     , optEventsCountStartTime :: Maybe TimeOfDay
     , optEventsCountEndDay    :: Maybe Day
@@ -213,33 +213,35 @@ eventsOptionsParser = EventsOptions
   <*> argument auto
     ( metavar "LIMIT"
     <> showDefault
-    <> value (Just 10)
+    <> value Nothing
     <> help "Limit the number of events displayed."
     )
 
 eventsCountOptionsParser :: Parser EventCountOptions
 eventsCountOptionsParser = do
-  optEventsLimit' <- eventsCountsLimit
+  optEventsCountLimit <- eventsCountsLimit
   optEventsCountStartDay <- dayParser
-  optEventsCountStartTime <- optional timeOfDay
   optEventsCountEndDay <- dayParser
+  optEventsCountStartTime <- optional timeOfDay
   optEventsCountEndTime <- optional timeOfDay
   return EventCountOptions {..}
 
 eventsCountsLimit :: Parser (Maybe Int)
 eventsCountsLimit =
-  argument (optional auto)
+  option (optional auto)
     ( metavar "LIMIT"
+    <> long "limit"
+    <> short 'n'
     <> showDefault
-    <> value (Just 10)
+    <> value Nothing
     <> help "Limit the number of events displayed."
     )
 
 eventRangeOptionsParser :: Parser EventRangeOptions
 eventRangeOptionsParser = do
   startDay <- dayParser
-  startTime <- optional timeOfDay
   endDay <- dayParser
+  startTime <- optional timeOfDay
   endTime <- optional timeOfDay
   return EventRangeOptions {..}
 
