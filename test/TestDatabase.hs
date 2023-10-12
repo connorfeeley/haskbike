@@ -460,9 +460,9 @@ unit_queryDockingUndockingCount = do
 
 checkConditions :: Int32 -> [StatusThreshold] -> Int -> Int -> IO ()
 checkConditions stationId thresholds expectDockings expectUndockings = do
-  eventCountsForStation <- findInList stationId <$> runWithApp dbnameTest (queryDockingEventsCount (StatusVariationQuery stationId Docking AT.Iconic thresholds))
-  assertEqual ("Expected number of undockings at station " ++ show stationId) (Just expectUndockings)  (undockings <$> eventCountsForStation)
-  assertEqual ("Expected number of dockings at station "   ++ show stationId) (Just expectDockings)    (dockings   <$> eventCountsForStation)
+  eventCountsForStation <- findInList stationId <$> runWithApp dbnameTest (queryDockingEventsCount (StatusVariationQuery (Just stationId) Docking AT.Iconic thresholds))
+  assertEqual ("Expected number of undockings at station " ++ show stationId) (Just expectUndockings)  (eventsCountUndockings . iconicCount   <$> eventCountsForStation)
+  assertEqual ("Expected number of dockings at station "   ++ show stationId) (Just expectDockings)    (eventsCountDockings . iconicCount   <$> eventCountsForStation)
 
 findInList :: Int32 -> [DockingEventsCount] -> Maybe DockingEventsCount
 findInList key tuples = tuples ^? folded . filtered (\k -> station k ^. info_station_id == key)

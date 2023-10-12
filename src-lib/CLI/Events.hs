@@ -115,7 +115,7 @@ showLower = map Char.toLower . show
 
 -- | Add the undockings and dockings for each station together, and sort the resulting list.
 sortedEventsBoth :: [DockingEventsCount] -> [(StationInformation, Int)]
-sortedEventsBoth = map (\counts -> (station counts, undockings counts + dockings counts))
+sortedEventsBoth = map (\counts -> (station counts, eventsCountUndockings (iconicCount counts) + eventsCountDockings (iconicCount counts)))
 
 -- | Given a 'Day', get the previous 'Day'.
 previousDay :: Day -> Day
@@ -187,8 +187,8 @@ eventsForRange stationId vehicleType variation earliestDay earliestTime latestDa
 
 -- | Sort docking and undocking events.
 sortDockingEventsCount :: AvailabilityCountVariation -> [DockingEventsCount] -> [DockingEventsCount]
-sortDockingEventsCount Undocking = sortOn undockings
-sortDockingEventsCount Docking   = sortOn (Down . dockings)
+sortDockingEventsCount Undocking = sortOn (eventsCountUndockings . iconicCount)
+sortDockingEventsCount Docking   = sortOn (Down . eventsCountDockings . iconicCount)
 
 -- | Print docking and undocking events (with index).
 formatDockingEventsCount :: [DockingEventsCount] -> IO ()
@@ -199,8 +199,8 @@ formatDockingEventsCount events = Box.printBox table
                          , station counts ^. info_station_id
                          , station counts ^. info_name
                          , station counts ^. info_is_charging_station
-                         , undockings counts
-                         , dockings counts
+                         , eventsCountUndockings (iconicCount counts)
+                         , eventsCountDockings (iconicCount counts)
                          )
                       ) [1..] events
     table = Box.hsep 1 Box.left [col1, col2, col3, col4, col5, col6]
