@@ -32,6 +32,8 @@ import           Database.BikeShare.Operations
 
 import           Fmt
 
+import           Formatting                    ( pPrintCompact )
+
 import           Prelude                       hiding ( log )
 
 import           ReportTime                    ( Day, TimeOfDay (..), fromGregorian, reportTime )
@@ -55,9 +57,10 @@ dispatchEvents (EventRange options)  = do
   where
     firstDay = fromGregorian 2023 0 06
     lastDay  = fromGregorian 2023 10 08
-dispatchEvents (EventCounts options)     = do
+dispatchEvents (EventCounts options) = do
   -- Calculate number of dockings and undockings
-  log I "Calculating number of dockings and undockings."
+  log I $ format "Calculating number of dockings and undockings. Limit: {}." (optEventsLimit' options)
+  pPrintCompact options
   eventSums <- eventsForRange (fromGregorian 2023 0 06) (fromGregorian 2023 10 08)
 
   -- Get number of bikes by type in the system, every two hours.

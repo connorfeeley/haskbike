@@ -188,7 +188,11 @@ data EventSubcommand =
 
 data EventCountOptions =
   EventCountOptions
-    { optEventsLimit' :: Maybe Int
+    { optEventsLimit'         :: Maybe Int
+    , optEventsCountStartDay  :: Maybe Day
+    , optEventsCountStartTime :: Maybe TimeOfDay
+    , optEventsCountEndDay    :: Maybe Day
+    , optEventsCountEndTime   :: Maybe TimeOfDay
     } deriving (Show)
 
 data EventRangeOptions =
@@ -203,7 +207,7 @@ data EventRangeOptions =
 eventsOptionsParser :: Parser EventsOptions
 eventsOptionsParser = EventsOptions
   <$> subparser
-    (  command "counts" (info (EventCounts <$> eventsCountsLimit) (progDesc "Counts of docking and undocking events."))
+    (  command "counts" (info (EventCounts <$> eventsCountOptionsParser) (progDesc "Counts of docking and undocking events."))
     <> command "range" (info (EventRange <$> eventRangeOptionsParser) (progDesc "Docking and undocking events within a date range."))
     )
   <*> argument auto
@@ -213,9 +217,18 @@ eventsOptionsParser = EventsOptions
     <> help "Limit the number of events displayed."
     )
 
-eventsCountsLimit :: Parser EventCountOptions
-eventsCountsLimit = EventCountOptions
-  <$> argument (optional auto)
+eventsCountOptionsParser :: Parser EventCountOptions
+eventsCountOptionsParser = do
+  optEventsLimit' <- eventsCountsLimit
+  optEventsCountStartDay <- dayParser
+  optEventsCountStartTime <- optional timeOfDay
+  optEventsCountEndDay <- dayParser
+  optEventsCountEndTime <- optional timeOfDay
+  return EventCountOptions {..}
+
+eventsCountsLimit :: Parser (Maybe Int)
+eventsCountsLimit =
+  argument (optional auto)
     ( metavar "LIMIT"
     <> showDefault
     <> value (Just 10)
@@ -224,15 +237,15 @@ eventsCountsLimit = EventCountOptions
 
 eventRangeOptionsParser :: Parser EventRangeOptions
 eventRangeOptionsParser = do
-  startDay <- optional dayParser
+  startDay <- dayParser
   startTime <- optional timeOfDay
-  endDay <- optional dayParser
+  endDay <- dayParser
   endTime <- optional timeOfDay
   return EventRangeOptions {..}
 
-dayParser :: Parser Day
+dayParser :: Parser (Maybe Day)
 dayParser =
-  argument auto
+  argument (optional auto)
     ( metavar "DATE"
     <> help "A date in the format yyyy-mm-dd."
     )
