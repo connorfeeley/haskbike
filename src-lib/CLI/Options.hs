@@ -16,6 +16,7 @@ import           ReportTime
 data Options where
   Options :: { optCommand         :: !Command
              , optVerbose         :: [Bool] -- ^ Verbosity flags.
+             , optLogDatabase     :: Bool   -- ^ If database queries should be logged.
              , optDatabase        :: String
              , optEnableMigration :: Bool
              } -> Options
@@ -27,6 +28,7 @@ parseOptions = Options
   <$> commandParser
   -- Support multiple verbosity flags.
   <*> many verboseFlag
+  <*> logDatabase
   <*> strOption
       ( long "database"
      <> metavar "DATABASE"
@@ -43,6 +45,10 @@ parseOptions = Options
                  <> short 'v'
                  <> help "Output verbosity (pass multiple times for more verbosity)."
                  <> showDefault)
+    logDatabase = switch
+                  ( long "log-database"
+                 <> showDefault
+                 <> help "Log database queries." )
 
 -- | Top-level commands.
 data Command where
@@ -56,7 +62,7 @@ data Command where
 
 -- | Parser for 'Command'.
 commandParser :: Parser Command
-commandParser = subparser
+commandParser = hsubparser
   (  command "poll"   (info (Poll <$> pollOptionsParser)
                        (progDesc "Poll the API and insert new station status into database."))
   <> command "query" (info (Query <$> queryOptionsParser)
@@ -116,7 +122,7 @@ unMatchMethod (WildcardMatch a) = a
 queryOptionsParser :: Parser QueryOptions
 queryOptionsParser = QueryOptions
   <$> flag True False (long "no-refresh" <> help "Don't refresh the data from the API.")
-  <*> subparser (queryByIdParser <> queryByNameParser)
+  <*> hsubparser (queryByIdParser <> queryByNameParser)
   where
     queryByIdParser   = command "id"   (info (QueryByStationId   <$> parseStationId)   (progDesc "Query by station ID."))
     queryByNameParser = command "name" (info (QueryByStationName <$> parseStationName) (progDesc "Query by station name."))
@@ -206,7 +212,7 @@ data EventRangeOptions =
 -- | Parser for 'EventsOptions'.
 eventsOptionsParser :: Parser EventsOptions
 eventsOptionsParser = EventsOptions
-  <$> subparser
+  <$> hsubparser
     (  command "counts" (info (EventCounts <$> eventsCountOptionsParser) (progDesc "Counts of docking and undocking events."))
     <> command "range" (info (EventRange <$> eventRangeOptionsParser) (progDesc "Docking and undocking events within a date range."))
     )

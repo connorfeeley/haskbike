@@ -62,8 +62,8 @@ main = do
   -- Run the application.
   runApp env (appMain options)
   where
-    -- | Log database operations when running in ultra-verbose (-vvv) mode.
-    logDatabase options = length (optVerbose options) >= 3
+    -- | Log database operations only when '--log-database' is given.
+    logDatabase = optLogDatabase
 
     -- | Logging action for stdout.
     logStdoutAction :: LogAction IO Message
