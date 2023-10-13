@@ -52,6 +52,8 @@ import qualified API.Types                                as AT
 
 import           AppEnv
 
+import           Colog                                    ( log, pattern W )
+
 import           Control.Lens                             hiding ( reuse, (<.) )
 
 import           Data.Int                                 ( Int32 )
@@ -67,9 +69,13 @@ import           Database.BikeShare.Expressions
 import           Database.BikeShare.Operations.Dockings
 import           Database.PostgreSQL.Simple               ( Only (..), query_ )
 
+import           Fmt
+
 import           Formatting
 
 import           GHC.Exts                                 ( fromString )
+
+import           Prelude                                  hiding ( log )
 
 
 data FilterStatusResult where
@@ -205,7 +211,9 @@ Insert updated station status into the database.
 insertStationStatus :: [AT.StationStatus] -- ^ List of 'AT.StationStatus' from the API response.
                     -> App InsertStatusResult
 insertStationStatus api_status
-  | null api_status = return $ InsertStatusResult [] []
+  | null api_status = do
+      log W "API status empty when trying to insert into DB."
+      pure $ InsertStatusResult [] []
   | otherwise = do
     info_ids <- map (fromIntegral . _info_station_id) <$> queryStationInformationByIds status_ids
 
@@ -219,6 +227,8 @@ insertStationStatus api_status
 
     -- Select arbitrary (in this case, last [by ID]) status record for each station ID.
     distinct_by_id <- selectDistinctByStationId status
+
+    log W $ format "distinct_by_id length {}: (truncated to 20 elements) {}" (length distinct_by_id) (pShowCompact (take 20 $ map _d_status_station_id distinct_by_id))
 
     -- Insert new records corresponding to station IDs which did not already exist in the station_status table.
     new_status <- insertNewStatus $
@@ -234,9 +244,13 @@ insertStationStatus api_status
 
     selectDistinctByStationId status
       | null status = return []
-      | otherwise = withPostgres $ runSelectReturningList $
-        select $ Pg.pgNubBy_ _d_status_info_id
-        (all_ (bikeshareDb ^. bikeshareStationStatus))
+      | otherwise = withPostgres $ runSelectReturningList $  select $ do
+          info <- all_ (bikeshareDb ^. bikeshareStationInformation)
+          status' <-  orderBy_ (asc_ . _d_status_station_id) $
+                      Pg.pgNubBy_ _d_status_info_id
+                      (all_ (bikeshareDb ^. bikeshareStationStatus))
+          guard_ (_d_status_info_id status' `references_` info &&. _d_status_active status')
+          pure status'
 
     deactivateOldStatus status
       | null status = return []
