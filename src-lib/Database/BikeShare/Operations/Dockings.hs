@@ -3,6 +3,7 @@
 {-# LANGUAGE OverloadedStrings         #-}
 {-# LANGUAGE PartialTypeSignatures     #-}
 {-# LANGUAGE Rank2Types                #-}
+{-# LANGUAGE TemplateHaskell           #-}
 
 -- Signatures of beam-related functions are incredibly verbose, so let's settle for partial type signatures.
 -- Sometimes it is straight up impossible to write the types down because of ambiguous types.
@@ -17,6 +18,16 @@ module Database.BikeShare.Operations.Dockings
      , EventsCountResult (..)
      , StatusThreshold (..)
      , StatusVariationQuery (..)
+       -- Lenses
+     , eventsBoostCount
+     , eventsCountBikeType
+     , eventsCountDockings
+     , eventsCountUndockings
+     , eventsEfitCount
+     , eventsEfitG5Count
+     , eventsIconicCount
+     , eventsStation
+     , eventsVariation
      , queryDockingEventsCount
      ) where
 
@@ -87,23 +98,28 @@ data AvailabilityCountVariation where
 
 -- | Wrapper for a station and its undocking and docking counts.
 data DockingEventsCount where
-  DockingEventsCount :: { station     :: StationInformation
-                        , variation   :: StatusVariationQuery
-                        , boostCount  :: EventsCountResult
-                        , iconicCount :: EventsCountResult
-                        , efitCount   :: EventsCountResult
-                        , efitG5Count :: EventsCountResult
+  DockingEventsCount :: { _eventsStation     :: StationInformation
+                        , _eventsVariation   :: StatusVariationQuery
+                        , _eventsBoostCount  :: EventsCountResult
+                        , _eventsIconicCount :: EventsCountResult
+                        , _eventsEfitCount   :: EventsCountResult
+                        , _eventsEfitG5Count :: EventsCountResult
                         } -> DockingEventsCount
   deriving (Generic, Show, Eq)
 
 
 -- | Wrapper for the undocking and docking counts for a bike type.
 data EventsCountResult =
-  EventsCountResult { bikeType              :: TorontoVehicleType
-                    , eventsCountUndockings :: Int
-                    , eventsCountDockings   :: Int
+  EventsCountResult { _eventsCountBikeType   :: TorontoVehicleType
+                    , _eventsCountUndockings :: Int
+                    , _eventsCountDockings   :: Int
                     }
   deriving (Generic, Show, Eq)
+
+
+-- | Lenses
+makeLenses ''DockingEventsCount
+makeLenses ''EventsCountResult
 
 
 -- | Query the number of dockings and undockings for a station.

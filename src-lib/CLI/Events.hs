@@ -85,16 +85,11 @@ dispatchEvents (EventCounts options) = do
     formatDockingEventsDifferential $ takeMaybe limit $ sortOnVariation eventType (sortedEventsBoth eventSums)
 
     putStrLn ""
-    formatDockingEventsCount $ takeMaybe limit $ sortDockingEventsCount eventType eventSums
+    formatDockingEventsCount $ takeMaybe limit $ sortDockingEventsCount eventType (sortOnVariationTotal Undocking eventSums)
   where
     sortedMessage :: AvailabilityCountVariation -> String
     sortedMessage Docking   = format "{} >> {}" (showLower Docking) (showLower Undocking)
     sortedMessage Undocking = format "{} >> {}" (showLower Undocking) (showLower Docking)
-
-    sortOnVariation :: AvailabilityCountVariation -> [(StationInformation, Int)] -> [(StationInformation, Int)]
-    sortOnVariation eventType = case eventType of
-      Docking   -> sortOn (Down . view _2)
-      Undocking -> sortOn (view _2)
 
     limit :: Maybe Int
     limit = optEventsCountLimit options
@@ -108,13 +103,32 @@ dispatchEvents (EventCounts options) = do
     endTime   = fromMaybe (TimeOfDay 00 00 00) (optEventsCountEndTime options)
 
 
+sortOnVariation :: AvailabilityCountVariation -> [(StationInformation, Int)] -> [(StationInformation, Int)]
+sortOnVariation eventType = case eventType of
+  Docking   -> sortOn (Down . view _2)
+  Undocking -> sortOn (view _2)
+
+-- | Sort a list of 'DockingEventsCount' by either the sum of 'Docking' or 'Undocking' events (across all bike types).
+sortOnVariationTotal :: AvailabilityCountVariation -> [DockingEventsCount] -> [DockingEventsCount]
+sortOnVariationTotal eventType events = case eventType of
+  Docking   -> sortOn (\ev -> (  ev ^. eventsBoostCount  . eventsCountDockings)
+                              + (ev ^. eventsIconicCount . eventsCountDockings)
+                              + (ev ^. eventsEfitCount   . eventsCountDockings)
+                              + (ev ^. eventsEfitG5Count . eventsCountDockings)
+                      ) events
+  Undocking -> sortOn (\ev -> (  ev ^. eventsBoostCount  . eventsCountUndockings)
+                              + (ev ^. eventsIconicCount . eventsCountUndockings)
+                              + (ev ^. eventsEfitCount   . eventsCountUndockings)
+                              + (ev ^. eventsEfitG5Count . eventsCountUndockings)
+                      ) events
+
 -- | Show with lowercase output.
 showLower :: (Show a) => a -> String
 showLower = map Char.toLower . show
 
 -- | Add the undockings and dockings for each station together, and sort the resulting list.
 sortedEventsBoth :: [DockingEventsCount] -> [(StationInformation, Int)]
-sortedEventsBoth = map (\counts -> (station counts, eventsCountUndockings (iconicCount counts) + eventsCountDockings (iconicCount counts)))
+sortedEventsBoth = map (\counts -> (counts ^. eventsStation , (counts ^. eventsIconicCount . eventsCountUndockings ) + (counts ^. eventsIconicCount . eventsCountDockings)))
 
 -- | Given a 'Day', get the previous 'Day'.
 previousDay :: Day -> Day
@@ -186,8 +200,8 @@ eventsForRange stationId vehicleType variation earliestDay earliestTime latestDa
 
 -- | Sort docking and undocking events.
 sortDockingEventsCount :: AvailabilityCountVariation -> [DockingEventsCount] -> [DockingEventsCount]
-sortDockingEventsCount Undocking = sortOn (eventsCountUndockings . iconicCount)
-sortDockingEventsCount Docking   = sortOn (Down . eventsCountDockings . iconicCount)
+sortDockingEventsCount Undocking = sortOn (_eventsCountUndockings . _eventsIconicCount)
+sortDockingEventsCount Docking   = sortOn (Down . _eventsCountDockings . _eventsIconicCount)
 
 -- | Print docking and undocking events (with index).
 formatDockingEventsCount :: [DockingEventsCount] -> IO ()
@@ -195,20 +209,22 @@ formatDockingEventsCount events = Box.printBox table
   where
     columns = zipWith (\index' counts ->
                          ( index' :: Int
-                         , station counts ^. info_station_id
-                         , station counts ^. info_name
-                         , station counts ^. info_is_charging_station
+                         , counts ^. eventsStation . info_station_id
+                         , counts ^. eventsStation . info_name
+                         , counts ^. eventsStation . info_is_charging_station
                          -- Total counts
-                         , eventsCountUndockings (iconicCount counts) + eventsCountUndockings (efitCount counts) + eventsCountUndockings (efitG5Count counts)
-                         , eventsCountDockings   (iconicCount counts) + eventsCountDockings   (efitCount counts) + eventsCountDockings   (efitG5Count counts)
+                         , (counts ^. eventsIconicCount . eventsCountUndockings)
+                           + (counts ^. eventsEfitCount   . eventsCountUndockings )
+                           + (counts ^. eventsEfitG5Count . eventsCountUndockings)
+                         , (counts ^. eventsIconicCount . eventsCountDockings) + (counts ^. eventsEfitCount . eventsCountDockings) + (counts ^. eventsEfitG5Count . eventsCountUndockings)
                          -- Undocking counts by type
-                         , eventsCountUndockings (iconicCount counts)
-                         , eventsCountUndockings (efitCount   counts)
-                         , eventsCountUndockings (efitG5Count counts)
+                         , counts ^. eventsIconicCount . eventsCountUndockings
+                         , counts ^. eventsEfitCount   . eventsCountUndockings
+                         , counts ^. eventsEfitG5Count . eventsCountUndockings
                          -- Docking counts by type
-                         , eventsCountDockings   (iconicCount counts)
-                         , eventsCountDockings   (efitCount   counts)
-                         , eventsCountDockings   (efitG5Count counts)
+                         , counts ^. eventsIconicCount . eventsCountDockings
+                         , counts ^. eventsEfitCount   . eventsCountDockings
+                         , counts ^. eventsEfitG5Count . eventsCountDockings
                          )
                       ) [1..] events
     table = Box.punctuateH Box.left (Box.text " | ") [col1, col2, col3, col4, col5, col6, col7, col8, col9, col10, col11, col12]
