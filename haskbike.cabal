@@ -62,8 +62,10 @@ Flag DEBUG
 
 -- Linker (use gold) common warning flags.
 common compile-flags
-    ghc-options: -Wall "-pgmP clang" "-pgmc clang" "-pgma clang" "-pgml clang"
-    ld-options: -fuse-ld=lld
+    ghc-options: -Wall
+  if os(linux)
+    ghc-options:       -optl-fuse-ld=gold
+    ld-options:        -fuse-ld=gold
 
 -- Common language extensions.
 common common-extensions
@@ -170,8 +172,6 @@ library
                     , common-depends
                     , api-depends
                     , database-depends
-
-    ghc-options: "-optl-fuse-ld=lld"
 
     -- Modules exported by the library.
     exposed-modules:  BikeShareAPI
