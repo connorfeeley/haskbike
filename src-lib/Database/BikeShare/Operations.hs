@@ -235,7 +235,7 @@ insertStationStatus api_status
     selectDistinctByStationId status
       | null status = return []
       | otherwise = withPostgres $ runSelectReturningList $
-        select $ Pg.pgNubBy_ _d_status_info_id $ orderBy_ (\s -> desc_ $ s ^. d_status_info_id)
+        select $ Pg.pgNubBy_ _d_status_info_id
         (all_ (bikeshareDb ^. bikeshareStationStatus))
 
     deactivateOldStatus status
