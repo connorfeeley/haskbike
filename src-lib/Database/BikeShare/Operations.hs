@@ -55,7 +55,6 @@ import           AppEnv
 import           Colog                                    ( log, pattern W )
 
 import           Control.Lens                             hiding ( reuse, (<.) )
-import           Control.Monad.RWS                        ( modify )
 
 import           Data.Int                                 ( Int32 )
 import qualified Data.Map                                 as Map
@@ -65,7 +64,6 @@ import           Database.Beam
 import           Database.Beam.Backend.SQL.BeamExtensions
 import           Database.Beam.Postgres
 import qualified Database.Beam.Postgres                   as Pg
-import qualified Database.Beam.Postgres.Full              as Pg
 import           Database.BikeShare
 import           Database.BikeShare.Expressions
 import           Database.BikeShare.Operations.Dockings
@@ -212,36 +210,60 @@ Insert updated station status into the database.
 -}
 insertStationStatus :: [AT.StationStatus] -- ^ List of 'AT.StationStatus' from the API response.
                     -> App InsertStatusResult
-insertStationStatus apiStatus
-  | null apiStatus = do
+insertStationStatus api_status
+  | null api_status = do
       log W "API status empty when trying to insert into DB."
       pure $ InsertStatusResult [] []
   | otherwise = do
-    -- New plan:
-    -- 1. Upsert the new statuses using runInsertReturningList and onConflictUpdateInstead.
-    -- 2. If there is an ACTIVE row with a matching station ID, then:
-    --   a. Upsert the new row, changing only the active field to FALSE.
-    --   b. runInsertReturningList returns the rows that were inserted AND updated.
-    --   c. Filter the rows that were updated, and return them.
-    --   d. Also return the rows that were inserted since we need to return the entire set of new (inserted on first try),
-    --      along with updated (upserted to be unactivated, then inserted with new status data) rows.
-    -- 3. For rows that were updated:
-    --   a. Perform same upsert as in step 1. Since there will be no conflict on insertion, this inserts the new (active) statuses.
-    --   b. Return the rows that were inserted. None should be updated, since that would have been done in step 2.
-    -- 4. Combine newly-inserted rows from step 2 and updated rows from step 3 into an InsertStatusResult, which is returned.
+    info_ids <- map (fromIntegral . _info_station_id) <$> queryStationInformationByIds status_ids
 
-      -- TODO: step 1.
+    let status = filter (\ss -> fromIntegral (_status_station_id ss) `elem` info_ids) api_status
 
-      -- TODO: step 2.
+    statuses_to_deactivate <- getRowsToDeactivate status
+    updated_statuses <- deactivateOldStatus statuses_to_deactivate
+    let updated_status_ids = map (fromIntegral . _d_status_station_id) updated_statuses
+    inserted_statuses <- insertNewStatus $
+      filter (\ss -> ss ^. status_station_id `elem` updated_status_ids) status
 
-      -- TODO: step 3.
+    -- Select arbitrary (in this case, last [by ID]) status record for each station ID.
+    distinct_by_id <- selectDistinctByStationId status
 
-      -- TODO: step 4.
-      pure $ InsertStatusResult [] []
+    log W $ format "distinct_by_id length {}: (truncated to 20 elements) {}" (length distinct_by_id) (pShowCompact (take 20 $ map _d_status_station_id distinct_by_id))
+
+    -- Insert new records corresponding to station IDs which did not already exist in the station_status table.
+    new_status <- insertNewStatus $
+      filter (\ss -> ss ^. status_station_id `notElem` map (fromIntegral . _d_status_station_id) distinct_by_id &&
+                     ss ^. status_station_id `elem` info_ids
+             ) status
+
+
+    return $ InsertStatusResult updated_statuses (inserted_statuses ++ new_status)
+
   where
-    -- Status from API transformed into Beam expressions.
-    statusExprs = map fromJSONToBeamStationStatus apiStatus
+    status_ids = fromIntegral <$> api_status ^.. traverse . status_station_id
 
+    selectDistinctByStationId status
+      | null status = return []
+      | otherwise = withPostgres $ runSelectReturningList $  select $ do
+          info <- all_ (bikeshareDb ^. bikeshareStationInformation)
+          status' <-  orderBy_ (asc_ . _d_status_station_id) $
+                      Pg.pgNubBy_ _d_status_info_id
+                      (all_ (bikeshareDb ^. bikeshareStationStatus))
+          guard_ (_d_status_info_id status' `references_` info &&. _d_status_active status')
+          pure status'
+
+    deactivateOldStatus status
+      | null status = return []
+      | otherwise = withPostgres $ runUpdateReturningList $
+          update (bikeshareDb ^. bikeshareStationStatus)
+          (\c -> _d_status_active c <-. val_ False)
+          (\c -> _d_status_id c `in_` map (val_ . _d_status_id) status)
+
+    insertNewStatus status
+      | null status = return []
+      | otherwise = withPostgres $ runInsertReturningList $
+          insert (bikeshareDb ^. bikeshareStationStatus) $
+          insertExpressions $ map fromJSONToBeamStationStatus status
 
 {- |
 Query the statuses for a station between two times.
