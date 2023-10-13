@@ -34,12 +34,15 @@ import qualified API.Types                                as AT
 
 import           AppEnv
 
+import           Colog
+
 import           Control.Lens
 
 import           Data.Aeson                               ( FromJSON, eitherDecode )
 import qualified Data.ByteString.Lazy                     as BL
 import           Data.Functor                             ( void )
 import           Data.Int                                 ( Int32 )
+import           Data.Time
 
 import           Database.Beam
 import           Database.Beam.Backend.SQL.BeamExtensions ( runUpdateReturningList )
@@ -480,17 +483,20 @@ findInList key tuples = tuples ^? folded . filtered (\k -> k ^. eventsStation . 
 -- | HUnit test to check that station statuses are inserted correctly when there is no active status record.
 unit_noActiveStationStatus :: IO ()
 unit_noActiveStationStatus = do
+
+  -- FIXME: switch runWithAppDebug back to runWithApp remove once done debugging.
+
   setupTestDatabase
   apiInfo     <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
   apiStatus   <- getDecodedFileStatus      "docs/json/2.3/station_status-1.json"
   apiStatus'  <- getDecodedFileStatus      "docs/json/2.3/station_status-2.json"
 
   -- Insert test data.
-  _insertedInfo   <- runWithApp dbnameTest $ insertStationInformation $ apiInfo   ^. response_data . unInfoStations
-  _insertedStatus <- runWithApp dbnameTest $ insertStationStatus      $ apiStatus ^. response_data . unStatusStations
+  _insertedInfo   <- runWithAppDebug dbnameTest $ insertStationInformation $ apiInfo   ^. response_data . unInfoStations
+  _insertedStatus <- runWithAppDebug dbnameTest $ insertStationStatus      $ apiStatus ^. response_data . unStatusStations
 
   -- Disable the status for station 7003.
-  updated <- runWithApp dbnameTest $ withPostgres $ runUpdateReturningList $
+  updated <- runWithAppDebug dbnameTest $ withPostgres $ runUpdateReturningList $
               update (bikeshareDb ^. bikeshareStationStatus)
               (\c -> _d_status_active c <-. val_ False) -- Set active flag to False
               (\c -> _d_status_info_id c ==. val_ (StationInformationId 7003) -- ... for station 7003.
@@ -500,15 +506,15 @@ unit_noActiveStationStatus = do
   pPrintCompact updated
 
   -- Insert new status records.
-  updatedApiStatus' <- runWithApp dbnameTest $ separateNewerStatusRecords (apiStatus' ^. response_data . unStatusStations)
-  insertedStatus'   <- runWithApp dbnameTest $ insertStationStatus $ updatedApiStatus' ^. filter_newer
+  updatedApiStatus' <- runWithAppDebug dbnameTest $ separateNewerStatusRecords (apiStatus' ^. response_data . unStatusStations)
+  insertedStatus'   <- runWithAppDebug dbnameTest $ insertStationStatus $ updatedApiStatus' ^. filter_newer
 
   assertEqual "Inserted 302 newer status records"    302 (length $ insertedStatus' ^. insert_inserted)
   -- 301 since we just manually deactivated the active status for station 7003.
   assertEqual "Deactivated 301 older status records" 301 (length $ insertedStatus' ^. insert_deactivated)
 
   -- Query active status for station 7003.
-  status <- runWithApp dbnameTest $ withPostgres $ runSelectReturningList $  select $ do
+  status <- runWithAppDebug dbnameTest $ withPostgres $ runSelectReturningList $  select $ do
     info <- all_ (bikeshareDb ^. bikeshareStationInformation)
     guard_ (_info_station_id info ==. val_ 7003)
     status <-  orderBy_ (asc_ . _d_status_station_id) $ all_ (bikeshareDb ^. bikeshareStationStatus)
