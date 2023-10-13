@@ -24,7 +24,7 @@ import           Control.Monad.Cont            ( forever )
 import           Data.Maybe                    ( fromMaybe )
 import qualified Data.Text                     as Text
 
-import           Database.BikeShare            ( d_status_last_reported, d_status_station_id )
+import           Database.BikeShare
 import           Database.BikeShare.Operations
 
 import           Fmt
@@ -111,7 +111,7 @@ statusHandler queue = void . forever $ do
     (length $ inserted_result ^. insert_inserted)
 
   where
-    dataToTuple u i = (i ^. d_status_station_id, u ^. d_status_last_reported, i ^. d_status_last_reported)
+    dataToTuple u i = (i ^. statusStationId . unInformationStationId, u ^. statusLastReported, i ^. statusLastReported)
     fmtLog (sid, lr, lr') = format "ID: {} {} {}" sid (maybe "-" show lr) (maybe "-" show lr')
 
 

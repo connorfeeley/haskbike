@@ -52,7 +52,7 @@ dispatchDebug _options = do
 
   log D $ format "Info table size: {}" infoTableSizeText
 
-  statusTableSize <- queryTableSize "station_status"
+  statusTableSize <- queryTableSize "StationStatus"
   let statusTableSizeText =
         maybe ("Error: unable to determine station status table size." :: String)
         (format "Status table uses {} of storage.")

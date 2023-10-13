@@ -65,7 +65,7 @@ withPostgres action = do
   conn <- withConn
   logDatabase <- asks envLogDatabase
   liftIO $
-    if logDatabase then runBeamPostgresDebug pPrintCompact conn action
+    if logDatabase then runBeamPostgresDebug putStrLn conn action
     else runBeamPostgres conn action
 
 -- Implement logging for the application environment.

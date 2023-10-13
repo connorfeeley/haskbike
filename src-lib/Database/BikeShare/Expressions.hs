@@ -32,18 +32,18 @@ statusBetweenExpr :: Int32 -> ReportTime -> ReportTime -> Q Postgres BikeshareDb
 statusBetweenExpr station_id start_time end_time =
   do
     info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
-    status <- orderBy_ (asc_ . _d_status_last_reported)
+    status <- orderBy_ (asc_ . _statusLastReported)
               (all_ (bikeshareDb ^. bikeshareStationStatus))
-    guard_ (_d_status_info_id status `references_` info &&.
-            _info_station_id info ==. val_ (fromIntegral station_id) &&.
-            (status ^. d_status_last_reported) >=. val_ (Just start_time) &&.
-            (status ^. d_status_last_reported) <=. val_ (Just end_time))
+    guard_ (_statusStationId status `references_` info &&.
+            (info   ^. infoStationId) ==. val_ (fromIntegral station_id) &&.
+            (status ^. statusLastReported) >=. val_ (Just start_time) &&.
+            (status ^. statusLastReported) <=. val_ (Just end_time))
     pure status
 
 -- | Expression to query information for stations by their IDs.
 infoByIdExpr :: [Int32] -> Q Postgres BikeshareDb s (StationInformationT (QExpr Postgres s))
 infoByIdExpr stationIds =
-    filter_ (\info -> _info_station_id info `in_` map val_ stationIds)
+    filter_ (\info -> _infoStationId info `in_` map val_ stationIds)
     (all_ (bikeshareDb ^. bikeshareStationInformation))
 
 -- | Insert station information into the database.
@@ -58,9 +58,9 @@ disabledDocksExpr :: Q Postgres BikeshareDb s (QGenExpr QValueContext Postgres s
 disabledDocksExpr = do
   info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
   status <- all_ (bikeshareDb ^. bikeshareStationStatus)
-  guard_ (_d_status_info_id status `references_` info &&. status^.d_status_num_docks_disabled >. 0)
-  pure ( info^.info_name
-       , status^.d_status_num_docks_disabled
+  guard_ (_statusStationId status `references_` info &&. status ^. statusNumDocksDisabled >. 0)
+  pure ( info   ^. infoName
+       , status ^. statusNumDocksDisabled
        )
 
 queryStationStatusExpr :: Maybe Integer -> Q Postgres BikeshareDb s (StationInformationT (QExpr Postgres s), StationStatusT (QGenExpr QValueContext Postgres s))
@@ -69,19 +69,19 @@ queryStationStatusExpr limit = do
   status <- case limit of
     Just limit' -> limit_ limit' $ all_ (bikeshareDb ^. bikeshareStationStatus)
     Nothing     ->                 all_ (bikeshareDb ^. bikeshareStationStatus)
-  guard_ (_d_status_info_id status `references_` info)
+  guard_ (_statusStationId status `references_` info)
   pure (info, status)
 
 queryStationIdExpr :: String -> Q Postgres BikeshareDb s (StationInformationT (QExpr Postgres s))
 queryStationIdExpr station_name = do
   info <- all_ (bikeshareDb ^. bikeshareStationInformation)
-  guard_ (_info_name info ==. val_ (Text.pack station_name))
+  guard_ (_infoName info ==. val_ (Text.pack station_name))
   pure info
 
 queryStationIdLikeExpr :: String -> Q Postgres BikeshareDb s (StationInformationT (QExpr Postgres s))
 queryStationIdLikeExpr station_name = do
   info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
-  guard_ (_info_name info `like_` val_ (Text.pack station_name))
+  guard_ (_infoName info `like_` val_ (Text.pack station_name))
   pure info
 
 
@@ -90,12 +90,12 @@ queryAllStationsStatusBeforeTimeExpr :: ReportTime
                                      -> With Postgres BikeshareDb (Q Postgres BikeshareDb s (StationStatusT (QExpr Postgres s)))
 queryAllStationsStatusBeforeTimeExpr latestTime = do
   stationsWithMaxTime <- selecting $
-    aggregate_ (\s -> (group_ (_d_status_info_id s), max_ (_d_status_last_reported s))) $
-               filter_ (\status -> _d_status_last_reported status <=. just_ (val_ latestTime))
+    aggregate_ (\s -> (group_ (_statusStationId s), max_ (_statusLastReported s))) $
+               filter_ (\status -> _statusLastReported status <=. just_ (val_ latestTime))
                (all_ (bikeshareDb ^. bikeshareStationStatus))
   pure $ do
     (stationId, maxTime) <- reuse stationsWithMaxTime
     stationStatus <- all_ (bikeshareDb ^. bikeshareStationStatus)
-    guard_' ((_d_status_info_id stationStatus ==?. stationId) &&?.
-             (_d_status_last_reported stationStatus ==?. fromMaybe_ (val_ Nothing) maxTime))
+    guard_' ((_statusStationId stationStatus ==?. stationId) &&?.
+             (_statusLastReported stationStatus ==?. fromMaybe_ (val_ Nothing) maxTime))
     pure stationStatus

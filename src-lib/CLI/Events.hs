@@ -209,9 +209,9 @@ formatDockingEventsCount events = Box.printBox table
   where
     columns = zipWith (\index' counts ->
                          ( index' :: Int
-                         , counts ^. eventsStation . info_station_id
-                         , counts ^. eventsStation . info_name
-                         , counts ^. eventsStation . info_is_charging_station
+                         , counts ^. eventsStation . infoStationId
+                         , counts ^. eventsStation . infoName
+                         , counts ^. eventsStation . infoIsChargingStation
                          -- Total counts
                          , (counts ^. eventsIconicCount . eventsCountUndockings)
                            + (counts ^. eventsEfitCount   . eventsCountUndockings )
@@ -258,8 +258,8 @@ formatDockingEventsDifferential events = Box.printBox table
   where
     columns = zipWith (\index' (info, differential) ->
                          ( index' :: Int
-                         , info ^. info_station_id
-                         , info ^. info_name
+                         , info ^. infoStationId
+                         , info ^. infoName
                          , differential
                          )
                       ) [1..] events

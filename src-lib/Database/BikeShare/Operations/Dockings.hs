@@ -66,19 +66,19 @@ data StatusThreshold where
 -- | Convert a 'StatusQuery' to a fragment of a filter expression.
 thresholdCondition :: StatusThreshold -> StationStatusT (QExpr Postgres s) -> QExpr Postgres s Bool
 thresholdCondition (OldestID id_threshold) status =
-  status ^. d_status_id >=. val_ (fromIntegral id_threshold)
+  _unInformationStationId (_statusStationId status) >=. val_  id_threshold
 thresholdCondition (NewestID id_threshold) status =
-  status ^. d_status_id <=. val_ (fromIntegral id_threshold)
+  _unInformationStationId (_statusStationId status) <=. val_  id_threshold
 thresholdCondition (EarliestTime time_threshold) status =
-  status ^. d_status_last_reported >=. val_ (Just time_threshold)
+  status ^. statusLastReported >=. val_ (Just time_threshold)
 thresholdCondition (LatestTime time_threshold) status =
-  status ^. d_status_last_reported <=. val_ (Just time_threshold)
+  status ^. statusLastReported <=. val_ (Just time_threshold)
 
 
 -- | Construct a filter expression corresponding to the station ID.
 stationIdCondition :: Maybe Int32 -> StationStatusT (QExpr Postgres s) -> QExpr Postgres s Bool
 stationIdCondition (Just stationId) status =
-  status ^. d_status_info_id ==. val_ stationId
+  _statusStationId status ==. val_ (StationInformationId stationId)
 stationIdCondition Nothing _ = val_ True
 
 
@@ -147,7 +147,7 @@ queryDockingEventsCountExpr variation =
   cte <- selecting $ do
     let statusForStation = filter_ (filterFor_ variation)
                                    (all_ (bikeshareDb ^. bikeshareStationStatus))
-      in withWindow_ (\row -> frame_ (partitionBy_ (row ^. d_status_info_id)) (orderPartitionBy_ (asc_ $ row ^. d_status_id)) noBounds_)
+      in withWindow_ (\row -> frame_ (partitionBy_ (primaryKey row)) (orderPartitionBy_ (asc_ $ _unInformationStationId (_statusStationId row))) noBounds_)
                      (\row w -> ( row
                                 , lagWithDefault_ (row ^. vehicle_types_available_boost  ) (val_ 1) (row ^. vehicle_types_available_boost  ) `over_` w
                                 , lagWithDefault_ (row ^. vehicle_types_available_iconic ) (val_ 1) (row ^. vehicle_types_available_iconic ) `over_` w
@@ -157,7 +157,7 @@ queryDockingEventsCountExpr variation =
                      statusForStation
   withDeltas <- selecting $ do
     -- Calculate delta between current and previous availability.
-    withWindow_ (\(row, _, _, _, _) -> frame_ (partitionBy_ (row ^. d_status_info_id)) noOrder_ noBounds_)
+    withWindow_ (\(row, _, _, _, _) -> frame_ (partitionBy_ (_statusStationId row)) noOrder_ noBounds_)
                 (\(row, pBoost, pIconic, pEFit, pEFitG5) _w -> ( row
                                                                , row ^. vehicle_types_available_boost   - pBoost
                                                                , row ^. vehicle_types_available_iconic  - pIconic
@@ -174,9 +174,9 @@ queryDockingEventsCountExpr variation =
     dockings'   <- reuse dockings
     undockings' <- reuse undockings
 
-    -- NOTE: Required, or else result is massive.
-    stationInfo <- filter_ (\i -> i ^. info_station_id ==. dockings' ^. _1 &&. (i ^. info_station_id ==. undockings' ^. _1))
-                   (all_ (bikeshareDb ^. bikeshareStationInformation))
+    stationInfo <- all_ (bikeshareDb ^. bikeshareStationInformation)
+    -- NOTE: Required, otherwise result is massive.
+    guard_ (_unInformationStationId (dockings' ^. _1) ==. (stationInfo ^. infoStationId) &&. dockings' ^. _1 ==. (undockings' ^. _1))
 
     -- Return tuples of station information and the dockings and undockings.
     pure ( stationInfo
@@ -189,7 +189,7 @@ queryDockingEventsCountExpr variation =
     -- Aggregate expression for unidirectionally summing deltas (only where delta is positive, or only where delta is negative).
     sumDeltasAggregate_ binOp =
       aggregate_ (\(status, dBoost, dIconic, dEFit, dEFitG5) ->
-                     ( group_ (status ^. d_status_info_id)
+                     ( group_ (_statusStationId status)
                      , fromMaybe_ 0 $ sum_ dBoost  `filterWhere_` (dBoost  `binOp` 0)
                      , fromMaybe_ 0 $ sum_ dIconic `filterWhere_` (dIconic `binOp` 0)
                      , fromMaybe_ 0 $ sum_ dEFit   `filterWhere_` (dEFit   `binOp` 0)

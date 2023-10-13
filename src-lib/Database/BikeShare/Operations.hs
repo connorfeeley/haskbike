@@ -118,12 +118,12 @@ queryStationStatusFields =
   withPostgres $ runSelectReturningList $ select $ do
   info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
   status <- all_ (bikeshareDb ^. bikeshareStationStatus)
-  guard_ (_d_status_info_id status `references_` info)
-  pure ( info^.info_name
-       , status^.d_status_num_bikes_available
-       , status^.d_status_num_bikes_disabled
-       , status^.d_status_num_docks_available
-       , status^.d_status_num_docks_disabled
+  guard_ (_statusStationId status `references_` info)
+  pure ( info   ^. infoName
+       , status ^. statusNumBikesAvailable
+       , status ^. statusNumBikesDisabled
+       , status ^. statusNumDocksAvailable
+       , status ^. statusNumDocksDisabled
        )
 
 
@@ -138,7 +138,7 @@ queryStationInformationByIds :: [Int]                   -- ^ List of station IDs
 queryStationInformationByIds ids =
   withPostgres $ runSelectReturningList $ select $ do
   info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
-  guard_ (_info_station_id info `in_` ids')
+  guard_ (_infoStationId info `in_` ids')
   pure info
   where
     ids' = fromIntegral <$> ids
@@ -160,9 +160,9 @@ getRowsToDeactivate api_status
       -- Common table expression for 'StationStatus'.
       common_status <- selecting $ do
         info <- infoByIdExpr (map (fromIntegral . _status_station_id) api_status)
-        status <- orderBy_ (asc_ . _d_status_id) $
-          all_ (bikeshareDb ^. bikeshareStationStatus)
-        guard_ (_d_status_info_id status `references_` info)
+        status <- orderBy_ (asc_ . _unInformationStationId . _statusStationId)
+                  (all_ (bikeshareDb ^. bikeshareStationStatus))
+        guard_ (_statusStationId status `references_` info)
         pure status
 
       -- Select from station status.
@@ -173,9 +173,8 @@ getRowsToDeactivate api_status
                                     ) api_status
         -- Select from station status where the last reported time is older than in the API response.
         status <- Database.Beam.reuse common_status
-        guard_ (_d_status_info_id       status ==. StationInformationId (fst api_values) &&. -- Station ID
-                _d_status_active        status ==. val_ True                             &&. -- Status record is active
-                _d_status_last_reported status <.  snd api_values)    -- Last reported time is older than in the API response
+        guard_ (_statusStationId    status ==. StationInformationId (fst api_values) &&. -- Station ID
+                _statusLastReported status <.  snd api_values)    -- Last reported time is older than in the API response
         pure status
 
 {- |
@@ -193,7 +192,10 @@ separateNewerStatusRecords api_status = do
   let api_status_map                = Map.fromList $ map (\ss -> (               ss ^. status_station_id,   ss)) api_status
 
   -- Map of rows that would be deactivated, keyed on station ID.
-  let statuses_would_deactivate_map = Map.fromList $ map (\ss -> (fromIntegral $ ss ^. d_status_station_id, ss)) statuses_would_deactivate
+  let statuses_would_deactivate_map = Map.fromList $
+        map (\ss ->
+               (fromIntegral $ _unInformationStationId $ _statusStationId ss, ss)
+            ) statuses_would_deactivate
 
   -- Map of intersection of both maps (station ID key appears in both Maps).
   let api_status_newer    = Map.intersection api_status_map statuses_would_deactivate_map
@@ -215,24 +217,24 @@ insertStationStatus api_status
       log W "API status empty when trying to insert into DB."
       pure $ InsertStatusResult [] []
   | otherwise = do
-    info_ids <- map (fromIntegral . _info_station_id) <$> queryStationInformationByIds status_ids
+    info_ids <- map (fromIntegral . _infoStationId) <$> queryStationInformationByIds status_ids
 
     let status = filter (\ss -> fromIntegral (_status_station_id ss) `elem` info_ids) api_status
 
     statuses_to_deactivate <- getRowsToDeactivate status
     updated_statuses <- deactivateOldStatus statuses_to_deactivate
-    let updated_status_ids = map (fromIntegral . _d_status_station_id) updated_statuses
+    let updated_status_ids = map (fromIntegral . _unInformationStationId . _statusStationId) updated_statuses
     inserted_statuses <- insertNewStatus $
       filter (\ss -> ss ^. status_station_id `elem` updated_status_ids) status
 
     -- Select arbitrary (in this case, last [by ID]) status record for each station ID.
     distinct_by_id <- selectDistinctByStationId status
 
-    log W $ format "distinct_by_id length {}: (truncated to 20 elements) {}" (length distinct_by_id) (pShowCompact (take 20 $ map _d_status_station_id distinct_by_id))
+    log W $ format "distinct_by_id length {}: (truncated to 20 elements) {}" (length distinct_by_id) (pShowCompact (take 20 $ map _statusStationId distinct_by_id))
 
     -- Insert new records corresponding to station IDs which did not already exist in the station_status table.
     new_status <- insertNewStatus $
-      filter (\ss -> ss ^. status_station_id `notElem` map (fromIntegral . _d_status_station_id) distinct_by_id &&
+      filter (\ss -> ss ^. status_station_id `notElem` map (fromIntegral . _unInformationStationId . _statusStationId) distinct_by_id &&
                      ss ^. status_station_id `elem` info_ids
              ) status
 
@@ -246,18 +248,18 @@ insertStationStatus api_status
       | null status = return []
       | otherwise = withPostgres $ runSelectReturningList $  select $ do
           info <- all_ (bikeshareDb ^. bikeshareStationInformation)
-          status' <-  orderBy_ (asc_ . _d_status_station_id) $
-                      Pg.pgNubBy_ _d_status_info_id
+          status' <-  orderBy_ (asc_ . _unInformationStationId . _statusStationId) $
+                      Pg.pgNubBy_ _statusStationId
                       (all_ (bikeshareDb ^. bikeshareStationStatus))
-          guard_ (_d_status_info_id status' `references_` info &&. _d_status_active status')
+          guard_ (_statusStationId status' `references_` info)
           pure status'
 
     deactivateOldStatus status
       | null status = return []
       | otherwise = withPostgres $ runUpdateReturningList $
           update (bikeshareDb ^. bikeshareStationStatus)
-          (\c -> _d_status_active c <-. val_ False)
-          (\c -> _d_status_id c `in_` map (val_ . _d_status_id) status)
+          (\c -> _statusStationId c <-. StationInformationId 12345) -- FIXME: refactor update.
+          (\c -> _statusStationId c `in_` map (val_ . _statusStationId) status)
 
     insertNewStatus status
       | null status = return []
@@ -284,7 +286,7 @@ queryStationName :: Int               -- ^ Station ID.
 queryStationName station_id = do
   info <- withPostgres $ runSelectReturningOne $ select $ infoByIdExpr [fromIntegral station_id]
 
-  let station_name = info ^. _Just . info_name
+  let station_name = info ^. _Just . infoName
 
   pure $ Just $ Text.unpack station_name
 
@@ -308,7 +310,7 @@ queryStationId :: String           -- ^ Station ID.
 queryStationId station_name = do
   info <- withPostgres $ runSelectReturningOne $ select $ queryStationIdExpr station_name
 
-  pure $ fromIntegral <$> info ^? _Just . info_station_id
+  pure $ fromIntegral <$> info ^? _Just . infoStationId
 
 
 {- | Query possible station IDs matching a given station name, using SQL `LIKE` semantics.
@@ -336,8 +338,8 @@ queryStationIdLike station_name = do
   info <- withPostgres $ runSelectReturningList $ select $ queryStationIdLikeExpr station_name
 
   -- Return tuples of (station_id, station_name)
-  pure $ map (\si -> ( si ^. info_station_id & fromIntegral
-                     , si ^. info_name & Text.unpack
+  pure $ map (\si -> ( si ^. infoStationId & fromIntegral
+                     , si ^. infoName & Text.unpack
                      )) info
 
 -- | Query the latest status for a station.
@@ -345,11 +347,10 @@ queryStationStatusLatest :: Int                       -- ^ Station ID.
                          -> App (Maybe StationStatus) -- ^ Latest 'StationStatus' for the given station.
 queryStationStatusLatest station_id = withPostgres $ runSelectReturningOne $ select $ do
   info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
-  guard_ (_info_station_id info ==. val_ ( fromIntegral station_id))
-  status <- orderBy_ (asc_ . _d_status_last_reported)
+  guard_ (_infoStationId info ==. val_ ( fromIntegral station_id))
+  status <- orderBy_ (asc_ . _statusLastReported)
               (all_ (bikeshareDb ^. bikeshareStationStatus))
-  guard_ (_d_status_info_id status `references_` info &&.
-         _d_status_active status ==. val_ True)
+  guard_ (_statusStationId status `references_` info)
   pure status
 
 -- | Count the number of rows in a given table.
