@@ -12,6 +12,7 @@ module AppEnv
      , mainLogAction
      , runApp
      , runWithApp
+     , runWithAppDebug
      , simpleEnv
      , withConn
      , withPostgres
@@ -110,8 +111,16 @@ mainLogAction severity = filterBySeverity severity msgSeverity richMessageAction
 runApp :: Env App -> App a -> IO a
 runApp env app = runReaderT (unApp app) env
 
+-- | Helper function to run a computation in the App monad, returning an IO monad.
 runWithApp :: String -> App a -> IO a
 runWithApp dbname app = do
   conn <- mkDbParams dbname >>= uncurry5 connectDbName
   currentTimeZone <- getCurrentTimeZone
   runApp (mainEnv Info False currentTimeZone conn) app
+
+-- | Helper function to run a computation in the App monad with debug and database logging, returning an IO monad.
+runWithAppDebug :: String -> App a -> IO a
+runWithAppDebug dbname app = do
+  conn <- mkDbParams dbname >>= uncurry5 connectDbName
+  currentTimeZone <- getCurrentTimeZone
+  runApp (mainEnv Debug True currentTimeZone conn) app
