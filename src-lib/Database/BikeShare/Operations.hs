@@ -134,17 +134,17 @@ queryStationStatusBetween :: Int                 -- ^ Station ID.
                           -> ReportTime          -- ^ Start time.
                           -> ReportTime          -- ^ End time.
                           -> App [StationStatus] -- ^ List of 'StationStatus' for the given station between the given times.
-queryStationStatusBetween station_id start_time end_time =
+queryStationStatusBetween stationId startTime endTime =
   withPostgres $ runSelectReturningList $ select $
-  statusBetweenExpr (fromIntegral station_id) start_time end_time
+  statusBetweenExpr (fromIntegral stationId) startTime endTime
 
 {- |
 Query the station name given a station ID.
 -}
 queryStationName :: Int               -- ^ Station ID.
                  -> App (Maybe String) -- ^ Station name assosicated with the given station ID.
-queryStationName station_id = do
-  info <- withPostgres $ runSelectReturningOne $ select $ infoByIdExpr [fromIntegral station_id]
+queryStationName stationId = do
+  info <- withPostgres $ runSelectReturningOne $ select $ infoByIdExpr [fromIntegral stationId]
 
   let station_name = info ^. _Just . infoName
 
@@ -167,8 +167,8 @@ Just 7001
 -}
 queryStationId :: String           -- ^ Station ID.
                -> App (Maybe Int)  -- ^ Station ID assosicated with the given station name, if found.
-queryStationId station_name = do
-  info <- withPostgres $ runSelectReturningOne $ select $ queryStationIdExpr station_name
+queryStationId stationName = do
+  info <- withPostgres $ runSelectReturningOne $ select $ queryStationIdExpr stationName
 
   pure $ fromIntegral <$> info ^? _Just . infoStationId
 
@@ -194,8 +194,8 @@ __Return:__ Tuples of (station ID, station name) matching the searched name, usi
 -}
 queryStationIdLike :: String               -- ^ Station ID.
                    -> App [(Int, String)]  -- ^ Tuples of (station ID, name) for stations that matched the query.
-queryStationIdLike station_name = do
-  info <- withPostgres $ runSelectReturningList $ select $ queryStationIdLikeExpr station_name
+queryStationIdLike stationName = do
+  info <- withPostgres $ runSelectReturningList $ select $ queryStationIdLikeExpr stationName
 
   -- Return tuples of (station_id, station_name)
   pure $ map (\si -> ( si ^. infoStationId & fromIntegral
