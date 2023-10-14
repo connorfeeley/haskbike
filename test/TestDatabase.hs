@@ -454,16 +454,16 @@ unit_queryDockingUndockingCount = do
   -- | 2849 |    7148 | 2023-09-15 17:36:37-04 |     19 |
 
 
-  --                   station  thresholds     dockings undockings
+  --              station  thresholds     dockings undockings
   checkConditions 7000     thresholds7000 29         0
   checkConditions 7006     thresholds7006  0       (-6)
   checkConditions 7012     thresholds7012  3       (-1)
   checkConditions 7148     thresholds7148  2         0
   where
-    thresholds7000  = [ OldestID    1, NewestID 2746, LatestTime (ReportTime $ read "2023-09-15 17:36:27.0") ]
-    thresholds7006  = [ OldestID    7, NewestID 1855, LatestTime (ReportTime $ read "2023-09-15 17:34:31.0") ]
-    thresholds7012  = [ OldestID   12, NewestID 2749, LatestTime (ReportTime $ read "2023-09-15 17:36:06.0") ]
-    thresholds7148  = [ OldestID  136, NewestID 2849, LatestTime (ReportTime $ read "2023-09-15 17:36:37.0") ]
+    thresholds7000  = [ EarliestTime (ReportTime $ read "2023-09-01 00:00:00.0"), LatestTime (ReportTime $ read "2023-09-15 17:36:27.0") ]
+    thresholds7006  = [ EarliestTime (ReportTime $ read "2023-09-01 00:00:00.0"), LatestTime (ReportTime $ read "2023-09-15 17:34:31.0") ]
+    thresholds7012  = [ EarliestTime (ReportTime $ read "2023-09-01 00:00:00.0"), LatestTime (ReportTime $ read "2023-09-15 17:36:06.0") ]
+    thresholds7148  = [ EarliestTime (ReportTime $ read "2023-09-01 00:00:00.0"), LatestTime (ReportTime $ read "2023-09-15 17:36:37.0") ]
 
 checkConditions :: Int32 -> [StatusThreshold] -> Int -> Int -> IO ()
 checkConditions stationId thresholds expectDockings expectUndockings = do

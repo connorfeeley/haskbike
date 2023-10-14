@@ -56,8 +56,6 @@ data StatusVariationQuery where
 
 -- | Varient representing the type of threshold to apply to the query.
 data StatusThreshold where
-  OldestID      :: Int32        -> StatusThreshold
-  NewestID      :: Int32        -> StatusThreshold
   EarliestTime  :: ReportTime   -> StatusThreshold
   LatestTime    :: ReportTime   -> StatusThreshold
   deriving (Show, Eq)
@@ -65,21 +63,14 @@ data StatusThreshold where
 
 -- | Convert a 'StatusQuery' to a fragment of a filter expression.
 thresholdCondition :: StatusThreshold -> StationStatusT (QExpr Postgres s) -> QExpr Postgres s Bool
-thresholdCondition (OldestID id_threshold) status =
-  _unInformationStationId (_statusStationId status) >=. val_  id_threshold
-thresholdCondition (NewestID id_threshold) status =
-  _unInformationStationId (_statusStationId status) <=. val_  id_threshold
-thresholdCondition (EarliestTime time_threshold) status =
-  status ^. statusLastReported >=. val_ time_threshold
-thresholdCondition (LatestTime time_threshold) status =
-  status ^. statusLastReported <=. val_ time_threshold
+thresholdCondition (EarliestTime threshold) status = status ^. statusLastReported >=. val_ threshold
+thresholdCondition (LatestTime threshold) status   = status ^. statusLastReported <=. val_ threshold
 
 
 -- | Construct a filter expression corresponding to the station ID.
 stationIdCondition :: Maybe Int32 -> StationStatusT (QExpr Postgres s) -> QExpr Postgres s Bool
-stationIdCondition (Just stationId) status =
-  _statusStationId status ==. val_ (StationInformationId stationId)
-stationIdCondition Nothing _ = val_ True
+stationIdCondition (Just stationId) status = _statusStationId status ==. val_ (StationInformationId stationId)
+stationIdCondition Nothing _               = val_ True
 
 
 -- | Construct a filter expression for a 'StatusQuery'.
@@ -147,7 +138,7 @@ queryDockingEventsCountExpr variation =
   cte <- selecting $ do
     let statusForStation = filter_ (filterFor_ variation)
                                    (all_ (bikeshareDb ^. bikeshareStationStatus))
-      in withWindow_ (\row -> frame_ (partitionBy_ (primaryKey row)) (orderPartitionBy_ (asc_ $ _unInformationStationId (_statusStationId row))) noBounds_)
+      in withWindow_ (\row -> frame_ (partitionBy_ (_statusStationId row)) (orderPartitionBy_ (asc_ $ _unInformationStationId (_statusStationId row))) noBounds_)
                      (\row w -> ( row
                                 , lagWithDefault_ (row ^. vehicle_types_available_boost  ) (val_ 1) (row ^. vehicle_types_available_boost  ) `over_` w
                                 , lagWithDefault_ (row ^. vehicle_types_available_iconic ) (val_ 1) (row ^. vehicle_types_available_iconic ) `over_` w
@@ -176,7 +167,9 @@ queryDockingEventsCountExpr variation =
 
     stationInfo <- all_ (bikeshareDb ^. bikeshareStationInformation)
     -- NOTE: Required, otherwise result is massive.
-    guard_ (_unInformationStationId (dockings' ^. _1) ==. (stationInfo ^. infoStationId) &&. dockings' ^. _1 ==. (undockings' ^. _1))
+    guard_ ( (dockings'   ^. _1) `references_` stationInfo  &&.
+             (undockings' ^. _1) `references_` stationInfo
+           )
 
     -- Return tuples of station information and the dockings and undockings.
     pure ( stationInfo
