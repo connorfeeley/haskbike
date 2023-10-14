@@ -62,7 +62,7 @@ bikeshareDb = defaultDbSettings `withDbModification`
       }
   , _bikeshareStationStatus =
     setEntityName "station_status" <> modifyTableFields tableModification
-      { _statusStationId             = StationInformationId "info_id"
+      { _statusStationId             = StationInformationId "station_id"
       , _statusLastReported          = "last_reported"
       , _statusNumBikesAvailable     = "num_bikes_available"
       , _statusNumBikesDisabled      = "num_bikes_disabled"
