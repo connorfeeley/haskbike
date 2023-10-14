@@ -21,6 +21,7 @@ module AppEnv
 import           Colog                    ( HasLog (..), LogAction (..), Message, Msg (msgSeverity), Severity (..),
                                             filterBySeverity, richMessageAction )
 
+import           Control.Monad.Catch
 import           Control.Monad.IO.Class   ( MonadIO )
 import           Control.Monad.Reader     ( MonadReader, ReaderT (..), asks )
 
@@ -55,7 +56,7 @@ data Env m where
 If you use this constraint, function call stack will be propagated and
 you will have access to code lines that log messages.
 -}
-type WithAppEnv env msg m = (MonadReader env m, HasLog env msg m, HasCallStack, MonadIO m, MonadUnliftIO m, MonadFail m)
+type WithAppEnv env msg m = (MonadReader env m, HasLog env msg m, HasCallStack, MonadIO m, MonadUnliftIO m, MonadFail m, MonadThrow m, MonadCatch m)
 
 withConn :: (WithAppEnv (Env env) Message m) => m Connection
 withConn = asks envDBConnection >>= liftIO . pure
@@ -81,7 +82,7 @@ instance HasLog (Env m) Message m where
 -- Application type
 newtype App a = App
   { unApp :: ReaderT (Env App) IO a
-  } deriving newtype (Functor, Applicative, Monad, MonadIO, MonadUnliftIO, MonadReader (Env App), MonadFail)
+  } deriving newtype (Functor, Applicative, Monad, MonadIO, MonadUnliftIO, MonadReader (Env App), MonadFail, MonadThrow, MonadCatch)
 
 -- | Simple environment for the main application.
 simpleEnv :: TimeZone -> Connection -> Env App

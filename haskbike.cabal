@@ -97,6 +97,7 @@ common common-depends
                     , optparse-applicative
                     , time
                     , boxes
+                    , exceptions
 
 -- Dependencies needed by targets excercising the API.
 common api-depends
