@@ -3,18 +3,9 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Use camelCase" #-}
 
-{-# LANGUAGE AllowAmbiguousTypes       #-}
 {-# LANGUAGE DeriveAnyClass            #-}
-{-# LANGUAGE DeriveGeneric             #-}
 {-# LANGUAGE DerivingVia               #-}
-{-# LANGUAGE FlexibleContexts          #-}
-{-# LANGUAGE FlexibleInstances         #-}
-{-# LANGUAGE ImpredicativeTypes        #-}
-{-# LANGUAGE MultiParamTypeClasses     #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
-{-# LANGUAGE StandaloneDeriving        #-}
-{-# LANGUAGE TemplateHaskell           #-}
-{-# LANGUAGE TypeApplications          #-}
 {-# LANGUAGE TypeFamilies              #-}
 {-# LANGUAGE UndecidableInstances      #-}
 
@@ -58,9 +49,7 @@ import           Control.Lens
 import qualified Data.ByteString.Char8                      as B
 import           Data.Coerce                                ( coerce )
 import           Data.Int
-import           Data.Kind                                  ( Type )
 import           Data.List                                  ( find )
-import           Data.Maybe                                 ( isNothing )
 import           Data.String                                ( IsString (fromString) )
 import qualified Data.Text                                  as Text
 
@@ -111,6 +100,15 @@ instance Table StationStatusT where
                                                      }
     deriving (Generic, Beamable)
   primaryKey = StationStatusId <$> _statusStationId  <*> _statusLastReported
+
+-- | Lenses
+unStatusLastReported :: Lens' (PrimaryKey StationStatusT f) (Columnar f ReportTime)
+unStatusLastReported key (StationStatusId stationId lastReported) = fmap (StationStatusId stationId) (key lastReported)
+{-# INLINE unStatusLastReported #-}
+
+unStatusStationId :: Lens' (PrimaryKey StationStatusT f) (PrimaryKey StationInformationT f)
+unStatusStationId key (StationStatusId stationId lastReported) = fmap (`StationStatusId` lastReported) (key stationId)
+{-# INLINE unStatusStationId #-}
 
 data VehicleTypeMixin f =
   VehicleType { _available_boost   :: Columnar f Int32
@@ -272,5 +270,3 @@ fromBeamStationStatusToJSON status =
                    }
   where
     StationInformationId sid = _statusStationId status
-
-makeLenses 'StationStatusId

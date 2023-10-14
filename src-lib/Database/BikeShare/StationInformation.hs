@@ -3,17 +3,9 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Use camelCase" #-}
 
-{-# LANGUAGE AllowAmbiguousTypes       #-}
 {-# LANGUAGE DeriveAnyClass            #-}
-{-# LANGUAGE DeriveGeneric             #-}
 {-# LANGUAGE DerivingVia               #-}
-{-# LANGUAGE FlexibleContexts          #-}
-{-# LANGUAGE FlexibleInstances         #-}
-{-# LANGUAGE ImpredicativeTypes        #-}
-{-# LANGUAGE MultiParamTypeClasses     #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
-{-# LANGUAGE StandaloneDeriving        #-}
-{-# LANGUAGE TemplateHaskell           #-}
 {-# LANGUAGE TypeFamilies              #-}
 {-# LANGUAGE UndecidableInstances      #-}
 
@@ -115,6 +107,13 @@ instance Table StationInformationT where
   data PrimaryKey StationInformationT f = StationInformationId { _unInformationStationId :: C f Int32 }
     deriving (Generic, Beamable)
   primaryKey = StationInformationId <$> _infoStationId
+
+-- | Lenses (technically, Iso)
+-- Lens' always works with part of a data structure (can set or view), while an Iso can swap between two different types bi-directionally.
+unInformationStationId :: Iso (PrimaryKey StationInformationT f1) (PrimaryKey StationInformationT f2) (C f1 Int32) (C f2 Int32)
+unInformationStationId = iso (\ (StationInformationId key) -> key) StationInformationId
+{-# INLINE unInformationStationId #-}
+
 
 -- | StationInformation Lenses
 info_id                     :: Lens' (StationInformationT f) (C f (SqlSerial Int32))
@@ -327,5 +326,3 @@ fromBeamStationInformationToJSON (StationInformation
                         }
   where
     rentalUris = toList rental_uris
-
-makeLenses 'StationInformationId

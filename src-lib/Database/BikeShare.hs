@@ -84,6 +84,9 @@ bikeshareDb = defaultDbSettings `withDbModification`
   --     }
   }
 
+-- bikeshareStationInformation :: Lens' (BikeshareDb f) (f (TableEntity StationInformationT))
+-- bikeshareStationStatus      :: Lens' (BikeshareDb f) (f (TableEntity StationStatusT))
+
 -- Lenses
 BikeshareDb
   (TableLens bikeshareStationInformation)
