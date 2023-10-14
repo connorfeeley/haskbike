@@ -122,17 +122,17 @@ instance FromJSON RentalMethod where
 
 -- | A type representing a BikeShare rental_uris record.
 data RentalURIs where
-  RentalURIs :: { rental_uris_android :: String
-                , rental_uris_ios     :: String
-                , rental_uris_web     :: String
+  RentalURIs :: { rentalUrisAndroid :: String
+                , rentalUrisIos     :: String
+                , rentalUrisWeb     :: String
                 } -> RentalURIs
   deriving (Show, Eq, Generic)
 
 instance ToJSON RentalURIs where
   toJSON rentalURIs =
-    object [ "android" .= rental_uris_android rentalURIs
-           , "ios"     .= rental_uris_ios     rentalURIs
-           , "web"     .= rental_uris_web     rentalURIs
+    object [ "android" .= rentalUrisAndroid rentalURIs
+           , "ios"     .= rentalUrisIos     rentalURIs
+           , "web"     .= rentalUrisWeb     rentalURIs
            ]
 instance FromJSON RentalURIs where
   parseJSON = withObject "RentalURIs" $ \v -> RentalURIs
@@ -144,9 +144,9 @@ instance FromJSON RentalURIs where
 data StationInformation where
   StationInformation :: { infoStationId               :: Int
                         , infoName                    :: String
-                        , info_physical_configuration :: PhysicalConfiguration
-                        , info_lat                    :: Double
-                        , info_lon                    :: Double
+                        , infoPhysicalConfiguration   :: PhysicalConfiguration
+                        , infoLat                     :: Double
+                        , infoLon                     :: Double
                         , infoAltitude                :: Maybe Double
                         , infoAddress                 :: String
                         , infoCapacity                :: Int
@@ -167,9 +167,9 @@ instance ToJSON StationInformation where
   toJSON station =
     object [ "station_id"               .= infoStationId                station
            , "name"                     .= infoName                     station
-           , "physical_configuration"   .= info_physical_configuration  station
-           , "lat"                      .= info_lat                     station
-           , "lon"                      .= info_lon                     station
+           , "physical_configuration"   .= infoPhysicalConfiguration    station
+           , "lat"                      .= infoLat                      station
+           , "lon"                      .= infoLon                      station
            , "altitude"                 .= infoAltitude                 station
            , "address"                  .= infoAddress                  station
            , "capacity"                 .= infoCapacity                 station

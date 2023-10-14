@@ -36,12 +36,12 @@ module Database.BikeShare.StationInformation
      , infoName
      , infoNearbyDistance
      , infoObcn
+     , infoPhysicalConfiguration
      , infoRentalMethods
      , infoRentalUris
      , infoRideCodeSupport
      , infoStationId
      , info_id
-     , info_physical_configuration
      , unInformationStationId
      ) where
 
@@ -119,7 +119,7 @@ unInformationStationId = iso (\ (StationInformationId key) -> key) StationInform
 info_id                     :: Lens' (StationInformationT f) (C f (SqlSerial Int32))
 infoStationId               :: Lens' (StationInformationT f) (C f Int32)
 infoName                    :: Lens' (StationInformationT f) (C f Text.Text)
-info_physical_configuration :: Lens' (StationInformationT f) (C f BeamPhysicalConfiguration)
+infoPhysicalConfiguration   :: Lens' (StationInformationT f) (C f BeamPhysicalConfiguration)
 infoLat                     :: Lens' (StationInformationT f) (C f Double)
 infoLon                     :: Lens' (StationInformationT f) (C f Double)
 infoAltitude                :: Lens' (StationInformationT f) (C f (Maybe Double))
@@ -140,7 +140,7 @@ infoActive                  :: Lens' (StationInformationT f) (C f Bool)
 StationInformation (LensFor info_id)                     _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
 StationInformation _ (LensFor infoStationId)               _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
 StationInformation _ _ (LensFor infoName)                    _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
-StationInformation _ _ _ (LensFor info_physical_configuration) _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
+StationInformation _ _ _ (LensFor infoPhysicalConfiguration)   _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
 StationInformation _ _ _ _ (LensFor infoLat)                     _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
 StationInformation _ _ _ _ _ (LensFor infoLon)                     _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
 StationInformation _ _ _ _ _ _ (LensFor infoAltitude)                _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
@@ -274,55 +274,55 @@ fromJSONToBeamStationInformation (AT.StationInformation
                      , _infoRentalUris            = val_ $ fromList [uriAndroid, uriIos, uriWeb]
                      }
   where
-    uriAndroid = Text.pack $ AT.rental_uris_android rental_uris
-    uriIos     = Text.pack $ AT.rental_uris_ios rental_uris
-    uriWeb     = Text.pack $ AT.rental_uris_web rental_uris
+    uriAndroid = Text.pack (AT.rentalUrisAndroid rental_uris)
+    uriIos     = Text.pack (AT.rentalUrisIos rental_uris)
+    uriWeb     = Text.pack (AT.rentalUrisWeb rental_uris)
 
 -- | Convert from the Beam StationInformation type to the JSON StationInformation
 fromBeamStationInformationToJSON :: StationInformation -> AT.StationInformation
 fromBeamStationInformationToJSON (StationInformation
                                   _id
-                                  station_id
+                                  stationId
                                   name
-                                  physical_configuration
+                                  physicalConfiguration'
                                   lat
                                   lon
                                   altitude
                                   address
                                   capacity
-                                  is_charging_station
-                                  rental_methods
-                                  is_valet_station
-                                  is_virtual_station
+                                  isChargingStation
+                                  rentalMethods
+                                  isValetStation
+                                  isVirtualStation
                                   groups
                                   obcn
-                                  nearby_distance
-                                  bluetooth_id
-                                  ride_code_support
-                                  rental_uris
+                                  nearbyDistance
+                                  bluetoothId
+                                  rideCodeSupport
+                                  rentalUris
                                   _active
                                  ) =
-  AT.StationInformation { AT.infoStationId               = fromIntegral station_id
+  AT.StationInformation { AT.infoStationId               = fromIntegral stationId
                         , AT.infoName                    = show name
-                        , AT.info_physical_configuration = coerce physical_configuration :: AT.PhysicalConfiguration
-                        , AT.info_lat                    = lat
-                        , AT.info_lon                    = lon
+                        , AT.infoPhysicalConfiguration   = coerce physicalConfiguration' :: AT.PhysicalConfiguration
+                        , AT.infoLat                     = lat
+                        , AT.infoLon                     = lon
                         , AT.infoAltitude                = altitude
                         , AT.infoAddress                 = Text.unpack address
                         , AT.infoCapacity                = fromIntegral capacity
-                        , AT.infoIsChargingStation       = is_charging_station
-                        , AT.infoRentalMethods           = coerce (toList rental_methods) :: [AT.RentalMethod]
-                        , AT.infoIsValetStation          = Just is_valet_station
-                        , AT.infoIsVirtualStation        = is_virtual_station
+                        , AT.infoIsChargingStation       = isChargingStation
+                        , AT.infoRentalMethods           = coerce (toList rentalMethods) :: [AT.RentalMethod]
+                        , AT.infoIsValetStation          = Just isValetStation
+                        , AT.infoIsVirtualStation        = isVirtualStation
                         , AT.infoGroups                  = Text.unpack <$> toList groups
                         , AT.infoObcn                    = Text.unpack obcn
-                        , AT.infoNearbyDistance          = nearby_distance
-                        , AT.infoBluetoothId             = Text.unpack bluetooth_id
-                        , AT.infoRideCodeSupport         = ride_code_support
-                        , AT.infoRentalUris              = AT.RentalURIs { AT.rental_uris_android = maybe "" Text.unpack (rentalUris ^? element 1)
-                                                                         , AT.rental_uris_ios     = maybe "" Text.unpack (rentalUris ^? element 2)
-                                                                         , AT.rental_uris_web     = maybe "" Text.unpack (rentalUris ^? element 3)
+                        , AT.infoNearbyDistance          = nearbyDistance
+                        , AT.infoBluetoothId             = Text.unpack bluetoothId
+                        , AT.infoRideCodeSupport         = rideCodeSupport
+                        , AT.infoRentalUris              = AT.RentalURIs { AT.rentalUrisAndroid = maybe "" Text.unpack (rentalUrisList ^? element 1)
+                                                                         , AT.rentalUrisIos     = maybe "" Text.unpack (rentalUrisList ^? element 2)
+                                                                         , AT.rentalUrisWeb     = maybe "" Text.unpack (rentalUrisList ^? element 3)
                                                                          }
                         }
   where
-    rentalUris = toList rental_uris
+    rentalUrisList = toList rentalUris

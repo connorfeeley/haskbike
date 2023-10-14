@@ -30,8 +30,6 @@ import           Data.Time                ( TimeZone, getCurrentTimeZone )
 import           Database.Beam.Postgres   ( Connection, Pg, runBeamPostgres, runBeamPostgresDebug )
 import           Database.BikeShare.Utils ( connectDbName, mkDbParams, uncurry5 )
 
-import           Formatting
-
 import           GHC.Stack                ( HasCallStack )
 
 import           Prelude                  hiding ( log )
