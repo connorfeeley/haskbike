@@ -179,7 +179,7 @@ library
                     , AppEnv
                     , API.ResponseWrapper
                     , API.Client
-                    , API.DebugClient
+                    -- , API.DebugClient
                     , CLI.Utils
                     , CLI.Poll
                     , CLI.Query
