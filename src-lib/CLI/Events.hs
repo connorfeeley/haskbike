@@ -9,7 +9,6 @@ module CLI.Events
 
 
 import           API.Types                     ( TorontoVehicleType (..) )
-import qualified API.Types                     as AT
 
 import           AppEnv
 
@@ -47,8 +46,7 @@ import qualified Text.PrettyPrint.Boxes        as Box
 import           UnliftIO
 
 -- | Dispatch CLI arguments for debugging.
-dispatchEvents :: EventSubcommand
-               -> App ()
+dispatchEvents :: EventSubcommand -> App ()
 dispatchEvents (EventRange options)  = do
   log I $ format "Getting counts of each bike time every two hours between {} and {}." firstDay lastDay
   log D $ format "Options: {}" (pShowCompact options)
@@ -77,7 +75,7 @@ dispatchEvents (EventCounts options) = do
 
   -- Get undocking/docking counts.
   log I $ format "Calculating number of {} {}s for (optional) station {} (limit: {})." (showLower bikeType) (showLower eventType) (maybeF stationId) (optEventsCountLimit options)
-  eventSums <- eventsForRange stationId bikeType eventType startDay' startTime endDay' endTime
+  eventSums <- eventsForRange stationId startDay' startTime endDay' endTime
 
   liftIO $ do
     putStrLn $ format "\nSorted by differentials ({}):" (sortedMessage eventType)
@@ -183,14 +181,13 @@ formatBikeCounts allCounts = Box.printBox table
 
 
 -- | Get (undockings, dockings) for a day.
-eventsForRange :: Maybe Int -> AT.TorontoVehicleType -> AvailabilityCountVariation -> Day -> TimeOfDay -> Day -> TimeOfDay -> App [DockingEventsCount]
-eventsForRange stationId vehicleType variation earliestDay earliestTime latestDay latestTime = do
+eventsForRange :: Maybe Int -> Day -> TimeOfDay -> Day -> TimeOfDay -> App [DockingEventsCount]
+eventsForRange stationId earliestDay earliestTime latestDay latestTime = do
   -- Calculate number of dockings and undockings
-  log D $ format "Querying {} events." (showLower variation)
-  queryDockingEventsCount (queryCondition variation)
+  queryDockingEventsCount queryCondition
   where
-    queryCondition :: AvailabilityCountVariation -> StatusVariationQuery
-    queryCondition variation' =
+    queryCondition :: StatusVariationQuery
+    queryCondition =
       StatusVariationQuery
       (fromIntegral <$> stationId)
       [ EarliestTime (reportTime earliestDay earliestTime) , LatestTime (reportTime latestDay latestTime) ]
