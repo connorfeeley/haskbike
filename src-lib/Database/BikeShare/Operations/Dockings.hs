@@ -138,20 +138,20 @@ queryDockingEventsCountExpr variation =
                                    (all_ (bikeshareDb ^. bikeshareStationStatus))
       in withWindow_ (\row -> frame_ (partitionBy_ (_statusStationId row)) (orderPartitionBy_ (asc_ $ _unInformationStationId (_statusStationId row))) noBounds_)
                      (\row w -> ( row
-                                , lagWithDefault_ (row ^. vehicle_types_available_boost  ) (val_ 1) (row ^. vehicle_types_available_boost  ) `over_` w
-                                , lagWithDefault_ (row ^. vehicle_types_available_iconic ) (val_ 1) (row ^. vehicle_types_available_iconic ) `over_` w
-                                , lagWithDefault_ (row ^. vehicle_types_available_efit   ) (val_ 1) (row ^. vehicle_types_available_efit   ) `over_` w
-                                , lagWithDefault_ (row ^. vehicle_types_available_efit_g5) (val_ 1) (row ^. vehicle_types_available_efit_g5) `over_` w
+                                , lagWithDefault_ (row ^. vehicleTypesAvailableBoost ) (val_ 1) (row ^. vehicleTypesAvailableBoost ) `over_` w
+                                , lagWithDefault_ (row ^. vehicleTypesAvailableIconic) (val_ 1) (row ^. vehicleTypesAvailableIconic) `over_` w
+                                , lagWithDefault_ (row ^. vehicleTypesAvailableEfit  ) (val_ 1) (row ^. vehicleTypesAvailableEfit  ) `over_` w
+                                , lagWithDefault_ (row ^. vehicleTypesAvailableEfitG5) (val_ 1) (row ^. vehicleTypesAvailableEfitG5) `over_` w
                                 ))
                      statusForStation
   withDeltas <- selecting $ do
     -- Calculate delta between current and previous availability.
     withWindow_ (\(row, _, _, _, _) -> frame_ (partitionBy_ (_statusStationId row)) noOrder_ noBounds_)
                 (\(row, pBoost, pIconic, pEFit, pEFitG5) _w -> ( row
-                                                               , row ^. vehicle_types_available_boost   - pBoost
-                                                               , row ^. vehicle_types_available_iconic  - pIconic
-                                                               , row ^. vehicle_types_available_efit    - pEFit
-                                                               , row ^. vehicle_types_available_efit_g5 - pEFitG5
+                                                               , row ^. vehicleTypesAvailableBoost  - pBoost
+                                                               , row ^. vehicleTypesAvailableIconic - pIconic
+                                                               , row ^. vehicleTypesAvailableEfit   - pEFit
+                                                               , row ^. vehicleTypesAvailableEfitG5 - pEFitG5
                                                                ))
                 (reuse cte)
 

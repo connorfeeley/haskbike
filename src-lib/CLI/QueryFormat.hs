@@ -55,10 +55,10 @@ formatStationStatusResult = maybe ["No status found."] formatStationInfo
 formatStationInfo :: (TimeZone, String, StationStatus) -> [Text]
 formatStationInfo (timeZone, name, status) =
   let
-    bikeAvailability = [ fmtBikeAvailability "Iconic"   (status ^. vehicle_types_available_iconic)
+    bikeAvailability = [ fmtBikeAvailability "Iconic"   (status ^. vehicleTypesAvailableIconic)
                        -- , fmtBikeAvailability "Boost"    (status ^. vehicle_types_available_boost) -- Not used in Toronto.
-                       , fmtBikeAvailability "E-Fit"    (status ^. vehicle_types_available_efit)
-                       , fmtBikeAvailability "E-Fit G5" (status ^. vehicle_types_available_efit_g5)]
+                       , fmtBikeAvailability "E-Fit"    (status ^. vehicleTypesAvailableEfit)
+                       , fmtBikeAvailability "E-Fit G5" (status ^. vehicleTypesAvailableEfitG5)]
 
     pairs = [ ("Docks:\t", status ^. statusNumDocksAvailable, status ^. statusStationId . unInformationStationId)
             , ("Bikes:\t", status ^. statusNumBikesAvailable, fromIntegral $ status ^. statusNumBikesDisabled)

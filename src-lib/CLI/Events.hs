@@ -160,10 +160,10 @@ dayTimes = [(addDays n refDay, TimeOfDay h 0 0) | n <- [0..3], h <- [0,2..22]]
 
 
 totalBoost, totalIconic, totalEbikeEfit, totalEbikeEfitG5 :: Num (Columnar f Int32) => [StationStatusT f] -> Columnar f Int32
-totalBoost bikeCount            = sum $ map (^. vehicle_types_available_boost)   bikeCount
-totalIconic bikeCount           = sum $ map (^. vehicle_types_available_iconic)  bikeCount
-totalEbikeEfit bikeCount        = sum $ map (^. vehicle_types_available_efit)    bikeCount
-totalEbikeEfitG5 bikeCount      = sum $ map (^. vehicle_types_available_efit_g5) bikeCount
+totalBoost bikeCount            = sum $ map (^. vehicleTypesAvailableBoost)   bikeCount
+totalIconic bikeCount           = sum $ map (^. vehicleTypesAvailableIconic)  bikeCount
+totalEbikeEfit bikeCount        = sum $ map (^. vehicleTypesAvailableEfit)    bikeCount
+totalEbikeEfitG5 bikeCount      = sum $ map (^. vehicleTypesAvailableEfitG5) bikeCount
 
 formatBikeCounts :: [(Day, TimeOfDay, Int32, Int32, Int32, Int32)] -> IO ()
 formatBikeCounts allCounts = Box.printBox table
