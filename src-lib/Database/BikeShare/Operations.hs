@@ -1,6 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes       #-}
 {-# LANGUAGE DeriveAnyClass            #-}
 {-# LANGUAGE DeriveGeneric             #-}
+{-# LANGUAGE FlexibleContexts          #-}
 {-# LANGUAGE FunctionalDependencies    #-}
 {-# LANGUAGE LambdaCase                #-}
 {-# LANGUAGE MultiWayIf                #-}
@@ -52,9 +53,10 @@ import qualified API.Types                                as AT
 
 import           AppEnv
 
-import           Colog                                    ( log, pattern W )
+import           Colog                                    ( log, logException, pattern W )
 
 import           Control.Lens                             hiding ( reuse, (<.) )
+import           Control.Monad.Catch
 
 import           Data.Int                                 ( Int32 )
 import qualified Data.Map                                 as Map
@@ -93,6 +95,7 @@ When inserting to a non-empty database with the full 'AT.StationStatusResponse' 
 '_insert_deactivated' and '_insert_inserted' will be the same length.
 -}
 data InsertStatusResult where
+  -- FIXME: no longer deactivating status records, so '_insert_deactivated' should be deleted.
   InsertStatusResult :: { _insert_deactivated  :: [StationStatus] -- ^ List of 'StationStatus' that were updated.
                         , _insert_inserted     :: [StationStatus] -- ^ List of station statuses that were inserted.
                         } -> InsertStatusResult
@@ -213,42 +216,19 @@ Insert updated station status into the database.
 -}
 insertStationStatus :: [AT.StationStatus] -- ^ List of 'AT.StationStatus' from the API response.
                     -> App InsertStatusResult
-insertStationStatus api_status
-  | null api_status = do
+insertStationStatus apiStatus
+  | null apiStatus = do
       log W "API status empty when trying to insert into DB."
       pure $ InsertStatusResult [] []
   | otherwise = do
-      inserted <- insertNewStatus api_status
-
-
-      return $ InsertStatusResult [] inserted
-
-  where
-    status_ids = fromIntegral <$> api_status ^.. traverse . status_station_id
-
-    selectDistinctByStationId status
-      | null status = return []
-      | otherwise = withPostgres $ runSelectReturningList $  select $ do
-          info <- all_ (bikeshareDb ^. bikeshareStationInformation)
-          status' <-  orderBy_ (asc_ . _unInformationStationId . _statusStationId) $
-                      Pg.pgNubBy_ _statusStationId
-                      (all_ (bikeshareDb ^. bikeshareStationStatus))
-          guard_ (_statusStationId status' `references_` info)
-          pure status'
-
-    deactivateOldStatus status
-      | null status = return []
-      | otherwise = withPostgres $ runUpdateReturningList $
-          update (bikeshareDb ^. bikeshareStationStatus)
-          (\c -> _statusStationId c <-. StationInformationId 12345) -- FIXME: refactor update.
-          (\c -> _statusStationId c `in_` map (val_ . _statusStationId) status)
-
-    insertNewStatus status
-      | null status = return []
-      | otherwise = withPostgres $ runInsertReturningList $
+      result <- try $ withPostgres $ runInsertReturningList $
           insertOnConflict (bikeshareDb ^. bikeshareStationStatus)
-          (insertExpressions (mapMaybe fromJSONToBeamStationStatus status)
+          (insertExpressions (mapMaybe fromJSONToBeamStationStatus apiStatus)
          ) anyConflict onConflictDoNothing
+
+      case result of
+        Left (e :: SqlError) -> logException e >> pure (InsertStatusResult [] [])
+        Right inserted       -> pure (InsertStatusResult [] inserted)
 
 {- |
 Query the statuses for a station between two times.

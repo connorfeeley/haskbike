@@ -148,6 +148,33 @@
         "_bluetooth_id": "db35",
         "_ride_code_support": true,
         "rental_uris": {}
+      },
+      {
+        "_bluetooth_id": "",
+        "_ride_code_support": true,
+        "address": "University Ave / College St (East)",
+        "altitude": 0.0,
+        "capacity": 14,
+        "groups": [
+          "P7062-7502"
+        ],
+        "is_charging_station": false,
+        "is_virtual_station": false,
+        "lat": 43.65995,
+        "lon": -79.38964,
+        "name": "University Ave / College St (East)",
+        "nearby_distance": 1609.34,
+        "obcn": "437-241-6388",
+        "physical_configuration": "REGULAR",
+        "post_code": "M5G 1L7",
+        "rental_methods": [
+          "KEY",
+          "TRANSITCARD",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "rental_uris": {},
+        "station_id": "7502"
       }
     ]
   },

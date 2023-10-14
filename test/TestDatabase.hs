@@ -118,7 +118,7 @@ unit_insertStationInformation = do
   -- Insert test data.
   inserted_info <- runWithApp dbnameTest $ insertStationInformation $ _unInfoStations $ stationInformationResponse ^. response_data
 
-  assertEqual "Inserted station information" 6 (length inserted_info)
+  assertEqual "Inserted station information" 7 (length inserted_info)
 
 
 -- | HUnit test for inserting station status.
@@ -144,19 +144,19 @@ unit_queryStationStatus = do
   -- Connect to the database.
   setupTestDatabase
 
-  info    <- getDecodedFileInformation  "test/json/station_information.json"
+  info    <- getDecodedFileInformation  "docs/json/2.3/station_information-1.json"
   status  <- getDecodedFileStatus       "test/json/station_status.json"
 
   -- Insert test data.
   inserted_info   <- runWithApp dbnameTest $ insertStationInformation $ info   ^. response_data . unInfoStations
   inserted_status <- runWithApp dbnameTest $ insertStationStatus $ status ^. response_data . unStatusStations
 
-  assertEqual "Inserted station information" 6 (length inserted_info)
-  assertEqual "Inserted station status"      5 (length $ inserted_status ^. insert_inserted)
+  assertEqual "Inserted station information" 704 (length inserted_info)
+  assertEqual "Inserted station status"        8 (length (inserted_status ^. insert_inserted))
 
   -- Query station status.
-  liftIO $ assertEqual "Query status (limit: 1000)" 5 . length =<< runWithApp dbnameTest (queryStationStatus (Just 1000))
-  liftIO $ assertEqual "Query status (limit: none)" 5 . length =<< runWithApp dbnameTest (queryStationStatus Nothing)
+  liftIO $ assertEqual "Query status (limit: 1000)" 8 . length =<< runWithApp dbnameTest (queryStationStatus (Just 1000))
+  liftIO $ assertEqual "Query status (limit: none)" 8 . length =<< runWithApp dbnameTest (queryStationStatus Nothing)
 
 
 -- | HUnit test for inserting station information, with data from the actual API.
@@ -302,9 +302,8 @@ unit_separateNewerStatusRecordsInsert = do
   updated <- doSeparateNewerStatusRecordsInsertOnce
 
   -- Assert that the same number of status rows are inserted as were updated.
-  assertEqual "Deactivated status rows"     302 (length $ updated ^. insert_deactivated)
+  assertEqual "Deactivated status rows"       0 (length $ updated ^. insert_deactivated)
   assertEqual "Inserted status rows"        302 (length $ updated ^. insert_inserted)
-  assertEqual "Same number inserted as updated" (length $ updated ^. insert_inserted) (length $ updated ^. insert_deactivated)
 
 -- | Insert station statuses (1) into a database, then (2).
 doSeparateNewerStatusRecordsInsertOnce :: IO InsertStatusResult -- ^ Result of inserting updated station statuses.
@@ -341,7 +340,6 @@ unit_separateNewerStatusRecordsInsertTwice = do
   -- Assert that the no status rows are inserted or deactivated on the second iteration.
   assertEqual "Deactivated status rows"       0 (length $ updated ^. insert_deactivated)
   assertEqual "Inserted status rows"          0 (length $ updated ^. insert_inserted)
-  assertEqual "Same number inserted as updated" (length $ updated ^. insert_inserted) (length $ updated ^. insert_deactivated)
 
 
 -- FIXME: test fails
@@ -469,7 +467,7 @@ unit_queryDockingUndockingCount = do
 
 checkConditions :: Int32 -> [StatusThreshold] -> Int -> Int -> IO ()
 checkConditions stationId thresholds expectDockings expectUndockings = do
-  eventCountsForStation <- findInList stationId <$> runWithApp dbnameTest (queryDockingEventsCount (StatusVariationQuery (Just stationId) Docking AT.Iconic thresholds))
+  eventCountsForStation <- findInList stationId <$> runWithAppDebug dbnameTest (queryDockingEventsCount (StatusVariationQuery (Just stationId) Docking AT.Iconic thresholds))
   assertEqual ("Expected number of undockings at station " ++ show stationId)
     (Just expectUndockings)
     (_eventsCountUndockings . _eventsIconicCount  <$> eventCountsForStation)
