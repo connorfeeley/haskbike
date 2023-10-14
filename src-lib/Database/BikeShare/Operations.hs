@@ -1,15 +1,9 @@
 {-# LANGUAGE AllowAmbiguousTypes       #-}
-{-# LANGUAGE DeriveAnyClass            #-}
-{-# LANGUAGE DeriveGeneric             #-}
 {-# LANGUAGE FlexibleContexts          #-}
-{-# LANGUAGE FunctionalDependencies    #-}
-{-# LANGUAGE LambdaCase                #-}
-{-# LANGUAGE MultiWayIf                #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE OverloadedStrings         #-}
 {-# LANGUAGE PartialTypeSignatures     #-}
 {-# LANGUAGE Rank2Types                #-}
-{-# LANGUAGE TemplateHaskell           #-}
 {-# LANGUAGE TypeApplications          #-}
 
 -- Signatures of beam-related functions are incredibly verbose, so let's settle for partial type signatures.
@@ -21,7 +15,6 @@
 
 module Database.BikeShare.Operations
      ( module Database.BikeShare.Operations.Dockings
-     , FilterStatusResult (..)
      , insertStationInformation
      , insertStationStatus
      , printDisabledDocks
@@ -44,7 +37,7 @@ import qualified API.Types                                as AT
 
 import           AppEnv
 
-import           Colog                                    ( log, logException, pattern W )
+import           Colog                                    ( logException )
 
 import           Control.Lens                             hiding ( reuse, (<.) )
 import           Control.Monad.Catch
@@ -67,18 +60,9 @@ import           GHC.Exts                                 ( fromString )
 
 import           Prelude                                  hiding ( log )
 
-
-data FilterStatusResult where
-  FilterStatusResult :: { _filter_newer         :: [AT.StationStatus] -- ^ List of 'AT.StationStatus' that were updated.
-                        , _filter_unchanged     :: [AT.StationStatus] -- ^ List of 'AT.StationStatus' that were not updated.
-                        } -> FilterStatusResult
-  deriving (Show)
-makeLenses ''FilterStatusResult
-
 -- | Query database for disabled docks, returning tuples of (name, num_docks_disabled).
 queryDisabledDocks :: App [(Text.Text, Int32)] -- ^ List of tuples of (name, num_docks_disabled).
-queryDisabledDocks = do
-  withPostgres $ runSelectReturningList $ select disabledDocksExpr
+queryDisabledDocks = withPostgres $ runSelectReturningList $ select disabledDocksExpr
 
 -- | Helper function to print disabled docks.
 printDisabledDocks :: App ()
@@ -249,6 +233,5 @@ queryTableSize tableName = do
 -- | Query the latest statuses for all stations before a given time.
 queryAllStationsStatusBeforeTime :: ReportTime        -- ^ Latest time to return records for.
                                  -> App [StationStatus] -- ^ Latest 'StationStatus' for each station before given time.
-queryAllStationsStatusBeforeTime latestTime = withPostgres $ do
-  runSelectReturningList $ selectWith $ do
-    queryAllStationsStatusBeforeTimeExpr latestTime
+queryAllStationsStatusBeforeTime latestTime = withPostgres $ runSelectReturningList $ selectWith $ do
+  queryAllStationsStatusBeforeTimeExpr latestTime
