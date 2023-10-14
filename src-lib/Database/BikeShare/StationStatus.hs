@@ -60,6 +60,7 @@ import           Data.Coerce                                ( coerce )
 import           Data.Int
 import           Data.Kind                                  ( Type )
 import           Data.List                                  ( find )
+import           Data.Maybe                                 ( isNothing )
 import           Data.String                                ( IsString (fromString) )
 import qualified Data.Text                                  as Text
 
@@ -78,18 +79,18 @@ import           ReportTime
 
 -- | Declare a (Beam) table for the 'StationStatus' type.
 data StationStatusT f where
-  StationStatus :: { _statusStationId                  :: PrimaryKey StationInformationT f
-                   , _statusLastReported               :: Columnar f (Maybe ReportTime) -- In UTC time
+  StationStatus :: { _statusStationId             :: PrimaryKey StationInformationT f
+                   , _statusLastReported          :: Columnar f ReportTime -- In UTC time
                    , _statusNumBikesAvailable     :: Columnar f Int32
                    , _statusNumBikesDisabled      :: Columnar f Int32
                    , _statusNumDocksAvailable     :: Columnar f Int32
                    , _statusNumDocksDisabled      :: Columnar f Int32
                    , _statusIsChargingStation     :: Columnar f Bool
-                   , _statusStatus                  :: Columnar f BeamStationStatusString
-                   , _statusIsInstalled            :: Columnar f Bool
-                   , _statusIsRenting              :: Columnar f Bool
-                   , _statusIsReturning            :: Columnar f Bool
-                   , _statusTraffic                 :: Columnar f (Maybe Text.Text) -- PBSC doesn't seem to set this field
+                   , _statusStatus                :: Columnar f BeamStationStatusString
+                   , _statusIsInstalled           :: Columnar f Bool
+                   , _statusIsRenting             :: Columnar f Bool
+                   , _statusIsReturning           :: Columnar f Bool
+                   , _statusTraffic               :: Columnar f (Maybe Text.Text) -- PBSC doesn't seem to set this field
                    , _statusVehicleDocksAvailable :: Columnar f Int32
                    , _statusVehicleTypesAvailable :: VehicleTypeMixin f
                    } -> StationStatusT f
@@ -105,9 +106,8 @@ deriving instance Eq StationStatus
 
 -- | Inform Beam about the table.
 instance Table StationStatusT where
-  -- data PrimaryKey StationStatusT f = StationStatusId (PrimaryKey StationInformationT f) (Columnar f (Maybe ReportTime))
   data PrimaryKey StationStatusT f = StationStatusId { _unStatusStationId    :: PrimaryKey StationInformationT f
-                                                     , _unStatusLastReported :: Columnar f (Maybe ReportTime)
+                                                     , _unStatusLastReported :: Columnar f ReportTime
                                                      }
     deriving (Generic, Beamable)
   primaryKey = StationStatusId <$> _statusStationId  <*> _statusLastReported
@@ -149,24 +149,24 @@ VehicleType _ _ _ (LensFor available_efit_g5) = tableLenses
 --                                  -> StationStatusT f
 --                                  -> f' (StationStatusT f)
 -- statusStationId                  :: forall {f  :: Type -> Type}. Lens' (PrimaryKey StationInformationT f) (StationInformationT f)
-statusStationId :: Getter (StationStatusT Identity) (PrimaryKey StationInformationT Identity)
+statusStationId                 :: Getter (StationStatusT Identity) (PrimaryKey StationInformationT Identity)
 statusStationId = to _statusStationId
-statusLastReported               :: Lens' (StationStatusT f) (C f (Maybe ReportTime))
-statusNumBikesAvailable     :: Lens' (StationStatusT f) (C f Int32)
-statusNumBikesDisabled      :: Lens' (StationStatusT f) (C f Int32)
-statusNumDocksAvailable     :: Lens' (StationStatusT f) (C f Int32)
-statusNumDocksDisabled      :: Lens' (StationStatusT f) (C f Int32)
-statusIsChargingStation     :: Lens' (StationStatusT f) (C f Bool)
-statusStatus                  :: Lens' (StationStatusT f) (C f BeamStationStatusString)
-statusIsInstalled            :: Lens' (StationStatusT f) (C f Bool)
-statusIsRenting              :: Lens' (StationStatusT f) (C f Bool)
-statusIsReturning            :: Lens' (StationStatusT f) (C f Bool)
-statusTraffic                 :: Lens' (StationStatusT f) (C f (Maybe Text.Text))
-statusVehicleDocksAvailable :: Lens' (StationStatusT f) (C f Int32)
-vehicle_types_available_boost    :: Lens' (StationStatusT f) (C f Int32)
-vehicle_types_available_iconic   :: Lens' (StationStatusT f) (C f Int32)
-vehicle_types_available_efit     :: Lens' (StationStatusT f) (C f Int32)
-vehicle_types_available_efit_g5  :: Lens' (StationStatusT f) (C f Int32)
+statusLastReported              :: Lens' (StationStatusT f) (C f ReportTime)
+statusNumBikesAvailable         :: Lens' (StationStatusT f) (C f Int32)
+statusNumBikesDisabled          :: Lens' (StationStatusT f) (C f Int32)
+statusNumDocksAvailable         :: Lens' (StationStatusT f) (C f Int32)
+statusNumDocksDisabled          :: Lens' (StationStatusT f) (C f Int32)
+statusIsChargingStation         :: Lens' (StationStatusT f) (C f Bool)
+statusStatus                    :: Lens' (StationStatusT f) (C f BeamStationStatusString)
+statusIsInstalled               :: Lens' (StationStatusT f) (C f Bool)
+statusIsRenting                 :: Lens' (StationStatusT f) (C f Bool)
+statusIsReturning               :: Lens' (StationStatusT f) (C f Bool)
+statusTraffic                   :: Lens' (StationStatusT f) (C f (Maybe Text.Text))
+statusVehicleDocksAvailable     :: Lens' (StationStatusT f) (C f Int32)
+vehicle_types_available_boost   :: Lens' (StationStatusT f) (C f Int32)
+vehicle_types_available_iconic  :: Lens' (StationStatusT f) (C f Int32)
+vehicle_types_available_efit    :: Lens' (StationStatusT f) (C f Int32)
+vehicle_types_available_efit_g5 :: Lens' (StationStatusT f) (C f Int32)
 
 -- StationStatus (StationInformationId (LensFor statusStationId))              _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
 StationStatus _ (LensFor statusLastReported)                                  _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
@@ -221,10 +221,11 @@ stationStatusType :: DataType Postgres BeamStationStatusString
 stationStatusType = DataType pgTextType
 
 -- | Convert from the JSON StationStatus to the Beam StationStatus type
-fromJSONToBeamStationStatus :: AT.StationStatus -> StationStatusT (QExpr Postgres s)
-fromJSONToBeamStationStatus status =
+fromJSONToBeamStationStatus :: AT.StationStatus -> Maybe (StationStatusT (QExpr Postgres s))
+fromJSONToBeamStationStatus status
+  | Just lastReported <- status ^. AT.status_last_reported = Just $
   StationStatus { _statusStationId             = StationInformationId (fromIntegral $ status ^. AT.status_station_id)
-                , _statusLastReported          = val_ (coerce $ status ^. AT.status_last_reported)
+                , _statusLastReported          = val_ (coerce lastReported)
                 , _statusNumBikesAvailable     = fromIntegral $ status ^. AT.status_num_bikes_available
                 , _statusNumBikesDisabled      = fromIntegral $ status ^. AT.status_num_bikes_disabled
                 , _statusNumDocksAvailable     = fromIntegral $ status ^. AT.status_num_docks_available
@@ -237,6 +238,7 @@ fromJSONToBeamStationStatus status =
                 , _statusVehicleDocksAvailable = fromIntegral $ AT.dock_count $ head $ status ^. AT.status_vehicle_docks_available
                 , _statusVehicleTypesAvailable = val_ $ VehicleType num_boost num_iconic num_efit num_efit_g5
                 }
+  | otherwise = Nothing
   where
     -- | Find the vehicle type in the list of vehicle types available; default to 0 if not found.
     findByType' vehicle_type = find (\x -> AT.vehicle_type_id x == vehicle_type) $ status ^. AT.status_vehicle_types_available
@@ -254,9 +256,9 @@ fromBeamStationStatusToJSON status =
                    , AT._status_num_bikes_disabled      = fromIntegral $ status ^. statusNumBikesDisabled
                    , AT._status_num_docks_available     = fromIntegral $ status ^. statusNumDocksAvailable
                    , AT._status_num_docks_disabled      = fromIntegral $ status ^. statusNumDocksDisabled
-                   , AT._status_last_reported           = coerce $ status ^. statusLastReported
+                   , AT._status_last_reported           = coerce (Just (status ^. statusLastReported))
                    , AT._status_is_charging_station     = status ^. statusIsChargingStation
-                   , AT._status_status                  = coerce $ status ^. statusStatus
+                   , AT._status_status                  = coerce (status ^. statusStatus)
                    , AT._status_is_installed            = status ^. statusIsInstalled
                    , AT._status_is_renting              = status ^. statusIsRenting
                    , AT._status_is_returning            = status ^. statusIsReturning

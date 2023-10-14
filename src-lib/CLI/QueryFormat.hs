@@ -64,7 +64,7 @@ formatStationInfo (timeZone, name, status) =
             , ("Bikes:\t", status ^. statusNumBikesAvailable, fromIntegral $ status ^. statusNumBikesDisabled)
             ]
     in [ formattedName name status
-       , formattedLastReport timeZone $ reportToLocal <$> status ^. statusLastReported
+       , formattedLastReport timeZone $ reportToLocal $ status ^. statusLastReported
        , "Charger:\t" <> formattedBool (status ^. statusIsChargingStation)
        ] ++ map fmtAvailability pairs ++ bikeAvailability
 
@@ -74,15 +74,12 @@ formattedName name status =
     where idPrefix = resetIntens <> "# " <> boldCode
 
 -- Format the last reported time in the specified time zone (namerly, the system's time zone).
-formattedLastReport :: TimeZone -> Maybe LocalTime -> Text
+formattedLastReport :: TimeZone -> LocalTime -> Text
 formattedLastReport timeZone status = reportedText
   where
-    reportedText = case status of
-      Nothing -> boldCode <> colouredText Vivid Red "Never" <> resetIntens
-      -- Just t  -> italCode <> showText t <> resetItal
-      Just t  -> "[" <> showText t <> "]"
-              <> boldCode <> "\t" <> "|" <> "\t" <> resetIntens
-              <> italCode <> pack (formatTime' timeZone t) <> resetItal <> " (local)"
+    reportedText = "[" <> showText status <> "]"
+                <> boldCode <> "\t" <> "|" <> "\t" <> resetIntens
+                <> italCode <> pack (formatTime' timeZone status) <> resetItal <> " (local)"
 
 formattedBool :: Bool -> Text
 formattedBool b = if b

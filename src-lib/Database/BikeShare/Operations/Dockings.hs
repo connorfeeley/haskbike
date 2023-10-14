@@ -70,9 +70,9 @@ thresholdCondition (OldestID id_threshold) status =
 thresholdCondition (NewestID id_threshold) status =
   _unInformationStationId (_statusStationId status) <=. val_  id_threshold
 thresholdCondition (EarliestTime time_threshold) status =
-  status ^. statusLastReported >=. val_ (Just time_threshold)
+  status ^. statusLastReported >=. val_ time_threshold
 thresholdCondition (LatestTime time_threshold) status =
-  status ^. statusLastReported <=. val_ (Just time_threshold)
+  status ^. statusLastReported <=. val_ time_threshold
 
 
 -- | Construct a filter expression corresponding to the station ID.

@@ -58,6 +58,7 @@ import           Control.Lens                             hiding ( reuse, (<.) )
 
 import           Data.Int                                 ( Int32 )
 import qualified Data.Map                                 as Map
+import           Data.Maybe                               ( mapMaybe )
 import qualified Data.Text                                as Text
 
 import           Database.Beam
@@ -174,7 +175,7 @@ getRowsToDeactivate api_status
         -- Select from station status where the last reported time is older than in the API response.
         status <- Database.Beam.reuse common_status
         guard_ (_statusStationId    status ==. StationInformationId (fst api_values) &&. -- Station ID
-                _statusLastReported status <.  snd api_values)    -- Last reported time is older than in the API response
+                just_ (_statusLastReported status) <.  snd api_values)    -- Last reported time is older than in the API response
         pure status
 
 {- |
@@ -217,29 +218,10 @@ insertStationStatus api_status
       log W "API status empty when trying to insert into DB."
       pure $ InsertStatusResult [] []
   | otherwise = do
-    info_ids <- map (fromIntegral . _infoStationId) <$> queryStationInformationByIds status_ids
-
-    let status = filter (\ss -> fromIntegral (_status_station_id ss) `elem` info_ids) api_status
-
-    statuses_to_deactivate <- getRowsToDeactivate status
-    updated_statuses <- deactivateOldStatus statuses_to_deactivate
-    let updated_status_ids = map (fromIntegral . _unInformationStationId . _statusStationId) updated_statuses
-    inserted_statuses <- insertNewStatus $
-      filter (\ss -> ss ^. status_station_id `elem` updated_status_ids) status
-
-    -- Select arbitrary (in this case, last [by ID]) status record for each station ID.
-    distinct_by_id <- selectDistinctByStationId status
-
-    log W $ format "distinct_by_id length {}: (truncated to 20 elements) {}" (length distinct_by_id) (pShowCompact (take 20 $ map _statusStationId distinct_by_id))
-
-    -- Insert new records corresponding to station IDs which did not already exist in the station_status table.
-    new_status <- insertNewStatus $
-      filter (\ss -> ss ^. status_station_id `notElem` map (fromIntegral . _unInformationStationId . _statusStationId) distinct_by_id &&
-                     ss ^. status_station_id `elem` info_ids
-             ) status
+      inserted <- insertNewStatus api_status
 
 
-    return $ InsertStatusResult updated_statuses (inserted_statuses ++ new_status)
+      return $ InsertStatusResult [] inserted
 
   where
     status_ids = fromIntegral <$> api_status ^.. traverse . status_station_id
@@ -264,8 +246,9 @@ insertStationStatus api_status
     insertNewStatus status
       | null status = return []
       | otherwise = withPostgres $ runInsertReturningList $
-          insert (bikeshareDb ^. bikeshareStationStatus) $
-          insertExpressions $ map fromJSONToBeamStationStatus status
+          insertOnConflict (bikeshareDb ^. bikeshareStationStatus)
+          (insertExpressions (mapMaybe fromJSONToBeamStationStatus status)
+         ) anyConflict onConflictDoNothing
 
 {- |
 Query the statuses for a station between two times.

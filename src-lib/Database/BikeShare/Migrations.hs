@@ -45,7 +45,7 @@ initialSetup = BikeshareDb
         })
   <*> (createTable "station_status" $ StationStatus
         { _statusStationId             = StationInformationId $ field "station_id" int notNull referenceInformationTable
-        , _statusLastReported          = field "last_reported"           (maybeType reportTimeType)
+        , _statusLastReported          = field "last_reported"           reportTimeType
         , _statusNumBikesAvailable     = field "num_bikes_available"     int notNull
         , _statusNumBikesDisabled      = field "num_bikes_disabled"      int notNull
         , _statusNumDocksAvailable     = field "num_docks_available"     int notNull

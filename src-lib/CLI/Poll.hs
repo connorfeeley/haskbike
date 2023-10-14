@@ -111,8 +111,11 @@ statusHandler queue = void . forever $ do
     (length $ inserted_result ^. insert_inserted)
 
   where
-    dataToTuple u i = (i ^. statusStationId . unInformationStationId, u ^. statusLastReported, i ^. statusLastReported)
-    fmtLog (sid, lr, lr') = format "ID: {} {} {}" sid (maybe "-" show lr) (maybe "-" show lr')
+    dataToTuple u i = ( i ^. statusStationId . unInformationStationId
+                      , u ^. statusLastReported
+                      , i ^. statusLastReported
+                      )
+    fmtLog (sid, lr, lr') = format "ID: {} {} {}" sid (show lr) (show lr')
 
 
 -- | Handle last_updated field in response.

@@ -36,8 +36,8 @@ statusBetweenExpr station_id start_time end_time =
               (all_ (bikeshareDb ^. bikeshareStationStatus))
     guard_ (_statusStationId status `references_` info &&.
             (info   ^. infoStationId) ==. val_ (fromIntegral station_id) &&.
-            (status ^. statusLastReported) >=. val_ (Just start_time) &&.
-            (status ^. statusLastReported) <=. val_ (Just end_time))
+            (status ^. statusLastReported) >=. val_ start_time &&.
+            (status ^. statusLastReported) <=. val_ end_time)
     pure status
 
 -- | Expression to query information for stations by their IDs.
@@ -91,11 +91,12 @@ queryAllStationsStatusBeforeTimeExpr :: ReportTime
 queryAllStationsStatusBeforeTimeExpr latestTime = do
   stationsWithMaxTime <- selecting $
     aggregate_ (\s -> (group_ (_statusStationId s), max_ (_statusLastReported s))) $
-               filter_ (\status -> _statusLastReported status <=. just_ (val_ latestTime))
+               filter_ (\status -> _statusLastReported status <=. val_ latestTime)
                (all_ (bikeshareDb ^. bikeshareStationStatus))
   pure $ do
     (stationId, maxTime) <- reuse stationsWithMaxTime
     stationStatus <- all_ (bikeshareDb ^. bikeshareStationStatus)
-    guard_' ((_statusStationId stationStatus ==?. stationId) &&?.
-             (_statusLastReported stationStatus ==?. fromMaybe_ (val_ Nothing) maxTime))
+    guard_ ((_statusStationId stationStatus ==. stationId) &&.
+             isJust_ maxTime &&.
+             (just_ (_statusLastReported stationStatus) ==.  maxTime))
     pure stationStatus
