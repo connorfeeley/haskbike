@@ -88,6 +88,7 @@
                   doctest
                   stylish-haskell
                   tasty-discover
+                  weeder
                 ;
                 inherit (self'.packages)
                   haskbike-completions;
