@@ -19,7 +19,6 @@ import           CLI.QueryFormat
 import           Colog
 
 import           Control.Lens                  hiding ( para )
-import           Control.Monad                 ( when )
 
 import qualified Data.Char                     as Char
 import           Data.Int                      ( Int32 )
@@ -194,8 +193,6 @@ eventsForRange stationId vehicleType variation earliestDay earliestTime latestDa
     queryCondition variation' =
       StatusVariationQuery
       (fromIntegral <$> stationId)
-      variation'
-      vehicleType
       [ EarliestTime (reportTime earliestDay earliestTime) , LatestTime (reportTime latestDay latestTime) ]
 
 -- | Sort docking and undocking events.

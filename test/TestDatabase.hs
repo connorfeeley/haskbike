@@ -10,50 +10,40 @@
 {-# LANGUAGE UndecidableInstances      #-}
 
 module TestDatabase
-     ( unit_getRowsToDeactivate
+     ( unit_insertNewerStatusRecords
+     , unit_insertNewerStatusRecordsInsert
+     , unit_insertNewerStatusRecordsInsertTwice
      , unit_insertStationApi
      , unit_insertStationInformation
      , unit_insertStationInformationApi
      , unit_insertStationStatus
      , unit_insertStationStatusApi
-       -- , unit_noActiveStationStatus
      , unit_queryDockingUndockingCount
      , unit_queryStationByIdAndName
      , unit_queryStationStatus
      , unit_queryStationStatusBetween
-     , unit_separateNewerStatusRecords
-     , unit_separateNewerStatusRecordsInsert
-     , unit_separateNewerStatusRecordsInsertTwice
      ) where
 
-import           API.ResponseWrapper                      ( response_data )
-import           API.Types                                ( StationInformationResponse, StationStatusResponse,
-                                                            _unInfoStations, status_station_id, unInfoStations,
-                                                            unStatusStations )
-import qualified API.Types                                as AT
+import           API.ResponseWrapper           ( response_data )
+import           API.Types                     ( StationInformationResponse, StationStatusResponse, _unInfoStations,
+                                                 unInfoStations, unStatusStations )
 
 import           AppEnv
 
-import           Colog
-
 import           Control.Lens
 
-import           Data.Aeson                               ( FromJSON, eitherDecode )
-import qualified Data.ByteString.Lazy                     as BL
-import           Data.Functor                             ( void )
-import           Data.Int                                 ( Int32 )
+import           Data.Aeson                    ( FromJSON, eitherDecode )
+import qualified Data.ByteString.Lazy          as BL
+import           Data.Functor                  ( void )
+import           Data.Int                      ( Int32 )
 import           Data.Time
 
-import           Database.Beam
-import           Database.Beam.Backend.SQL.BeamExtensions ( runUpdateReturningList )
 import           Database.Beam.Postgres
 import           Database.BikeShare
 import           Database.BikeShare.Operations
 import           Database.BikeShare.Utils
 
 import           Fmt
-
-import           Formatting
 
 import           ReportTime
 
@@ -131,11 +121,11 @@ unit_insertStationStatus = do
   status  <- getDecodedFileStatus      "test/json/station_status.json"
 
   -- Insert test data.
-  inserted_info   <- runWithApp dbnameTest $ insertStationInformation $ info   ^. response_data . unInfoStations
-  inserted_status <- runWithApp dbnameTest $ insertStationStatus $ status ^. response_data . unStatusStations
+  insertedInfo   <- runWithApp dbnameTest $ insertStationInformation $ info   ^. response_data . unInfoStations
+  insertedStatus <- runWithApp dbnameTest $ insertStationStatus $ status ^. response_data . unStatusStations
 
-  assertEqual "Inserted station information" 704 (length inserted_info)
-  assertEqual "Inserted station status"        8 (length $ inserted_status ^. insert_inserted)
+  assertEqual "Inserted station information" 704 (length insertedInfo)
+  assertEqual "Inserted station status"        8 (length insertedStatus)
 
 
 -- | HUnit test for querying station status.
@@ -148,11 +138,11 @@ unit_queryStationStatus = do
   status  <- getDecodedFileStatus       "test/json/station_status.json"
 
   -- Insert test data.
-  inserted_info   <- runWithApp dbnameTest $ insertStationInformation $ info   ^. response_data . unInfoStations
-  inserted_status <- runWithApp dbnameTest $ insertStationStatus $ status ^. response_data . unStatusStations
+  insertedInfo   <- runWithApp dbnameTest $ insertStationInformation $ info   ^. response_data . unInfoStations
+  insertedStatus <- runWithApp dbnameTest $ insertStationStatus $ status ^. response_data . unStatusStations
 
-  assertEqual "Inserted station information" 704 (length inserted_info)
-  assertEqual "Inserted station status"        8 (length (inserted_status ^. insert_inserted))
+  assertEqual "Inserted station information" 704 (length insertedInfo)
+  assertEqual "Inserted station status"        8 (length insertedStatus)
 
   -- Query station status.
   liftIO $ assertEqual "Query status (limit: 1000)" 8 . length =<< runWithApp dbnameTest (queryStationStatus (Just 1000))
@@ -182,8 +172,8 @@ unit_insertStationStatusApi = do
   -- Should fail because station information has not been inserted.
   inserted_status <- runWithApp dbnameTest $ insertStationStatus $ status ^. response_data . unStatusStations
 
-  assertEqual "Inserted station status" [] $ inserted_status ^. insert_inserted
-  assertEqual "Updated station status"  [] $ inserted_status ^. insert_deactivated
+  assertEqual "Inserted station status" [] inserted_status
+  assertEqual "Updated station status"  [] inserted_status
 
 -- | HUnit test for inserting station information and status, with data from the actual API.
 unit_insertStationApi :: IO ()
@@ -199,7 +189,7 @@ unit_insertStationApi = do
   inserted_status <- runWithApp dbnameTest $ insertStationStatus $ status ^. response_data . unStatusStations
 
   assertEqual "Inserted station information" 704 (length inserted_info)
-  assertEqual "Inserted station status"      704 (length $ inserted_status ^. insert_inserted)
+  assertEqual "Inserted station status"      704 (length inserted_status)
 
 
 {- | HUnit test for querying which station status have reported.
@@ -213,84 +203,38 @@ Between /station_status-1/ and /station_status-2/, station 7000 reported new dat
 |    7001 |         1694798218 |         1694798218 |   0 |
 +---------+--------------------+--------------------+-----+
 -}
-unit_getRowsToDeactivate :: IO ()
-unit_getRowsToDeactivate = do
+unit_insertNewerStatusRecords :: IO ()
+unit_insertNewerStatusRecords = do
   setupTestDatabase
 
   -- Separate API status records into those that are newer than in the database entry and those that are unchanged.
-  rows_to_deactivate <- doGetRowsToDeactivate
+  inserted <- doInsertNewerStatusRecords
 
-  assertEqual "Expected number of rows that would be deactivated" 302 (length rows_to_deactivate)
-
-  -- Ensure station 7000 (has newer data between (1) and (2)) is in the list of rows that would be deactivated.
-  assertBool "Station 7000 would be deactivated"     (StationInformationId 7000 `elem`     map _statusStationId rows_to_deactivate)
-  -- Ensure station 7001 (did not update between (1) and (2)) is not in the list of rows that would be deactivated.
-  assertBool "Station 7001 would not be deactivated" (StationInformationId 7001 `notElem`  map _statusStationId rows_to_deactivate)
-
-
--- | Query updated station status and return a list of database statuses.
-doGetRowsToDeactivate :: IO [StationStatusT Identity]
-doGetRowsToDeactivate = do
-  info      <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
-  status_1  <- getDecodedFileStatus      "docs/json/2.3/station_status-1.json"
-  status_2  <- getDecodedFileStatus      "docs/json/2.3/station_status-2.json"
-
-  -- Insert test data.
-  void $ runWithApp dbnameTest $ insertStationInformation $ info   ^. response_data . unInfoStations
-  void $ runWithApp dbnameTest $ insertStationStatus $ status_1 ^. response_data . unStatusStations
-
-  -- Return stations that have reported since being inserted.
-  runWithApp dbnameTest $ getRowsToDeactivate $ status_2 ^. response_data . unStatusStations
-
-
-{- | HUnit test for querying which station status have reported.
-
-Between /station_status-1/ and /station_status-2/, station 7000 reported new data but 7001 did not:
-+---------+--------------------+--------------------+-----+
-| Station | last\_reported (1) | last\_reported (2) |   Δ |
-+=========+====================+====================+=====+
-|    7000 |         1694798090 |         1694798350 | 260 |
-+---------+--------------------+--------------------+-----+
-|    7001 |         1694798218 |         1694798218 |   0 |
-+---------+--------------------+--------------------+-----+
--}
-unit_separateNewerStatusRecords :: IO ()
-unit_separateNewerStatusRecords = do
-  setupTestDatabase
-
-  -- Separate API status records into those that are newer than in the database entry and those that are unchanged.
-  api_update_plan <- doSeparateNewerStatusRecords
-
-  assertEqual "API status records newer than database entry"      302 (length $ api_update_plan ^. filter_newer)
-  assertEqual "API status recrods unchanged from database entry"  407 (length $ api_update_plan ^. filter_unchanged)
+  assertEqual "API status records newer than database entry"      302 (length inserted)
 
   -- Station 7000 should be in the list of API records that would trigger a database update, but not in the list of unchanged records.
-  assertBool "Station 7000 record is newer"                      (has (traverse . status_station_id . only 7000) (api_update_plan ^. filter_newer))
-  assertBool "Station 7000 record is not in unchanged list" (not (has (traverse . status_station_id . only 7000) (api_update_plan ^. filter_unchanged)))
+  assertBool "Station 7000 record is newer"          (has (traverse . statusStationId . unInformationStationId . only 7000) inserted)
 
   -- Station 7001 should be in the list of API records that would /not/ trigger a database update, but not in the list of newer records.
-  assertBool "Station 7001 record is unchanged"                  (has (traverse . status_station_id . only 7001) (api_update_plan ^. filter_unchanged))
-  assertBool "Station 7001 record is not in newer list"     (not (has (traverse . status_station_id . only 7001) (api_update_plan ^. filter_newer)))
+  assertBool "Station 7001 record is unchanged" (not (has (traverse . statusStationId . unInformationStationId . only 7001) inserted))
 
-
--- | Query updated station status and return a list of API statuses.
-doSeparateNewerStatusRecords :: IO FilterStatusResult
-doSeparateNewerStatusRecords = do
+doInsertNewerStatusRecords :: IO [StationStatus]
+doInsertNewerStatusRecords = do
   info      <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
   status_1  <- getDecodedFileStatus      "docs/json/2.3/station_status-1.json"
   status_2  <- getDecodedFileStatus      "docs/json/2.3/station_status-2.json"
 
   -- Insert test data.
-  void $ runWithApp dbnameTest $ insertStationInformation $ info   ^. response_data . unInfoStations
-  void $ runWithApp dbnameTest $ insertStationStatus $ status_1 ^. response_data . unStatusStations
+  void $ runWithApp dbnameTest $ insertStationInformation $ info     ^. response_data . unInfoStations
+  void $ runWithApp dbnameTest $ insertStationStatus      $ status_1 ^. response_data . unStatusStations
 
   -- Return maps of updated and same API statuses
-  runWithApp dbnameTest $ separateNewerStatusRecords $ status_2 ^. response_data . unStatusStations
+  runWithApp dbnameTest $ insertStationStatus $ status_2 ^. response_data . unStatusStations
 
 
 -- | HUnit test to assert that changed station status are inserted.
-unit_separateNewerStatusRecordsInsert :: IO ()
-unit_separateNewerStatusRecordsInsert = do
+unit_insertNewerStatusRecordsInsert :: IO ()
+unit_insertNewerStatusRecordsInsert = do
   setupTestDatabase
 
   {-
@@ -299,74 +243,53 @@ unit_separateNewerStatusRecordsInsert = do
   - Check if inserting status data (2) would result in updates
   - Returns (updated, same)
   -}
-  updated <- doSeparateNewerStatusRecordsInsertOnce
+  updated <- doStatusInsertOnce
 
   -- Assert that the same number of status rows are inserted as were updated.
-  assertEqual "Deactivated status rows"       0 (length $ updated ^. insert_deactivated)
-  assertEqual "Inserted status rows"        302 (length $ updated ^. insert_inserted)
+  assertEqual "Inserted status rows"        302 (length updated)
 
 -- | Insert station statuses (1) into a database, then (2).
-doSeparateNewerStatusRecordsInsertOnce :: IO InsertStatusResult -- ^ Result of inserting updated station statuses.
-doSeparateNewerStatusRecordsInsertOnce = do
+doStatusInsertOnce :: IO [StationStatus] -- ^ Result of inserting station statuses.
+doStatusInsertOnce = do
   info      <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
   status_1  <- getDecodedFileStatus      "docs/json/2.3/station_status-1.json"
   status_2  <- getDecodedFileStatus      "docs/json/2.3/station_status-2.json"
 
   -- Insert test data.
-  void $ runWithApp dbnameTest $ insertStationInformation $ info   ^. response_data . unInfoStations
-  void $ runWithApp dbnameTest $ insertStationStatus $ status_1 ^. response_data . unStatusStations
-
-  -- Find statuses that need to be updated (second round of data vs. first).
-  updated <- runWithApp dbnameTest $ separateNewerStatusRecords $ status_2 ^. response_data . unStatusStations
+  void $ runWithApp dbnameTest $ insertStationInformation $ info     ^. response_data . unInfoStations
+  void $ runWithApp dbnameTest $ insertStationStatus      $ status_1 ^. response_data . unStatusStations
 
   -- Insert second round of test data (some of which have reported since the first round was inserted).
-  runWithApp dbnameTest $ insertStationStatus $ updated ^. filter_newer
+  runWithApp dbnameTest $ insertStationStatus $ status_2 ^. response_data . unStatusStations
 
 
--- FIXME: test fails
--- | HUnit test to assert that reinserting already-deactivated rows is a no-op.
-unit_separateNewerStatusRecordsInsertTwice :: IO ()
-unit_separateNewerStatusRecordsInsertTwice = do
+-- | HUnit test to assert that reinserting rows is a no-op.
+unit_insertNewerStatusRecordsInsertTwice :: IO ()
+unit_insertNewerStatusRecordsInsertTwice = do
   setupTestDatabase
 
-  {-
-  - Insert information and status data (1)
-  - Insert/update status data (2)
-  - Check if inserting status data (2) would result in updates
-  - Returns (updated, same)
-  -}
-  updated <- doSeparateNewerStatusRecordsInsertTwice
+  inserted <- doStatusInsertTwice
 
-  -- Assert that the no status rows are inserted or deactivated on the second iteration.
-  assertEqual "Deactivated status rows"       0 (length $ updated ^. insert_deactivated)
-  assertEqual "Inserted status rows"          0 (length $ updated ^. insert_inserted)
+  -- Assert that the no status rows were inserted on the second iteration.
+  assertEqual "Reinserting duplicate statuses inserts 0 new status rows"          0 (length inserted)
 
 
--- FIXME: test fails
 -- | Insert station statuses (1) into a database, then (2), then (2) again.
-doSeparateNewerStatusRecordsInsertTwice :: IO InsertStatusResult -- ^ Result of inserting updated station statuses.
-doSeparateNewerStatusRecordsInsertTwice = do
+doStatusInsertTwice :: IO [StationStatus] -- ^ Result of inserting updated station statuses.
+doStatusInsertTwice = do
   info      <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
   status_1  <- getDecodedFileStatus "docs/json/2.3/station_status-1.json"
   status_2  <- getDecodedFileStatus "docs/json/2.3/station_status-2.json"
 
   -- Insert first round of test data.
-  void $ runWithApp dbnameTest $ insertStationInformation $ info   ^. response_data . unInfoStations
-  void $ runWithApp dbnameTest $ insertStationStatus $ status_1 ^. response_data . unStatusStations
-
-
-  -- Find status records that need to be updated (second round of data vs. first).
-  updated_1 <- runWithApp dbnameTest $ separateNewerStatusRecords $ status_2 ^. response_data . unStatusStations
+  void $ runWithApp dbnameTest $ insertStationInformation $ info     ^. response_data . unInfoStations
+  void $ runWithApp dbnameTest $ insertStationStatus      $ status_1 ^. response_data . unStatusStations
 
   -- Insert second round of test data (some of which have reported since the first round was inserted).
-  void $ runWithApp dbnameTest $ insertStationStatus $ updated_1 ^. filter_newer
-
-
-  -- Find status records that need to be updated (second round of data vs. second).
-  updated_2 <- runWithApp dbnameTest $ separateNewerStatusRecords $ status_2 ^. response_data . unStatusStations
+  void $ runWithApp dbnameTest $ insertStationStatus $ status_2 ^. response_data . unStatusStations
 
   -- Insert second round of test data once again (nothing should have changed).
-  runWithApp dbnameTest $ insertStationStatus $ updated_2 ^. filter_newer
+  runWithApp dbnameTest $ insertStationStatus $ status_2 ^. response_data . unStatusStations
 
 
 -- | HUnit test to validate that a station ID can be looked up by its name, and vice-versa.
@@ -467,7 +390,7 @@ unit_queryDockingUndockingCount = do
 
 checkConditions :: Int32 -> [StatusThreshold] -> Int -> Int -> IO ()
 checkConditions stationId thresholds expectDockings expectUndockings = do
-  eventCountsForStation <- findInList stationId <$> runWithAppDebug dbnameTest (queryDockingEventsCount (StatusVariationQuery (Just stationId) Docking AT.Iconic thresholds))
+  eventCountsForStation <- findInList stationId <$> runWithAppDebug dbnameTest (queryDockingEventsCount (StatusVariationQuery (Just stationId) thresholds))
   assertEqual ("Expected number of undockings at station " ++ show stationId)
     (Just expectUndockings)
     (_eventsCountUndockings . _eventsIconicCount  <$> eventCountsForStation)
@@ -478,47 +401,3 @@ checkConditions stationId thresholds expectDockings expectUndockings = do
 findInList :: Int32 -> [DockingEventsCount] -> Maybe DockingEventsCount
 findInList key tuples = tuples ^? folded . filtered (\k -> k ^. eventsStation . infoStationId == key)
 
--- | HUnit test to check that station statuses are inserted correctly when there is no active status record.
--- unit_noActiveStationStatus :: IO ()
--- unit_noActiveStationStatus = do
-
---   -- FIXME: switch runWithAppDebug back to runWithApp remove once done debugging.
-
---   setupTestDatabase
---   apiInfo     <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
---   apiStatus   <- getDecodedFileStatus      "docs/json/2.3/station_status-1.json"
---   apiStatus'  <- getDecodedFileStatus      "docs/json/2.3/station_status-2.json"
-
---   -- Insert test data.
---   _insertedInfo   <- runWithAppDebug dbnameTest $ insertStationInformation $ apiInfo   ^. response_data . unInfoStations
---   _insertedStatus <- runWithAppDebug dbnameTest $ insertStationStatus      $ apiStatus ^. response_data . unStatusStations
-
---   -- Disable the status for station 7003.
---   updated <- runWithAppDebug dbnameTest $ withPostgres $ runUpdateReturningList $
---               update (bikeshareDb ^. bikeshareStationStatus)
---               (\c -> _d_status_active c <-. val_ False) -- Set active flag to False
---               (\c -> _d_status_infoId c ==. val_ (StationInformationId 7003) -- ... for station 7003.
---                &&. _d_status_active c ==. val_ True)
---   assertEqual "Deactivated status for station 7003" 1 (length updated)
-
---   pPrintCompact updated
-
---   -- Insert new status records.
---   updatedApiStatus' <- runWithAppDebug dbnameTest $ separateNewerStatusRecords (apiStatus' ^. response_data . unStatusStations)
---   insertedStatus'   <- runWithAppDebug dbnameTest $ insertStationStatus $ updatedApiStatus' ^. filter_newer
-
---   assertEqual "Inserted 302 newer status records"    302 (length $ insertedStatus' ^. insert_inserted)
---   -- 301 since we just manually deactivated the active status for station 7003.
---   assertEqual "Deactivated 301 older status records" 301 (length $ insertedStatus' ^. insert_deactivated)
-
---   -- Query active status for station 7003.
---   status <- runWithAppDebug dbnameTest $ withPostgres $ runSelectReturningList $  select $ do
---     info <- all_ (bikeshareDb ^. bikeshareStationInformation)
---     guard_ (_infoStationId info ==. val_ 7003)
---     status <-  orderBy_ (asc_ . _statusStationId) $ all_ (bikeshareDb ^. bikeshareStationStatus)
---     guard_ (_d_status_infoId status `references_` info &&. _d_status_active status)
---     pure status
-
---   pPrintCompact status
-
---   assertEqual "Station 7003 has one active status" 1 (length status)

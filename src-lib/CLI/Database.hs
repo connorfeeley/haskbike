@@ -112,5 +112,5 @@ handleStationStatus = do
         log D "Inserted station status into database."
   where
     report = log I . ("Status updated: " <>) . Text.pack . show .
-      (\inserted -> length (inserted ^. insert_inserted) + length (inserted ^. insert_deactivated))
+      (\inserted -> length inserted + length inserted)
     rightToMaybe = either (const Nothing) Just

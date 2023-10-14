@@ -22,14 +22,8 @@
 module Database.BikeShare.Operations
      ( module Database.BikeShare.Operations.Dockings
      , FilterStatusResult (..)
-     , InsertStatusResult (..)
-     , filter_newer
-     , filter_unchanged
-     , getRowsToDeactivate
      , insertStationInformation
      , insertStationStatus
-     , insert_deactivated
-     , insert_inserted
      , printDisabledDocks
      , queryAllStationsStatusBeforeTime
      , queryDisabledDocks
@@ -44,11 +38,8 @@ module Database.BikeShare.Operations
      , queryStationStatusFields
      , queryStationStatusLatest
      , queryTableSize
-     , separateNewerStatusRecords
      ) where
 
-import           API.Types                                ( _status_last_reported, _status_station_id,
-                                                            status_station_id )
 import qualified API.Types                                as AT
 
 import           AppEnv
@@ -59,20 +50,16 @@ import           Control.Lens                             hiding ( reuse, (<.) )
 import           Control.Monad.Catch
 
 import           Data.Int                                 ( Int32 )
-import qualified Data.Map                                 as Map
 import           Data.Maybe                               ( mapMaybe )
 import qualified Data.Text                                as Text
 
 import           Database.Beam
 import           Database.Beam.Backend.SQL.BeamExtensions
 import           Database.Beam.Postgres
-import qualified Database.Beam.Postgres                   as Pg
 import           Database.BikeShare
 import           Database.BikeShare.Expressions
 import           Database.BikeShare.Operations.Dockings
 import           Database.PostgreSQL.Simple               ( Only (..), query_ )
-
-import           Fmt
 
 import           Formatting
 
@@ -87,20 +74,6 @@ data FilterStatusResult where
                         } -> FilterStatusResult
   deriving (Show)
 makeLenses ''FilterStatusResult
-
-{- | Data type representing the result of inserting updated station statuses.
-
-When inserting to an empty database, all statuses are inserted.
-When inserting to a non-empty database with the full 'AT.StationStatusResponse' data,
-'_insert_deactivated' and '_insert_inserted' will be the same length.
--}
-data InsertStatusResult where
-  -- FIXME: no longer deactivating status records, so '_insert_deactivated' should be deleted.
-  InsertStatusResult :: { _insert_deactivated  :: [StationStatus] -- ^ List of 'StationStatus' that were updated.
-                        , _insert_inserted     :: [StationStatus] -- ^ List of station statuses that were inserted.
-                        } -> InsertStatusResult
-  deriving (Show)
-makeLenses ''InsertStatusResult
 
 -- | Query database for disabled docks, returning tuples of (name, num_docks_disabled).
 queryDisabledDocks :: App [(Text.Text, Int32)] -- ^ List of tuples of (name, num_docks_disabled).
@@ -153,73 +126,13 @@ insertStationInformation :: [AT.StationInformation]  -- ^ List of 'StationInform
 insertStationInformation stations =
   withPostgres $ runInsertReturningList $ insertStationInformationExpr stations
 
--- | Find the corresponding active rows in the database corresponding to each element of a list of *newer* 'AT.StationStatus' records.
-getRowsToDeactivate :: [AT.StationStatus]  -- ^ List of 'AT.StationStatus' from the API response.
-                    -> App [StationStatus] -- ^ List of 'StationStatus' rows that would need to be deactivated, if the statuses from the API were inserted.
-getRowsToDeactivate api_status
-  | null api_status = return []
-  | otherwise = do
-    -- Select using common table expressions (selectWith).
-    withPostgres $ runSelectReturningList $ selectWith $ do
-      -- Common table expression for 'StationStatus'.
-      common_status <- selecting $ do
-        info <- infoByIdExpr (map (fromIntegral . _status_station_id) api_status)
-        status <- orderBy_ (asc_ . _unInformationStationId . _statusStationId)
-                  (all_ (bikeshareDb ^. bikeshareStationStatus))
-        guard_ (_statusStationId status `references_` info)
-        pure status
-
-      -- Select from station status.
-      pure $ do
-        -- Transform each 'AT.StationStatus' into corresponding rows, containing '_status_station_id' and '_status_last_reported'.
-        api_values <- values_ $ map (\s -> ( as_ @Int32 ( fromIntegral $ _status_station_id s)
-                                           , cast_ (val_ $ _status_last_reported s) (maybeType reportTimeType))
-                                    ) api_status
-        -- Select from station status where the last reported time is older than in the API response.
-        status <- Database.Beam.reuse common_status
-        guard_ (_statusStationId    status ==. StationInformationId (fst api_values) &&. -- Station ID
-                just_ (_statusLastReported status) <.  snd api_values)    -- Last reported time is older than in the API response
-        pure status
-
 {- |
-Separate API 'AT.StationStatus' into two lists:
-- one containing statuses that are newer than in the database statuses
-- one containing statuses that are the same as in the database statuses
--}
-separateNewerStatusRecords :: [AT.StationStatus] -- ^ List of 'AT.StationStatus' from the API response.
-                           -> App FilterStatusResult
-separateNewerStatusRecords api_status = do
-  -- Find rows that would need to be deactivated if the statuses from the API were inserted.
-  statuses_would_deactivate <- getRowsToDeactivate api_status
-
-  -- Map of all API statuses, keyed on station ID.
-  let api_status_map                = Map.fromList $ map (\ss -> (               ss ^. status_station_id,   ss)) api_status
-
-  -- Map of rows that would be deactivated, keyed on station ID.
-  let statuses_would_deactivate_map = Map.fromList $
-        map (\ss ->
-               (fromIntegral $ _unInformationStationId $ _statusStationId ss, ss)
-            ) statuses_would_deactivate
-
-  -- Map of intersection of both maps (station ID key appears in both Maps).
-  let api_status_newer    = Map.intersection api_status_map statuses_would_deactivate_map
-  -- Map of difference of both maps (station ID key appears in API map but not in the statuses to deactivate Map).
-  let api_status_unchanged = Map.difference  api_status_map statuses_would_deactivate_map
-
-  pure $ FilterStatusResult { _filter_newer     = map snd $ Map.toAscList api_status_newer
-                            , _filter_unchanged = map snd $ Map.toAscList api_status_unchanged
-                            }
-
-
-{- |
-Insert updated station status into the database.
+Insert station statuses into the database.
 -}
 insertStationStatus :: [AT.StationStatus] -- ^ List of 'AT.StationStatus' from the API response.
-                    -> App InsertStatusResult
+                    -> App [StationStatus]
 insertStationStatus apiStatus
-  | null apiStatus = do
-      log W "API status empty when trying to insert into DB."
-      pure $ InsertStatusResult [] []
+  | null apiStatus = pure []
   | otherwise = do
       result <- try $ withPostgres $ runInsertReturningList $
           insertOnConflict (bikeshareDb ^. bikeshareStationStatus)
@@ -227,8 +140,8 @@ insertStationStatus apiStatus
          ) anyConflict onConflictDoNothing
 
       case result of
-        Left (e :: SqlError) -> logException e >> pure (InsertStatusResult [] [])
-        Right inserted       -> pure (InsertStatusResult [] inserted)
+        Left (e :: SqlError) -> logException e >> pure []
+        Right inserted       -> pure inserted
 
 {- |
 Query the statuses for a station between two times.
