@@ -22,48 +22,45 @@ initialSetup :: Migration Postgres
   (CheckedDatabaseSettings Postgres BikeshareDb)
 initialSetup = BikeshareDb
   <$> (createTable "station_information" $ StationInformation
-        { _info_id                     = field "id"                     PG.serial notNull unique
-        , _info_station_id             = field "station_id"             int notNull unique
-        , _info_name                   = field "name"                   (varchar (Just 100)) notNull
-        , _info_physical_configuration = field "physical_configuration" physicalConfiguration
-        , _info_lat                    = field "lat"                    double notNull
-        , _info_lon                    = field "lon"                    double notNull
-        , _info_altitude               = field "altitude"               (maybeType double)
-        , _info_address                = field "address"                (varchar (Just 100)) notNull
-        , _info_capacity               = field "capacity"               int notNull
-        , _info_is_charging_station    = field "is_charging_station"    boolean notNull
-        , _info_rental_methods         = field "rental_methods"         (unboundedArray rentalMethod)
-        , _info_is_valet_station       = field "is_valet_station"       boolean notNull
-        , _info_is_virtual_station     = field "is_virtual_station"     boolean notNull
-        , _info_groups                 = field "groups"                 (unboundedArray (varchar (Just 100)))
-        , _info_obcn                   = field "obcn"                   (varchar (Just 100)) notNull
-        , _info_nearby_distance        = field "nearby_distance"        double notNull
-        , _info_bluetooth_id           = field "bluetooth_id"           (varchar (Just 100)) notNull
-        , _info_ride_code_support      = field "ride_code_support"      boolean notNull
-        , _info_rental_uris            = field "rental_uris"            (unboundedArray (varchar (Just 100)))
-        , _info_active                 = field "active"                 boolean notNull
+        { _infoId                    = field "id"                     PG.serial notNull unique
+        , _infoStationId             = field "station_id"             int notNull unique
+        , _infoName                  = field "name"                   (varchar (Just 100)) notNull
+        , _infoPhysicalConfiguration = field "physical_configuration" physicalConfiguration
+        , _infoLat                   = field "lat"                    double notNull
+        , _infoLon                   = field "lon"                    double notNull
+        , _infoAltitude              = field "altitude"               (maybeType double)
+        , _infoAddress               = field "address"                (varchar (Just 100)) notNull
+        , _infoCapacity              = field "capacity"               int notNull
+        , _infoIsChargingStation     = field "is_charging_station"    boolean notNull
+        , _infoRentalMethods         = field "rental_methods"         (unboundedArray rentalMethod)
+        , _infoIsValetStation        = field "is_valet_station"       boolean notNull
+        , _infoIsVirtualStation      = field "is_virtual_station"     boolean notNull
+        , _infoGroups                = field "groups"                 (unboundedArray (varchar (Just 100)))
+        , _infoObcn                  = field "obcn"                   (varchar (Just 100)) notNull
+        , _infoNearbyDistance        = field "nearby_distance"        double notNull
+        , _infoBluetoothId           = field "bluetooth_id"           (varchar (Just 100)) notNull
+        , _infoRideCodeSupport       = field "ride_code_support"      boolean notNull
+        , _infoRentalUris            = field "rental_uris"            (unboundedArray (varchar (Just 100)))
+        , _infoActive                = field "active"                 boolean notNull
         })
   <*> (createTable "station_status" $ StationStatus
-        { _d_status_id                      = field "id"                      PG.serial notNull unique
-        , _d_status_info_id                 = StationInformationId $ field "info_id" int notNull referenceInformationTable
-        , _d_status_station_id              = field "station_id" int notNull
-        , _d_status_num_bikes_available     = field "num_bikes_available"     int notNull
-        , _d_status_num_bikes_disabled      = field "num_bikes_disabled"      int notNull
-        , _d_status_num_docks_available     = field "num_docks_available"     int notNull
-        , _d_status_num_docks_disabled      = field "num_docks_disabled"      int notNull
-        , _d_status_last_reported           = field "last_reported"           (maybeType reportTimeType)
-        , _d_status_is_charging_station     = field "is_charging_station"     boolean notNull
-        , _d_status_status                  = field "status"                  stationStatusType
-        , _d_status_is_installed            = field "is_installed"            boolean notNull
-        , _d_status_is_renting              = field "is_renting"              boolean notNull
-        , _d_status_is_returning            = field "is_returning"            boolean notNull
-        , _d_status_traffic                 = field "traffic"                 (maybeType (varchar (Just 100)))
-        , _d_status_vehicle_docks_available = field "vehicle_docks_available" int notNull
-        , _d_status_vehicle_types_available = VehicleType (field "vehicle_types_available_boost"   int)
-                                                          (field "vehicle_types_available_iconic"  int)
-                                                          (field "vehicle_types_available_efit"    int)
-                                                          (field "vehicle_types_available_efit_g5" int)
-        , _d_status_active                  = field "active"                  boolean notNull
+        { _statusStationId             = StationInformationId $ field "station_id" int notNull referenceInformationTable
+        , _statusLastReported          = field "last_reported"           reportTimeType
+        , _statusNumBikesAvailable     = field "num_bikes_available"     int notNull
+        , _statusNumBikesDisabled      = field "num_bikes_disabled"      int notNull
+        , _statusNumDocksAvailable     = field "num_docks_available"     int notNull
+        , _statusNumDocksDisabled      = field "num_docks_disabled"      int notNull
+        , _statusIsChargingStation     = field "is_charging_station"     boolean notNull
+        , _statusStatus                = field "status"                  stationStatusType
+        , _statusIsInstalled           = field "is_installed"            boolean notNull
+        , _statusIsRenting             = field "is_renting"              boolean notNull
+        , _statusIsReturning           = field "is_returning"            boolean notNull
+        , _statusTraffic               = field "traffic"                 (maybeType (varchar (Just 100)))
+        , _statusVehicleDocksAvailable = field "vehicle_docks_available" int notNull
+        , _statusVehicleTypesAvailable = VehicleType (field "vehicle_types_available_boost"   int)
+                                                     (field "vehicle_types_available_iconic"  int)
+                                                     (field "vehicle_types_available_efit"    int)
+                                                     (field "vehicle_types_available_efit_g5" int)
         })
 
 initialSetupStep :: MigrationSteps Postgres

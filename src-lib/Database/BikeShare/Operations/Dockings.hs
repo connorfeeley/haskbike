@@ -3,6 +3,7 @@
 {-# LANGUAGE OverloadedStrings         #-}
 {-# LANGUAGE PartialTypeSignatures     #-}
 {-# LANGUAGE Rank2Types                #-}
+{-# LANGUAGE TemplateHaskell           #-}
 
 -- Signatures of beam-related functions are incredibly verbose, so let's settle for partial type signatures.
 -- Sometimes it is straight up impossible to write the types down because of ambiguous types.
@@ -14,12 +15,23 @@
 module Database.BikeShare.Operations.Dockings
      ( AvailabilityCountVariation (..)
      , DockingEventsCount (..)
+     , EventsCountResult (..)
      , StatusThreshold (..)
      , StatusVariationQuery (..)
+       -- Lenses
+     , eventsBoostCount
+     , eventsCountBikeType
+     , eventsCountDockings
+     , eventsCountUndockings
+     , eventsEfitCount
+     , eventsEfitG5Count
+     , eventsIconicCount
+     , eventsStation
+     , eventsVariation
      , queryDockingEventsCount
      ) where
 
-import qualified API.Types              as AT
+import           API.Types              ( TorontoVehicleType (..) )
 
 import           AppEnv
 
@@ -35,8 +47,6 @@ import           Database.BikeShare
 -- | Data type representing a query for station status dockings or undockings.
 data StatusVariationQuery where
   StatusVariationQuery :: { _status_query_station_id    :: Maybe Int32
-                          , _status_query_variation     :: AvailabilityCountVariation
-                          , _status_query_bike_type     :: AT.TorontoVehicleType
                           , _status_query_thresholds    :: [StatusThreshold]
                           } -> StatusVariationQuery
   deriving (Generic, Show, Eq)
@@ -44,8 +54,6 @@ data StatusVariationQuery where
 
 -- | Varient representing the type of threshold to apply to the query.
 data StatusThreshold where
-  OldestID      :: Int32        -> StatusThreshold
-  NewestID      :: Int32        -> StatusThreshold
   EarliestTime  :: ReportTime   -> StatusThreshold
   LatestTime    :: ReportTime   -> StatusThreshold
   deriving (Show, Eq)
@@ -53,26 +61,19 @@ data StatusThreshold where
 
 -- | Convert a 'StatusQuery' to a fragment of a filter expression.
 thresholdCondition :: StatusThreshold -> StationStatusT (QExpr Postgres s) -> QExpr Postgres s Bool
-thresholdCondition (OldestID id_threshold) status =
-  status ^. d_status_id >=. val_ (fromIntegral id_threshold)
-thresholdCondition (NewestID id_threshold) status =
-  status ^. d_status_id <=. val_ (fromIntegral id_threshold)
-thresholdCondition (EarliestTime time_threshold) status =
-  status ^. d_status_last_reported >=. val_ (Just time_threshold)
-thresholdCondition (LatestTime time_threshold) status =
-  status ^. d_status_last_reported <=. val_ (Just time_threshold)
+thresholdCondition (EarliestTime threshold) status = status ^. statusLastReported >=. val_ threshold
+thresholdCondition (LatestTime threshold) status   = status ^. statusLastReported <=. val_ threshold
 
 
 -- | Construct a filter expression corresponding to the station ID.
 stationIdCondition :: Maybe Int32 -> StationStatusT (QExpr Postgres s) -> QExpr Postgres s Bool
-stationIdCondition (Just stationId) status =
-  status ^. d_status_info_id ==. val_ stationId
-stationIdCondition Nothing _ = val_ True
+stationIdCondition (Just stationId) status = _statusStationId status ==. val_ (StationInformationId stationId)
+stationIdCondition Nothing _               = val_ True
 
 
 -- | Construct a filter expression for a 'StatusQuery'.
 filterFor_ :: StatusVariationQuery -> StationStatusT (QExpr Postgres s) -> QExpr Postgres s Bool
-filterFor_ (StatusVariationQuery stationId _ _ thresholds) status =
+filterFor_ (StatusVariationQuery stationId thresholds) status =
   let thresholdConditions = map (`thresholdCondition` status) thresholds
   in foldr (&&.) (stationIdCondition stationId status) thresholdConditions
 
@@ -86,63 +87,102 @@ data AvailabilityCountVariation where
 
 -- | Wrapper for a station and its undocking and docking counts.
 data DockingEventsCount where
-  DockingEventsCount :: { station     :: StationInformation
-                        , variation   :: StatusVariationQuery
-                        , undockings  :: Int
-                        , dockings    :: Int
+  DockingEventsCount :: { _eventsStation     :: StationInformation
+                        , _eventsVariation   :: StatusVariationQuery
+                        , _eventsBoostCount  :: EventsCountResult
+                        , _eventsIconicCount :: EventsCountResult
+                        , _eventsEfitCount   :: EventsCountResult
+                        , _eventsEfitG5Count :: EventsCountResult
                         } -> DockingEventsCount
   deriving (Generic, Show, Eq)
 
 
+-- | Wrapper for the undocking and docking counts for a bike type.
+data EventsCountResult =
+  EventsCountResult { _eventsCountBikeType   :: TorontoVehicleType
+                    , _eventsCountUndockings :: Int
+                    , _eventsCountDockings   :: Int
+                    }
+  deriving (Generic, Show, Eq)
+
+
+-- | Lenses
+makeLenses ''DockingEventsCount
+makeLenses ''EventsCountResult
+
+
+-- | Query the number of dockings and undockings for a station.
 queryDockingEventsCount :: StatusVariationQuery -> App [DockingEventsCount]
 queryDockingEventsCount variation =  do
   counts <- queryDockingEventsCountExpr variation
-  pure $ map (\(station, (undockings, dockings))
-              -> DockingEventsCount station variation (fromIntegral undockings) (fromIntegral dockings)
+  pure $ map (\( station
+               , (boostUndockingsCount, boostDockingsCount)
+               , (iconicUndockingsCount, iconicDockingsCount)
+               , (efitUndockingsCount,   efitDockingsCount)
+               , (efitG5UndockingsCount, efitG5DockingsCount)
+               )
+              -> DockingEventsCount station variation
+                        (EventsCountResult Boost  (fromIntegral  boostUndockingsCount) (fromIntegral  boostDockingsCount))
+                        (EventsCountResult Iconic (fromIntegral iconicUndockingsCount) (fromIntegral iconicDockingsCount))
+                        (EventsCountResult EFit   (fromIntegral   efitUndockingsCount) (fromIntegral   efitDockingsCount))
+                        (EventsCountResult EFitG5 (fromIntegral efitG5UndockingsCount) (fromIntegral efitG5DockingsCount))
              ) counts
 
 
-queryDockingEventsCountExpr :: StatusVariationQuery -> App [(StationInformation, (Int32, Int32))]
-queryDockingEventsCountExpr variation@(StatusVariationQuery _ _ bikeType _) =
-  let bikeType' = case bikeType of
-        AT.Iconic -> vehicle_types_available_iconic
-        AT.Boost  -> vehicle_types_available_boost
-        AT.EFit   -> vehicle_types_available_efit
-        AT.EFitG5 -> vehicle_types_available_efit_g5
-  in withPostgres $ runSelectReturningList $ selectWith $ do
+-- | Query the number of dockings and undockings for a station (returning tuples of each count for each bike type).
+queryDockingEventsCountExpr :: StatusVariationQuery -> App [(StationInformation, (Int32, Int32), (Int32, Int32), (Int32, Int32), (Int32, Int32))]
+queryDockingEventsCountExpr variation =
+  withPostgres $ runSelectReturningList $ selectWith $ do
   cte <- selecting $ do
     let statusForStation = filter_ (filterFor_ variation)
                                    (all_ (bikeshareDb ^. bikeshareStationStatus))
-      in withWindow_ (\row -> frame_ (partitionBy_ (row ^. d_status_info_id)) (orderPartitionBy_ (asc_ $ row ^. d_status_id)) noBounds_)
-                     (\row w -> (row, lagWithDefault_ (row ^. bikeType') (val_ 1) (row ^. bikeType') `over_` w))
+      in withWindow_ (\row -> frame_ (partitionBy_ (_statusStationId row)) (orderPartitionBy_ (asc_ $ _statusLastReported row)) noBounds_)
+                     (\row w -> ( row
+                                , lagWithDefault_ (row ^. vehicleTypesAvailableBoost ) (val_ 1) (row ^. vehicleTypesAvailableBoost ) `over_` w
+                                , lagWithDefault_ (row ^. vehicleTypesAvailableIconic) (val_ 1) (row ^. vehicleTypesAvailableIconic) `over_` w
+                                , lagWithDefault_ (row ^. vehicleTypesAvailableEfit  ) (val_ 1) (row ^. vehicleTypesAvailableEfit  ) `over_` w
+                                , lagWithDefault_ (row ^. vehicleTypesAvailableEfitG5) (val_ 1) (row ^. vehicleTypesAvailableEfitG5) `over_` w
+                                ))
                      statusForStation
   withDeltas <- selecting $ do
-    -- Delta between current and previous iconic availability.
-    withWindow_ (\(row, _prev) -> frame_ (partitionBy_ (row ^. d_status_info_id)) noOrder_ noBounds_)
-                (\(row, prev) _w -> (row, row ^. bikeType' - prev))
+    -- Calculate delta between current and previous availability.
+    withWindow_ (\(row, _, _, _, _) -> frame_ (partitionBy_ (_statusStationId row)) noOrder_ noBounds_)
+                (\(row, pBoost, pIconic, pEFit, pEFitG5) _w -> ( row
+                                                               , row ^. vehicleTypesAvailableBoost  - pBoost
+                                                               , row ^. vehicleTypesAvailableIconic - pIconic
+                                                               , row ^. vehicleTypesAvailableEfit   - pEFit
+                                                               , row ^. vehicleTypesAvailableEfitG5 - pEFitG5
+                                                               ))
                 (reuse cte)
 
-  dockings <- selecting $ do
-    let increased = filter_ (\(_s, delta) -> delta >=. 0)
-                    (reuse withDeltas)
-
-        agg = aggregate_ (\(status, delta) -> (group_ (status ^. d_status_info_id), fromMaybe_ 0 $ sum_ delta))
-                         increased
-      in orderBy_ (\(sId, _sum) -> asc_ sId) agg
-  undockings <- selecting $ do
-    let decreased = filter_ (\(_s, delta) -> delta <=. 0)
-                    (reuse withDeltas)
-
-        agg = aggregate_ (\(status, delta) -> (group_ (status ^. d_status_info_id), fromMaybe_ 0 $ sum_ delta))
-                         decreased
-      in orderBy_ (\(sId, _sum) -> asc_ sId) agg
+  dockings   <- selecting $ sumDeltasAggregate_ (>.) (reuse withDeltas)
+  undockings <- selecting $ sumDeltasAggregate_ (<.) (reuse withDeltas)
 
   pure $ do
-    dockings' <- reuse dockings
+    -- Join the station information with the dockings and undockings.
+    dockings'   <- reuse dockings
     undockings' <- reuse undockings
-    -- NOTE: Required, or else result is massive.
-    stationInfo <- filter_ (\i -> i ^. info_station_id ==. dockings' ^. _1 &&. (i ^. info_station_id ==. undockings' ^. _1))
-                   (all_ (bikeshareDb ^. bikeshareStationInformation))
-    let dockingsCount   = dockings' ^. _2
-    let undockingsCount = undockings' ^. _2
-    pure (stationInfo, (undockingsCount, dockingsCount))
+
+    stationInfo <- all_ (bikeshareDb ^. bikeshareStationInformation)
+    -- NOTE: Required, otherwise result is massive.
+    guard_ ( (dockings'   ^. _1) `references_` stationInfo  &&.
+             (undockings' ^. _1) `references_` stationInfo
+           )
+
+    -- Return tuples of station information and the dockings and undockings.
+    pure ( stationInfo
+         , (undockings' ^. _2, dockings' ^. _2) -- Boost
+         , (undockings' ^. _3, dockings' ^. _3) -- Iconic
+         , (undockings' ^. _4, dockings' ^. _4) -- E-Fit
+         , (undockings' ^. _5, dockings' ^. _5) -- E-Fit G5
+         )
+  where
+    -- Aggregate expression for unidirectionally summing deltas (only where delta is positive, or only where delta is negative).
+    sumDeltasAggregate_ binOp =
+      aggregate_ (\(status, dBoost, dIconic, dEFit, dEFitG5) ->
+                     ( group_ (_statusStationId status)
+                     , fromMaybe_ 0 $ sum_ dBoost  `filterWhere_` (dBoost  `binOp` 0)
+                     , fromMaybe_ 0 $ sum_ dIconic `filterWhere_` (dIconic `binOp` 0)
+                     , fromMaybe_ 0 $ sum_ dEFit   `filterWhere_` (dEFit   `binOp` 0)
+                     , fromMaybe_ 0 $ sum_ dEFitG5 `filterWhere_` (dEFitG5 `binOp` 0)
+                     ))

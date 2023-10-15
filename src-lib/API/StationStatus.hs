@@ -11,20 +11,20 @@ module API.StationStatus
      , TorontoVehicleType (..)
      , VehicleDock (..)
      , VehicleType (..)
-     , status_is_charging_station
-     , status_is_installed
-     , status_is_renting
-     , status_is_returning
-     , status_last_reported
-     , status_num_bikes_available
-     , status_num_bikes_disabled
-     , status_num_docks_available
-     , status_num_docks_disabled
-     , status_station_id
-     , status_status
-     , status_traffic
-     , status_vehicle_docks_available
-     , status_vehicle_types_available
+     , statusIsChargingStation
+     , statusIsInstalled
+     , statusIsRenting
+     , statusIsReturning
+     , statusLastReported
+     , statusNumBikesAvailable
+     , statusNumBikesDisabled
+     , statusNumDocksAvailable
+     , statusNumDocksDisabled
+     , statusStationId
+     , statusStatus
+     , statusTraffic
+     , statusVehicleDocksAvailable
+     , statusVehicleTypesAvailable
      , unStatusStations
      ) where
 
@@ -76,39 +76,39 @@ instance FromJSON StationStatusString where
 
 -- | Type representing a BikeShare station's status.
 data StationStatus where
-  StationStatus :: { _status_station_id                  :: Int
-                   , _status_num_bikes_available         :: Int
-                   , _status_num_bikes_disabled          :: Int
-                   , _status_num_docks_available         :: Int
-                   , _status_num_docks_disabled          :: Int
-                   , _status_last_reported               :: Maybe LocalTime -- In UTC time
-                   , _status_is_charging_station         :: Bool
-                   , _status_status                      :: StationStatusString
-                   , _status_is_installed                :: Bool
-                   , _status_is_renting                  :: Bool
-                   , _status_is_returning                :: Bool
-                   , _status_traffic                     :: Maybe String -- PBSC doesn't seem to set this field
-                   , _status_vehicle_docks_available     :: [VehicleDock]
-                   , _status_vehicle_types_available     :: [VehicleType]
+  StationStatus :: { _statusStationId             :: Int
+                   , _statusNumBikesAvailable     :: Int
+                   , _statusNumBikesDisabled      :: Int
+                   , _statusNumDocksAvailable     :: Int
+                   , _statusNumDocksDisabled      :: Int
+                   , _statusLastReported          :: Maybe LocalTime -- In UTC time
+                   , _statusIsChargingStation     :: Bool
+                   , _statusStatus                :: StationStatusString
+                   , _statusIsInstalled           :: Bool
+                   , _statusIsRenting             :: Bool
+                   , _statusIsReturning           :: Bool
+                   , _statusTraffic               :: Maybe String -- PBSC doesn't seem to set this field
+                   , _statusVehicleDocksAvailable :: [VehicleDock]
+                   , _statusVehicleTypesAvailable :: [VehicleType]
                    } -> StationStatus
   deriving (Show, Generic, Eq, Ord)
 
 instance ToJSON StationStatus where
   toJSON station =
-    object [ "station_id"               .=  show (_status_station_id                 station)
-           , "num_bikes_available"      .= _status_num_bikes_available               station
-           , "num_bikes_disabled"       .= _status_num_bikes_disabled                station
-           , "num_docks_available"      .= _status_num_docks_available               station
-           , "num_docks_disabled"       .= _status_num_docks_disabled                station
-           , "last_reported"            .=  fmap localToPosix (_status_last_reported station)
-           , "is_charging_station"      .= _status_is_charging_station               station
-           , "status"                   .= _status_status                            station
-           , "is_installed"             .= _status_is_installed                      station
-           , "is_renting"               .= _status_is_renting                        station
-           , "is_returning"             .= _status_is_returning                      station
-           , "traffic"                  .= _status_traffic                           station
-           , "vehicle_docks_available"  .= _status_vehicle_docks_available           station
-           , "vehicle_types_available"  .= _status_vehicle_types_available           station
+    object [ "station_id"               .=  show (_statusStationId                 station)
+           , "num_bikes_available"      .= _statusNumBikesAvailable               station
+           , "num_bikes_disabled"       .= _statusNumBikesDisabled                station
+           , "num_docks_available"      .= _statusNumDocksAvailable               station
+           , "num_docks_disabled"       .= _statusNumDocksDisabled                station
+           , "last_reported"            .=  fmap localToPosix (_statusLastReported station)
+           , "is_charging_station"      .= _statusIsChargingStation               station
+           , "status"                   .= _statusStatus                            station
+           , "is_installed"             .= _statusIsInstalled                      station
+           , "is_renting"               .= _statusIsRenting                        station
+           , "is_returning"             .= _statusIsReturning                      station
+           , "traffic"                  .= _statusTraffic                           station
+           , "vehicle_docks_available"  .= _statusVehicleDocksAvailable           station
+           , "vehicle_types_available"  .= _statusVehicleTypesAvailable           station
            ]
 instance FromJSON StationStatus where
   parseJSON = withObject "StationStatus" $ \v -> StationStatus

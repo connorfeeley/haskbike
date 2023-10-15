@@ -71,7 +71,7 @@ connectTestDb = mkDbParams dbnameTest >>= uncurry5 connectDbName
 
 -- | Establish a connection to the named database, using values from the HASKBIKE_{PGDBHOST,USERNAME,PASSWORD} environment variables.
 connectDbName :: String -> String -> String -> String -> String -> IO Connection
-connectDbName name host port username password= do
+connectDbName name host port username password = do
   connectPostgreSQL $ fromString $
     host ++ " " ++
     port ++ " " ++

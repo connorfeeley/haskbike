@@ -9,7 +9,6 @@ module CLI.Events
 
 
 import           API.Types                     ( TorontoVehicleType (..) )
-import qualified API.Types                     as AT
 
 import           AppEnv
 
@@ -19,7 +18,6 @@ import           CLI.QueryFormat
 import           Colog
 
 import           Control.Lens                  hiding ( para )
-import           Control.Monad                 ( when )
 
 import qualified Data.Char                     as Char
 import           Data.Int                      ( Int32 )
@@ -48,8 +46,7 @@ import qualified Text.PrettyPrint.Boxes        as Box
 import           UnliftIO
 
 -- | Dispatch CLI arguments for debugging.
-dispatchEvents :: EventSubcommand
-               -> App ()
+dispatchEvents :: EventSubcommand -> App ()
 dispatchEvents (EventRange options)  = do
   log I $ format "Getting counts of each bike time every two hours between {} and {}." firstDay lastDay
   log D $ format "Options: {}" (pShowCompact options)
@@ -70,32 +67,25 @@ dispatchEvents (EventCounts options) = do
   let yesterday = previousDay today
 
   -- 'eventsForRange' parameters:
-  let stationId :: Maybe Int = Nothing -- Get event counts for all stations.
-  let bikeType = Iconic
-  let eventType = Docking
+  let stationId = optEventsCountStationId options
   let startDay' = fromMaybe yesterday startDay
   let endDay' = fromMaybe today endDay
 
   -- Get undocking/docking counts.
-  log I $ format "Calculating number of {} {}s for (optional) station {} (limit: {})." (showLower bikeType) (showLower eventType) (maybeF stationId) (optEventsCountLimit options)
-  eventSums <- eventsForRange stationId bikeType eventType startDay' startTime endDay' endTime
+  log I $ format "Calculating number of event counts for (optional) station {} (limit: {})." (maybeF stationId) (optEventsCountLimit options)
+  eventSums <- eventsForRange stationId startDay' startTime endDay' endTime
 
+  let sortOrder = Docking
   liftIO $ do
-    when (length eventSums < 10) (putStrLn $ format "{} counts: {}" (show eventType) (length eventSums))
+    putStrLn $ format "\nSorted by differentials ({}):" (sortedMessage sortOrder)
+    formatDockingEventsDifferential $ takeMaybe limit $ sortOnVariation sortOrder (sortedEventsBoth eventSums)
 
-    formatDockingEventsCount $ takeMaybe limit $ sortDockingEventsCount eventType eventSums
-
-    putStrLn $ format "\nSorted by differentials ({}):" (sortedMessage eventType)
-    formatDockingEventsDifferential $ takeMaybe limit $ sortOnVariation eventType (sortedEventsBoth eventSums)
+    putStrLn ""
+    formatDockingEventsCount $ takeMaybe limit $ sortDockingEventsCount sortOrder (sortOnVariationTotal Undocking eventSums)
   where
     sortedMessage :: AvailabilityCountVariation -> String
     sortedMessage Docking   = format "{} >> {}" (showLower Docking) (showLower Undocking)
     sortedMessage Undocking = format "{} >> {}" (showLower Undocking) (showLower Docking)
-
-    sortOnVariation :: AvailabilityCountVariation -> [(StationInformation, Int)] -> [(StationInformation, Int)]
-    sortOnVariation eventType = case eventType of
-      Docking   -> sortOn (Down . view _2)
-      Undocking -> sortOn (view _2)
 
     limit :: Maybe Int
     limit = optEventsCountLimit options
@@ -109,13 +99,32 @@ dispatchEvents (EventCounts options) = do
     endTime   = fromMaybe (TimeOfDay 00 00 00) (optEventsCountEndTime options)
 
 
+sortOnVariation :: AvailabilityCountVariation -> [(StationInformation, Int)] -> [(StationInformation, Int)]
+sortOnVariation eventType = case eventType of
+  Docking   -> sortOn (Down . view _2)
+  Undocking -> sortOn (view _2)
+
+-- | Sort a list of 'DockingEventsCount' by either the sum of 'Docking' or 'Undocking' events (across all bike types).
+sortOnVariationTotal :: AvailabilityCountVariation -> [DockingEventsCount] -> [DockingEventsCount]
+sortOnVariationTotal eventType events = case eventType of
+  Docking   -> sortOn (\ev -> (  ev ^. eventsBoostCount  . eventsCountDockings)
+                              + (ev ^. eventsIconicCount . eventsCountDockings)
+                              + (ev ^. eventsEfitCount   . eventsCountDockings)
+                              + (ev ^. eventsEfitG5Count . eventsCountDockings)
+                      ) events
+  Undocking -> sortOn (\ev -> (  ev ^. eventsBoostCount  . eventsCountUndockings)
+                              + (ev ^. eventsIconicCount . eventsCountUndockings)
+                              + (ev ^. eventsEfitCount   . eventsCountUndockings)
+                              + (ev ^. eventsEfitG5Count . eventsCountUndockings)
+                      ) events
+
 -- | Show with lowercase output.
 showLower :: (Show a) => a -> String
 showLower = map Char.toLower . show
 
 -- | Add the undockings and dockings for each station together, and sort the resulting list.
 sortedEventsBoth :: [DockingEventsCount] -> [(StationInformation, Int)]
-sortedEventsBoth = map (\counts -> (station counts, undockings counts + dockings counts))
+sortedEventsBoth = map (\counts -> (counts ^. eventsStation , (counts ^. eventsIconicCount . eventsCountUndockings ) + (counts ^. eventsIconicCount . eventsCountDockings)))
 
 -- | Given a 'Day', get the previous 'Day'.
 previousDay :: Day -> Day
@@ -148,10 +157,10 @@ dayTimes = [(addDays n refDay, TimeOfDay h 0 0) | n <- [0..3], h <- [0,2..22]]
 
 
 totalBoost, totalIconic, totalEbikeEfit, totalEbikeEfitG5 :: Num (Columnar f Int32) => [StationStatusT f] -> Columnar f Int32
-totalBoost bikeCount            = sum $ map (^. vehicle_types_available_boost)   bikeCount
-totalIconic bikeCount           = sum $ map (^. vehicle_types_available_iconic)  bikeCount
-totalEbikeEfit bikeCount        = sum $ map (^. vehicle_types_available_efit)    bikeCount
-totalEbikeEfitG5 bikeCount      = sum $ map (^. vehicle_types_available_efit_g5) bikeCount
+totalBoost bikeCount            = sum $ map (^. vehicleTypesAvailableBoost)   bikeCount
+totalIconic bikeCount           = sum $ map (^. vehicleTypesAvailableIconic)  bikeCount
+totalEbikeEfit bikeCount        = sum $ map (^. vehicleTypesAvailableEfit)    bikeCount
+totalEbikeEfitG5 bikeCount      = sum $ map (^. vehicleTypesAvailableEfitG5) bikeCount
 
 formatBikeCounts :: [(Day, TimeOfDay, Int32, Int32, Int32, Int32)] -> IO ()
 formatBikeCounts allCounts = Box.printBox table
@@ -171,24 +180,21 @@ formatBikeCounts allCounts = Box.printBox table
 
 
 -- | Get (undockings, dockings) for a day.
-eventsForRange :: Maybe Int -> AT.TorontoVehicleType -> AvailabilityCountVariation -> Day -> TimeOfDay -> Day -> TimeOfDay -> App [DockingEventsCount]
-eventsForRange stationId vehicleType variation earliestDay earliestTime latestDay latestTime = do
+eventsForRange :: Maybe Int -> Day -> TimeOfDay -> Day -> TimeOfDay -> App [DockingEventsCount]
+eventsForRange stationId earliestDay earliestTime latestDay latestTime = do
   -- Calculate number of dockings and undockings
-  log D $ format "Querying {} events." (showLower variation)
-  queryDockingEventsCount (queryCondition variation)
+  queryDockingEventsCount queryCondition
   where
-    queryCondition :: AvailabilityCountVariation -> StatusVariationQuery
-    queryCondition variation' =
+    queryCondition :: StatusVariationQuery
+    queryCondition =
       StatusVariationQuery
       (fromIntegral <$> stationId)
-      variation'
-      vehicleType
       [ EarliestTime (reportTime earliestDay earliestTime) , LatestTime (reportTime latestDay latestTime) ]
 
 -- | Sort docking and undocking events.
 sortDockingEventsCount :: AvailabilityCountVariation -> [DockingEventsCount] -> [DockingEventsCount]
-sortDockingEventsCount Undocking = sortOn undockings
-sortDockingEventsCount Docking   = sortOn (Down . dockings)
+sortDockingEventsCount Undocking = sortOn (_eventsCountUndockings . _eventsIconicCount)
+sortDockingEventsCount Docking   = sortOn (Down . _eventsCountDockings . _eventsIconicCount)
 
 -- | Print docking and undocking events (with index).
 formatDockingEventsCount :: [DockingEventsCount] -> IO ()
@@ -196,20 +202,41 @@ formatDockingEventsCount events = Box.printBox table
   where
     columns = zipWith (\index' counts ->
                          ( index' :: Int
-                         , station counts ^. info_station_id
-                         , station counts ^. info_name
-                         , station counts ^. info_is_charging_station
-                         , undockings counts
-                         , dockings counts
+                         , counts ^. eventsStation . infoStationId
+                         , counts ^. eventsStation . infoName
+                         , counts ^. eventsStation . infoIsChargingStation
+                         -- Total counts
+                         , (counts ^. eventsIconicCount . eventsCountUndockings)
+                           + (counts ^. eventsEfitCount   . eventsCountUndockings )
+                           + (counts ^. eventsEfitG5Count . eventsCountUndockings)
+                         , (counts ^. eventsIconicCount . eventsCountDockings) + (counts ^. eventsEfitCount . eventsCountDockings) + (counts ^. eventsEfitG5Count . eventsCountUndockings)
+                         -- Undocking counts by type
+                         , counts ^. eventsIconicCount . eventsCountUndockings
+                         , counts ^. eventsEfitCount   . eventsCountUndockings
+                         , counts ^. eventsEfitG5Count . eventsCountUndockings
+                         -- Docking counts by type
+                         , counts ^. eventsIconicCount . eventsCountDockings
+                         , counts ^. eventsEfitCount   . eventsCountDockings
+                         , counts ^. eventsEfitG5Count . eventsCountDockings
                          )
                       ) [1..] events
-    table = Box.hsep 1 Box.left [col1, col2, col3, col4, col5, col6]
-    col1 = Box.vcat Box.left (showFn Dull Cyan   "#"          : map (showFn Dull Cyan   . show)        (toListOf (traverse . _1) columns))
-    col2 = Box.vcat Box.left (showFn Dull Green  "ID"         : map (showFn Dull Green  . show)        (toListOf (traverse . _2) columns))
-    col3 = Box.vcat Box.left (showFn Dull White  "Name"       : map (showFn Vivid White . read . show) (toListOf (traverse . _3) columns))
-    col4 = Box.vcat Box.left (showFn Dull Yellow "Charger"    : map showBoolFn                         (toListOf (traverse . _4) columns))
-    col5 = Box.vcat Box.left (showFn Dull Red    "Undockings" : map (showFn Vivid Red   . show)        (toListOf (traverse . _5) columns))
-    col6 = Box.vcat Box.left (showFn Dull Blue   "Dockings"   : map (showFn Vivid Blue  . show)        (toListOf (traverse . _6) columns))
+    table = Box.punctuateH Box.left (Box.text " | ") [col1, col2, col3, col4, col5, col6, col7, col8, col9, col10, col11, col12]
+    -- Station information
+    col1  = Box.vcat Box.left    (showFn Dull  Cyan   "#"          : map (showFn Dull Cyan    . show)        (toListOf (traverse .  _1) columns))
+    col2  = Box.vcat Box.left    (showFn Dull  Green  "ID"         : map (showFn Dull Green   . show)        (toListOf (traverse .  _2) columns))
+    col3  = Box.vcat Box.left    (showFn Dull  White  "Name"       : map (showFn Vivid White  . read . show) (toListOf (traverse .  _3) columns))
+    col4  = Box.vcat Box.left    (showFn Dull  Yellow "Charger"    : map showBoolFn                          (toListOf (traverse .  _4) columns))
+    -- Total counts
+    col5  = Box.vcat Box.center2 (showFn Dull  Red    "Total ↧"    : map (showFn Vivid White  . show)        (toListOf (traverse .  _5) columns))
+    col6  = Box.vcat Box.center2 (showFn Dull  Green  "Total ↥"    : map (showFn Vivid White  . show)        (toListOf (traverse .  _6) columns))
+    -- Undocking counts by type
+    col7  = Box.vcat Box.center2 (showFn Dull  White  "Iconic ↧"   : map (showFn Dull  White  . show)        (toListOf (traverse .  _7) columns))
+    col8  = Box.vcat Box.center2 (showFn Vivid White  "E-Fit ↧"    : map (showFn Vivid White  . show)        (toListOf (traverse .  _8) columns))
+    col9  = Box.vcat Box.center2 (showFn Dull  White  "E-Fit G5 ↧" : map (showFn Dull  White  . show)        (toListOf (traverse .  _9) columns))
+    -- Docking counts by type
+    col10 = Box.vcat Box.center2 (showFn Vivid White  "Iconic ↥"   : map (showFn Vivid White  . show)        (toListOf (traverse . _10) columns))
+    col11 = Box.vcat Box.center2 (showFn Dull  White  "E-Fit ↥"    : map (showFn Dull  White  . show)        (toListOf (traverse . _11) columns))
+    col12 = Box.vcat Box.center2 (showFn Vivid White  "E-Fit G5 ↥" : map (showFn Vivid White  . show)        (toListOf (traverse . _12) columns))
 
     showFn :: ColorIntensity -> Color -> String -> Box.Box
     showFn intensity colour = Box.text . (unpack . colouredText intensity colour . pack)
@@ -224,8 +251,8 @@ formatDockingEventsDifferential events = Box.printBox table
   where
     columns = zipWith (\index' (info, differential) ->
                          ( index' :: Int
-                         , info ^. info_station_id
-                         , info ^. info_name
+                         , info ^. infoStationId
+                         , info ^. infoName
                          , differential
                          )
                       ) [1..] events

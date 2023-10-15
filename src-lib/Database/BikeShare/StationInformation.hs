@@ -3,16 +3,9 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Use camelCase" #-}
 
-{-# LANGUAGE AllowAmbiguousTypes       #-}
 {-# LANGUAGE DeriveAnyClass            #-}
-{-# LANGUAGE DeriveGeneric             #-}
 {-# LANGUAGE DerivingVia               #-}
-{-# LANGUAGE FlexibleContexts          #-}
-{-# LANGUAGE FlexibleInstances         #-}
-{-# LANGUAGE ImpredicativeTypes        #-}
-{-# LANGUAGE MultiParamTypeClasses     #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
-{-# LANGUAGE StandaloneDeriving        #-}
 {-# LANGUAGE TypeFamilies              #-}
 {-# LANGUAGE UndecidableInstances      #-}
 
@@ -20,7 +13,7 @@
 module Database.BikeShare.StationInformation
      ( BeamPhysicalConfiguration (..)
      , BeamRentalMethod (..)
-     , PrimaryKey (StationInformationId)
+     , PrimaryKey (..)
      , StationInformation
      , StationInformationId
      , StationInformationT (..)
@@ -29,26 +22,27 @@ module Database.BikeShare.StationInformation
      , physicalConfiguration
      , rentalMethod
        -- Lenses
-     , info_active
-     , info_address
-     , info_altitude
-     , info_bluetooth_id
-     , info_capacity
-     , info_groups
+     , infoActive
+     , infoAddress
+     , infoAltitude
+     , infoBluetoothId
+     , infoCapacity
+     , infoGroups
+     , infoIsChargingStation
+     , infoIsValetStation
+     , infoIsVirtualStation
+     , infoLat
+     , infoLon
+     , infoName
+     , infoNearbyDistance
+     , infoObcn
+     , infoPhysicalConfiguration
+     , infoRentalMethods
+     , infoRentalUris
+     , infoRideCodeSupport
+     , infoStationId
      , info_id
-     , info_is_charging_station
-     , info_is_valet_station
-     , info_is_virtual_station
-     , info_lat
-     , info_lon
-     , info_name
-     , info_nearby_distance
-     , info_obcn
-     , info_physical_configuration
-     , info_rental_methods
-     , info_rental_uris
-     , info_ride_code_support
-     , info_station_id
+     , unInformationStationId
      ) where
 
 import qualified API.Types                                  as AT
@@ -76,26 +70,26 @@ import           Database.PostgreSQL.Simple.TypeInfo.Static ( text )
 
 -- | Declare a (Beam) table for the 'StationInformation' type.
 data StationInformationT f where
-  StationInformation :: { _info_id                        :: Columnar f (SqlSerial Int32)
-                        , _info_station_id                :: Columnar f Int32
-                        , _info_name                      :: Columnar f Text.Text
-                        , _info_physical_configuration    :: Columnar f BeamPhysicalConfiguration
-                        , _info_lat                       :: Columnar f Double
-                        , _info_lon                       :: Columnar f Double
-                        , _info_altitude                  :: Columnar f (Maybe Double)
-                        , _info_address                   :: Columnar f Text.Text
-                        , _info_capacity                  :: Columnar f Int32
-                        , _info_is_charging_station       :: Columnar f Bool
-                        , _info_rental_methods            :: Columnar f (Vector.Vector BeamRentalMethod)
-                        , _info_is_valet_station          :: Columnar f Bool
-                        , _info_is_virtual_station        :: Columnar f Bool
-                        , _info_groups                    :: Columnar f (Vector.Vector Text.Text)
-                        , _info_obcn                      :: Columnar f Text.Text
-                        , _info_nearby_distance           :: Columnar f Double
-                        , _info_bluetooth_id              :: Columnar f Text.Text
-                        , _info_ride_code_support         :: Columnar f Bool
-                        , _info_rental_uris               :: Columnar f (Vector.Vector Text.Text)
-                        , _info_active                    :: Columnar f Bool
+  StationInformation :: { _infoId                    :: Columnar f (SqlSerial Int32)
+                        , _infoStationId             :: Columnar f Int32
+                        , _infoName                  :: Columnar f Text.Text
+                        , _infoPhysicalConfiguration :: Columnar f BeamPhysicalConfiguration
+                        , _infoLat                   :: Columnar f Double
+                        , _infoLon                   :: Columnar f Double
+                        , _infoAltitude              :: Columnar f (Maybe Double)
+                        , _infoAddress               :: Columnar f Text.Text
+                        , _infoCapacity              :: Columnar f Int32
+                        , _infoIsChargingStation     :: Columnar f Bool
+                        , _infoRentalMethods         :: Columnar f (Vector.Vector BeamRentalMethod)
+                        , _infoIsValetStation        :: Columnar f Bool
+                        , _infoIsVirtualStation      :: Columnar f Bool
+                        , _infoGroups                :: Columnar f (Vector.Vector Text.Text)
+                        , _infoObcn                  :: Columnar f Text.Text
+                        , _infoNearbyDistance        :: Columnar f Double
+                        , _infoBluetoothId           :: Columnar f Text.Text
+                        , _infoRideCodeSupport       :: Columnar f Bool
+                        , _infoRentalUris            :: Columnar f (Vector.Vector Text.Text)
+                        , _infoActive                :: Columnar f Bool
                         } -> StationInformationT f
   deriving (Generic, Beamable)
 
@@ -104,57 +98,65 @@ type StationInformation = StationInformationT Identity
 type StationInformationId = PrimaryKey StationInformationT Identity
 deriving instance Show StationInformationId
 deriving instance Eq StationInformationId
+deriving instance Ord StationInformationId
 deriving instance Show StationInformation
 deriving instance Eq StationInformation
 
 -- | Inform Beam about the table.
 instance Table StationInformationT where
-  data PrimaryKey StationInformationT f = StationInformationId (Columnar f Int32)
+  data PrimaryKey StationInformationT f = StationInformationId { _unInformationStationId :: C f Int32 }
     deriving (Generic, Beamable)
-  primaryKey = StationInformationId . _info_station_id
+  primaryKey = StationInformationId <$> _infoStationId
+
+-- | Lenses (technically, Iso)
+-- Lens' always works with part of a data structure (can set or view), while an Iso can swap between two different types bi-directionally.
+unInformationStationId :: Iso (PrimaryKey StationInformationT f1) (PrimaryKey StationInformationT f2) (C f1 Int32) (C f2 Int32)
+unInformationStationId = iso (\ (StationInformationId key) -> key) StationInformationId
+{-# INLINE unInformationStationId #-}
+
 
 -- | StationInformation Lenses
 info_id                     :: Lens' (StationInformationT f) (C f (SqlSerial Int32))
-info_station_id             :: Lens' (StationInformationT f) (C f Int32)
-info_name                   :: Lens' (StationInformationT f) (C f Text.Text)
-info_physical_configuration :: Lens' (StationInformationT f) (C f BeamPhysicalConfiguration)
-info_lat                    :: Lens' (StationInformationT f) (C f Double)
-info_lon                    :: Lens' (StationInformationT f) (C f Double)
-info_altitude               :: Lens' (StationInformationT f) (C f (Maybe Double))
-info_address                :: Lens' (StationInformationT f) (C f Text.Text)
-info_capacity               :: Lens' (StationInformationT f) (C f Int32)
-info_is_charging_station    :: Lens' (StationInformationT f) (C f Bool)
-info_rental_methods         :: Lens' (StationInformationT f) (C f (Vector.Vector BeamRentalMethod))
-info_is_valet_station       :: Lens' (StationInformationT f) (C f Bool)
-info_is_virtual_station     :: Lens' (StationInformationT f) (C f Bool)
-info_groups                 :: Lens' (StationInformationT f) (C f (Vector.Vector Text.Text))
-info_obcn                   :: Lens' (StationInformationT f) (C f Text.Text)
-info_nearby_distance        :: Lens' (StationInformationT f) (C f Double)
-info_bluetooth_id           :: Lens' (StationInformationT f) (C f Text.Text)
-info_ride_code_support      :: Lens' (StationInformationT f) (C f Bool)
-info_rental_uris            :: Lens' (StationInformationT f) (C f (Vector.Vector Text.Text))
-info_active                 :: Lens' (StationInformationT f) (C f Bool)
+infoStationId               :: Lens' (StationInformationT f) (C f Int32)
+infoName                    :: Lens' (StationInformationT f) (C f Text.Text)
+infoPhysicalConfiguration   :: Lens' (StationInformationT f) (C f BeamPhysicalConfiguration)
+infoLat                     :: Lens' (StationInformationT f) (C f Double)
+infoLon                     :: Lens' (StationInformationT f) (C f Double)
+infoAltitude                :: Lens' (StationInformationT f) (C f (Maybe Double))
+infoAddress                 :: Lens' (StationInformationT f) (C f Text.Text)
+infoCapacity                :: Lens' (StationInformationT f) (C f Int32)
+infoIsChargingStation       :: Lens' (StationInformationT f) (C f Bool)
+infoRentalMethods           :: Lens' (StationInformationT f) (C f (Vector.Vector BeamRentalMethod))
+infoIsValetStation          :: Lens' (StationInformationT f) (C f Bool)
+infoIsVirtualStation        :: Lens' (StationInformationT f) (C f Bool)
+infoGroups                  :: Lens' (StationInformationT f) (C f (Vector.Vector Text.Text))
+infoObcn                    :: Lens' (StationInformationT f) (C f Text.Text)
+infoNearbyDistance          :: Lens' (StationInformationT f) (C f Double)
+infoBluetoothId             :: Lens' (StationInformationT f) (C f Text.Text)
+infoRideCodeSupport         :: Lens' (StationInformationT f) (C f Bool)
+infoRentalUris              :: Lens' (StationInformationT f) (C f (Vector.Vector Text.Text))
+infoActive                  :: Lens' (StationInformationT f) (C f Bool)
 
 StationInformation (LensFor info_id)                     _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
-StationInformation _ (LensFor info_station_id)             _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
-StationInformation _ _ (LensFor info_name)                   _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
-StationInformation _ _ _ (LensFor info_physical_configuration) _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
-StationInformation _ _ _ _ (LensFor info_lat)                    _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
-StationInformation _ _ _ _ _ (LensFor info_lon)                    _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
-StationInformation _ _ _ _ _ _ (LensFor info_altitude)               _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
-StationInformation _ _ _ _ _ _ _ (LensFor info_address)                _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
-StationInformation _ _ _ _ _ _ _ _ (LensFor info_capacity)               _ _ _ _ _ _ _ _ _ _ _ = tableLenses
-StationInformation _ _ _ _ _ _ _ _ _ (LensFor info_is_charging_station)    _ _ _ _ _ _ _ _ _ _ = tableLenses
-StationInformation _ _ _ _ _ _ _ _ _ _ (LensFor info_rental_methods)         _ _ _ _ _ _ _ _ _ = tableLenses
-StationInformation _ _ _ _ _ _ _ _ _ _ _ (LensFor info_is_valet_station)       _ _ _ _ _ _ _ _ = tableLenses
-StationInformation _ _ _ _ _ _ _ _ _ _ _ _ (LensFor info_is_virtual_station)     _ _ _ _ _ _ _ = tableLenses
-StationInformation _ _ _ _ _ _ _ _ _ _ _ _ _ (LensFor info_groups)                 _ _ _ _ _ _ = tableLenses
-StationInformation _ _ _ _ _ _ _ _ _ _ _ _ _ _ (LensFor info_obcn)                   _ _ _ _ _ = tableLenses
-StationInformation _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (LensFor info_nearby_distance)        _ _ _ _ = tableLenses
-StationInformation _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (LensFor info_bluetooth_id)           _ _ _ = tableLenses
-StationInformation _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (LensFor info_ride_code_support)      _ _ = tableLenses
-StationInformation _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (LensFor info_rental_uris)            _ = tableLenses
-StationInformation _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (LensFor info_active)                 = tableLenses
+StationInformation _ (LensFor infoStationId)               _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
+StationInformation _ _ (LensFor infoName)                    _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
+StationInformation _ _ _ (LensFor infoPhysicalConfiguration)   _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
+StationInformation _ _ _ _ (LensFor infoLat)                     _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
+StationInformation _ _ _ _ _ (LensFor infoLon)                     _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
+StationInformation _ _ _ _ _ _ (LensFor infoAltitude)                _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
+StationInformation _ _ _ _ _ _ _ (LensFor infoAddress)                 _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
+StationInformation _ _ _ _ _ _ _ _ (LensFor infoCapacity)                _ _ _ _ _ _ _ _ _ _ _ = tableLenses
+StationInformation _ _ _ _ _ _ _ _ _ (LensFor infoIsChargingStation)       _ _ _ _ _ _ _ _ _ _ = tableLenses
+StationInformation _ _ _ _ _ _ _ _ _ _ (LensFor infoRentalMethods)           _ _ _ _ _ _ _ _ _ = tableLenses
+StationInformation _ _ _ _ _ _ _ _ _ _ _ (LensFor infoIsValetStation)          _ _ _ _ _ _ _ _ = tableLenses
+StationInformation _ _ _ _ _ _ _ _ _ _ _ _ (LensFor infoIsVirtualStation)        _ _ _ _ _ _ _ = tableLenses
+StationInformation _ _ _ _ _ _ _ _ _ _ _ _ _ (LensFor infoGroups)                  _ _ _ _ _ _ = tableLenses
+StationInformation _ _ _ _ _ _ _ _ _ _ _ _ _ _ (LensFor infoObcn)                    _ _ _ _ _ = tableLenses
+StationInformation _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (LensFor infoNearbyDistance)          _ _ _ _ = tableLenses
+StationInformation _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (LensFor infoBluetoothId)             _ _ _ = tableLenses
+StationInformation _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (LensFor infoRideCodeSupport)         _ _ = tableLenses
+StationInformation _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (LensFor infoRentalUris)              _ = tableLenses
+StationInformation _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (LensFor infoActive)                  = tableLenses
 
 -- | Newtype wrapper for RentalMethod to allow us to define a custom FromBackendRow instance.
 -- Don't want to implement database-specific code for the underlying RentalMethod type.
@@ -250,77 +252,77 @@ fromJSONToBeamStationInformation (AT.StationInformation
                                   ride_code_support
                                   rental_uris
                                  ) =
-  StationInformation { _info_id                        = default_
-                     , _info_station_id                = fromIntegral station_id
-                     , _info_name                      = val_ $ Text.pack name
-                     , _info_physical_configuration    = val_ (coerce physical_configuration :: BeamPhysicalConfiguration)
-                     , _info_lat                       = val_ lat
-                     , _info_lon                       = val_ lon
-                     , _info_altitude                  = val_ altitude
-                     , _info_address                   = val_ $ Text.pack address
-                     , _info_capacity                  = fromIntegral capacity
-                     , _info_is_charging_station       = val_ is_charging_station
-                     , _info_rental_methods            = val_ $ fromList (coerce rental_methods :: [BeamRentalMethod])
-                     , _info_is_valet_station          = val_ $ fromMaybe False is_valet_station
-                     , _info_is_virtual_station        = val_ is_virtual_station
-                     , _info_groups                    = val_ $ fromList $ fmap Text.pack groups
-                     , _info_obcn                      = val_ $ Text.pack obcn
-                     , _info_nearby_distance           = val_ nearby_distance
-                     , _info_bluetooth_id              = val_ $ Text.pack bluetooth_id
-                     , _info_ride_code_support         = val_ ride_code_support
-                     , _info_active                    = val_ True
-                     , _info_rental_uris               = val_ $ fromList [uriAndroid, uriIos, uriWeb]
+  StationInformation { _infoId                    = default_
+                     , _infoStationId             = fromIntegral station_id
+                     , _infoName                  = val_ $ Text.pack name
+                     , _infoPhysicalConfiguration = val_ (coerce physical_configuration :: BeamPhysicalConfiguration)
+                     , _infoLat                   = val_ lat
+                     , _infoLon                   = val_ lon
+                     , _infoAltitude              = val_ altitude
+                     , _infoAddress               = val_ $ Text.pack address
+                     , _infoCapacity              = fromIntegral capacity
+                     , _infoIsChargingStation     = val_ is_charging_station
+                     , _infoRentalMethods         = val_ $ fromList (coerce rental_methods :: [BeamRentalMethod])
+                     , _infoIsValetStation        = val_ $ fromMaybe False is_valet_station
+                     , _infoIsVirtualStation      = val_ is_virtual_station
+                     , _infoGroups                = val_ $ fromList $ fmap Text.pack groups
+                     , _infoObcn                  = val_ $ Text.pack obcn
+                     , _infoNearbyDistance        = val_ nearby_distance
+                     , _infoBluetoothId           = val_ $ Text.pack bluetooth_id
+                     , _infoRideCodeSupport       = val_ ride_code_support
+                     , _infoActive                = val_ True
+                     , _infoRentalUris            = val_ $ fromList [uriAndroid, uriIos, uriWeb]
                      }
   where
-    uriAndroid = Text.pack $ AT.rental_uris_android rental_uris
-    uriIos     = Text.pack $ AT.rental_uris_ios rental_uris
-    uriWeb     = Text.pack $ AT.rental_uris_web rental_uris
+    uriAndroid = Text.pack (AT.rentalUrisAndroid rental_uris)
+    uriIos     = Text.pack (AT.rentalUrisIos rental_uris)
+    uriWeb     = Text.pack (AT.rentalUrisWeb rental_uris)
 
 -- | Convert from the Beam StationInformation type to the JSON StationInformation
 fromBeamStationInformationToJSON :: StationInformation -> AT.StationInformation
 fromBeamStationInformationToJSON (StationInformation
                                   _id
-                                  station_id
+                                  stationId
                                   name
-                                  physical_configuration
+                                  physicalConfiguration'
                                   lat
                                   lon
                                   altitude
                                   address
                                   capacity
-                                  is_charging_station
-                                  rental_methods
-                                  is_valet_station
-                                  is_virtual_station
+                                  isChargingStation
+                                  rentalMethods
+                                  isValetStation
+                                  isVirtualStation
                                   groups
                                   obcn
-                                  nearby_distance
-                                  bluetooth_id
-                                  ride_code_support
-                                  rental_uris
+                                  nearbyDistance
+                                  bluetoothId
+                                  rideCodeSupport
+                                  rentalUris
                                   _active
                                  ) =
-  AT.StationInformation { AT.info_station_id                = fromIntegral station_id
-                        , AT.info_name                      = show name
-                        , AT.info_physical_configuration    = coerce physical_configuration :: AT.PhysicalConfiguration
-                        , AT.info_lat                       = lat
-                        , AT.info_lon                       = lon
-                        , AT.info_altitude                  = altitude
-                        , AT.info_address                   = Text.unpack address
-                        , AT.info_capacity                  = fromIntegral capacity
-                        , AT.info_is_charging_station       = is_charging_station
-                        , AT.info_rental_methods            = coerce (toList rental_methods) :: [AT.RentalMethod]
-                        , AT.info_is_valet_station          = Just is_valet_station
-                        , AT.info_is_virtual_station        = is_virtual_station
-                        , AT.info_groups                    = Text.unpack <$> toList groups
-                        , AT.info_obcn                      = Text.unpack obcn
-                        , AT.info_nearby_distance           = nearby_distance
-                        , AT.info_bluetooth_id              = Text.unpack bluetooth_id
-                        , AT.info_ride_code_support         = ride_code_support
-                        , AT.info_rental_uris               = AT.RentalURIs { AT.rental_uris_android = maybe "" Text.unpack (rentalUris ^? element 1)
-                                                                            , AT.rental_uris_ios     = maybe "" Text.unpack (rentalUris ^? element 2)
-                                                                            , AT.rental_uris_web     = maybe "" Text.unpack (rentalUris ^? element 3)
-                                                                            }
+  AT.StationInformation { AT.infoStationId               = fromIntegral stationId
+                        , AT.infoName                    = show name
+                        , AT.infoPhysicalConfiguration   = coerce physicalConfiguration' :: AT.PhysicalConfiguration
+                        , AT.infoLat                     = lat
+                        , AT.infoLon                     = lon
+                        , AT.infoAltitude                = altitude
+                        , AT.infoAddress                 = Text.unpack address
+                        , AT.infoCapacity                = fromIntegral capacity
+                        , AT.infoIsChargingStation       = isChargingStation
+                        , AT.infoRentalMethods           = coerce (toList rentalMethods) :: [AT.RentalMethod]
+                        , AT.infoIsValetStation          = Just isValetStation
+                        , AT.infoIsVirtualStation        = isVirtualStation
+                        , AT.infoGroups                  = Text.unpack <$> toList groups
+                        , AT.infoObcn                    = Text.unpack obcn
+                        , AT.infoNearbyDistance          = nearbyDistance
+                        , AT.infoBluetoothId             = Text.unpack bluetoothId
+                        , AT.infoRideCodeSupport         = rideCodeSupport
+                        , AT.infoRentalUris              = AT.RentalURIs { AT.rentalUrisAndroid = maybe "" Text.unpack (rentalUrisList ^? element 1)
+                                                                         , AT.rentalUrisIos     = maybe "" Text.unpack (rentalUrisList ^? element 2)
+                                                                         , AT.rentalUrisWeb     = maybe "" Text.unpack (rentalUrisList ^? element 3)
+                                                                         }
                         }
   where
-    rentalUris = toList rental_uris
+    rentalUrisList = toList rentalUris

@@ -62,7 +62,7 @@ Flag DEBUG
 
 -- Linker (use gold) common warning flags.
 common compile-flags
-    ghc-options: -Wall
+    ghc-options: -Wall -fwrite-ide-info
   if os(linux)
     ghc-options:       -optl-fuse-ld=gold
     ld-options:        -fuse-ld=gold
@@ -97,6 +97,7 @@ common common-depends
                     , optparse-applicative
                     , time
                     , boxes
+                    , exceptions
 
 -- Dependencies needed by targets excercising the API.
 common api-depends
@@ -178,7 +179,7 @@ library
                     , AppEnv
                     , API.ResponseWrapper
                     , API.Client
-                    , API.DebugClient
+                    -- , API.DebugClient
                     , CLI.Utils
                     , CLI.Poll
                     , CLI.Query

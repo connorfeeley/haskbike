@@ -24,6 +24,7 @@ import           Data.Aeson
 import           Data.Attoparsec.Text ( Parser, choice, parseOnly, string )
 import           Data.Either          ( fromRight )
 import           Data.Functor         ( ($>) )
+import           Data.Maybe           ( fromMaybe )
 import           Data.Text            ( pack )
 import qualified Data.Text            as Text
 
@@ -121,89 +122,89 @@ instance FromJSON RentalMethod where
 
 -- | A type representing a BikeShare rental_uris record.
 data RentalURIs where
-  RentalURIs :: { rental_uris_android :: String
-                , rental_uris_ios     :: String
-                , rental_uris_web     :: String
+  RentalURIs :: { rentalUrisAndroid :: String
+                , rentalUrisIos     :: String
+                , rentalUrisWeb     :: String
                 } -> RentalURIs
   deriving (Show, Eq, Generic)
 
 instance ToJSON RentalURIs where
   toJSON rentalURIs =
-    object [ "android" .= rental_uris_android rentalURIs
-           , "ios"     .= rental_uris_ios     rentalURIs
-           , "web"     .= rental_uris_web     rentalURIs
+    object [ "android" .= rentalUrisAndroid rentalURIs
+           , "ios"     .= rentalUrisIos     rentalURIs
+           , "web"     .= rentalUrisWeb     rentalURIs
            ]
 instance FromJSON RentalURIs where
   parseJSON = withObject "RentalURIs" $ \v -> RentalURIs
-    <$> v .: "android"
-    <*> v .: "ios"
-    <*> v .: "web"
+    <$> fmap (fromMaybe "") (v .:? "android")
+    <*> fmap (fromMaybe "") (v .:? "ios")
+    <*> fmap (fromMaybe "") (v .:? "web")
 
 -- | A type representing a BikeShare station.
 data StationInformation where
-  StationInformation :: { info_station_id                :: Int
-                        , info_name                      :: String
-                        , info_physical_configuration    :: PhysicalConfiguration
-                        , info_lat                       :: Double
-                        , info_lon                       :: Double
-                        , info_altitude                  :: Maybe Double
-                        , info_address                   :: String
-                        , info_capacity                  :: Int
-                        , info_is_charging_station       :: Bool
-                        , info_rental_methods            :: [RentalMethod]
-                        , info_is_valet_station          :: Maybe Bool
-                        , info_is_virtual_station        :: Bool
-                        , info_groups                    :: [String]
-                        , info_obcn                      :: String
-                        , info_nearby_distance           :: Double
-                        , info_bluetooth_id              :: String
-                        , info_ride_code_support         :: Bool
-                        , info_rental_uris               :: RentalURIs
+  StationInformation :: { infoStationId               :: Int
+                        , infoName                    :: String
+                        , infoPhysicalConfiguration   :: PhysicalConfiguration
+                        , infoLat                     :: Double
+                        , infoLon                     :: Double
+                        , infoAltitude                :: Maybe Double
+                        , infoAddress                 :: String
+                        , infoCapacity                :: Int
+                        , infoIsChargingStation       :: Bool
+                        , infoRentalMethods           :: [RentalMethod]
+                        , infoIsValetStation          :: Maybe Bool
+                        , infoIsVirtualStation        :: Bool
+                        , infoGroups                  :: [String]
+                        , infoObcn                    :: String
+                        , infoNearbyDistance          :: Double
+                        , infoBluetoothId             :: String
+                        , infoRideCodeSupport         :: Bool
+                        , infoRentalUris              :: RentalURIs
                         } -> StationInformation
   deriving (Show, Eq, Generic)
 
 instance ToJSON StationInformation where
   toJSON station =
-    object [ "station_id"               .= info_station_id               station
-           , "name"                     .= info_name                     station
-           , "physical_configuration"   .= info_physical_configuration   station
-           , "lat"                      .= info_lat                      station
-           , "lon"                      .= info_lon                      station
-           , "altitude"                 .= info_altitude                 station
-           , "address"                  .= info_address                  station
-           , "capacity"                 .= info_capacity                 station
-           , "is_charging_station"      .= info_is_charging_station      station
-           , "rental_methods"           .= info_rental_methods           station
-           , "is_valet_station"         .= info_is_valet_station         station
-           , "is_virtual_station"       .= info_is_virtual_station       station
-           , "groups"                   .= info_groups                   station
-           , "obcn"                     .= info_obcn                     station
-           , "nearby_distance"          .= info_nearby_distance          station
-           , "_bluetooth_id"            .= info_bluetooth_id             station
-           , "_ride_code_support"       .= info_ride_code_support        station
-           , "rental_uris"              .= info_rental_uris              station
+    object [ "station_id"               .= infoStationId                station
+           , "name"                     .= infoName                     station
+           , "physical_configuration"   .= infoPhysicalConfiguration    station
+           , "lat"                      .= infoLat                      station
+           , "lon"                      .= infoLon                      station
+           , "altitude"                 .= infoAltitude                 station
+           , "address"                  .= infoAddress                  station
+           , "capacity"                 .= infoCapacity                 station
+           , "is_charging_station"      .= infoIsChargingStation        station
+           , "rental_methods"           .= infoRentalMethods            station
+           , "is_valet_station"         .= infoIsValetStation           station
+           , "is_virtual_station"       .= infoIsVirtualStation         station
+           , "groups"                   .= infoGroups                   station
+           , "obcn"                     .= infoObcn                     station
+           , "nearby_distance"          .= infoNearbyDistance           station
+           , "_bluetooth_id"            .= infoBluetoothId              station
+           , "_ride_code_support"       .= infoRideCodeSupport          station
+           , "rental_uris"              .= infoRentalUris               station
            ]
 
 instance FromJSON StationInformation where
   parseJSON = withObject "StationInformation" $ \v -> StationInformation
     <$> fmap read (v .: "station_id")
-    <*> v .: "name"
-    <*> v .: "physical_configuration"
-    <*> v .: "lat"
-    <*> v .: "lon"
-    <*> v .: "altitude"
-    <*> v .: "address"
-    <*> v .: "capacity"
-    <*> v .: "is_charging_station"
-    <*> v .: "rental_methods"
+    <*> v .:  "name"
+    <*> v .:  "physical_configuration"
+    <*> v .:  "lat"
+    <*> v .:  "lon"
+    <*> v .:  "altitude"
+    <*> v .:  "address"
+    <*> v .:  "capacity"
+    <*> v .:  "is_charging_station"
+    <*> v .:  "rental_methods"
     <*> v .:? "is_valet_station"
-    <*> v .: "is_virtual_station"
-    <*> v .: "groups"
-    <*> v .: "obcn"
-    <*> v .: "nearby_distance"
-    <*> v .: "_bluetooth_id"
-    <*> v .: "_ride_code_support"
-    <*> v .: "rental_uris"
+    <*> v .:  "is_virtual_station"
+    <*> v .:  "groups"
+    <*> v .:  "obcn"
+    <*> v .:  "nearby_distance"
+    <*> v .:  "_bluetooth_id"
+    <*> v .:  "_ride_code_support"
+    <*> v .:  "rental_uris"
 
 -- | A wrapper type for the station information response.
 newtype StationInformationResponseData where

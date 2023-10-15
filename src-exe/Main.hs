@@ -46,7 +46,7 @@ main = do
                           , pack host
                           , pack port
                           , pack username
-                          , pack "password=***" -- Don't log the password.
+                          , pack "password=" <> pack (map (\_ -> '*') password) -- Obfuscate password in logs.
                           ]
 
   usingLoggerT logStdoutAction $
@@ -62,8 +62,8 @@ main = do
   -- Run the application.
   runApp env (appMain options)
   where
-    -- | Log database operations when running in ultra-verbose (-vvv) mode.
-    logDatabase options = length (optVerbose options) >= 3
+    -- | Log database operations only when '--log-database' is given.
+    logDatabase = optLogDatabase
 
     -- | Logging action for stdout.
     logStdoutAction :: LogAction IO Message

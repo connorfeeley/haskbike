@@ -12,11 +12,7 @@ import           Data.Int                      ( Int32 )
 import           Data.Text.Lazy                ( Text, chunksOf, pack, reverse, unlines, unpack, unwords )
 import           Data.Time                     ( LocalTime (..), TimeZone )
 
-import           Database.BikeShare            ( StationStatus, d_status_is_charging_station, d_status_last_reported,
-                                                 d_status_num_bikes_available, d_status_num_bikes_disabled,
-                                                 d_status_num_docks_available, d_status_num_docks_disabled,
-                                                 d_status_station_id, vehicle_types_available_efit,
-                                                 vehicle_types_available_efit_g5, vehicle_types_available_iconic )
+import           Database.BikeShare
 import           Database.BikeShare.Operations
 
 import           Fmt
@@ -59,34 +55,31 @@ formatStationStatusResult = maybe ["No status found."] formatStationInfo
 formatStationInfo :: (TimeZone, String, StationStatus) -> [Text]
 formatStationInfo (timeZone, name, status) =
   let
-    bikeAvailability = [ fmtBikeAvailability "Iconic"   (status ^. vehicle_types_available_iconic)
+    bikeAvailability = [ fmtBikeAvailability "Iconic"   (status ^. vehicleTypesAvailableIconic)
                        -- , fmtBikeAvailability "Boost"    (status ^. vehicle_types_available_boost) -- Not used in Toronto.
-                       , fmtBikeAvailability "E-Fit"    (status ^. vehicle_types_available_efit)
-                       , fmtBikeAvailability "E-Fit G5" (status ^. vehicle_types_available_efit_g5)]
+                       , fmtBikeAvailability "E-Fit"    (status ^. vehicleTypesAvailableEfit)
+                       , fmtBikeAvailability "E-Fit G5" (status ^. vehicleTypesAvailableEfitG5)]
 
-    pairs = [ ("Docks:\t", status ^. d_status_num_docks_available, status ^. d_status_num_docks_disabled)
-            , ("Bikes:\t", status ^. d_status_num_bikes_available, status ^. d_status_num_bikes_disabled)
+    pairs = [ ("Docks:\t", status ^. statusNumDocksAvailable, fromIntegral $ status ^. statusNumDocksDisabled)
+            , ("Bikes:\t", status ^. statusNumBikesAvailable, fromIntegral $ status ^. statusNumBikesDisabled)
             ]
     in [ formattedName name status
-       , formattedLastReport timeZone $ reportToLocal <$> status ^. d_status_last_reported
-       , "Charger:\t" <> formattedBool (status ^. d_status_is_charging_station)
+       , formattedLastReport timeZone $ reportToLocal $ status ^. statusLastReported
+       , "Charger:\t" <> formattedBool (status ^. statusIsChargingStation)
        ] ++ map fmtAvailability pairs ++ bikeAvailability
 
 formattedName :: String -> StationStatus -> Text
 formattedName name status =
-    format "{}[{}{}]{} {}{}{}" boldCode idPrefix (status ^. d_status_station_id) resetIntens underCode name resetUnder
+    format "{}[{}{}]{} {}{}{}" boldCode idPrefix (status ^. statusStationId . unInformationStationId) resetIntens underCode name resetUnder
     where idPrefix = resetIntens <> "# " <> boldCode
 
 -- Format the last reported time in the specified time zone (namerly, the system's time zone).
-formattedLastReport :: TimeZone -> Maybe LocalTime -> Text
+formattedLastReport :: TimeZone -> LocalTime -> Text
 formattedLastReport timeZone status = reportedText
   where
-    reportedText = case status of
-      Nothing -> boldCode <> colouredText Vivid Red "Never" <> resetIntens
-      -- Just t  -> italCode <> showText t <> resetItal
-      Just t  -> "[" <> showText t <> "]"
-              <> boldCode <> "\t" <> "|" <> "\t" <> resetIntens
-              <> italCode <> pack (formatTime' timeZone t) <> resetItal <> " (local)"
+    reportedText = "[" <> showText status <> "]"
+                <> boldCode <> "\t" <> "|" <> "\t" <> resetIntens
+                <> italCode <> pack (formatTime' timeZone status) <> resetItal <> " (local)"
 
 formattedBool :: Bool -> Text
 formattedBool b = if b

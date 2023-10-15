@@ -1,14 +1,9 @@
 {-# LANGUAGE AllowAmbiguousTypes       #-}
-{-# LANGUAGE DeriveAnyClass            #-}
-{-# LANGUAGE DeriveGeneric             #-}
-{-# LANGUAGE FunctionalDependencies    #-}
-{-# LANGUAGE LambdaCase                #-}
-{-# LANGUAGE MultiWayIf                #-}
+{-# LANGUAGE FlexibleContexts          #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE OverloadedStrings         #-}
 {-# LANGUAGE PartialTypeSignatures     #-}
 {-# LANGUAGE Rank2Types                #-}
-{-# LANGUAGE TemplateHaskell           #-}
 {-# LANGUAGE TypeApplications          #-}
 
 -- Signatures of beam-related functions are incredibly verbose, so let's settle for partial type signatures.
@@ -20,15 +15,8 @@
 
 module Database.BikeShare.Operations
      ( module Database.BikeShare.Operations.Dockings
-     , FilterStatusResult (..)
-     , InsertStatusResult (..)
-     , filter_newer
-     , filter_unchanged
-     , getRowsToDeactivate
      , insertStationInformation
      , insertStationStatus
-     , insert_deactivated
-     , insert_inserted
      , printDisabledDocks
      , queryAllStationsStatusBeforeTime
      , queryDisabledDocks
@@ -43,25 +31,24 @@ module Database.BikeShare.Operations
      , queryStationStatusFields
      , queryStationStatusLatest
      , queryTableSize
-     , separateNewerStatusRecords
      ) where
 
-import           API.Types                                ( _status_last_reported, _status_station_id,
-                                                            status_station_id )
 import qualified API.Types                                as AT
 
 import           AppEnv
 
+import           Colog                                    ( logException )
+
 import           Control.Lens                             hiding ( reuse, (<.) )
+import           Control.Monad.Catch
 
 import           Data.Int                                 ( Int32 )
-import qualified Data.Map                                 as Map
+import           Data.Maybe                               ( mapMaybe )
 import qualified Data.Text                                as Text
 
 import           Database.Beam
 import           Database.Beam.Backend.SQL.BeamExtensions
 import           Database.Beam.Postgres
-import qualified Database.Beam.Postgres                   as Pg
 import           Database.BikeShare
 import           Database.BikeShare.Expressions
 import           Database.BikeShare.Operations.Dockings
@@ -71,31 +58,11 @@ import           Formatting
 
 import           GHC.Exts                                 ( fromString )
 
-
-data FilterStatusResult where
-  FilterStatusResult :: { _filter_newer         :: [AT.StationStatus] -- ^ List of 'AT.StationStatus' that were updated.
-                        , _filter_unchanged     :: [AT.StationStatus] -- ^ List of 'AT.StationStatus' that were not updated.
-                        } -> FilterStatusResult
-  deriving (Show)
-makeLenses ''FilterStatusResult
-
-{- | Data type representing the result of inserting updated station statuses.
-
-When inserting to an empty database, all statuses are inserted.
-When inserting to a non-empty database with the full 'AT.StationStatusResponse' data,
-'_insert_deactivated' and '_insert_inserted' will be the same length.
--}
-data InsertStatusResult where
-  InsertStatusResult :: { _insert_deactivated  :: [StationStatus] -- ^ List of 'StationStatus' that were updated.
-                        , _insert_inserted     :: [StationStatus] -- ^ List of station statuses that were inserted.
-                        } -> InsertStatusResult
-  deriving (Show)
-makeLenses ''InsertStatusResult
+import           Prelude                                  hiding ( log )
 
 -- | Query database for disabled docks, returning tuples of (name, num_docks_disabled).
 queryDisabledDocks :: App [(Text.Text, Int32)] -- ^ List of tuples of (name, num_docks_disabled).
-queryDisabledDocks = do
-  withPostgres $ runSelectReturningList $ select disabledDocksExpr
+queryDisabledDocks = withPostgres $ runSelectReturningList $ select disabledDocksExpr
 
 -- | Helper function to print disabled docks.
 printDisabledDocks :: App ()
@@ -112,12 +79,12 @@ queryStationStatusFields =
   withPostgres $ runSelectReturningList $ select $ do
   info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
   status <- all_ (bikeshareDb ^. bikeshareStationStatus)
-  guard_ (_d_status_info_id status `references_` info)
-  pure ( info^.info_name
-       , status^.d_status_num_bikes_available
-       , status^.d_status_num_bikes_disabled
-       , status^.d_status_num_docks_available
-       , status^.d_status_num_docks_disabled
+  guard_ (_statusStationId status `references_` info)
+  pure ( info   ^. infoName
+       , status ^. statusNumBikesAvailable
+       , status ^. statusNumBikesDisabled
+       , status ^. statusNumDocksAvailable
+       , status ^. statusNumDocksDisabled
        )
 
 
@@ -132,7 +99,7 @@ queryStationInformationByIds :: [Int]                   -- ^ List of station IDs
 queryStationInformationByIds ids =
   withPostgres $ runSelectReturningList $ select $ do
   info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
-  guard_ (_info_station_id info `in_` ids')
+  guard_ (_infoStationId info `in_` ids')
   pure info
   where
     ids' = fromIntegral <$> ids
@@ -143,113 +110,22 @@ insertStationInformation :: [AT.StationInformation]  -- ^ List of 'StationInform
 insertStationInformation stations =
   withPostgres $ runInsertReturningList $ insertStationInformationExpr stations
 
--- | Find the corresponding active rows in the database corresponding to each element of a list of *newer* 'AT.StationStatus' records.
-getRowsToDeactivate :: [AT.StationStatus]  -- ^ List of 'AT.StationStatus' from the API response.
-                    -> App [StationStatus] -- ^ List of 'StationStatus' rows that would need to be deactivated, if the statuses from the API were inserted.
-getRowsToDeactivate api_status
-  | null api_status = return []
-  | otherwise = do
-    -- Select using common table expressions (selectWith).
-    withPostgres $ runSelectReturningList $ selectWith $ do
-      -- Common table expression for 'StationStatus'.
-      common_status <- selecting $ do
-        info <- infoByIdExpr (map (fromIntegral . _status_station_id) api_status)
-        status <- orderBy_ (asc_ . _d_status_id) $
-          all_ (bikeshareDb ^. bikeshareStationStatus)
-        guard_ (_d_status_info_id status `references_` info)
-        pure status
-
-      -- Select from station status.
-      pure $ do
-        -- Transform each 'AT.StationStatus' into corresponding rows, containing '_status_station_id' and '_status_last_reported'.
-        api_values <- values_ $ map (\s -> ( as_ @Int32 ( fromIntegral $ _status_station_id s)
-                                           , cast_ (val_ $ _status_last_reported s) (maybeType reportTimeType))
-                                    ) api_status
-        -- Select from station status where the last reported time is older than in the API response.
-        status <- Database.Beam.reuse common_status
-        guard_ (_d_status_info_id       status ==. StationInformationId (fst api_values) &&. -- Station ID
-                _d_status_active        status ==. val_ True                             &&. -- Status record is active
-                _d_status_last_reported status <.  snd api_values)    -- Last reported time is older than in the API response
-        pure status
-
 {- |
-Separate API 'AT.StationStatus' into two lists:
-- one containing statuses that are newer than in the database statuses
-- one containing statuses that are the same as in the database statuses
--}
-separateNewerStatusRecords :: [AT.StationStatus] -- ^ List of 'AT.StationStatus' from the API response.
-                           -> App FilterStatusResult
-separateNewerStatusRecords api_status = do
-  -- Find rows that would need to be deactivated if the statuses from the API were inserted.
-  statuses_would_deactivate <- getRowsToDeactivate api_status
-
-  -- Map of all API statuses, keyed on station ID.
-  let api_status_map                = Map.fromList $ map (\ss -> (               ss ^. status_station_id,   ss)) api_status
-
-  -- Map of rows that would be deactivated, keyed on station ID.
-  let statuses_would_deactivate_map = Map.fromList $ map (\ss -> (fromIntegral $ ss ^. d_status_station_id, ss)) statuses_would_deactivate
-
-  -- Map of intersection of both maps (station ID key appears in both Maps).
-  let api_status_newer    = Map.intersection api_status_map statuses_would_deactivate_map
-  -- Map of difference of both maps (station ID key appears in API map but not in the statuses to deactivate Map).
-  let api_status_unchanged = Map.difference  api_status_map statuses_would_deactivate_map
-
-  pure $ FilterStatusResult { _filter_newer     = map snd $ Map.toAscList api_status_newer
-                            , _filter_unchanged = map snd $ Map.toAscList api_status_unchanged
-                            }
-
-
-{- |
-Insert updated station status into the database.
+Insert station statuses into the database.
 -}
 insertStationStatus :: [AT.StationStatus] -- ^ List of 'AT.StationStatus' from the API response.
-                    -> App InsertStatusResult
-insertStationStatus api_status
-  | null api_status = return $ InsertStatusResult [] []
+                    -> App [StationStatus]
+insertStationStatus apiStatus
+  | null apiStatus = pure []
   | otherwise = do
-    info_ids <- map (fromIntegral . _info_station_id) <$> queryStationInformationByIds status_ids
+      result <- try $ withPostgres $ runInsertReturningList $
+          insertOnConflict (bikeshareDb ^. bikeshareStationStatus)
+          (insertExpressions (mapMaybe fromJSONToBeamStationStatus apiStatus)
+         ) anyConflict onConflictDoNothing
 
-    let status = filter (\ss -> fromIntegral (_status_station_id ss) `elem` info_ids) api_status
-
-    statuses_to_deactivate <- getRowsToDeactivate status
-    updated_statuses <- deactivateOldStatus statuses_to_deactivate
-    let updated_status_ids = map (fromIntegral . _d_status_station_id) updated_statuses
-    inserted_statuses <- insertNewStatus $
-      filter (\ss -> ss ^. status_station_id `elem` updated_status_ids) status
-
-    -- Select arbitrary (in this case, last [by ID]) status record for each station ID.
-    distinct_by_id <- selectDistinctByStationId status
-
-    -- Insert new records corresponding to station IDs which did not already exist in the station_status table.
-    new_status <- insertNewStatus $
-      filter (\ss -> ss ^. status_station_id `notElem` map (fromIntegral . _d_status_station_id) distinct_by_id &&
-                     ss ^. status_station_id `elem` info_ids
-             ) status
-
-
-    return $ InsertStatusResult updated_statuses (inserted_statuses ++ new_status)
-
-  where
-    status_ids = fromIntegral <$> api_status ^.. traverse . status_station_id
-
-    selectDistinctByStationId status
-      | null status = return []
-      | otherwise = withPostgres $ runSelectReturningList $
-        select $ Pg.pgNubBy_ _d_status_info_id $ orderBy_ (\s -> desc_ $ s ^. d_status_info_id)
-        (all_ (bikeshareDb ^. bikeshareStationStatus))
-
-    deactivateOldStatus status
-      | null status = return []
-      | otherwise = withPostgres $ runUpdateReturningList $
-          update (bikeshareDb ^. bikeshareStationStatus)
-          (\c -> _d_status_active c <-. val_ False)
-          (\c -> _d_status_id c `in_` map (val_ . _d_status_id) status)
-
-    insertNewStatus status
-      | null status = return []
-      | otherwise = withPostgres $ runInsertReturningList $
-          insert (bikeshareDb ^. bikeshareStationStatus) $
-          insertExpressions $ map fromJSONToBeamStationStatus status
+      case result of
+        Left (e :: SqlError) -> logException e >> pure []
+        Right inserted       -> pure inserted
 
 {- |
 Query the statuses for a station between two times.
@@ -258,19 +134,19 @@ queryStationStatusBetween :: Int                 -- ^ Station ID.
                           -> ReportTime          -- ^ Start time.
                           -> ReportTime          -- ^ End time.
                           -> App [StationStatus] -- ^ List of 'StationStatus' for the given station between the given times.
-queryStationStatusBetween station_id start_time end_time =
+queryStationStatusBetween stationId startTime endTime =
   withPostgres $ runSelectReturningList $ select $
-  statusBetweenExpr (fromIntegral station_id) start_time end_time
+  statusBetweenExpr (fromIntegral stationId) startTime endTime
 
 {- |
 Query the station name given a station ID.
 -}
 queryStationName :: Int               -- ^ Station ID.
                  -> App (Maybe String) -- ^ Station name assosicated with the given station ID.
-queryStationName station_id = do
-  info <- withPostgres $ runSelectReturningOne $ select $ infoByIdExpr [fromIntegral station_id]
+queryStationName stationId = do
+  info <- withPostgres $ runSelectReturningOne $ select $ infoByIdExpr [fromIntegral stationId]
 
-  let station_name = info ^. _Just . info_name
+  let station_name = info ^. _Just . infoName
 
   pure $ Just $ Text.unpack station_name
 
@@ -291,10 +167,10 @@ Just 7001
 -}
 queryStationId :: String           -- ^ Station ID.
                -> App (Maybe Int)  -- ^ Station ID assosicated with the given station name, if found.
-queryStationId station_name = do
-  info <- withPostgres $ runSelectReturningOne $ select $ queryStationIdExpr station_name
+queryStationId stationName = do
+  info <- withPostgres $ runSelectReturningOne $ select $ queryStationIdExpr stationName
 
-  pure $ fromIntegral <$> info ^? _Just . info_station_id
+  pure $ fromIntegral <$> info ^? _Just . infoStationId
 
 
 {- | Query possible station IDs matching a given station name, using SQL `LIKE` semantics.
@@ -318,24 +194,23 @@ __Return:__ Tuples of (station ID, station name) matching the searched name, usi
 -}
 queryStationIdLike :: String               -- ^ Station ID.
                    -> App [(Int, String)]  -- ^ Tuples of (station ID, name) for stations that matched the query.
-queryStationIdLike station_name = do
-  info <- withPostgres $ runSelectReturningList $ select $ queryStationIdLikeExpr station_name
+queryStationIdLike stationName = do
+  info <- withPostgres $ runSelectReturningList $ select $ queryStationIdLikeExpr stationName
 
   -- Return tuples of (station_id, station_name)
-  pure $ map (\si -> ( si ^. info_station_id & fromIntegral
-                     , si ^. info_name & Text.unpack
+  pure $ map (\si -> ( si ^. infoStationId & fromIntegral
+                     , si ^. infoName & Text.unpack
                      )) info
 
 -- | Query the latest status for a station.
 queryStationStatusLatest :: Int                       -- ^ Station ID.
                          -> App (Maybe StationStatus) -- ^ Latest 'StationStatus' for the given station.
-queryStationStatusLatest station_id = withPostgres $ runSelectReturningOne $ select $ do
+queryStationStatusLatest station_id = withPostgres $ runSelectReturningOne $ select $ limit_ 1 $ do
   info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
-  guard_ (_info_station_id info ==. val_ ( fromIntegral station_id))
-  status <- orderBy_ (asc_ . _d_status_last_reported)
+  guard_ (_infoStationId info ==. val_ ( fromIntegral station_id))
+  status <- orderBy_ (asc_ . _statusLastReported)
               (all_ (bikeshareDb ^. bikeshareStationStatus))
-  guard_ (_d_status_info_id status `references_` info &&.
-         _d_status_active status ==. val_ True)
+  guard_ (_statusStationId status `references_` info)
   pure status
 
 -- | Count the number of rows in a given table.
@@ -358,6 +233,5 @@ queryTableSize tableName = do
 -- | Query the latest statuses for all stations before a given time.
 queryAllStationsStatusBeforeTime :: ReportTime        -- ^ Latest time to return records for.
                                  -> App [StationStatus] -- ^ Latest 'StationStatus' for each station before given time.
-queryAllStationsStatusBeforeTime latestTime = withPostgres $ do
-  runSelectReturningList $ selectWith $ do
-    queryAllStationsStatusBeforeTimeExpr latestTime
+queryAllStationsStatusBeforeTime latestTime = withPostgres $ runSelectReturningList $ selectWith $ do
+  queryAllStationsStatusBeforeTimeExpr latestTime

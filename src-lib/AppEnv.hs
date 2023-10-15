@@ -12,6 +12,7 @@ module AppEnv
      , mainLogAction
      , runApp
      , runWithApp
+     , runWithAppDebug
      , simpleEnv
      , withConn
      , withPostgres
@@ -20,6 +21,7 @@ module AppEnv
 import           Colog                    ( HasLog (..), LogAction (..), Message, Msg (msgSeverity), Severity (..),
                                             filterBySeverity, richMessageAction )
 
+import           Control.Monad.Catch
 import           Control.Monad.IO.Class   ( MonadIO )
 import           Control.Monad.Reader     ( MonadReader, ReaderT (..), asks )
 
@@ -27,8 +29,6 @@ import           Data.Time                ( TimeZone, getCurrentTimeZone )
 
 import           Database.Beam.Postgres   ( Connection, Pg, runBeamPostgres, runBeamPostgresDebug )
 import           Database.BikeShare.Utils ( connectDbName, mkDbParams, uncurry5 )
-
-import           Formatting
 
 import           GHC.Stack                ( HasCallStack )
 
@@ -54,7 +54,7 @@ data Env m where
 If you use this constraint, function call stack will be propagated and
 you will have access to code lines that log messages.
 -}
-type WithAppEnv env msg m = (MonadReader env m, HasLog env msg m, HasCallStack, MonadIO m, MonadUnliftIO m, MonadFail m)
+type WithAppEnv env msg m = (MonadReader env m, HasLog env msg m, HasCallStack, MonadIO m, MonadUnliftIO m, MonadFail m, MonadThrow m, MonadCatch m)
 
 withConn :: (WithAppEnv (Env env) Message m) => m Connection
 withConn = asks envDBConnection >>= liftIO . pure
@@ -64,7 +64,7 @@ withPostgres action = do
   conn <- withConn
   logDatabase <- asks envLogDatabase
   liftIO $
-    if logDatabase then runBeamPostgresDebug pPrintCompact conn action
+    if logDatabase then runBeamPostgresDebug putStrLn conn action
     else runBeamPostgres conn action
 
 -- Implement logging for the application environment.
@@ -80,7 +80,7 @@ instance HasLog (Env m) Message m where
 -- Application type
 newtype App a = App
   { unApp :: ReaderT (Env App) IO a
-  } deriving newtype (Functor, Applicative, Monad, MonadIO, MonadUnliftIO, MonadReader (Env App), MonadFail)
+  } deriving newtype (Functor, Applicative, Monad, MonadIO, MonadUnliftIO, MonadReader (Env App), MonadFail, MonadThrow, MonadCatch)
 
 -- | Simple environment for the main application.
 simpleEnv :: TimeZone -> Connection -> Env App
@@ -110,8 +110,16 @@ mainLogAction severity = filterBySeverity severity msgSeverity richMessageAction
 runApp :: Env App -> App a -> IO a
 runApp env app = runReaderT (unApp app) env
 
+-- | Helper function to run a computation in the App monad, returning an IO monad.
 runWithApp :: String -> App a -> IO a
 runWithApp dbname app = do
   conn <- mkDbParams dbname >>= uncurry5 connectDbName
   currentTimeZone <- getCurrentTimeZone
   runApp (mainEnv Info False currentTimeZone conn) app
+
+-- | Helper function to run a computation in the App monad with debug and database logging, returning an IO monad.
+runWithAppDebug :: String -> App a -> IO a
+runWithAppDebug dbname app = do
+  conn <- mkDbParams dbname >>= uncurry5 connectDbName
+  currentTimeZone <- getCurrentTimeZone
+  runApp (mainEnv Debug True currentTimeZone conn) app

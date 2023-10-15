@@ -4,49 +4,42 @@
 {-# HLINT ignore "Use camelCase" #-}
 
 {-# LANGUAGE DeriveAnyClass            #-}
-{-# LANGUAGE DeriveGeneric             #-}
 {-# LANGUAGE DerivingVia               #-}
-{-# LANGUAGE FlexibleContexts          #-}
-{-# LANGUAGE FlexibleInstances         #-}
-{-# LANGUAGE ImpredicativeTypes        #-}
-{-# LANGUAGE MultiParamTypeClasses     #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
-{-# LANGUAGE StandaloneDeriving        #-}
 {-# LANGUAGE TypeFamilies              #-}
 {-# LANGUAGE UndecidableInstances      #-}
 
 module Database.BikeShare.StationStatus
      ( BeamStationStatusString (..)
-     , PrimaryKey (StationStatusId)
+     , PrimaryKey (..)
      , ReportTime (..)
      , StationStatus
      , StationStatusId
      , StationStatusT (..)
      , VehicleTypeMixin (..)
-     , available_boost
-     , available_efit
-     , available_efit_g5
-     , available_iconic
-     , d_status_active
-     , d_status_id
-     , d_status_info_id
-     , d_status_is_charging_station
-     , d_status_last_reported
-     , d_status_num_bikes_available
-     , d_status_num_bikes_disabled
-     , d_status_num_docks_available
-     , d_status_num_docks_disabled
-     , d_status_station_id
+     , availableBoost
+     , availableEfit
+     , availableEfitG5
+     , availableIconic
      , fromBeamStationStatusToJSON
      , fromJSONToBeamStationStatus
      , reportTimeType
      , stationStatusType
+     , statusIsChargingStation
+     , statusLastReported
+     , statusNumBikesAvailable
+     , statusNumBikesDisabled
+     , statusNumDocksAvailable
+     , statusNumDocksDisabled
+     , statusStationId
+     , unStatusLastReported
+     , unStatusStationId
      , vehicleTypeFields
      , vehicleTypesAvailable
-     , vehicle_types_available_boost
-     , vehicle_types_available_efit
-     , vehicle_types_available_efit_g5
-     , vehicle_types_available_iconic
+     , vehicleTypesAvailableBoost
+     , vehicleTypesAvailableEfit
+     , vehicleTypesAvailableEfitG5
+     , vehicleTypesAvailableIconic
      ) where
 
 import qualified API.Types                                  as AT
@@ -61,8 +54,7 @@ import           Data.String                                ( IsString (fromStri
 import qualified Data.Text                                  as Text
 
 import           Database.Beam
-import           Database.Beam.Backend                      ( BeamBackend, HasSqlValueSyntax (sqlValueSyntax),
-                                                              SqlSerial (..) )
+import           Database.Beam.Backend                      ( BeamBackend, HasSqlValueSyntax (sqlValueSyntax) )
 import           Database.Beam.Postgres                     ( Postgres )
 import           Database.Beam.Postgres.Syntax              ( pgTextType )
 import           Database.BikeShare.StationInformation
@@ -76,23 +68,20 @@ import           ReportTime
 
 -- | Declare a (Beam) table for the 'StationStatus' type.
 data StationStatusT f where
-  StationStatus :: { _d_status_id                      :: Columnar f (SqlSerial Int32)
-                   , _d_status_info_id                 :: PrimaryKey StationInformationT f
-                   , _d_status_station_id              :: Columnar f Int32
-                   , _d_status_num_bikes_available     :: Columnar f Int32
-                   , _d_status_num_bikes_disabled      :: Columnar f Int32
-                   , _d_status_num_docks_available     :: Columnar f Int32
-                   , _d_status_num_docks_disabled      :: Columnar f Int32
-                   , _d_status_last_reported           :: Columnar f (Maybe ReportTime) -- In UTC time
-                   , _d_status_is_charging_station     :: Columnar f Bool
-                   , _d_status_status                  :: Columnar f BeamStationStatusString
-                   , _d_status_is_installed            :: Columnar f Bool
-                   , _d_status_is_renting              :: Columnar f Bool
-                   , _d_status_is_returning            :: Columnar f Bool
-                   , _d_status_traffic                 :: Columnar f (Maybe Text.Text) -- PBSC doesn't seem to set this field
-                   , _d_status_vehicle_docks_available :: Columnar f Int32
-                   , _d_status_vehicle_types_available :: VehicleTypeMixin f
-                   , _d_status_active                  :: Columnar f Bool -- Flag indicating if the record is active or not
+  StationStatus :: { _statusStationId             :: PrimaryKey StationInformationT f
+                   , _statusLastReported          :: Columnar f ReportTime -- In UTC time
+                   , _statusNumBikesAvailable     :: Columnar f Int32
+                   , _statusNumBikesDisabled      :: Columnar f Int32
+                   , _statusNumDocksAvailable     :: Columnar f Int32
+                   , _statusNumDocksDisabled      :: Columnar f Int32
+                   , _statusIsChargingStation     :: Columnar f Bool
+                   , _statusStatus                :: Columnar f BeamStationStatusString
+                   , _statusIsInstalled           :: Columnar f Bool
+                   , _statusIsRenting             :: Columnar f Bool
+                   , _statusIsReturning           :: Columnar f Bool
+                   , _statusTraffic               :: Columnar f (Maybe Text.Text) -- PBSC doesn't seem to set this field
+                   , _statusVehicleDocksAvailable :: Columnar f Int32
+                   , _statusVehicleTypesAvailable :: VehicleTypeMixin f
                    } -> StationStatusT f
   deriving (Generic, Beamable)
 
@@ -106,15 +95,26 @@ deriving instance Eq StationStatus
 
 -- | Inform Beam about the table.
 instance Table StationStatusT where
-  data PrimaryKey StationStatusT f = StationStatusId (Columnar f (SqlSerial Int32))
+  data PrimaryKey StationStatusT f = StationStatusId { _unStatusStationId    :: PrimaryKey StationInformationT f
+                                                     , _unStatusLastReported :: Columnar f ReportTime
+                                                     }
     deriving (Generic, Beamable)
-  primaryKey = StationStatusId . _d_status_id
+  primaryKey = StationStatusId <$> _statusStationId  <*> _statusLastReported
+
+-- | Lenses
+unStatusLastReported :: Lens' (PrimaryKey StationStatusT f) (Columnar f ReportTime)
+unStatusLastReported key (StationStatusId stationId lastReported) = fmap (StationStatusId stationId) (key lastReported)
+{-# INLINE unStatusLastReported #-}
+
+unStatusStationId :: Lens' (PrimaryKey StationStatusT f) (PrimaryKey StationInformationT f)
+unStatusStationId key (StationStatusId stationId lastReported) = fmap (`StationStatusId` lastReported) (key stationId)
+{-# INLINE unStatusStationId #-}
 
 data VehicleTypeMixin f =
-  VehicleType { _available_boost   :: Columnar f Int32
-              , _available_iconic  :: Columnar f Int32
-              , _available_efit    :: Columnar f Int32
-              , _available_efit_g5 :: Columnar f Int32
+  VehicleType { _availableBoost  :: Columnar f Int32
+              , _availableIconic :: Columnar f Int32
+              , _availableEfit   :: Columnar f Int32
+              , _availableEfitG5 :: Columnar f Int32
               } deriving (Generic, Beamable)
 type VehicleType = VehicleTypeMixin Identity
 deriving instance Show (VehicleTypeMixin Identity)
@@ -131,58 +131,52 @@ vehicleTypesAvailable :: DataType Postgres VehicleType
 vehicleTypesAvailable = DataType pgTextType
 
 -- | VehicleType Lenses
-available_boost   :: Lens' VehicleType Int32
-available_iconic  :: Lens' VehicleType Int32
-available_efit    :: Lens' VehicleType Int32
-available_efit_g5 :: Lens' VehicleType Int32
+availableBoost   :: Lens' VehicleType Int32
+availableIconic  :: Lens' VehicleType Int32
+availableEfit    :: Lens' VehicleType Int32
+availableEfitG5 :: Lens' VehicleType Int32
 
-VehicleType (LensFor available_boost) _ _ _   = tableLenses
-VehicleType _ (LensFor available_iconic) _ _  = tableLenses
-VehicleType _ _ (LensFor available_efit) _    = tableLenses
-VehicleType _ _ _ (LensFor available_efit_g5) = tableLenses
+VehicleType (LensFor availableBoost)  _ _ _ = tableLenses
+VehicleType _ (LensFor availableIconic) _ _ = tableLenses
+VehicleType _ _ (LensFor availableEfit)   _ = tableLenses
+VehicleType _ _ _ (LensFor availableEfitG5) = tableLenses
 
 -- | StationStatus Lenses
-d_status_id                      :: Lens' (StationStatusT f) (C f (SqlSerial Int32))
-d_status_info_id                 :: Lens' (StationStatusT f) (C f Int32)
-d_status_station_id              :: Lens' (StationStatusT f) (C f Int32)
-d_status_num_bikes_available     :: Lens' (StationStatusT f) (C f Int32)
-d_status_num_bikes_disabled      :: Lens' (StationStatusT f) (C f Int32)
-d_status_num_docks_available     :: Lens' (StationStatusT f) (C f Int32)
-d_status_num_docks_disabled      :: Lens' (StationStatusT f) (C f Int32)
-d_status_last_reported           :: Lens' (StationStatusT f) (C f (Maybe ReportTime))
-d_status_is_charging_station     :: Lens' (StationStatusT f) (C f Bool)
-d_status_status                  :: Lens' (StationStatusT f) (C f BeamStationStatusString)
-d_status_is_installed            :: Lens' (StationStatusT f) (C f Bool)
-d_status_is_renting              :: Lens' (StationStatusT f) (C f Bool)
-d_status_is_returning            :: Lens' (StationStatusT f) (C f Bool)
-d_status_traffic                 :: Lens' (StationStatusT f) (C f (Maybe Text.Text))
-d_status_vehicle_docks_available :: Lens' (StationStatusT f) (C f Int32)
-vehicle_types_available_boost    :: Lens' (StationStatusT f) (C f Int32)
-vehicle_types_available_iconic   :: Lens' (StationStatusT f) (C f Int32)
-vehicle_types_available_efit     :: Lens' (StationStatusT f) (C f Int32)
-vehicle_types_available_efit_g5  :: Lens' (StationStatusT f) (C f Int32)
-d_status_active                  :: Lens' (StationStatusT f) (C f Bool)
+statusStationId             :: Getter (StationStatusT Identity) (PrimaryKey StationInformationT Identity)
+statusLastReported          :: Lens' (StationStatusT f) (C f ReportTime)
+statusNumBikesAvailable     :: Lens' (StationStatusT f) (C f Int32)
+statusNumBikesDisabled      :: Lens' (StationStatusT f) (C f Int32)
+statusNumDocksAvailable     :: Lens' (StationStatusT f) (C f Int32)
+statusNumDocksDisabled      :: Lens' (StationStatusT f) (C f Int32)
+statusIsChargingStation     :: Lens' (StationStatusT f) (C f Bool)
+statusStatus                :: Lens' (StationStatusT f) (C f BeamStationStatusString)
+statusIsInstalled           :: Lens' (StationStatusT f) (C f Bool)
+statusIsRenting             :: Lens' (StationStatusT f) (C f Bool)
+statusIsReturning           :: Lens' (StationStatusT f) (C f Bool)
+statusTraffic               :: Lens' (StationStatusT f) (C f (Maybe Text.Text))
+statusVehicleDocksAvailable :: Lens' (StationStatusT f) (C f Int32)
+vehicleTypesAvailableBoost  :: Lens' (StationStatusT f) (C f Int32)
+vehicleTypesAvailableIconic :: Lens' (StationStatusT f) (C f Int32)
+vehicleTypesAvailableEfit   :: Lens' (StationStatusT f) (C f Int32)
+vehicleTypesAvailableEfitG5 :: Lens' (StationStatusT f) (C f Int32)
 
-StationStatus (LensFor d_status_id)                                         _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
-StationStatus _ (StationInformationId (LensFor d_status_info_id))             _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
-StationStatus _ _ (LensFor d_status_station_id)                                 _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
-StationStatus _ _ _ (LensFor d_status_num_bikes_available)                        _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
-StationStatus _ _ _ _ (LensFor d_status_num_bikes_disabled)                         _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
-StationStatus _ _ _ _ _ (LensFor d_status_num_docks_available)                        _ _ _ _ _ _ _ _ _ _ _ = tableLenses
-StationStatus _ _ _ _ _ _ (LensFor d_status_num_docks_disabled)                         _ _ _ _ _ _ _ _ _ _ = tableLenses
-StationStatus _ _ _ _ _ _ _ (LensFor d_status_last_reported)                              _ _ _ _ _ _ _ _ _ = tableLenses
-StationStatus _ _ _ _ _ _ _ _ (LensFor d_status_is_charging_station)                        _ _ _ _ _ _ _ _ = tableLenses
-StationStatus _ _ _ _ _ _ _ _ _ (LensFor d_status_status)                                     _ _ _ _ _ _ _ = tableLenses
-StationStatus _ _ _ _ _ _ _ _ _ _ (LensFor d_status_is_installed)                               _ _ _ _ _ _ = tableLenses
-StationStatus _ _ _ _ _ _ _ _ _ _ _ (LensFor d_status_is_renting)                                 _ _ _ _ _ = tableLenses
-StationStatus _ _ _ _ _ _ _ _ _ _ _ _ (LensFor d_status_is_returning)                               _ _ _ _ = tableLenses
-StationStatus _ _ _ _ _ _ _ _ _ _ _ _ _ (LensFor d_status_traffic)                                    _ _ _ = tableLenses
-StationStatus _ _ _ _ _ _ _ _ _ _ _ _ _ _ (LensFor d_status_vehicle_docks_available)                    _ _ = tableLenses
-StationStatus _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (VehicleType (LensFor vehicle_types_available_boost) _ _ _)   _ = tableLenses
-StationStatus _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (VehicleType _ (LensFor vehicle_types_available_iconic) _ _)  _ = tableLenses
-StationStatus _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (VehicleType _ _ (LensFor vehicle_types_available_efit)    _) _ = tableLenses
-StationStatus _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (VehicleType _ _ _ (LensFor vehicle_types_available_efit_g5)) _ = tableLenses
-StationStatus _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (LensFor d_status_active)                                     = tableLenses
+statusStationId = to _statusStationId
+StationStatus _ (LensFor statusLastReported)                               _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
+StationStatus _ _ (LensFor statusNumBikesAvailable)                          _ _ _ _ _ _ _ _ _ _ _ = tableLenses
+StationStatus _ _ _ (LensFor statusNumBikesDisabled)                           _ _ _ _ _ _ _ _ _ _ = tableLenses
+StationStatus _ _ _ _ (LensFor statusNumDocksAvailable)                          _ _ _ _ _ _ _ _ _ = tableLenses
+StationStatus _ _ _ _ _ (LensFor statusNumDocksDisabled)                           _ _ _ _ _ _ _ _ = tableLenses
+StationStatus _ _ _ _ _ _ (LensFor statusIsChargingStation)                          _ _ _ _ _ _ _ = tableLenses
+StationStatus _ _ _ _ _ _ _ (LensFor statusStatus)                                     _ _ _ _ _ _ = tableLenses
+StationStatus _ _ _ _ _ _ _ _ (LensFor statusIsInstalled)                                _ _ _ _ _ = tableLenses
+StationStatus _ _ _ _ _ _ _ _ _ (LensFor statusIsRenting)                                  _ _ _ _ = tableLenses
+StationStatus _ _ _ _ _ _ _ _ _ _ (LensFor statusIsReturning)                                _ _ _ = tableLenses
+StationStatus _ _ _ _ _ _ _ _ _ _ _ (LensFor statusTraffic)                                    _ _ = tableLenses
+StationStatus _ _ _ _ _ _ _ _ _ _ _ _ (LensFor statusVehicleDocksAvailable)                      _ = tableLenses
+StationStatus _ _ _ _ _ _ _ _ _ _ _ _ _ (VehicleType (LensFor vehicleTypesAvailableBoost) _ _ _)   = tableLenses
+StationStatus _ _ _ _ _ _ _ _ _ _ _ _ _ (VehicleType _ (LensFor vehicleTypesAvailableIconic) _ _)  = tableLenses
+StationStatus _ _ _ _ _ _ _ _ _ _ _ _ _ (VehicleType _ _ (LensFor vehicleTypesAvailableEfit)    _) = tableLenses
+StationStatus _ _ _ _ _ _ _ _ _ _ _ _ _ (VehicleType _ _ _ (LensFor vehicleTypesAvailableEfitG5))  = tableLenses
 
 -- | Newtype wrapper for StationStatusString to allow us to define a custom FromBackendRow instance.
 -- Don't want to implement database-specific code for the underlying StationStatusString type.
@@ -219,29 +213,27 @@ stationStatusType :: DataType Postgres BeamStationStatusString
 stationStatusType = DataType pgTextType
 
 -- | Convert from the JSON StationStatus to the Beam StationStatus type
-fromJSONToBeamStationStatus :: AT.StationStatus -> StationStatusT (QExpr Postgres s)
-fromJSONToBeamStationStatus status =
-  StationStatus { _d_status_id                       = default_
-                , _d_status_info_id                  = StationInformationId $ fromIntegral $ status ^. AT.status_station_id
-                , _d_status_station_id               = fromIntegral $ status ^. AT.status_station_id
-                , _d_status_num_bikes_available      = fromIntegral $ status ^. AT.status_num_bikes_available
-                , _d_status_num_bikes_disabled       = fromIntegral $ status ^. AT.status_num_bikes_disabled
-                , _d_status_num_docks_available      = fromIntegral $ status ^. AT.status_num_docks_available
-                , _d_status_num_docks_disabled       = fromIntegral $ status ^. AT.status_num_docks_disabled
-                , _d_status_last_reported            = val_ (coerce $ status ^. AT.status_last_reported)
-                , _d_status_is_charging_station      = val_ $ status ^. AT.status_is_charging_station
-                , _d_status_status                   = val_ (coerce $ status ^. AT.status_status :: BeamStationStatusString)
-                , _d_status_is_installed             = val_ $ status ^. AT.status_is_installed
-                , _d_status_is_renting               = val_ $ status ^. AT.status_is_renting
-                , _d_status_is_returning             = val_ $ status ^. AT.status_is_returning
-                , _d_status_traffic                  = val_ $ fmap Text.pack $ status ^. AT.status_traffic
-                , _d_status_vehicle_docks_available  = fromIntegral $ AT.dock_count $ head $ status ^. AT.status_vehicle_docks_available
-                , _d_status_vehicle_types_available  = val_ $ VehicleType num_boost num_iconic num_efit num_efit_g5
-                , _d_status_active                   = val_ True
+fromJSONToBeamStationStatus :: AT.StationStatus -> Maybe (StationStatusT (QExpr Postgres s))
+fromJSONToBeamStationStatus status
+  | Just lastReported <- status ^. AT.statusLastReported = Just $
+  StationStatus { _statusStationId             = StationInformationId (fromIntegral $ status ^. AT.statusStationId)
+                , _statusLastReported          = val_ (coerce lastReported)
+                , _statusNumBikesAvailable     = fromIntegral $ status ^. AT.statusNumBikesAvailable
+                , _statusNumBikesDisabled      = fromIntegral $ status ^. AT.statusNumBikesDisabled
+                , _statusNumDocksAvailable     = fromIntegral $ status ^. AT.statusNumDocksAvailable
+                , _statusNumDocksDisabled      = fromIntegral $ status ^. AT.statusNumDocksDisabled
+                , _statusIsChargingStation     = val_ $ status ^. AT.statusIsChargingStation
+                , _statusStatus                = val_ (coerce $ status ^. AT.statusStatus :: BeamStationStatusString) , _statusIsInstalled = val_ $ status ^. AT.statusIsInstalled
+                , _statusIsRenting             = val_ $ status ^. AT.statusIsRenting
+                , _statusIsReturning           = val_ $ status ^. AT.statusIsReturning
+                , _statusTraffic               = val_ $ fmap Text.pack $ status ^. AT.statusTraffic
+                , _statusVehicleDocksAvailable = fromIntegral $ AT.dock_count $ head $ status ^. AT.statusVehicleDocksAvailable
+                , _statusVehicleTypesAvailable = val_ $ VehicleType num_boost num_iconic num_efit num_efit_g5
                 }
+  | otherwise = Nothing
   where
     -- | Find the vehicle type in the list of vehicle types available; default to 0 if not found.
-    findByType' vehicle_type = find (\x -> AT.vehicle_type_id x == vehicle_type) $ status ^. AT.status_vehicle_types_available
+    findByType' vehicle_type = find (\x -> AT.vehicle_type_id x == vehicle_type) $ status ^. AT.statusVehicleTypesAvailable
     findByType  vehicle_type = fromIntegral $ maybe 0 AT.type_count (findByType' vehicle_type)
     num_boost   = findByType AT.Boost
     num_iconic  = findByType AT.Iconic
@@ -251,22 +243,24 @@ fromJSONToBeamStationStatus status =
 -- | Convert from the Beam StationStatus type to the JSON StationStatus
 fromBeamStationStatusToJSON :: StationStatus -> AT.StationStatus
 fromBeamStationStatusToJSON status =
-  AT.StationStatus { AT._status_station_id                  = fromIntegral $ status^.d_status_station_id
-                   , AT._status_num_bikes_available      = fromIntegral $ status^.d_status_num_bikes_available
-                   , AT._status_num_bikes_disabled       = fromIntegral $ status^.d_status_num_bikes_disabled
-                   , AT._status_num_docks_available      = fromIntegral $ status^.d_status_num_docks_available
-                   , AT._status_num_docks_disabled       = fromIntegral $ status^.d_status_num_docks_disabled
-                   , AT._status_last_reported            = coerce $ status^.d_status_last_reported
-                   , AT._status_is_charging_station      = status^.d_status_is_charging_station
-                   , AT._status_status                   = coerce $ status^.d_status_status
-                   , AT._status_is_installed             = status^.d_status_is_installed
-                   , AT._status_is_renting               = status^.d_status_is_renting
-                   , AT._status_is_returning             = status^.d_status_is_returning
-                   , AT._status_traffic                  = fmap Text.unpack $ status^.d_status_traffic
-                   , AT._status_vehicle_docks_available  = [ AT.VehicleDock (map show [AT.Boost, AT.Iconic, AT.EFit, AT.EFitG5]) (fromIntegral $ status^.d_status_vehicle_docks_available) ]
-                   , AT._status_vehicle_types_available  = [ AT.VehicleType AT.Boost  (fromIntegral (status^.vehicle_types_available_boost))
-                                                           , AT.VehicleType AT.Iconic (fromIntegral (status^.vehicle_types_available_iconic))
-                                                           , AT.VehicleType AT.EFit   (fromIntegral (status^.vehicle_types_available_efit))
-                                                           , AT.VehicleType AT.EFitG5 (fromIntegral (status^.vehicle_types_available_efit_g5))
-                                                           ]
+  AT.StationStatus { AT._statusStationId             = fromIntegral sid
+                   , AT._statusNumBikesAvailable     = fromIntegral $ status ^. statusNumBikesAvailable
+                   , AT._statusNumBikesDisabled      = fromIntegral $ status ^. statusNumBikesDisabled
+                   , AT._statusNumDocksAvailable     = fromIntegral $ status ^. statusNumDocksAvailable
+                   , AT._statusNumDocksDisabled      = fromIntegral $ status ^. statusNumDocksDisabled
+                   , AT._statusLastReported          = coerce (Just (status ^. statusLastReported))
+                   , AT._statusIsChargingStation     = status ^. statusIsChargingStation
+                   , AT._statusStatus                = coerce (status ^. statusStatus)
+                   , AT._statusIsInstalled           = status ^. statusIsInstalled
+                   , AT._statusIsRenting             = status ^. statusIsRenting
+                   , AT._statusIsReturning           = status ^. statusIsReturning
+                   , AT._statusTraffic               = fmap Text.unpack $ status ^. statusTraffic
+                   , AT._statusVehicleDocksAvailable = [ AT.VehicleDock (map show [AT.Boost, AT.Iconic, AT.EFit, AT.EFitG5]) (fromIntegral $ status ^. statusVehicleDocksAvailable) ]
+                   , AT._statusVehicleTypesAvailable = [ AT.VehicleType AT.Boost  (fromIntegral (status ^. vehicleTypesAvailableBoost))
+                                                       , AT.VehicleType AT.Iconic (fromIntegral (status ^. vehicleTypesAvailableIconic))
+                                                       , AT.VehicleType AT.EFit   (fromIntegral (status ^. vehicleTypesAvailableEfit))
+                                                       , AT.VehicleType AT.EFitG5 (fromIntegral (status ^. vehicleTypesAvailableEfitG5))
+                                                       ]
                    }
+  where
+    StationInformationId sid = _statusStationId status

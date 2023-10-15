@@ -88,6 +88,7 @@
                   doctest
                   stylish-haskell
                   tasty-discover
+                  weeder
                 ;
                 inherit (self'.packages)
                   haskbike-completions;
@@ -100,7 +101,11 @@
                   reuse
                   pgadmin
                   litecli
-                  ;
+                  pgformatter
+                ;
+                inherit (pkgs.nodePackages)
+                  prettier
+                ;
                 # PostgreSQL with extensions
                 inherit postgres;
 
@@ -142,7 +147,7 @@
 
           # Start the service and expose the port
           config = {
-            Cmd = [ "haskbike" "poll" ];
+            Cmd = [ "haskbike" "-v" "--enable-migrations" "poll" ];
           };
         };
 

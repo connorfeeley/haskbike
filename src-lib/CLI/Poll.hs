@@ -24,7 +24,7 @@ import           Control.Monad.Cont            ( forever )
 import           Data.Maybe                    ( fromMaybe )
 import qualified Data.Text                     as Text
 
-import           Database.BikeShare            ( d_status_last_reported, d_status_station_id )
+import           Database.BikeShare
 import           Database.BikeShare.Operations
 
 import           Fmt
@@ -94,25 +94,20 @@ statusHandler queue = void . forever $ do
   let status = response ^. (response_data . unStatusStations)
   log I $ format "(Status) Received {} status records from API." (length status)
 
-  updated_api <- separateNewerStatusRecords status
-
   -- Insert the updated status.
-  inserted_result <- insertStationStatus (updated_api ^. filter_newer)
+  inserted_result <- insertStationStatus status
 
   -- Log each station ID updated.
-  mapM_ (log D . Text.pack . fmtLog) $
-    zipWith dataToTuple
-      (inserted_result ^. insert_deactivated)
-      (inserted_result ^. insert_inserted)
+  mapM_ (log D . Text.pack . fmtLog . dataToTuple) inserted_result
 
   -- Log counts of rows inserted and activated.
-  log I $ format "(Status) Updated: {} | Inserted: {}"
-    (length $ inserted_result ^. insert_deactivated)
-    (length $ inserted_result ^. insert_inserted)
+  log I $ format "(Status) Inserted: {}" (length inserted_result)
 
   where
-    dataToTuple u i = (i ^. d_status_station_id, u ^. d_status_last_reported, i ^. d_status_last_reported)
-    fmtLog (sid, lr, lr') = format "ID: {} {} {}" sid (maybe "-" show lr) (maybe "-" show lr')
+    dataToTuple s = ( s ^. statusStationId . unInformationStationId
+                    , s ^. statusLastReported
+                    )
+    fmtLog (sid, lr) = format "ID: {} {}" sid (show lr)
 
 
 -- | Handle last_updated field in response.

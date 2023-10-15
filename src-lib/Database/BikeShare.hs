@@ -39,46 +39,43 @@ bikeshareDb = defaultDbSettings `withDbModification`
   dbModification
   { _bikeshareStationInformation =
     setEntityName "station_information" <> modifyTableFields tableModification
-      { _info_id                     = "id"
-      , _info_station_id             = "station_id"
-      , _info_name                   = "name"
-      , _info_physical_configuration = "physical_configuration"
-      , _info_lat                    = "lat"
-      , _info_lon                    = "lon"
-      , _info_altitude               = "altitude"
-      , _info_address                = "address"
-      , _info_capacity               = "capacity"
-      , _info_is_charging_station    = "is_charging_station"
-      , _info_rental_methods         = "rental_methods"
-      , _info_is_valet_station       = "is_valet_station"
-      , _info_is_virtual_station     = "is_virtual_station"
-      , _info_groups                 = "groups"
-      , _info_obcn                   = "obcn"
-      , _info_nearby_distance        = "nearby_distance"
-      , _info_bluetooth_id           = "bluetooth_id"
-      , _info_ride_code_support      = "ride_code_support"
-      , _info_rental_uris            = "rental_uris"
-      , _info_active                 = "active"
+      { _infoId                    = "id"
+      , _infoStationId             = "station_id"
+      , _infoName                  = "name"
+      , _infoPhysicalConfiguration = "physical_configuration"
+      , _infoLat                   = "lat"
+      , _infoLon                   = "lon"
+      , _infoAltitude              = "altitude"
+      , _infoAddress               = "address"
+      , _infoCapacity              = "capacity"
+      , _infoIsChargingStation     = "is_charging_station"
+      , _infoRentalMethods         = "rental_methods"
+      , _infoIsValetStation        = "is_valet_station"
+      , _infoIsVirtualStation      = "is_virtual_station"
+      , _infoGroups                = "groups"
+      , _infoObcn                  = "obcn"
+      , _infoNearbyDistance        = "nearby_distance"
+      , _infoBluetoothId           = "bluetooth_id"
+      , _infoRideCodeSupport       = "ride_code_support"
+      , _infoRentalUris            = "rental_uris"
+      , _infoActive                = "active"
       }
   , _bikeshareStationStatus =
     setEntityName "station_status" <> modifyTableFields tableModification
-      { _d_status_id                      = "id"
-      , _d_status_info_id                 = StationInformationId "info_id"
-      , _d_status_station_id              = "station_id"
-      , _d_status_num_bikes_available     = "num_bikes_available"
-      , _d_status_num_bikes_disabled      = "num_bikes_disabled"
-      , _d_status_num_docks_available     = "num_docks_available"
-      , _d_status_num_docks_disabled      = "num_docks_disabled"
-      , _d_status_last_reported           = "last_reported"
-      , _d_status_is_charging_station     = "is_charging_station"
-      , _d_status_status                  = "status"
-      , _d_status_is_installed            = "is_installed"
-      , _d_status_is_renting              = "is_renting"
-      , _d_status_is_returning            = "is_returning"
-      , _d_status_traffic                 = "traffic"
-      , _d_status_vehicle_docks_available = "vehicle_docks_available"
-      , _d_status_vehicle_types_available = vehicleTypeFields "vehicle_types_available"
-      , _d_status_active                  = "active"
+      { _statusStationId             = StationInformationId "station_id"
+      , _statusLastReported          = "last_reported"
+      , _statusNumBikesAvailable     = "num_bikes_available"
+      , _statusNumBikesDisabled      = "num_bikes_disabled"
+      , _statusNumDocksAvailable     = "num_docks_available"
+      , _statusNumDocksDisabled      = "num_docks_disabled"
+      , _statusIsChargingStation     = "is_charging_station"
+      , _statusStatus                = "status"
+      , _statusIsInstalled           = "is_installed"
+      , _statusIsRenting             = "is_renting"
+      , _statusIsReturning           = "is_returning"
+      , _statusTraffic               = "traffic"
+      , _statusVehicleDocksAvailable = "vehicle_docks_available"
+      , _statusVehicleTypesAvailable = vehicleTypeFields "vehicle_types_available"
       }
   -- , _bikeshareDiagnostics =
   --   setEntityName "diagnostics" <> modifyTableFields tableModification
@@ -86,6 +83,9 @@ bikeshareDb = defaultDbSettings `withDbModification`
   --     , _diagnosticTime = "time"
   --     }
   }
+
+-- bikeshareStationInformation :: Lens' (BikeshareDb f) (f (TableEntity StationInformationT))
+-- bikeshareStationStatus      :: Lens' (BikeshareDb f) (f (TableEntity StationStatusT))
 
 -- Lenses
 BikeshareDb
