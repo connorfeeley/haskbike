@@ -205,7 +205,7 @@ queryStationIdLike stationName = do
 -- | Query the latest status for a station.
 queryStationStatusLatest :: Int                       -- ^ Station ID.
                          -> App (Maybe StationStatus) -- ^ Latest 'StationStatus' for the given station.
-queryStationStatusLatest station_id = withPostgres $ runSelectReturningOne $ select $ do
+queryStationStatusLatest station_id = withPostgres $ runSelectReturningOne $ select $ limit_ 1 $ do
   info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
   guard_ (_infoStationId info ==. val_ ( fromIntegral station_id))
   status <- orderBy_ (asc_ . _statusLastReported)
