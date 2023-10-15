@@ -54,7 +54,7 @@ main = do
   conn <- connectDbName name host port username password
 
   -- Create the application environment.
-  let env = mainEnv (logLevel options) (logDatabase options) timeZone conn
+  let env = mainEnv (logLevel options) (logDatabase options) (optLogColourize options) timeZone conn
 
   -- Log the database connection parameters.
   runApp env (log I $ "Connected to database using: " <> logParams)

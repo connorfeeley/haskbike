@@ -17,6 +17,7 @@ data Options where
   Options :: { optCommand         :: !Command
              , optVerbose         :: [Bool] -- ^ Verbosity flags.
              , optLogDatabase     :: Bool   -- ^ If database queries should be logged.
+             , optLogColourize    :: Bool   -- ^ If log output should be colourized.
              , optDatabase        :: String
              , optEnableMigration :: Bool
              } -> Options
@@ -29,6 +30,7 @@ parseOptions = Options
   -- Support multiple verbosity flags.
   <*> many verboseFlag
   <*> logDatabase
+  <*> logColourize
   <*> strOption
       ( long "database"
      <> metavar "DATABASE"
@@ -41,14 +43,18 @@ parseOptions = Options
      <> help "Perform database migrations." )
   where
     verboseFlag = flag' True -- Active when flag is present.
-                  ( long "verbose"
-                 <> short 'v'
-                 <> help "Output verbosity (pass multiple times for more verbosity)."
-                 <> showDefault)
+                 (long "verbose"
+               <> short 'v'
+               <> help "Output verbosity (pass multiple times for more verbosity)."
+               <> showDefault)
     logDatabase = switch
-                  ( long "log-database"
-                 <> showDefault
-                 <> help "Log database queries." )
+                 (long "log-database"
+               <> showDefault
+               <> help "Log database queries." )
+    logColourize = flag True False
+                  (long "no-log-colour"
+                <> help "Don't colourize logging output."
+                <> showDefault)
 
 -- | Top-level commands.
 data Command where
