@@ -46,7 +46,7 @@ main = do
                           , pack host
                           , pack port
                           , pack username
-                          , pack "password=***" -- Don't log the password.
+                          , pack "password=" <> pack (map (\_ -> '*') password) -- Obfuscate password in logs.
                           ]
 
   usingLoggerT logStdoutAction $
