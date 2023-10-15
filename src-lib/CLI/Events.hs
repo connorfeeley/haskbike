@@ -67,22 +67,21 @@ dispatchEvents (EventCounts options) = do
   let yesterday = previousDay today
 
   -- 'eventsForRange' parameters:
-  let stationId :: Maybe Int = Nothing -- Get event counts for all stations.
-  let bikeType = Iconic
-  let eventType = Docking
+  let stationId = optEventsCountStationId options
   let startDay' = fromMaybe yesterday startDay
   let endDay' = fromMaybe today endDay
 
   -- Get undocking/docking counts.
-  log I $ format "Calculating number of {} {}s for (optional) station {} (limit: {})." (showLower bikeType) (showLower eventType) (maybeF stationId) (optEventsCountLimit options)
+  log I $ format "Calculating number of event counts for (optional) station {} (limit: {})." (maybeF stationId) (optEventsCountLimit options)
   eventSums <- eventsForRange stationId startDay' startTime endDay' endTime
 
+  let sortOrder = Docking
   liftIO $ do
-    putStrLn $ format "\nSorted by differentials ({}):" (sortedMessage eventType)
-    formatDockingEventsDifferential $ takeMaybe limit $ sortOnVariation eventType (sortedEventsBoth eventSums)
+    putStrLn $ format "\nSorted by differentials ({}):" (sortedMessage sortOrder)
+    formatDockingEventsDifferential $ takeMaybe limit $ sortOnVariation sortOrder (sortedEventsBoth eventSums)
 
     putStrLn ""
-    formatDockingEventsCount $ takeMaybe limit $ sortDockingEventsCount eventType (sortOnVariationTotal Undocking eventSums)
+    formatDockingEventsCount $ takeMaybe limit $ sortDockingEventsCount sortOrder (sortOnVariationTotal Undocking eventSums)
   where
     sortedMessage :: AvailabilityCountVariation -> String
     sortedMessage Docking   = format "{} >> {}" (showLower Docking) (showLower Undocking)

@@ -195,6 +195,7 @@ data EventSubcommand =
 data EventCountOptions =
   EventCountOptions
     { optEventsCountLimit     :: Maybe Int
+    , optEventsCountStationId :: Maybe Int
     , optEventsCountStartDay  :: Maybe Day
     , optEventsCountStartTime :: Maybe TimeOfDay
     , optEventsCountEndDay    :: Maybe Day
@@ -226,6 +227,14 @@ eventsOptionsParser = EventsOptions
 eventsCountOptionsParser :: Parser EventCountOptions
 eventsCountOptionsParser = do
   optEventsCountLimit <- eventsCountsLimit
+  optEventsCountStationId <- option (optional auto)
+    ( metavar "STATION_ID"
+    <> long "station"
+    <> short 's'
+    <> showDefault
+    <> value Nothing
+    <> help "Restrict to a specific station (ID)."
+    )
   optEventsCountStartDay <- dayParser
   optEventsCountEndDay <- dayParser
   optEventsCountStartTime <- optional timeOfDayParser
