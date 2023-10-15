@@ -59,7 +59,7 @@ unit_poll = do
   conn <- connectDbName name host port username password >>= dropTables >>= migrateDatabase
 
   -- Create the application environment.
-  let env = mainEnv W False timeZone conn
+  let env = mainEnv W False False timeZone conn
 
   -- Log the database connection parameters.
   runApp env (log I $ "Connected to database using: " <> unwords [ "dbname=" <> pack name

@@ -9,7 +9,6 @@ module AppEnv
      , WithAppEnv
      , liftIO
      , mainEnv
-     , mainLogAction
      , runApp
      , runWithApp
      , runWithAppDebug
@@ -19,7 +18,7 @@ module AppEnv
      ) where
 
 import           Colog                    ( HasLog (..), LogAction (..), Message, Msg (msgSeverity), Severity (..),
-                                            filterBySeverity, richMessageAction )
+                                            filterBySeverity, richMessageAction, simpleMessageAction )
 
 import           Control.Monad.Catch
 import           Control.Monad.IO.Class   ( MonadIO )
@@ -43,12 +42,11 @@ import           UnliftIO                 ( MonadUnliftIO, liftIO )
 
 -- Application environment
 data Env m where
-  Env :: { envLogAction    :: !(LogAction m Message)
-         , envLogDatabase  :: !Bool
-         , envLogColourize :: !Bool
-         , envMinSeverity  :: !Severity
-         , envTimeZone     :: !TimeZone
-         , envDBConnection :: !Connection
+  Env :: { envLogAction     :: !(LogAction m Message)
+         , envLogDatabase   :: !Bool
+         , envMinSeverity   :: !Severity
+         , envTimeZone      :: !TimeZone
+         , envDBConnection  :: !Connection
          } -> Env m
 
 {- | Type alias for constraint for:
@@ -90,30 +88,29 @@ newtype App a = App
 
 -- | Simple environment for the main application.
 simpleEnv :: TimeZone -> Connection -> Env App
-simpleEnv timeZone conn = Env { envLogAction    = mainLogAction Info
-                              , envLogDatabase  = False
-                              , envLogColourize = True
-                              , envMinSeverity  = Info
-                              , envTimeZone     = timeZone
-                              , envDBConnection = conn
+simpleEnv timeZone conn = Env { envLogAction     = mainLogAction Info False
+                              , envLogDatabase   = False
+                              , envMinSeverity   = Info
+                              , envTimeZone      = timeZone
+                              , envDBConnection  = conn
                               }
 
 -- | Environment for the main application.
 mainEnv :: Severity -> Bool -> Bool -> TimeZone -> Connection -> Env App
-mainEnv sev logDatabase logColourize timeZone conn =
-  Env { envLogAction    = mainLogAction sev
-      , envLogDatabase  = logDatabase
-      , envLogColourize = logColourize
-      , envMinSeverity  = Info
-      , envTimeZone     = timeZone
-      , envDBConnection = conn
+mainEnv sev logDatabase logRichOutput timeZone conn =
+  Env { envLogAction     = mainLogAction sev logRichOutput
+      , envLogDatabase   = logDatabase
+      , envMinSeverity   = Info
+      , envTimeZone      = timeZone
+      , envDBConnection  = conn
       }
 
 -- | Log action for the main application.
 mainLogAction :: (MonadIO m)
               => Severity            -- ^ Severity level (verbosity).
+              -> Bool                -- ^ If rich log action should be used.
               -> LogAction m Message -- ^ Action used to log.
-mainLogAction severity = filterBySeverity severity msgSeverity richMessageAction -- or simpleMessageAction
+mainLogAction severity enableRich = filterBySeverity severity msgSeverity (if enableRich then richMessageAction else simpleMessageAction)
 
   -- | Helper function to run the application.
 runApp :: Env App -> App a -> IO a

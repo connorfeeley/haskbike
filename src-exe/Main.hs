@@ -14,16 +14,19 @@ import           CLI.Poll
 import           CLI.Query
 
 import           Colog                    ( LogAction, Severity (..), WithLog, cmap, fmtMessage, log, logTextStdout,
-                                            pattern E, pattern I, usingLoggerT )
+                                            pattern D, pattern E, pattern I, usingLoggerT )
 
-import           Control.Monad            ( void )
+import           Control.Monad            ( void, when )
 import           Control.Monad.IO.Class   ( MonadIO )
 
 import           Data.Text                ( pack, unwords )
 import qualified Data.Text                as Text
+import           Data.Text.Lazy           ( toStrict )
 import           Data.Time                ( getCurrentTimeZone )
 
 import           Database.BikeShare.Utils
+
+import           Formatting
 
 import           Options.Applicative
 
@@ -37,6 +40,10 @@ main = do
   -- Parse command line options.
   options <- liftIO $ customExecParser (prefs $ helpShowGlobals <> showHelpOnEmpty <> showHelpOnError) opts
 
+  -- Log options when verbosity is high enough.
+  when (length (optVerbose options) >= 3) $ usingLoggerT logStdoutAction $
+    log D $ "Connecting to database using: " <> toStrict (pShowCompact options)
+
   -- Get the current time zone.
   timeZone <- getCurrentTimeZone
 
@@ -46,7 +53,7 @@ main = do
                           , pack host
                           , pack port
                           , pack username
-                          , pack "password=" <> pack (map (\_ -> '*') password) -- Obfuscate password in logs.
+                          , pack "password=" <> pack (map (const '*') password) -- Obfuscate password in logs.
                           ]
 
   usingLoggerT logStdoutAction $
@@ -54,7 +61,7 @@ main = do
   conn <- connectDbName name host port username password
 
   -- Create the application environment.
-  let env = mainEnv (logLevel options) (logDatabase options) (optLogColourize options) timeZone conn
+  let env = mainEnv (logLevel options) (logDatabase options) (optLogRichOutput options) timeZone conn
 
   -- Log the database connection parameters.
   runApp env (log I $ "Connected to database using: " <> logParams)
