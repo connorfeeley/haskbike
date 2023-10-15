@@ -60,7 +60,7 @@ formatStationInfo (timeZone, name, status) =
                        , fmtBikeAvailability "E-Fit"    (status ^. vehicleTypesAvailableEfit)
                        , fmtBikeAvailability "E-Fit G5" (status ^. vehicleTypesAvailableEfitG5)]
 
-    pairs = [ ("Docks:\t", status ^. statusNumDocksAvailable, status ^. statusStationId . unInformationStationId)
+    pairs = [ ("Docks:\t", status ^. statusNumDocksAvailable, fromIntegral $ status ^. statusNumDocksDisabled)
             , ("Bikes:\t", status ^. statusNumBikesAvailable, fromIntegral $ status ^. statusNumBikesDisabled)
             ]
     in [ formattedName name status
