@@ -217,6 +217,7 @@ library
                     , colour
                     , text-show
                     , attoparsec
+                    , hvega
 
     -- Directories containing source files.
     hs-source-dirs:   src-lib
