@@ -179,6 +179,7 @@ library
                     , AppEnv
                     , API.ResponseWrapper
                     , API.Client
+                    , API.ClientLifted
                     -- , API.DebugClient
                     , CLI.Utils
                     , CLI.Poll

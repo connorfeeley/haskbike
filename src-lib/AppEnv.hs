@@ -7,7 +7,6 @@ module AppEnv
      , Env (..)
      , Message
      , WithAppEnv
-     , liftClientM
      , liftIO
      , mainEnv
      , runApp
@@ -18,14 +17,6 @@ module AppEnv
      , withConn
      , withManager
      , withPostgres
-       -- Lifted API client functions
-     , stationInformationM
-     , stationStatusM
-     , systemInformationM
-     , systemPricingPlansM
-     , systemRegionsM
-     , vehicleTypesM
-     , versionsM
      ) where
 
 import           API.Client
@@ -164,38 +155,3 @@ runWithAppDebug dbname app = do
   currentTimeZone <- getCurrentTimeZone
   clientManager <- liftIO $ newManager tlsManagerSettings
   runApp (mainEnv Debug True True currentTimeZone conn clientManager) app
-
-
-
-liftClientM :: ClientM a -> App a
-liftClientM clientM = do
-  env <- ask
-  let manager = envClientManager env
-  eitherResult <- liftIO $ runClientM clientM (mkClientEnv manager (envBaseUrl env))
-  case eitherResult of
-    Left err -> do
-      logException err
-      throwM err
-    Right res -> return res
-
-
-versionsM:: App Object
-versionsM = liftClientM versions
-
-vehicleTypesM :: App Object
-vehicleTypesM = liftClientM vehicleTypes
-
-stationInformationM :: App StationInformationResponse
-stationInformationM = liftClientM stationInformation
-
-stationStatusM :: App StationStatusResponse
-stationStatusM = liftClientM stationStatus
-
-systemRegionsM :: App Object
-systemRegionsM = liftClientM systemRegions
-
-systemInformationM :: App Object
-systemInformationM = liftClientM systemInformation
-
-systemPricingPlansM :: App Object
-systemPricingPlansM = liftClientM systemPricingPlans
