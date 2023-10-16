@@ -32,6 +32,7 @@
 
           settings = {
             haskbike = {
+              extraBuildTools = [ pkgs.git ];
               check = false; # Don't run cabal tests as part of build.
 
               # Profiling options.
