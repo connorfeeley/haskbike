@@ -30,7 +30,7 @@ import           Servant.Client
 
 
 
-liftClientM :: ClientM a -> App a
+liftClientM :: ClientM a -> AppM a
 liftClientM clientM = do
   env <- ask
   let manager = envClientManager env
@@ -42,23 +42,23 @@ liftClientM clientM = do
     Right res -> return res
 
 
-versionsM:: App Object
+versionsM:: AppM Object
 versionsM = liftClientM versions
 
-vehicleTypesM :: App Object
+vehicleTypesM :: AppM Object
 vehicleTypesM = liftClientM vehicleTypes
 
-stationInformationM :: App StationInformationResponse
+stationInformationM :: AppM StationInformationResponse
 stationInformationM = liftClientM stationInformation
 
-stationStatusM :: App StationStatusResponse
+stationStatusM :: AppM StationStatusResponse
 stationStatusM = liftClientM stationStatus
 
-systemRegionsM :: App Object
+systemRegionsM :: AppM Object
 systemRegionsM = liftClientM systemRegions
 
-systemInformationM :: App Object
+systemInformationM :: AppM Object
 systemInformationM = liftClientM systemInformation
 
-systemPricingPlansM :: App Object
+systemPricingPlansM :: AppM Object
 systemPricingPlansM = liftClientM systemPricingPlans

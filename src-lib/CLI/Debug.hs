@@ -31,7 +31,7 @@ import           System.Console.ANSI
 
 -- | Dispatch CLI arguments for debugging.
 dispatchDebug :: DebugMiscOptions
-              -> App ()
+              -> AppM ()
 dispatchDebug _options = do
   -- Get the number of rows in the station status table.
   numStatusRows <-

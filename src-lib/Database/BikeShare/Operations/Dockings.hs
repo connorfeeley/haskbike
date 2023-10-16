@@ -112,7 +112,7 @@ makeLenses ''EventsCountResult
 
 
 -- | Query the number of dockings and undockings for a station.
-queryDockingEventsCount :: StatusVariationQuery -> App [DockingEventsCount]
+queryDockingEventsCount :: StatusVariationQuery -> AppM [DockingEventsCount]
 queryDockingEventsCount variation =  do
   counts <- queryDockingEventsCountExpr variation
   pure $ map (\( station
@@ -130,7 +130,7 @@ queryDockingEventsCount variation =  do
 
 
 -- | Query the number of dockings and undockings for a station (returning tuples of each count for each bike type).
-queryDockingEventsCountExpr :: StatusVariationQuery -> App [(StationInformation, (Int32, Int32), (Int32, Int32), (Int32, Int32), (Int32, Int32))]
+queryDockingEventsCountExpr :: StatusVariationQuery -> AppM [(StationInformation, (Int32, Int32), (Int32, Int32), (Int32, Int32), (Int32, Int32))]
 queryDockingEventsCountExpr variation =
   withPostgres $ runSelectReturningList $ selectWith $ do
   cte <- selecting $ do

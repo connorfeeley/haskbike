@@ -88,12 +88,12 @@ getDecodedFileStatus = getDecodedFile
 initDBWithAllTestData :: IO ()
 initDBWithAllTestData = do
   info <- getDecodedFileInformation  "docs/json/2.3/station_information-1.json"
-  void $ runWithApp dbnameTest $ insertStationInformation $ info   ^. response_data . unInfoStations
+  void $ runWithAppM dbnameTest $ insertStationInformation $ info   ^. response_data . unInfoStations
 
   -- Insert test station status data 1-22.
   mapM_ (\i -> do
             statusResponse <- getDecodedFileStatus $ "docs/json/2.3/station_status-"+|i|+".json"
-            void $ runWithApp dbnameTest $ insertStationStatus $ statusResponse ^. response_data . unStatusStations
+            void $ runWithAppM dbnameTest $ insertStationStatus $ statusResponse ^. response_data . unStatusStations
         ) [(1 :: Int) .. (22 :: Int)]
 
 
@@ -106,7 +106,7 @@ unit_insertStationInformation = do
   stationInformationResponse <- getDecodedFileInformation "test/json/station_information.json"
 
   -- Insert test data.
-  inserted_info <- runWithApp dbnameTest $ insertStationInformation $ _unInfoStations $ stationInformationResponse ^. response_data
+  inserted_info <- runWithAppM dbnameTest $ insertStationInformation $ _unInfoStations $ stationInformationResponse ^. response_data
 
   assertEqual "Inserted station information" 7 (length inserted_info)
 
@@ -121,8 +121,8 @@ unit_insertStationStatus = do
   status  <- getDecodedFileStatus      "test/json/station_status.json"
 
   -- Insert test data.
-  insertedInfo   <- runWithApp dbnameTest $ insertStationInformation $ info   ^. response_data . unInfoStations
-  insertedStatus <- runWithApp dbnameTest $ insertStationStatus $ status ^. response_data . unStatusStations
+  insertedInfo   <- runWithAppM dbnameTest $ insertStationInformation $ info   ^. response_data . unInfoStations
+  insertedStatus <- runWithAppM dbnameTest $ insertStationStatus $ status ^. response_data . unStatusStations
 
   assertEqual "Inserted station information" 704 (length insertedInfo)
   assertEqual "Inserted station status"        8 (length insertedStatus)
@@ -138,15 +138,15 @@ unit_queryStationStatus = do
   status  <- getDecodedFileStatus       "test/json/station_status.json"
 
   -- Insert test data.
-  insertedInfo   <- runWithApp dbnameTest $ insertStationInformation $ info   ^. response_data . unInfoStations
-  insertedStatus <- runWithApp dbnameTest $ insertStationStatus $ status ^. response_data . unStatusStations
+  insertedInfo   <- runWithAppM dbnameTest $ insertStationInformation $ info   ^. response_data . unInfoStations
+  insertedStatus <- runWithAppM dbnameTest $ insertStationStatus $ status ^. response_data . unStatusStations
 
   assertEqual "Inserted station information" 704 (length insertedInfo)
   assertEqual "Inserted station status"        8 (length insertedStatus)
 
   -- Query station status.
-  liftIO $ assertEqual "Query status (limit: 1000)" 8 . length =<< runWithApp dbnameTest (queryStationStatus (Just 1000))
-  liftIO $ assertEqual "Query status (limit: none)" 8 . length =<< runWithApp dbnameTest (queryStationStatus Nothing)
+  liftIO $ assertEqual "Query status (limit: 1000)" 8 . length =<< runWithAppM dbnameTest (queryStationStatus (Just 1000))
+  liftIO $ assertEqual "Query status (limit: none)" 8 . length =<< runWithAppM dbnameTest (queryStationStatus Nothing)
 
 
 -- | HUnit test for inserting station information, with data from the actual API.
@@ -158,7 +158,7 @@ unit_insertStationInformationApi = do
   info    <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
 
   -- Insert test data.
-  void $ runWithApp dbnameTest $ insertStationInformation $ info ^. response_data . unInfoStations
+  void $ runWithAppM dbnameTest $ insertStationInformation $ info ^. response_data . unInfoStations
 
 
 -- | HUnit test for inserting station status, with data from the actual API.
@@ -170,7 +170,7 @@ unit_insertStationStatusApi = do
   status  <- getDecodedFileStatus "docs/json/2.3/station_status-1.json"
 
   -- Should fail because station information has not been inserted.
-  inserted_status <- runWithApp dbnameTest $ insertStationStatus $ status ^. response_data . unStatusStations
+  inserted_status <- runWithAppM dbnameTest $ insertStationStatus $ status ^. response_data . unStatusStations
 
   assertEqual "Inserted station status" [] inserted_status
   assertEqual "Updated station status"  [] inserted_status
@@ -185,8 +185,8 @@ unit_insertStationApi = do
   status  <- getDecodedFileStatus      "docs/json/2.3/station_status-1.json"
 
   -- Insert test data.
-  inserted_info   <- runWithApp dbnameTest $ insertStationInformation $ info   ^. response_data . unInfoStations
-  inserted_status <- runWithApp dbnameTest $ insertStationStatus $ status ^. response_data . unStatusStations
+  inserted_info   <- runWithAppM dbnameTest $ insertStationInformation $ info   ^. response_data . unInfoStations
+  inserted_status <- runWithAppM dbnameTest $ insertStationStatus $ status ^. response_data . unStatusStations
 
   assertEqual "Inserted station information" 704 (length inserted_info)
   assertEqual "Inserted station status"      704 (length inserted_status)
@@ -225,11 +225,11 @@ doInsertNewerStatusRecords = do
   status_2  <- getDecodedFileStatus      "docs/json/2.3/station_status-2.json"
 
   -- Insert test data.
-  void $ runWithApp dbnameTest $ insertStationInformation $ info     ^. response_data . unInfoStations
-  void $ runWithApp dbnameTest $ insertStationStatus      $ status_1 ^. response_data . unStatusStations
+  void $ runWithAppM dbnameTest $ insertStationInformation $ info     ^. response_data . unInfoStations
+  void $ runWithAppM dbnameTest $ insertStationStatus      $ status_1 ^. response_data . unStatusStations
 
   -- Return maps of updated and same API statuses
-  runWithApp dbnameTest $ insertStationStatus $ status_2 ^. response_data . unStatusStations
+  runWithAppM dbnameTest $ insertStationStatus $ status_2 ^. response_data . unStatusStations
 
 
 -- | HUnit test to assert that changed station status are inserted.
@@ -256,11 +256,11 @@ doStatusInsertOnce = do
   status_2  <- getDecodedFileStatus      "docs/json/2.3/station_status-2.json"
 
   -- Insert test data.
-  void $ runWithApp dbnameTest $ insertStationInformation $ info     ^. response_data . unInfoStations
-  void $ runWithApp dbnameTest $ insertStationStatus      $ status_1 ^. response_data . unStatusStations
+  void $ runWithAppM dbnameTest $ insertStationInformation $ info     ^. response_data . unInfoStations
+  void $ runWithAppM dbnameTest $ insertStationStatus      $ status_1 ^. response_data . unStatusStations
 
   -- Insert second round of test data (some of which have reported since the first round was inserted).
-  runWithApp dbnameTest $ insertStationStatus $ status_2 ^. response_data . unStatusStations
+  runWithAppM dbnameTest $ insertStationStatus $ status_2 ^. response_data . unStatusStations
 
 
 -- | HUnit test to assert that reinserting rows is a no-op.
@@ -282,14 +282,14 @@ doStatusInsertTwice = do
   status_2  <- getDecodedFileStatus "docs/json/2.3/station_status-2.json"
 
   -- Insert first round of test data.
-  void $ runWithApp dbnameTest $ insertStationInformation $ info     ^. response_data . unInfoStations
-  void $ runWithApp dbnameTest $ insertStationStatus      $ status_1 ^. response_data . unStatusStations
+  void $ runWithAppM dbnameTest $ insertStationInformation $ info     ^. response_data . unInfoStations
+  void $ runWithAppM dbnameTest $ insertStationStatus      $ status_1 ^. response_data . unStatusStations
 
   -- Insert second round of test data (some of which have reported since the first round was inserted).
-  void $ runWithApp dbnameTest $ insertStationStatus $ status_2 ^. response_data . unStatusStations
+  void $ runWithAppM dbnameTest $ insertStationStatus $ status_2 ^. response_data . unStatusStations
 
   -- Insert second round of test data once again (nothing should have changed).
-  runWithApp dbnameTest $ insertStationStatus $ status_2 ^. response_data . unStatusStations
+  runWithAppM dbnameTest $ insertStationStatus $ status_2 ^. response_data . unStatusStations
 
 
 -- | HUnit test to validate that a station ID can be looked up by its name, and vice-versa.
@@ -297,16 +297,16 @@ unit_queryStationByIdAndName :: IO ()
 unit_queryStationByIdAndName = do
   setupTestDatabase
   info <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
-  void $ runWithApp dbnameTest $ insertStationInformation $ info ^. response_data . unInfoStations
+  void $ runWithAppM dbnameTest $ insertStationInformation $ info ^. response_data . unInfoStations
 
-  assertEqual "Station ID for 'King St W / Joe Shuster Way'" (Just 7148)  =<< runWithApp dbnameTest (queryStationId "King St W / Joe Shuster Way")
-  assertEqual "Station ID for 'Wellesley Station Green P'" (Just 7001)    =<< runWithApp dbnameTest (queryStationId "Wellesley Station Green P")
+  assertEqual "Station ID for 'King St W / Joe Shuster Way'" (Just 7148)  =<< runWithAppM dbnameTest (queryStationId "King St W / Joe Shuster Way")
+  assertEqual "Station ID for 'Wellesley Station Green P'" (Just 7001)    =<< runWithAppM dbnameTest (queryStationId "Wellesley Station Green P")
   assertEqual "Stations with name ending in 'Green P'"
     [ (7001,"Wellesley Station Green P")
     , (7050,"Richmond St E / Jarvis St Green P")
     , (7112,"Liberty St / Fraser Ave Green P")
     , (7789,"75 Holly St - Green P")
-    ] =<< runWithApp dbnameTest (queryStationIdLike "%Green P")
+    ] =<< runWithAppM dbnameTest (queryStationIdLike "%Green P")
 
 
 -- | HUnit test to query all status records for a station between two times.
@@ -316,19 +316,19 @@ unit_queryStationStatusBetween = do
   initDBWithAllTestData
 
   -- First status for #7001 was inserted at 2023-09-15 17:16:58; last status at 2023-09-15 17:35:00.
-  statusBetweenAll <- runWithApp dbnameTest $ queryStationStatusBetween 7001
+  statusBetweenAll <- runWithAppM dbnameTest $ queryStationStatusBetween 7001
     (ReportTime $ read "2023-09-15 17:16:58")
     (ReportTime $ read "2023-09-15 17:35:00")
   assertEqual "Expected number of status records for #7001 between two valid times" 4 (length statusBetweenAll)
 
   -- Query for status records for #7001 between two times, where the start and end time match the first status report.
-  statusBetweenFirst <- runWithApp dbnameTest $ queryStationStatusBetween 7001
+  statusBetweenFirst <- runWithAppM dbnameTest $ queryStationStatusBetween 7001
     (ReportTime $ read "2000-09-15 17:16:58") -- Moment the first status was reported.
     (ReportTime $ read "2023-09-15 17:16:58") -- Moment the first status was reported.
   assertEqual "Expected number of status records for #7001 for first status reported" 1 (length statusBetweenFirst)
 
   -- Query for status records for #7001 between two times, where the end time is before the first status was reported.
-  statusBetweenTooEarly <- runWithApp dbnameTest $ queryStationStatusBetween 7001
+  statusBetweenTooEarly <- runWithAppM dbnameTest $ queryStationStatusBetween 7001
     (ReportTime $ read "2000-01-01 00:00:00") -- Arbitrary date
     (ReportTime $ read "2023-09-15 17:16:57") -- One second before first status reported.
   assertEqual "Expected number of status records for #7001 before first status reported" 0 (length statusBetweenTooEarly)
@@ -339,7 +339,7 @@ unit_queryStationStatusBetween = do
 
   NOTE: as an example, uses both 'ReportTime $ ...' and 'reportTime ...' to construct a 'ReportTime' value.
   -}
-  statusBetweenBackwards <- runWithApp dbnameTest $ queryStationStatusBetween 7001
+  statusBetweenBackwards <- runWithAppM dbnameTest $ queryStationStatusBetween 7001
     (ReportTime $ read "2023-09-15 17:16:59")                     -- One second after first status reported.
     (reportTime (fromGregorian 2000 01 01) (TimeOfDay 00 00 00))  -- Arbitrary date
   assertEqual "Expected number of status records for #7001 with backwards time parameters" 0 (length statusBetweenBackwards)
@@ -390,7 +390,7 @@ unit_queryDockingUndockingCount = do
 
 checkConditions :: Int32 -> [StatusThreshold] -> Int -> Int -> IO ()
 checkConditions stationId thresholds expectDockings expectUndockings = do
-  eventCountsForStation <- findInList stationId <$> runWithAppDebug dbnameTest (queryDockingEventsCount (StatusVariationQuery (Just stationId) thresholds))
+  eventCountsForStation <- findInList stationId <$> runWithAppMDebug dbnameTest (queryDockingEventsCount (StatusVariationQuery (Just stationId) thresholds))
   assertEqual ("Expected number of undockings at station " ++ show stationId)
     (Just expectUndockings)
     (_eventsCountUndockings . _eventsIconicCount  <$> eventCountsForStation)

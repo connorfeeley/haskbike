@@ -3,16 +3,16 @@
 
 -- | Application environment and monad.
 module AppEnv
-     ( App
+     ( AppM
      , Env (..)
      , Message
-     , WithAppEnv
+     , WithAppMEnv
      , liftIO
      , mainEnv
-     , runApp
+     , runAppM
      , runQueryWithManager
-     , runWithApp
-     , runWithAppDebug
+     , runWithAppM
+     , runWithAppMDebug
      , simpleEnv
      , withConn
      , withManager
@@ -66,14 +66,14 @@ data Env m where
 If you use this constraint, function call stack will be propagated and
 you will have access to code lines that log messages.
 -}
-type WithAppEnv env msg m = (MonadReader env m, HasLog env msg m, HasCallStack, MonadIO m, MonadUnliftIO m, MonadFail m, MonadThrow m, MonadCatch m)
+type WithAppMEnv env msg m = (MonadReader env m, HasLog env msg m, HasCallStack, MonadIO m, MonadUnliftIO m, MonadFail m, MonadThrow m, MonadCatch m)
 
 -- | Fetch database connection from environment monad.
-withConn :: (WithAppEnv (Env env) Message m) => m Connection
+withConn :: (WithAppMEnv (Env env) Message m) => m Connection
 withConn = asks envDBConnection >>= liftIO . pure
 
 -- | Run a Beam operation using database connection from the environment.
-withPostgres :: (WithAppEnv (Env env) Message m) => Pg a -> m a
+withPostgres :: (WithAppMEnv (Env env) Message m) => Pg a -> m a
 withPostgres action = do
   conn <- withConn
   logDatabase <- asks envLogDatabase
@@ -82,11 +82,11 @@ withPostgres action = do
     else runBeamPostgres conn action
 
 -- | Fetch client manager from the environment.
-withManager :: (WithAppEnv (Env env) Message m) => m Manager
+withManager :: (WithAppMEnv (Env env) Message m) => m Manager
 withManager = asks envClientManager >>= liftIO . pure
 
 -- | Run API query using client manager from environment monad.
-runQueryWithManager :: WithAppEnv (Env env) Message m => ClientM a -> m (Either ClientError a)
+runQueryWithManager :: WithAppMEnv (Env env) Message m => ClientM a -> m (Either ClientError a)
 runQueryWithManager query = do
   clientManager <- withManager
   liftIO $ runQuery clientManager query
@@ -102,12 +102,12 @@ instance HasLog (Env m) Message m where
   {-# INLINE setLogAction #-}
 
 -- Application type
-newtype App a = App
-  { unApp :: ReaderT (Env App) IO a
-  } deriving newtype (Functor, Applicative, Monad, MonadIO, MonadUnliftIO, MonadReader (Env App), MonadFail, MonadThrow, MonadCatch)
+newtype AppM a = AppM
+  { unAppM :: ReaderT (Env AppM) IO a
+  } deriving newtype (Functor, Applicative, Monad, MonadIO, MonadUnliftIO, MonadReader (Env AppM), MonadFail, MonadThrow, MonadCatch)
 
 -- | Simple environment for the main application.
-simpleEnv :: TimeZone -> Connection -> Manager -> Env App
+simpleEnv :: TimeZone -> Connection -> Manager -> Env AppM
 simpleEnv timeZone conn manager = Env { envLogAction     = mainLogAction Info False
                                       , envLogDatabase   = False
                                       , envMinSeverity   = Info
@@ -118,7 +118,7 @@ simpleEnv timeZone conn manager = Env { envLogAction     = mainLogAction Info Fa
                                       }
 
 -- | Environment for the main application.
-mainEnv :: Severity -> Bool -> Bool -> TimeZone -> Connection -> Manager -> Env App
+mainEnv :: Severity -> Bool -> Bool -> TimeZone -> Connection -> Manager -> Env AppM
 mainEnv sev logDatabase logRichOutput timeZone conn manager =
   Env { envLogAction     = mainLogAction sev logRichOutput
       , envLogDatabase   = logDatabase
@@ -137,21 +137,21 @@ mainLogAction :: (MonadIO m)
 mainLogAction severity enableRich = filterBySeverity severity msgSeverity (if enableRich then richMessageAction else simpleMessageAction)
 
   -- | Helper function to run the application.
-runApp :: Env App -> App a -> IO a
-runApp env app = runReaderT (unApp app) env
+runAppM :: Env AppM -> AppM a -> IO a
+runAppM env app = runReaderT (unAppM app) env
 
--- | Helper function to run a computation in the App monad, returning an IO monad.
-runWithApp :: String -> App a -> IO a
-runWithApp dbname app = do
+-- | Helper function to run a computation in the AppM monad, returning an IO monad.
+runWithAppM :: String -> AppM a -> IO a
+runWithAppM dbname app = do
   conn <- mkDbParams dbname >>= uncurry5 connectDbName
   currentTimeZone <- getCurrentTimeZone
   clientManager <- liftIO $ newManager tlsManagerSettings
-  runApp (mainEnv Info False True currentTimeZone conn clientManager) app
+  runAppM (mainEnv Info False True currentTimeZone conn clientManager) app
 
--- | Helper function to run a computation in the App monad with debug and database logging, returning an IO monad.
-runWithAppDebug :: String -> App a -> IO a
-runWithAppDebug dbname app = do
+-- | Helper function to run a computation in the AppM monad with debug and database logging, returning an IO monad.
+runWithAppMDebug :: String -> AppM a -> IO a
+runWithAppMDebug dbname app = do
   conn <- mkDbParams dbname >>= uncurry5 connectDbName
   currentTimeZone <- getCurrentTimeZone
   clientManager <- liftIO $ newManager tlsManagerSettings
-  runApp (mainEnv Debug True True currentTimeZone conn clientManager) app
+  runAppM (mainEnv Debug True True currentTimeZone conn clientManager) app

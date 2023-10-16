@@ -24,7 +24,7 @@ import           Prelude                       hiding ( log, unlines )
 
 -- | Dispatch CLI arguments to the query interface.
 dispatchQuery :: QueryOptions
-              -> App ()
+              -> AppM ()
 dispatchQuery options = do
   -- Refresh the database if requested.
   when (optRefresh options) $ do
@@ -39,7 +39,7 @@ dispatchQuery options = do
 
 -- | Query the database for the station with the given ID.
 queryByStationId :: Int
-                 -> App ()
+                 -> AppM ()
 queryByStationId stationId = do
   log I $ toStrict $ "Querying station ID '" <> (pack . show) stationId <> "'"
 
@@ -57,7 +57,7 @@ queryByStationId stationId = do
 
 -- | Query the database for stations with names matching the given pattern.
 queryByStationName :: MatchMethod String
-                   -> App ()
+                   -> AppM ()
 queryByStationName stationMatch = do
   log I $ toStrict $ "Querying station names like '" <> pack stationName <> "'"
 
@@ -80,7 +80,7 @@ queryByStationName stationMatch = do
 -- | Query the database for the status of the given station tuple.
 queryStatus :: String        -- ^ Header
             -> (Int, String) -- ^ (station_id, station_name)
-            -> App [Text]
+            -> AppM [Text]
 queryStatus header station_tuple = do
   -- Query the current time zone.
   currentTimeZone <- asks envTimeZone  -- Fetch the timeZone from the environment

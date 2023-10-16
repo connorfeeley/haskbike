@@ -68,10 +68,10 @@ main = do
   let env = mainEnv (logLevel options) (logDatabase options) (optLogRichOutput options) timeZone conn clientManager
 
   -- Log the database connection parameters.
-  runApp env (log I $ "Connected to database using: " <> logParams)
+  runAppM env (log I $ "Connected to database using: " <> logParams)
 
   -- Run the application.
-  runApp env (appMain options)
+  runAppM env (appMain options)
   where
     -- | Log database operations only when '--log-database' is given.
     logDatabase = optLogDatabase
@@ -87,8 +87,8 @@ main = do
           <> header "Toronto Bikeshare" )
 
 
--- Main application entry point inside the 'App' monad environment.
-appMain :: (App ~ m, WithLog env Message m, MonadIO m, MonadUnliftIO m) => Options -> m ()
+-- Main application entry point inside the 'AppM' monad environment.
+appMain :: (AppM ~ m, WithLog env Message m, MonadIO m, MonadUnliftIO m) => Options -> m ()
 appMain options = do
   log I $ "Starting Toronto Bikeshare CLI with verbosity '" <> Text.pack (show (logLevel options)) <> "'."
   -- Dispatch to appropriate command.

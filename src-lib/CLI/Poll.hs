@@ -41,11 +41,11 @@ import           UnliftIO.Async                ( concurrently_ )
 
 -- | Dispatch CLI arguments to the poller.
 dispatchPoll :: PollOptions
-             -> App ()
+             -> AppM ()
 dispatchPoll _options = pollClient
 
 
-pollClient :: App ()
+pollClient :: AppM ()
 pollClient = do
   (statusTtl, statusLastUpdated, statusQueueResp, infoTtl, infoLastUpdated, infoQueueResp) <- liftIO $
     (,,,,,) <$> newTVarIO 0 <*> newTVarIO 0 <*> newTBQueueIO 4 <*> newTVarIO 0 <*> newTVarIO 0 <*> newTBQueueIO 4
@@ -87,7 +87,7 @@ statusRequester queue intervalSecsVar lastUpdated = void . forever $ do
 
 -- | Thread action to handle API response for station status query.
 statusHandler :: TBQueue StationStatusResponse  -- ^ Queue of responses
-              -> App ()
+              -> AppM ()
 statusHandler queue = void . forever $ do
   response <- liftIO $ atomically $ readTBQueue queue
 
@@ -165,7 +165,7 @@ informationRequester queue intervalSecsVar lastUpdated = void . forever $ do
 
 -- | Thread action to handle API response for station information query.
 informationHandler :: TBQueue StationInformationResponse  -- ^ Queue of responses
-                   -> App ()
+                   -> AppM ()
 informationHandler queue = void . forever $ do
   response <- liftIO $ atomically $ readTBQueue queue
 

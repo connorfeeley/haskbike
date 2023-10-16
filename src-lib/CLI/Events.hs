@@ -46,7 +46,7 @@ import qualified Text.PrettyPrint.Boxes        as Box
 import           UnliftIO
 
 -- | Dispatch CLI arguments for debugging.
-dispatchEvents :: EventSubcommand -> App ()
+dispatchEvents :: EventSubcommand -> AppM ()
 dispatchEvents (EventRange options)  = do
   log I $ format "Getting counts of each bike time every two hours between {} and {}." firstDay lastDay
   log D $ format "Options: {}" (pShowCompact options)
@@ -135,7 +135,7 @@ takeMaybe :: Maybe Int -> [a] -> [a]
 takeMaybe (Just limit) xs = take limit xs
 takeMaybe Nothing xs      = xs
 
-bikeCountsAtMoment :: Day -> TimeOfDay -> App (Day, TimeOfDay, Int32, Int32, Int32, Int32)
+bikeCountsAtMoment :: Day -> TimeOfDay -> AppM (Day, TimeOfDay, Int32, Int32, Int32, Int32)
 bikeCountsAtMoment day timeOfDay = do
 
   log I $ format "Getting number of bikes by type in the system on {} at {}" day timeOfDay
@@ -180,7 +180,7 @@ formatBikeCounts allCounts = Box.printBox table
 
 
 -- | Get (undockings, dockings) for a day.
-eventsForRange :: Maybe Int -> Day -> TimeOfDay -> Day -> TimeOfDay -> App [DockingEventsCount]
+eventsForRange :: Maybe Int -> Day -> TimeOfDay -> Day -> TimeOfDay -> AppM [DockingEventsCount]
 eventsForRange stationId earliestDay earliestTime latestDay latestTime = do
   -- Calculate number of dockings and undockings
   queryDockingEventsCount queryCondition

@@ -62,14 +62,14 @@ unit_poll = do
   let env = mainEnv W False False timeZone conn
 
   -- Log the database connection parameters.
-  runApp env (log I $ "Connected to database using: " <> unwords [ "dbname=" <> pack name
-                                                                 , pack host
-                                                                 , pack port
-                                                                 , pack username
-                                                                 , pack "password=***" -- Don't log the password.
-                                                                 ])
-  runApp env doPoll
+  runAppM env (log I $ "Connected to database using: " <> unwords [ "dbname=" <> pack name
+                                                                  , pack host
+                                                                  , pack port
+                                                                  , pack username
+                                                                  , pack "password=***" -- Don't log the password.
+                                                                  ])
+  runAppM env doPoll
   where
-    doPoll :: App ()
+    doPoll :: AppM ()
     doPoll = void $ timeout 1000000 $ do -- Terminate after 1 second
       void Poll.pollClient

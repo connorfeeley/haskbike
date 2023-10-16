@@ -41,7 +41,7 @@ import           System.Exit                   ( exitSuccess )
 -- | Helper functions.
 
 -- | Dispatch CLI arguments to the database interface.
-dispatchDatabase :: Options -> App Connection
+dispatchDatabase :: Options -> AppM Connection
 dispatchDatabase options = do
   case optCommand options of
     Poll _pollOptions
@@ -56,7 +56,7 @@ dispatchDatabase options = do
 
 
 -- | Handle the 'Reset' command.
-handleReset :: (App ~ m, WithAppEnv env Message m)  => Options -> ResetOptions -> m Connection
+handleReset :: (AppM ~ m, WithAppMEnv env Message m)  => Options -> ResetOptions -> m Connection
 handleReset options resetOptions = do
   pPrintCompact options
   pPrintCompact resetOptions
@@ -67,7 +67,7 @@ handleReset options resetOptions = do
          log I "Initializing database." >> handleInformation >> liftIO exitSuccess
 
 -- | Helper for station information request.
-handleInformation :: App ()
+handleInformation :: AppM ()
 handleInformation = do
   log D "Querying station information from database."
   numInfoRows <- queryRowCount bikeshareStationInformation
@@ -75,7 +75,7 @@ handleInformation = do
   unless (null numInfoRows) handleStationInformation
 
 -- | Handle station information request.
-handleStationInformation :: App ()
+handleStationInformation :: AppM ()
 handleStationInformation = do
   log D "Requesting station information from API."
   stationInfo <- liftIO (runQueryWithEnv stationInformation :: IO (Either ClientError StationInformationResponse))
@@ -91,7 +91,7 @@ handleStationInformation = do
     rightToMaybe = either (const Nothing) Just
 
 -- | Helper for station status request.
-handleStatus :: App ()
+handleStatus :: AppM ()
 handleStatus = do
   log D "Querying station status from database."
   numStatusRows <- queryRowCount bikeshareStationStatus
@@ -99,7 +99,7 @@ handleStatus = do
   unless (null numStatusRows) handleStationStatus
 
 -- | Handle station status request.
-handleStationStatus :: App ()
+handleStationStatus :: AppM ()
 handleStationStatus = do
   log D "Requesting station status from API."
   stationStatus' <- liftIO (runQueryWithEnv stationStatus :: IO (Either ClientError StationStatusResponse))
