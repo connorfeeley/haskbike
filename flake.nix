@@ -31,8 +31,25 @@
           projectRoot = ./.;
 
           settings = {
-            haskbike = {
+            haskbike = { self, super, ... }: {
+              custom = pkg: pkgs.lib.pipe super.haskbike [
+                # Replace Version.hs with a generated one, since it requires access to the git directory
+                # to determine the version.
+                (pkgs.haskell.lib.compose.overrideCabal (o:
+                  let
+                    versionFile = pkgs.substituteAll {
+                      src = ./nix/VersionPure.hs;
+                      inherit (super.haskbike) version;
+                    };
+                  in
+                  { postPatch = o.postPatch or "" + "cp ${versionFile} src-exe/Version.hs"; doCheck = false; }))
+
+                # Add optparse-applicative completions to the derivation output.
+                (self.generateOptparseApplicativeCompletions [ "haskbike" ])
+              ];
+
               extraBuildTools = [ pkgs.git ];
+
               check = false; # Don't run cabal tests as part of build.
 
               # Profiling options.
@@ -90,7 +107,7 @@
                   stylish-haskell
                   tasty-discover
                   weeder
-                ;
+                  ;
                 inherit (self'.packages)
                   haskbike-completions;
                 # Disable ghcid.
@@ -103,10 +120,10 @@
                   pgadmin
                   litecli
                   pgformatter
-                ;
+                  ;
                 inherit (pkgs.nodePackages)
                   prettier
-                ;
+                  ;
                 # PostgreSQL with extensions
                 inherit postgres;
 
