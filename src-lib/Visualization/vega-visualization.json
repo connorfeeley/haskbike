@@ -1,0 +1,56 @@
+{
+  "$schema": "https://vega.github.io/schema/vega-lite/v4.json",
+  "title": "Available Vehicle Types Over Time",
+  "data": { "url": "https://gist.githubusercontent.com/connorfeeley/672dda6d788b15eee5923fbb258b68ea/raw/b999ecea0152480962a7786472b8eed5bf47b57c/station_status_7001_10-15-14_202310162031.csv" },
+  "transform": [
+    {
+      "fold": ["vehicle_types_available_boost", "vehicle_types_available_iconic", "vehicle_types_available_efit", "vehicle_types_available_efit_g5"],
+      "as": ["Vehicle Type", "Count"]
+    }
+  ],
+  "layer": [
+    {
+      "mark": "area",
+      "encoding": {
+        "x": {
+          "field": "last_reported",
+          "type": "temporal",
+          "title": "Last Reported"
+        },
+        "y": {
+          "field": "Count",
+          "type": "quantitative",
+          "stack": "zero",
+          "title": "Count"
+        },
+        "color": {
+          "field": "Vehicle Type",
+          "type": "nominal"
+        },
+        "tooltip": [
+          { "field": "last_reported", "type": "temporal", "title": "Last Reported", "timeUnit": "yearmonthdatehoursminutesseconds" },
+          { "field": "Vehicle Type", "type": "nominal" },
+          { "field": "Count", "type": "quantitative" }
+        ]
+      }
+    },
+    {
+      "mark": "point",
+      "encoding": {
+        "x": {
+          "field": "last_reported",
+          "type": "temporal"
+        },
+        "y": {
+          "field": "Count",
+          "type": "quantitative",
+          "stack": "zero"
+        },
+        "color": {
+          "field": "Vehicle Type",
+          "type": "nominal"
+        }
+      }
+    }
+  ]
+}
