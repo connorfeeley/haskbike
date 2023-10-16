@@ -19,11 +19,11 @@ import           Colog                         ( WithLog, log, logException, pat
 import           Control.Concurrent            ( threadDelay )
 import           Control.Concurrent.STM
 import           Control.Lens
-import           Control.Monad                 ( void )
+import           Control.Monad                 ( void, when )
 import           Control.Monad.Cont            ( forever )
 import           Control.Monad.Reader          ( MonadReader )
 
-import           Data.Maybe                    ( fromMaybe )
+import           Data.Maybe                    ( fromMaybe, isJust, isNothing )
 import qualified Data.Text                     as Text
 
 import           Database.BikeShare
@@ -35,7 +35,7 @@ import           Formatting
 
 import           Prelude                       hiding ( log )
 
-import           ReportTime                    ( localToPosix )
+import           ReportTime                    ( localToPosix, posixToLocal )
 
 import           TextShow                      ( showt )
 
@@ -90,10 +90,13 @@ statusRequester queue intervalSecsVar lastUpdated = void $ do
       log D $ format "(Status) Sleeping for {} seconds." intervalSecs
       liftIO $ threadDelay (intervalSecs * 1000000)
 
-      liftIO $ atomically $ writeTBQueue queue result
+      elapsedResult <- handleTimeElapsed "Status" result lastUpdated
+      handleTTL "Status" result intervalSecsVar elapsedResult
 
-      extendBy <- handleTimeElapsed "Status" result lastUpdated
-      handleTTL "Status" result intervalSecsVar extendBy
+      -- If 'elapsedResult' is a 'Just', that indicates that last_updated went backwards.
+      -- In that case, we should NOT write the result to the queue, and instead extend the
+      -- time until our next poll by however long the time went backwards.
+      when (isNothing elapsedResult) (liftIO $ atomically $ writeTBQueue queue result)
 
 
 -- | Thread action to handle API response for station status query.
@@ -130,16 +133,17 @@ handleTimeElapsed :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
 handleTimeElapsed logPrefix apiResult lastUpdatedVar = do
   let currentTime' = apiResult ^. response_last_updated
   previousTime <- liftIO $ readTVarIO lastUpdatedVar
+  let previousTime' = posixToLocal previousTime
   let timeElapsed = localToPosix currentTime' - previousTime
 
   -- Check if last_updated went backwards
   if timeElapsed >= 0
     then do -- Update last_updated variable.
       liftIO $ atomically $ writeTVar lastUpdatedVar (localToPosix currentTime')
-      log I $ format "{} last_updated [{}]" logPrefix currentTime'
+      log I $ format "({}) last updated [{}]" logPrefix currentTime'
       pure Nothing
     else do
-      log W $ format "{} last_updated went backwards: {} [{}] -> [{}]" logPrefix previousTime (localToPosix currentTime') timeElapsed
+      log W $ format "({}) last updated went backwards: [{}] -> [{}] | ({})" logPrefix previousTime' currentTime' timeElapsed
       pure (Just (-timeElapsed))
 
 
@@ -152,7 +156,10 @@ handleTTL :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
           -> m ()
 handleTTL logPrefix apiResult ttlVar extendBy = do
   let ttlSecs = apiResult ^. response_ttl
+
+  when (isJust extendBy) $ log W $ format "({}) extending TTL by {}s" logPrefix (fromMaybe 0 extendBy)
   log I $ format "({}) TTL={}{}" logPrefix (showt ttlSecs) (maybe "" (("+" ++) . show) extendBy)
+
   liftIO $ atomically $ writeTVar ttlVar (ttlSecs + fromMaybe 0 extendBy)
 
 
@@ -172,12 +179,13 @@ informationRequester queue intervalSecsVar lastUpdated = void $ do
       log D $ format "(Info) Sleeping for {} seconds." intervalSecs
       liftIO $ threadDelay (intervalSecs * 1000000)
 
-      liftIO $ atomically $ writeTBQueue queue result
+      elapsedResult <- handleTimeElapsed "Info" result lastUpdated
+      handleTTL "Info" result intervalSecsVar elapsedResult
 
-      extendBy <- handleTimeElapsed "Info" result lastUpdated
-      handleTTL "Info" result intervalSecsVar extendBy
-
-      pure ()
+      -- If 'elapsedResult' is a 'Just', that indicates that last_updated went backwards.
+      -- In that case, we should NOT write the result to the queue, and instead extend the
+      -- time until our next poll by however long the time went backwards.
+      when (isNothing elapsedResult) (liftIO $ atomically $ writeTBQueue queue result)
 
 -- | Thread action to handle API response for station information query.
 informationHandler :: TBQueue StationInformationResponse  -- ^ Queue of responses
