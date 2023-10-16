@@ -147,7 +147,7 @@
 
           # Start the service and expose the port
           config = {
-            Cmd = [ "haskbike" "-v" "--enable-migrations" "poll" ];
+            Cmd = [ "haskbike" "-v" "--plain" "--enable-migrations" "poll" ];
           };
         };
 
