@@ -8,8 +8,6 @@ module CLI.Events
      ) where
 
 
-import           API.Types                     ( TorontoVehicleType (..) )
-
 import           AppEnv
 
 import           CLI.Options

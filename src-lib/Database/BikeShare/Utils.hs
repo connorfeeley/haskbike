@@ -8,6 +8,7 @@ module Database.BikeShare.Utils
      , dbnameTest
      , dropTables
      , migrateDatabase
+     , mkDbConnectInfo
      , mkDbParams
      , runBeamPostgres'
      , runBeamPostgresDebug'
@@ -18,7 +19,9 @@ module Database.BikeShare.Utils
 
 import           Control.Monad                 ( void )
 
+import           Data.Maybe                    ( fromMaybe )
 import           Data.String                   ( fromString )
+import           Data.Word                     ( Word16 )
 
 import           Database.Beam.Postgres
 import           Database.BikeShare.Migrations ( migrateDB )
@@ -27,6 +30,8 @@ import           Database.PostgreSQL.Simple
 import           Formatting
 
 import           System.Environment            ( lookupEnv )
+
+import           Text.Read                     ( readMaybe )
 
 
 debug :: Bool
@@ -63,15 +68,17 @@ dbnameTest = "haskbike-test"
 
 -- | Establish a connection to the production database.
 connectProductionDb :: IO Connection
-connectProductionDb = mkDbParams dbnameProduction >>= uncurry5 connectDbName
+connectProductionDb = mkDbConnectInfo dbnameProduction >>= connect
 
 -- | Establish a connection to the testing database.
 connectTestDb :: IO Connection
-connectTestDb = mkDbParams dbnameTest >>= uncurry5 connectDbName
+connectTestDb = mkDbConnectInfo dbnameTest >>= connect
 
 -- | Establish a connection to the named database, using values from the HASKBIKE_{PGDBHOST,USERNAME,PASSWORD} environment variables.
 connectDbName :: String -> String -> String -> String -> String -> IO Connection
 connectDbName name host port username password = do
+  -- Connect using a libpq connection string.
+  -- https://www.postgresql.org/docs/9.5/static/libpq-connect.html#LIBPQ-CONNSTRING
   connectPostgreSQL $ fromString $
     host ++ " " ++
     port ++ " " ++
@@ -99,6 +106,19 @@ mkDbParams name = do
     mkParam :: String -> String -> Maybe String -> IO String
     mkParam defaultVal prefix = maybe (pure defaultVal) (pure . (prefix ++))
 
+-- | Construct a 'ConnectInfo' using values from the HASKBIKE_{PGDBHOST,USERNAME,PASSWORD} environment variables.
+mkDbConnectInfo :: String -> IO ConnectInfo
+mkDbConnectInfo dbName = do
+  envPgDbHostParam <- lookupEnv "HASKBIKE_PGDBHOST"
+  envPgDbPortParam <- lookupEnv "HASKBIKE_PGDBPORT"
+  envUsernameParam <- lookupEnv "HASKBIKE_USERNAME"
+  envPasswordParam <- lookupEnv "HASKBIKE_PASSWORD"
+
+  pure $ ConnectInfo (fromMaybe (connectHost     defaultConnectInfo) envPgDbHostParam)
+                     (fromMaybe (connectPort     defaultConnectInfo) ((readMaybe :: String -> Maybe Word16) =<< envPgDbPortParam))
+                     (fromMaybe (connectUser     defaultConnectInfo) envUsernameParam)
+                     (fromMaybe (connectPassword defaultConnectInfo) envPasswordParam)
+                     dbName
 
 -- | Setup the production database.
 setupProductionDatabase :: IO Connection
@@ -108,7 +128,7 @@ setupProductionDatabase = setupDatabaseName dbnameProduction
 setupDatabaseName :: String -> IO Connection
 setupDatabaseName dbname = do
   -- Connect to named database, drop all tables, and execute migrations.
-  mkDbParams dbname >>= uncurry5 connectDbName >>= dropTables >>= migrateDatabase
+  mkDbConnectInfo dbname >>= connect >>= dropTables >>= migrateDatabase
 
 -- | Drop all tables in the named database.
 dropTables :: Connection -> IO Connection

@@ -13,6 +13,7 @@ module AppEnv
      , runQueryWithManager
      , runWithAppM
      , runWithAppMDebug
+     , runWithAppMSuppressLog
      , simpleEnv
      , withConn
      , withManager
@@ -20,20 +21,18 @@ module AppEnv
      ) where
 
 import           API.Client
-import           API.Types
 
 import           Colog                    ( HasLog (..), LogAction (..), Message, Msg (msgSeverity), Severity (..),
-                                            filterBySeverity, logException, richMessageAction, simpleMessageAction )
+                                            filterBySeverity, richMessageAction, simpleMessageAction )
 
 import           Control.Monad.Catch
 import           Control.Monad.IO.Class   ( MonadIO )
-import           Control.Monad.Reader     ( MonadReader, ReaderT (..), ask, asks )
+import           Control.Monad.Reader     ( MonadReader, ReaderT (..), asks )
 
-import           Data.Aeson               ( Object )
 import           Data.Time                ( TimeZone, getCurrentTimeZone )
 
-import           Database.Beam.Postgres   ( Connection, Pg, runBeamPostgres, runBeamPostgresDebug )
-import           Database.BikeShare.Utils ( connectDbName, mkDbParams, uncurry5 )
+import           Database.Beam.Postgres   ( Connection, Pg, connect, runBeamPostgres, runBeamPostgresDebug )
+import           Database.BikeShare.Utils ( mkDbConnectInfo )
 
 import           GHC.Stack                ( HasCallStack )
 
@@ -142,16 +141,28 @@ runAppM env app = runReaderT (unAppM app) env
 
 -- | Helper function to run a computation in the AppM monad, returning an IO monad.
 runWithAppM :: String -> AppM a -> IO a
-runWithAppM dbname app = do
-  conn <- mkDbParams dbname >>= uncurry5 connectDbName
+runWithAppM dbname action = do
+  conn <- mkDbConnectInfo dbname >>= connect
   currentTimeZone <- getCurrentTimeZone
   clientManager <- liftIO $ newManager tlsManagerSettings
-  runAppM (mainEnv Info False True currentTimeZone conn clientManager) app
+  let env = mainEnv Info False True currentTimeZone conn clientManager
+  runAppM env action
+
+-- | This function is the same as runWithAppM, but overrides the log action to be a no-op.
+runWithAppMSuppressLog :: String -> AppM a -> IO a
+runWithAppMSuppressLog dbname action = do
+  conn <- mkDbConnectInfo dbname >>= connect
+  currentTimeZone <- getCurrentTimeZone
+  clientManager <- liftIO $ newManager tlsManagerSettings
+  let env = (mainEnv Info False True currentTimeZone conn clientManager) { envLogAction = mempty }
+  runAppM env action
+
 
 -- | Helper function to run a computation in the AppM monad with debug and database logging, returning an IO monad.
 runWithAppMDebug :: String -> AppM a -> IO a
-runWithAppMDebug dbname app = do
-  conn <- mkDbParams dbname >>= uncurry5 connectDbName
+runWithAppMDebug dbname action = do
+  conn <- mkDbConnectInfo dbname >>= connect
   currentTimeZone <- getCurrentTimeZone
   clientManager <- liftIO $ newManager tlsManagerSettings
-  runAppM (mainEnv Debug True True currentTimeZone conn clientManager) app
+  let env = mainEnv Debug True True currentTimeZone conn clientManager
+  runAppM env action

@@ -173,12 +173,12 @@ unit_insertStationStatusApi = do
 
   -- Should fail because station information has not been inserted.
   -- Catch exception with 'try'.
-  inserted_status <- runWithAppM dbnameTest $ try $
+  insertedStatus <- runWithAppMSuppressLog dbnameTest $ try $
     insertStationStatus $ status ^. response_data . unStatusStations
 
   -- Exception was expected - only return error if inserted succeeded.
   -- If the insertion succeeded, then database schema does not enforce foreign key constraint correctly.
-  case inserted_status of
+  case insertedStatus of
     Left (_ :: SqlError) -> pure ()
     Right _              -> assertFailure "Unable to insert status records without information populated"
 

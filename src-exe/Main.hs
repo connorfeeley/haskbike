@@ -19,12 +19,14 @@ import           Colog                    ( LogAction, Severity (..), WithLog, c
 import           Control.Monad            ( void, when )
 import           Control.Monad.IO.Class   ( MonadIO )
 
-import           Data.Text                ( pack, unwords )
 import qualified Data.Text                as Text
 import           Data.Text.Lazy           ( toStrict )
 import           Data.Time                ( getCurrentTimeZone )
 
+import           Database.Beam.Postgres   ( ConnectInfo (connectPassword), connect )
 import           Database.BikeShare.Utils
+
+import           Fmt
 
 import           Formatting
 
@@ -51,28 +53,23 @@ main = do
   timeZone <- getCurrentTimeZone
 
   -- Establish a connection to the database.
-  (name, host, port, username, password) <- mkDbParams (optDatabase options)
-  let logParams = unwords [ "dbname=" <> pack name
-                          , pack host
-                          , pack port
-                          , pack username
-                          , pack "password=" <> pack (map (const '*') password) -- Obfuscate password in logs.
-                          ]
+  connInfo <- mkDbConnectInfo (optDatabase options)
   usingLoggerT logStdoutAction $
-    log I $ "Connecting to database using: " <> logParams
-  conn <- connectDbName name host port username password
+    log I $ format "Connecting to database: {}" (pShowCompact (obfuscatePassword connInfo))
+  conn <- connect connInfo >>= dropTables >>= migrateDatabase
 
+  -- Create HTTPS client manager.
   clientManager <- liftIO $ newManager tlsManagerSettings
 
   -- Create the application environment.
   let env = mainEnv (logLevel options) (logDatabase options) (optLogRichOutput options) timeZone conn clientManager
 
-  -- Log the database connection parameters.
-  runAppM env (log I $ "Connected to database using: " <> logParams)
-
   -- Run the application.
   runAppM env (appMain options)
   where
+    -- Obfuscate password by replacing with asterisks.
+    obfuscatePassword connInfo = (connInfo { connectPassword = map (const '*') (connectPassword connInfo) })
+
     -- | Log database operations only when '--log-database' is given.
     logDatabase = optLogDatabase
 
