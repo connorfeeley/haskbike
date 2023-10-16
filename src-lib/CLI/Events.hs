@@ -73,7 +73,7 @@ dispatchEvents (EventCounts options) = do
   log I $ format "Calculating number of event counts for (optional) station {} (limit: {})." (maybeF stationId) (optEventsCountLimit options)
   eventSums <- eventsForRange stationId startDay' startTime endDay' endTime
 
-  let sortOrder = Docking
+  let sortOrder = Undocking
   liftIO $ do
     putStrLn $ format "\nSorted by differentials ({}):" (sortedMessage sortOrder)
     formatDockingEventsDifferential $ takeMaybe limit $ sortOnVariation sortOrder (sortedEventsBoth eventSums)
