@@ -1,0 +1,272 @@
+{
+  "last_updated": 1697465548,
+  "ttl": 0,
+  "data": {
+    "stations": [
+      {
+        "station_id": "7169",
+        "name": "Front St W / Bay St (North Side)",
+        "address": "Front St W / Bay St (North Side),32 Front St",
+        "num_docks_available": 0,
+        "num_bikes_available": 11,
+        "num_bikes_available_types": {
+          "mechanical": 11,
+          "ebike": 0
+        },
+        "status": "IN_SERVICE"
+      },
+      {
+        "station_id": "7283",
+        "name": "Front St W / Bay St (South Side)",
+        "address": "Front St W / Bay St (South Side),",
+        "num_docks_available": 9,
+        "num_bikes_available": 10,
+        "num_bikes_available_types": {
+          "mechanical": 10,
+          "ebike": 0
+        },
+        "status": "IN_SERVICE"
+      },
+      {
+        "station_id": "7052",
+        "name": "Wellington St W / Bay St",
+        "address": "Wellington St W / Bay St,",
+        "num_docks_available": 1,
+        "num_bikes_available": 22,
+        "num_bikes_available_types": {
+          "mechanical": 22,
+          "ebike": 0
+        },
+        "status": "IN_SERVICE"
+      },
+      {
+        "station_id": "7321",
+        "name": "Front St W / University Ave (2)",
+        "address": "Front St W / University Ave (2),",
+        "num_docks_available": 0,
+        "num_bikes_available": 18,
+        "num_bikes_available_types": {
+          "mechanical": 18,
+          "ebike": 0
+        },
+        "status": "IN_SERVICE"
+      },
+      {
+        "station_id": "7048",
+        "name": "Front St W / Yonge St (Hockey Hall of Fame)",
+        "address": "Front St W / Yonge St (Hockey Hall of Fame),",
+        "num_docks_available": 35,
+        "num_bikes_available": 12,
+        "num_bikes_available_types": {
+          "mechanical": 12,
+          "ebike": 0
+        },
+        "status": "IN_SERVICE"
+      },
+      {
+        "station_id": "7070",
+        "name": "25 York St – Union Station South",
+        "address": "25 York St – Union Station South,",
+        "num_docks_available": 2,
+        "num_bikes_available": 9,
+        "num_bikes_available_types": {
+          "mechanical": 9,
+          "ebike": 0
+        },
+        "status": "IN_SERVICE"
+      },
+      {
+        "station_id": "7320",
+        "name": "Front St W / University Ave (1)",
+        "address": "Front St W / University Ave (1),",
+        "num_docks_available": 0,
+        "num_bikes_available": 18,
+        "num_bikes_available_types": {
+          "mechanical": 18,
+          "ebike": 0
+        },
+        "status": "IN_SERVICE"
+      },
+      {
+        "station_id": "7469",
+        "name": "Wellington St W / York St",
+        "address": "Wellington St W / York St,",
+        "num_docks_available": 19,
+        "num_bikes_available": 4,
+        "num_bikes_available_types": {
+          "mechanical": 4,
+          "ebike": 0
+        },
+        "status": "IN_SERVICE"
+      },
+      {
+        "station_id": "7015",
+        "name": "King St W / Bay St (West Side)",
+        "address": "King St W / Bay St (West Side),",
+        "num_docks_available": 12,
+        "num_bikes_available": 28,
+        "num_bikes_available_types": {
+          "mechanical": 26,
+          "ebike": 2
+        },
+        "status": "IN_SERVICE"
+      },
+      {
+        "station_id": "7118",
+        "name": "King St W / Bay St (East Side)",
+        "address": "King St W / Bay St (East Side),243 Bay St",
+        "num_docks_available": 0,
+        "num_bikes_available": 19,
+        "num_bikes_available_types": {
+          "mechanical": 19,
+          "ebike": 0
+        },
+        "status": "IN_SERVICE"
+      },
+      {
+        "station_id": "7005",
+        "name": "King St W / York St",
+        "address": "King St W / York St,",
+        "num_docks_available": 3,
+        "num_bikes_available": 19,
+        "num_bikes_available_types": {
+          "mechanical": 19,
+          "ebike": 0
+        },
+        "status": "IN_SERVICE"
+      },
+      {
+        "station_id": "7417",
+        "name": "King St W / Jordan St",
+        "address": "King St / Jordan St - SMART,",
+        "num_docks_available": 0,
+        "num_bikes_available": 11,
+        "num_bikes_available_types": {
+          "mechanical": 10,
+          "ebike": 1
+        },
+        "status": "IN_SERVICE"
+      },
+      {
+        "station_id": "7057",
+        "name": "Simcoe St / Wellington St W South",
+        "address": "Simcoe St / Wellington St 1,",
+        "num_docks_available": 2,
+        "num_bikes_available": 25,
+        "num_bikes_available_types": {
+          "mechanical": 25,
+          "ebike": 0
+        },
+        "status": "IN_SERVICE"
+      },
+      {
+        "station_id": "7398",
+        "name": "York St / Lake Shore Blvd W",
+        "address": "York St / Lakeshore St W - South,Ontario Canada",
+        "num_docks_available": 1,
+        "num_bikes_available": 18,
+        "num_bikes_available_types": {
+          "mechanical": 18,
+          "ebike": 0
+        },
+        "status": "IN_SERVICE"
+      },
+      {
+        "station_id": "7334",
+        "name": "Simcoe St / Wellington St W North",
+        "address": "Simcoe St / Wellington St 2,",
+        "num_docks_available": 0,
+        "num_bikes_available": 15,
+        "num_bikes_available_types": {
+          "mechanical": 15,
+          "ebike": 0
+        },
+        "status": "IN_SERVICE"
+      },
+      {
+        "station_id": "7284",
+        "name": "University Ave / King St W - SMART",
+        "address": "University Ave / King St W,Ontario Canada",
+        "num_docks_available": 1,
+        "num_bikes_available": 21,
+        "num_bikes_available_types": {
+          "mechanical": 21,
+          "ebike": 0
+        },
+        "status": "IN_SERVICE"
+      },
+      {
+        "station_id": "7467",
+        "name": "Lower Simcoe St / Bremner Blvd",
+        "address": "Lower Simcoe St / Bremner Blvd,",
+        "num_docks_available": 0,
+        "num_bikes_available": 14,
+        "num_bikes_available_types": {
+          "mechanical": 14,
+          "ebike": 0
+        },
+        "status": "IN_SERVICE"
+      },
+      {
+        "station_id": "7683",
+        "name": "Bay St / Harbour St (West )",
+        "address": "Bay St / Harbour St,Ontario Canada",
+        "num_docks_available": 0,
+        "num_bikes_available": 0,
+        "num_bikes_available_types": {
+          "mechanical": 0,
+          "ebike": 0
+        },
+        "status": "MAINTENANCE"
+      },
+      {
+        "station_id": "7067",
+        "name": "Yonge St / Harbour St",
+        "address": "Yonge St / Harbour St,",
+        "num_docks_available": 19,
+        "num_bikes_available": 17,
+        "num_bikes_available_types": {
+          "mechanical": 17,
+          "ebike": 0
+        },
+        "status": "IN_SERVICE"
+      },
+      {
+        "station_id": "7375",
+        "name": "Front St E / Scott St",
+        "address": "Front St E / Scott St,35 Front St. E.",
+        "num_docks_available": 1,
+        "num_bikes_available": 10,
+        "num_bikes_available_types": {
+          "mechanical": 10,
+          "ebike": 0
+        },
+        "status": "IN_SERVICE"
+      },
+      {
+        "station_id": "7684",
+        "name": "Bay St / Harbour St (East)",
+        "address": "Bay St / Harbour St (East),Ontario Canada",
+        "num_docks_available": 9,
+        "num_bikes_available": 13,
+        "num_bikes_available_types": {
+          "mechanical": 13,
+          "ebike": 0
+        },
+        "status": "IN_SERVICE"
+      },
+      {
+        "station_id": "7383",
+        "name": "12 Harbour St",
+        "address": "12 Harbour St,",
+        "num_docks_available": 14,
+        "num_bikes_available": 1,
+        "num_bikes_available_types": {
+          "mechanical": 1,
+          "ebike": 0
+        },
+        "status": "IN_SERVICE"
+      }
+    ]
+  }
+}

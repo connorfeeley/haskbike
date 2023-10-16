@@ -14,6 +14,15 @@ GET https://toronto.publicbikesystem.net/ube/gbfs/v1/
 #+RESULTS:
 [[file:json/1.1/gbfs.json]]
 
+**
+
+#+begin_src restclient :file json/1.1/station_information/7033.json :noheaders :results value file
+GET https://toronto.publicbikesystem.net/customer/ube/gbfs/v1/en/station_information/7033/nearby_stations
+#+end_src
+
+#+RESULTS:
+[[file:json/1.1/station_information/7033.json]]
+
 * GBFS 2.3 Entrypoint
 
 #+begin_src restclient :file json/2.3/gbfs.json :noheaders :results value file
