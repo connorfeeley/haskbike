@@ -31,6 +31,8 @@ import           Database.BikeShare.Operations
 
 import           Fmt
 
+import           Formatting
+
 import           Prelude                       hiding ( log )
 
 import           ReportTime                    ( localToPosix )
@@ -104,19 +106,19 @@ statusHandler queue = void $ do
   log I $ format "(Status) Received {} status records from API." (length status)
 
   -- Insert the updated status.
-  inserted_result <- insertStationStatus status
+  insertedResult <- insertStationStatus status
 
   -- Log each station ID updated.
-  mapM_ (log D . Text.pack . fmtLog . dataToTuple) inserted_result
+  mapM_ (log D . Text.pack . fmtLog . dataToTuple) insertedResult
 
-  -- Log counts of rows inserted and activated.
-  log I $ format "(Status) Inserted: {}" (length inserted_result)
+  -- Log number of inserted rows.
+  log I $ format "(Status) Inserted: {}" (length insertedResult)
 
   where
     dataToTuple s = ( s ^. statusStationId . unInformationStationId
                     , s ^. statusLastReported
                     )
-    fmtLog (sid, lr) = format "ID: {} {}" sid (show lr)
+    fmtLog (sid, lr) = format "ID: {} {}" sid (pShowCompact lr)
 
 
 -- | Handle last_updated field in response.
@@ -126,17 +128,18 @@ handleTimeElapsed :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
                   -> TVar Int          -- ^ TVar holding last_updated between threads.
                   -> m (Maybe Int)     -- ^ Optional number of seconds extend TTL by, if last_updated went backwards.
 handleTimeElapsed logPrefix apiResult lastUpdatedVar = do
-  let currentTime' = localToPosix $ apiResult ^. response_last_updated
+  let currentTime' = apiResult ^. response_last_updated
   previousTime <- liftIO $ readTVarIO lastUpdatedVar
-  let timeElapsed = currentTime' - previousTime
+  let timeElapsed = localToPosix currentTime' - previousTime
 
   -- Check if last_updated went backwards
   if timeElapsed >= 0
     then do -- Update last_updated variable.
-      liftIO $ atomically $ writeTVar lastUpdatedVar currentTime'
+      liftIO $ atomically $ writeTVar lastUpdatedVar (localToPosix currentTime')
+      log I $ format "{} last_updated [{}]" logPrefix currentTime'
       pure Nothing
     else do
-      log W $ format "{} last_updated went backwards: {} [{}] -> [{}]" logPrefix previousTime currentTime' timeElapsed
+      log W $ format "{} last_updated went backwards: {} [{}] -> [{}]" logPrefix previousTime (localToPosix currentTime') timeElapsed
       pure (Just (-timeElapsed))
 
 
@@ -186,13 +189,13 @@ informationHandler queue = void $ do
   log I $ format "(Info) Received {} info records from API." (length info)
 
   -- Insert the station information (updating existing records, if existing).
-  inserted_result <- insertStationInformation info
+  insertedResult <- insertStationInformation info
 
   -- Log each station ID updated.
-  mapM_ (log D . Text.pack . fmtLog) inserted_result
+  mapM_ (log D . Text.pack . fmtLog) insertedResult
 
-  -- Log counts of rows inserted and activated.
-  log I $ format "(Info) Updated/inserted {} records into database." (length inserted_result)
+  -- Log number of inserted rows.
+  log I $ format "(Info) Updated/inserted {} records into database." (length insertedResult)
 
   where
-    fmtLog inserted = format "ID: {}" (show inserted)
+    fmtLog inserted = format "ID: {}" (pShowCompact inserted)
