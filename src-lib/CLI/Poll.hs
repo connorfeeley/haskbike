@@ -82,14 +82,16 @@ statusRequester queue intervalSecsVar lastUpdated = void $ do
   runQueryM stationStatus >>= \case
     Left err -> logException err
     Right result -> do
+      -- Handle TTL upfront, so that we don't sleep when called
+      -- for the first time from 'pollClient' (TTL = 0).
+      intervalSecs <- liftIO $ readTVarIO intervalSecsVar
+      log D $ format "(Status) Sleeping for {} seconds." intervalSecs
+      liftIO $ threadDelay (intervalSecs * 1000000)
+
       liftIO $ atomically $ writeTBQueue queue result
 
       extendBy <- handleTimeElapsed "Status" result lastUpdated
       handleTTL "Status" result intervalSecsVar extendBy
-      intervalSecs <- liftIO $ readTVarIO intervalSecsVar
-
-      log D $ format "(Status) Sleeping for {} seconds." intervalSecs
-      liftIO $ threadDelay (intervalSecs * 1000000)
 
 
 -- | Thread action to handle API response for station status query.
@@ -161,14 +163,18 @@ informationRequester queue intervalSecsVar lastUpdated = void $ do
   runQueryM stationInformation >>= \case
     Left err -> logException err
     Right result -> do
+      -- Handle TTL upfront, so that we don't sleep when called
+      -- for the first time from 'pollClient' (TTL = 0).
+      intervalSecs <- liftIO $ readTVarIO intervalSecsVar
+      log D $ format "(Info) Sleeping for {} seconds." intervalSecs
+      liftIO $ threadDelay (intervalSecs * 1000000)
+
       liftIO $ atomically $ writeTBQueue queue result
 
       extendBy <- handleTimeElapsed "Info" result lastUpdated
       handleTTL "Info" result intervalSecsVar extendBy
-      intervalSecs <- liftIO $ readTVarIO intervalSecsVar
 
-      log D $ format "(Info) Sleeping for {} seconds." intervalSecs
-      liftIO $ threadDelay (intervalSecs * 1000000)
+      pure ()
 
 -- | Thread action to handle API response for station information query.
 informationHandler :: TBQueue StationInformationResponse  -- ^ Queue of responses
