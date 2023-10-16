@@ -211,7 +211,7 @@ queryStationStatusLatest :: Int                       -- ^ Station ID.
 queryStationStatusLatest station_id = withPostgres $ runSelectReturningOne $ select $ limit_ 1 $ do
   info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
   guard_ (_infoStationId info ==. val_ ( fromIntegral station_id))
-  status <- orderBy_ (asc_ . _statusLastReported)
+  status <- orderBy_ (desc_ . _statusLastReported)
               (all_ (bikeshareDb ^. bikeshareStationStatus))
   guard_ (_statusStationId status `references_` info)
   pure status

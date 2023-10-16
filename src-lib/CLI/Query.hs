@@ -27,6 +27,8 @@ import           Database.BikeShare.Operations
 
 import           Fmt
 
+import           Formatting
+
 import           Prelude                       hiding ( log, unlines )
 
 import           Servant.Client
@@ -80,7 +82,7 @@ queryByStationId stationId = do
   -- Maybe tuple of (id, name)
   let station_pair = fmap (stationId,) name
 
-  log I $ toStrict $ "Station: " <> (pack . show) station_pair
+  log I $ toStrict $ "Station: " <> pShowCompact station_pair
 
   results <- mapM (queryStatus "By ID") station_pair
 
@@ -113,10 +115,18 @@ queryByStationName stationMatch = do
 queryStatus :: String        -- ^ Header
             -> (Int, String) -- ^ (station_id, station_name)
             -> AppM [Text]
-queryStatus header station_tuple = do
-  -- Query the current time zone.
-  currentTimeZone <- asks envTimeZone  -- Fetch the timeZone from the environment
-
+queryStatus header stationTuple = do
   -- Query the latest status for the given station tuple.
-  resultsText <- fmtStationStatus currentTimeZone station_tuple
+  resultsText <- queryAndFmtStationStatus header stationTuple
   pure $ withHeader (pack header) resultsText
+
+queryAndFmtStationStatus :: String -> (Int, String) -> AppM [Text]
+queryAndFmtStationStatus header (id', name') = do
+  currentTimeZone <- asks envTimeZone  -- Fetch the TimeZone from the environment
+
+  latest <- queryStationStatusLatest id'
+
+  let status = fmap (currentTimeZone, name', ) latest
+
+  pure $
+    withHeader (pack header) (formatStationStatusResult status)
