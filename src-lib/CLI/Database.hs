@@ -2,10 +2,13 @@
 module CLI.Database
      ( dispatchDatabase
      , handleInformation
+     , handleStationInformation
+     , handleStationStatus
      , handleStatus
      ) where
 
 import           API.Client
+import           API.ClientLifted              ( runQueryM )
 import           API.ResponseWrapper
 import           API.Types
 
@@ -78,7 +81,7 @@ handleInformation = do
 handleStationInformation :: AppM ()
 handleStationInformation = do
   log D "Requesting station information from API."
-  stationInfo <- liftIO (runQueryWithEnv stationInformation :: IO (Either ClientError StationInformationResponse))
+  stationInfo <- runQueryM stationInformation :: AppM (Either ClientError StationInformationResponse)
   log D "Requested station information from API."
 
   for_ (rightToMaybe stationInfo) $ \response -> do
@@ -102,7 +105,7 @@ handleStatus = do
 handleStationStatus :: AppM ()
 handleStationStatus = do
   log D "Requesting station status from API."
-  stationStatus' <- liftIO (runQueryWithEnv stationStatus :: IO (Either ClientError StationStatusResponse))
+  stationStatus' <- runQueryM stationStatus :: AppM (Either ClientError StationStatusResponse)
   log D "Requested station status from API."
 
   for_ (rightToMaybe stationStatus') $ \response -> do
