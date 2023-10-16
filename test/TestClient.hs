@@ -15,6 +15,7 @@ import           Control.Monad            ( void )
 import           Data.Text                ( pack, unwords )
 import           Data.Time                ( getCurrentTimeZone )
 
+import           Database.Beam.Postgres   ( connect )
 import           Database.BikeShare.Utils
 
 import           Network.HTTP.Client      ( newManager )
@@ -58,8 +59,9 @@ unit_poll = do
   timeZone <- getCurrentTimeZone
 
   -- Establish a connection to the database, drop all tables, and re-initialize it.
-  (name, host, port, username, password) <- pure (dbnameTest, "", "", "", "")
-  conn <- connectDbName name host port username password >>= dropTables >>= migrateDatabase
+  -- Establish a connection to the database.
+  connInfo <- mkDbConnectInfo dbnameTest
+  conn <- connect connInfo >>= dropTables >>= migrateDatabase
 
   clientManager <- liftIO $ newManager tlsManagerSettings
 
