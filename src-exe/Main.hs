@@ -56,7 +56,7 @@ main = do
 
   -- Log options when verbosity is high enough.
   when (length (optVerbose options) >= 3) $ usingLoggerT logStdoutAction $
-    log D $ "Connecting to database using: " <> toStrict (pShowCompact options)
+    log D $ "Options: " <> toStrict (pShowCompact options)
 
   -- Get the current time zone.
   timeZone <- getCurrentTimeZone
@@ -65,7 +65,7 @@ main = do
   connInfo <- mkDbConnectInfo (optDatabase options)
   usingLoggerT logStdoutAction $
     log I $ format "Connecting to database: {}" (pShowCompact (obfuscatePassword connInfo))
-  conn <- connect connInfo >>= dropTables >>= migrateDatabase
+  conn <- connect connInfo
 
   -- Create HTTPS client manager.
   clientManager <- liftIO $ newManager tlsManagerSettings
