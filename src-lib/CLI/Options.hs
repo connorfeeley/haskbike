@@ -45,9 +45,9 @@ parseOptions = Options
      <> help "Perform database migrations." )
   where
     versionFlag = switch
-              ( long "version"
-            <> short 'V'
-            <> help "Print version (from cabal file and git revision).")
+                 (long "version"
+               <> short 'V'
+               <> help "Print version (from cabal file and git revision).")
     verboseFlag = flag' True -- Active when flag is present.
                  (long "verbose"
                <> short 'v'
