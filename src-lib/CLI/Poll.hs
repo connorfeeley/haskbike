@@ -52,19 +52,24 @@ pollClient = do
   (statusTtl, statusLastUpdated, statusQueueResp, infoTtl, infoLastUpdated, infoQueueResp) <- liftIO $
     (,,,,,) <$> newTVarIO 0 <*> newTVarIO 0 <*> newTBQueueIO 4 <*> newTVarIO 0 <*> newTVarIO 0 <*> newTBQueueIO 4
 
-  log I "Polling API for status updates."
+  log I "Fetching station information from API once."
+  concurrently_
+    (informationRequester infoQueueResp infoTtl infoLastUpdated)
+    (informationHandler infoQueueResp)
+
+  log I "Polling API for information and status updates."
   void $
     concurrently_
-      (spawnStatus statusQueueResp statusTtl statusLastUpdated)
       (spawnInfo infoQueueResp infoTtl infoLastUpdated)
+      (spawnStatus statusQueueResp statusTtl statusLastUpdated)
   log I "Done."
   where
-    spawnStatus queueStatusResp ttl lastUpdated = concurrently_
-                  (statusRequester queueStatusResp ttl  lastUpdated)
-                  (statusHandler queueStatusResp)
     spawnInfo   infoQueueResp ttl lastUpdated = concurrently_
-                  (informationRequester infoQueueResp ttl lastUpdated)
-                  (informationHandler infoQueueResp)
+                  (forever $ informationRequester infoQueueResp ttl lastUpdated)
+                  (forever $ informationHandler infoQueueResp)
+    spawnStatus queueStatusResp ttl lastUpdated = concurrently_
+                  (forever $ statusRequester queueStatusResp ttl  lastUpdated)
+                  (forever $ statusHandler queueStatusResp)
 
 
 -- | Thread action to request station information from API.
@@ -73,7 +78,7 @@ statusRequester :: (WithLog env Message m, MonadIO m, MonadUnliftIO m, MonadRead
                 -> TVar Int                      -- ^ Interval between requests in seconds.
                 -> TVar Int                      -- ^ Last updated time.
                 -> m ()
-statusRequester queue intervalSecsVar lastUpdated = void . forever $ do
+statusRequester queue intervalSecsVar lastUpdated = void $ do
   runQueryM stationStatus >>= \case
     Left err -> logException err
     Right result -> do
@@ -90,7 +95,7 @@ statusRequester queue intervalSecsVar lastUpdated = void . forever $ do
 -- | Thread action to handle API response for station status query.
 statusHandler :: TBQueue StationStatusResponse  -- ^ Queue of responses
               -> AppM ()
-statusHandler queue = void . forever $ do
+statusHandler queue = void $ do
   response <- liftIO $ atomically $ readTBQueue queue
 
   let status = response ^. (response_data . unStatusStations)
@@ -152,7 +157,7 @@ informationRequester :: (WithLog env Message m, MonadIO m, MonadUnliftIO m, Mona
                      -> TVar Int                           -- ^ Interval between requests, in seconds.
                      -> TVar Int                           -- ^ Last updated time.
                      -> m ()
-informationRequester queue intervalSecsVar lastUpdated = void . forever $ do
+informationRequester queue intervalSecsVar lastUpdated = void $ do
   runQueryM stationInformation >>= \case
     Left err -> logException err
     Right result -> do
@@ -168,7 +173,7 @@ informationRequester queue intervalSecsVar lastUpdated = void . forever $ do
 -- | Thread action to handle API response for station information query.
 informationHandler :: TBQueue StationInformationResponse  -- ^ Queue of responses
                    -> AppM ()
-informationHandler queue = void . forever $ do
+informationHandler queue = void $ do
   response <- liftIO $ atomically $ readTBQueue queue
 
   let info = response ^. (response_data . unInfoStations)
