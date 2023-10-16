@@ -37,13 +37,22 @@ import           Options.Applicative
 
 import           Prelude                  hiding ( log, unwords )
 
+import           System.Exit              ( exitSuccess )
+
 import           UnliftIO                 ( MonadUnliftIO )
+
+import           Version
 
 
 main :: IO ()
 main = do
   -- Parse command line options.
   options <- liftIO $ customExecParser (prefs $ helpShowGlobals <> showHelpOnEmpty <> showHelpOnError) opts
+
+  -- Check if version flag was used.
+  when (optVersion options) $ do
+    printVersionFromCabalAndGit
+    exitSuccess
 
   -- Log options when verbosity is high enough.
   when (length (optVerbose options) >= 3) $ usingLoggerT logStdoutAction $
@@ -77,6 +86,10 @@ main = do
     logStdoutAction :: LogAction IO Message
     logStdoutAction = cmap fmtMessage logTextStdout
 
+    printVersionFromCabalAndGit = do
+      putStrLn $ "Version: " ++ getCabalVersion
+      putStrLn $ "Git revision: " ++ getGitVersion
+
     opts :: ParserInfo Options
     opts = info (parseOptions <**> helper)
            ( fullDesc
@@ -88,6 +101,7 @@ main = do
 appMain :: (AppM ~ m, WithLog env Message m, MonadIO m, MonadUnliftIO m) => Options -> m ()
 appMain options = do
   log I $ "Starting Toronto Bikeshare CLI with verbosity '" <> Text.pack (show (logLevel options)) <> "'."
+  log I $ format "Version: {} | {}'" getCabalVersion getGitVersion
   -- Dispatch to appropriate command.
   case optCommand options of
     (Poll p)      -> dispatchDatabase options >> dispatchPoll p

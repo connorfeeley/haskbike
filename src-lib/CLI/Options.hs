@@ -14,19 +14,21 @@ import           ReportTime
 
 -- | Top-level options.
 data Options where
-  Options :: { optCommand         :: !Command
-             , optVerbose         :: [Bool] -- ^ Verbosity flags.
-             , optLogDatabase     :: Bool   -- ^ If database queries should be logged.
-             , optLogRichOutput   :: Bool   -- ^ If log output should use rich messages.
-             , optDatabase        :: String
-             , optEnableMigration :: Bool
+  Options :: { optVersion         :: !Bool   -- ^ Flag for version (derived from cabal file and git revision).
+             , optCommand         :: !Command
+             , optVerbose         :: ![Bool] -- ^ Verbosity flags.
+             , optLogDatabase     :: !Bool   -- ^ If database queries should be logged.
+             , optLogRichOutput   :: !Bool   -- ^ If log output should use rich messages.
+             , optDatabase        :: !String
+             , optEnableMigration :: !Bool
              } -> Options
   deriving (Show)
 
 -- | Parser for 'Options'.
 parseOptions :: Parser Options
 parseOptions = Options
-  <$> commandParser
+  <$> versionFlag
+  <*> commandParser
   -- Support multiple verbosity flags.
   <*> many verboseFlag
   <*> logDatabase
@@ -42,6 +44,10 @@ parseOptions = Options
      <> showDefault
      <> help "Perform database migrations." )
   where
+    versionFlag = switch
+              ( long "version"
+            <> short 'V'
+            <> help "Print version (from cabal file and git revision).")
     verboseFlag = flag' True -- Active when flag is present.
                  (long "verbose"
                <> short 'v'
