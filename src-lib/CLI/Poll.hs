@@ -5,6 +5,7 @@ module CLI.Poll
      ) where
 
 import           API.Client
+import           API.ClientLifted
 import           API.ResponseWrapper
 import           API.Types                     ( StationInformationResponse, StationStatusResponse, unInfoStations,
                                                  unStatusStations )
@@ -20,6 +21,7 @@ import           Control.Concurrent.STM
 import           Control.Lens
 import           Control.Monad                 ( void )
 import           Control.Monad.Cont            ( forever )
+import           Control.Monad.Reader          ( MonadReader )
 
 import           Data.Maybe                    ( fromMaybe )
 import qualified Data.Text                     as Text
@@ -66,13 +68,13 @@ pollClient = do
 
 
 -- | Thread action to request station information from API.
-statusRequester :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
+statusRequester :: (WithLog env Message m, MonadIO m, MonadUnliftIO m, MonadReader (Env m) m)
                 => TBQueue StationStatusResponse -- ^ Queue of responses.
                 -> TVar Int                      -- ^ Interval between requests in seconds.
                 -> TVar Int                      -- ^ Last updated time.
                 -> m ()
 statusRequester queue intervalSecsVar lastUpdated = void . forever $ do
-  liftIO (runQueryWithEnv stationStatus) >>= \case
+  runQueryM stationStatus >>= \case
     Left err -> logException err
     Right result -> do
       liftIO $ atomically $ writeTBQueue queue result
@@ -145,13 +147,13 @@ handleTTL logPrefix apiResult ttlVar extendBy = do
 
 
 -- | Thread action to request station information from API.
-informationRequester :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
+informationRequester :: (WithLog env Message m, MonadIO m, MonadUnliftIO m, MonadReader (Env m) m)
                      => TBQueue StationInformationResponse -- ^ Queue of responses.
                      -> TVar Int                           -- ^ Interval between requests, in seconds.
                      -> TVar Int                           -- ^ Last updated time.
                      -> m ()
 informationRequester queue intervalSecsVar lastUpdated = void . forever $ do
-  liftIO (runQueryWithEnv stationInformation) >>= \case
+  runQueryM stationInformation >>= \case
     Left err -> logException err
     Right result -> do
       liftIO $ atomically $ writeTBQueue queue result

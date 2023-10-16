@@ -2,6 +2,7 @@
 
 module API.ClientLifted
      ( liftClientM
+     , runQueryM
        -- Lifted API client functions
      , stationInformationM
      , stationStatusM
@@ -17,10 +18,10 @@ import           API.Types
 
 import           AppEnv
 
-import           Colog                ( logException )
+import           Colog                ( WithLog, logException )
 
 import           Control.Monad.Catch
-import           Control.Monad.Reader ( ask )
+import           Control.Monad.Reader ( MonadIO, MonadReader (..), ask )
 
 import           Data.Aeson           ( Object )
 
@@ -28,6 +29,14 @@ import           Prelude              hiding ( log )
 
 import           Servant.Client
 
+import           UnliftIO
+
+
+runQueryM :: (WithLog env Message m, MonadIO m, MonadUnliftIO m, MonadReader (Env m) m) => ClientM a -> m (Either ClientError a)
+runQueryM query = do
+  env <- ask
+  let clientManager = envClientManager env
+  liftIO $ runClientM query (mkClientEnv clientManager bikeshareBaseUrl)
 
 
 liftClientM :: ClientM a -> AppM a

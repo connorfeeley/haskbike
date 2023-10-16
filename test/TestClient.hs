@@ -17,6 +17,9 @@ import           Data.Time                ( getCurrentTimeZone )
 
 import           Database.BikeShare.Utils
 
+import           Network.HTTP.Client      ( newManager )
+import           Network.HTTP.Client.TLS  ( tlsManagerSettings )
+
 import           Prelude                  hiding ( log, unwords )
 
 import           Test.Tasty.HUnit
@@ -58,8 +61,10 @@ unit_poll = do
   (name, host, port, username, password) <- pure (dbnameTest, "", "", "", "")
   conn <- connectDbName name host port username password >>= dropTables >>= migrateDatabase
 
+  clientManager <- liftIO $ newManager tlsManagerSettings
+
   -- Create the application environment.
-  let env = mainEnv W False False timeZone conn
+  let env = mainEnv W False False timeZone conn clientManager
 
   -- Log the database connection parameters.
   runAppM env (log I $ "Connected to database using: " <> unwords [ "dbname=" <> pack name

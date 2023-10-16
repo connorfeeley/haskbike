@@ -124,7 +124,10 @@ insertStationStatus apiStatus
          ) anyConflict onConflictDoNothing
 
       case result of
-        Left (e :: SqlError) -> logException e >> pure []
+        Left (e :: SqlError) ->
+          logException e >>
+          throwM e >>
+          pure []
         Right inserted       -> pure inserted
 
 {- |
