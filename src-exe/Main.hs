@@ -28,6 +28,9 @@ import           Database.BikeShare.Utils
 
 import           Formatting
 
+import           Network.HTTP.Client      ( newManager )
+import           Network.HTTP.Client.TLS  ( tlsManagerSettings )
+
 import           Options.Applicative
 
 import           Prelude                  hiding ( log, unwords )
@@ -55,13 +58,14 @@ main = do
                           , pack username
                           , pack "password=" <> pack (map (const '*') password) -- Obfuscate password in logs.
                           ]
-
   usingLoggerT logStdoutAction $
     log I $ "Connecting to database using: " <> logParams
   conn <- connectDbName name host port username password
 
+  clientManager <- liftIO $ newManager tlsManagerSettings
+
   -- Create the application environment.
-  let env = mainEnv (logLevel options) (logDatabase options) (optLogRichOutput options) timeZone conn
+  let env = mainEnv (logLevel options) (logDatabase options) (optLogRichOutput options) timeZone conn clientManager
 
   -- Log the database connection parameters.
   runApp env (log I $ "Connected to database using: " <> logParams)

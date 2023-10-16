@@ -10,12 +10,16 @@ module AppEnv
      , liftIO
      , mainEnv
      , runApp
+     , runQueryWithManager
      , runWithApp
      , runWithAppDebug
      , simpleEnv
      , withConn
+     , withManager
      , withPostgres
      ) where
+
+import           API.Client
 
 import           Colog                    ( HasLog (..), LogAction (..), Message, Msg (msgSeverity), Severity (..),
                                             filterBySeverity, richMessageAction, simpleMessageAction )
@@ -24,19 +28,19 @@ import           Control.Monad.Catch
 import           Control.Monad.IO.Class   ( MonadIO )
 import           Control.Monad.Reader     ( MonadReader, ReaderT (..), asks )
 
-import qualified Data.Text.Lazy           as TextL
 import           Data.Time                ( TimeZone, getCurrentTimeZone )
 
 import           Database.Beam.Postgres   ( Connection, Pg, runBeamPostgres, runBeamPostgresDebug )
 import           Database.BikeShare.Utils ( connectDbName, mkDbParams, uncurry5 )
 
-import           Formatting
-
 import           GHC.Stack                ( HasCallStack )
+
+import           Network.HTTP.Client      ( Manager, newManager )
+import           Network.HTTP.Client.TLS  ( tlsManagerSettings )
 
 import           Prelude                  hiding ( log )
 
-import           Text.Pretty.Simple
+import           Servant.Client
 
 import           UnliftIO                 ( MonadUnliftIO, liftIO )
 
@@ -47,6 +51,7 @@ data Env m where
          , envMinSeverity   :: !Severity
          , envTimeZone      :: !TimeZone
          , envDBConnection  :: !Connection
+         , envClientManager :: !Manager
          } -> Env m
 
 {- | Type alias for constraint for:
@@ -60,9 +65,11 @@ you will have access to code lines that log messages.
 -}
 type WithAppEnv env msg m = (MonadReader env m, HasLog env msg m, HasCallStack, MonadIO m, MonadUnliftIO m, MonadFail m, MonadThrow m, MonadCatch m)
 
+-- | Fetch database connection from environment monad.
 withConn :: (WithAppEnv (Env env) Message m) => m Connection
 withConn = asks envDBConnection >>= liftIO . pure
 
+-- | Run a Beam operation using database connection from the environment.
 withPostgres :: (WithAppEnv (Env env) Message m) => Pg a -> m a
 withPostgres action = do
   conn <- withConn
@@ -70,6 +77,16 @@ withPostgres action = do
   liftIO $
     if logDatabase then runBeamPostgresDebug putStrLn conn action
     else runBeamPostgres conn action
+
+-- | Fetch client manager from the environment.
+withManager :: (WithAppEnv (Env env) Message m) => m Manager
+withManager = asks envClientManager >>= liftIO . pure
+
+-- | Run API query using client manager from environment monad.
+runQueryWithManager :: WithAppEnv (Env env) Message m => ClientM a -> m (Either ClientError a)
+runQueryWithManager query = do
+  clientManager <- withManager
+  liftIO $ runQuery clientManager query
 
 -- Implement logging for the application environment.
 instance HasLog (Env m) Message m where
@@ -87,22 +104,24 @@ newtype App a = App
   } deriving newtype (Functor, Applicative, Monad, MonadIO, MonadUnliftIO, MonadReader (Env App), MonadFail, MonadThrow, MonadCatch)
 
 -- | Simple environment for the main application.
-simpleEnv :: TimeZone -> Connection -> Env App
-simpleEnv timeZone conn = Env { envLogAction     = mainLogAction Info False
-                              , envLogDatabase   = False
-                              , envMinSeverity   = Info
-                              , envTimeZone      = timeZone
-                              , envDBConnection  = conn
-                              }
+simpleEnv :: TimeZone -> Connection -> Manager -> Env App
+simpleEnv timeZone conn manager = Env { envLogAction     = mainLogAction Info False
+                                      , envLogDatabase   = False
+                                      , envMinSeverity   = Info
+                                      , envTimeZone      = timeZone
+                                      , envDBConnection  = conn
+                                      , envClientManager = manager
+                                      }
 
 -- | Environment for the main application.
-mainEnv :: Severity -> Bool -> Bool -> TimeZone -> Connection -> Env App
-mainEnv sev logDatabase logRichOutput timeZone conn =
+mainEnv :: Severity -> Bool -> Bool -> TimeZone -> Connection -> Manager -> Env App
+mainEnv sev logDatabase logRichOutput timeZone conn manager =
   Env { envLogAction     = mainLogAction sev logRichOutput
       , envLogDatabase   = logDatabase
       , envMinSeverity   = Info
       , envTimeZone      = timeZone
       , envDBConnection  = conn
+      , envClientManager = manager
       }
 
 -- | Log action for the main application.
@@ -121,11 +140,13 @@ runWithApp :: String -> App a -> IO a
 runWithApp dbname app = do
   conn <- mkDbParams dbname >>= uncurry5 connectDbName
   currentTimeZone <- getCurrentTimeZone
-  runApp (mainEnv Info False True currentTimeZone conn) app
+  clientManager <- liftIO $ newManager tlsManagerSettings
+  runApp (mainEnv Info False True currentTimeZone conn clientManager) app
 
 -- | Helper function to run a computation in the App monad with debug and database logging, returning an IO monad.
 runWithAppDebug :: String -> App a -> IO a
 runWithAppDebug dbname app = do
   conn <- mkDbParams dbname >>= uncurry5 connectDbName
   currentTimeZone <- getCurrentTimeZone
-  runApp (mainEnv Debug True True currentTimeZone conn) app
+  clientManager <- liftIO $ newManager tlsManagerSettings
+  runApp (mainEnv Debug True True currentTimeZone conn clientManager) app
