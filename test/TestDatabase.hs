@@ -1,5 +1,3 @@
--- | Test the database.
-
 {-# LANGUAGE BlockArguments            #-}
 {-# LANGUAGE FlexibleContexts          #-}
 {-# LANGUAGE FlexibleInstances         #-}
@@ -8,6 +6,8 @@
 {-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE TypeFamilies              #-}
 {-# LANGUAGE UndecidableInstances      #-}
+
+-- | Test the database.
 
 module TestDatabase
      ( unit_insertNewerStatusRecords
@@ -48,6 +48,8 @@ import           Fmt
 import           ReportTime
 
 import           Test.Tasty.HUnit
+
+import           UnliftIO                      ( try )
 
 setupTestDatabase :: IO Connection
 setupTestDatabase = connectTestDatabase >>= dropTables >>= migrateDatabase
@@ -170,10 +172,15 @@ unit_insertStationStatusApi = do
   status  <- getDecodedFileStatus "docs/json/2.3/station_status-1.json"
 
   -- Should fail because station information has not been inserted.
-  inserted_status <- runWithAppM dbnameTest $ insertStationStatus $ status ^. response_data . unStatusStations
+  -- Catch exception with 'try'.
+  inserted_status <- runWithAppM dbnameTest $ try $
+    insertStationStatus $ status ^. response_data . unStatusStations
 
-  assertEqual "Inserted station status" [] inserted_status
-  assertEqual "Updated station status"  [] inserted_status
+  -- Exception was expected - only return error if inserted succeeded.
+  -- If the insertion succeeded, then database schema does not enforce foreign key constraint correctly.
+  case inserted_status of
+    Left (_ :: SqlError) -> pure ()
+    Right _              -> assertFailure "Unable to insert status records without information populated"
 
 -- | HUnit test for inserting station information and status, with data from the actual API.
 unit_insertStationApi :: IO ()
