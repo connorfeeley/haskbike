@@ -1,16 +1,22 @@
 -- | CLI interface for querying the database.
 module CLI.Query
      ( dispatchQuery
+     , requestStationDataConcurrently
      ) where
+
+import           API.Client
+import           API.ClientLifted
+import           API.Types
 
 import           AppEnv
 
-import           CLI.Database
 import           CLI.Options
 import           CLI.QueryFormat
 
-import           Colog                         ( log, pattern D, pattern I )
+import           Colog
 
+import           Control.Lens
+import           Control.Monad.Catch
 import           Control.Monad.Reader          ( asks, when )
 
 import qualified Data.List                     as List
@@ -19,22 +25,48 @@ import           Data.Text.Lazy                ( Text, pack, toStrict, unlines, 
 
 import           Database.BikeShare.Operations
 
+import           Fmt
+
 import           Prelude                       hiding ( log, unlines )
+
+import           Servant.Client
+
+import           UnliftIO                      ( concurrently )
 
 
 -- | Dispatch CLI arguments to the query interface.
 dispatchQuery :: QueryOptions
               -> AppM ()
 dispatchQuery options = do
-  -- Refresh the database if requested.
-  when (optRefresh options) $ do
-    log D "Refreshing database with latest status from API."
-    handleStatus
+  -- Update database with latest station data.
+  when (optRefresh options) refreshStationData
 
   -- Query the database by either ID or name.
   case optQueryBy options of
     QueryByStationId stationId     -> queryByStationId   stationId
     QueryByStationName stationName -> queryByStationName stationName
+
+
+-- | Refresh the database with the latest information and status from the API.
+refreshStationData :: AppM ()
+refreshStationData = do
+  log D "Concurrently fetching station information and status from API."
+  (reqInfo, reqStatus) <- requestStationDataConcurrently
+  log D "Refreshing database with latest station data."
+  case (reqInfo, reqStatus) of
+    (Left err, _) -> logException err >> throwM err
+    (_, Left err) -> logException err >> throwM err
+    (Right info, Right status) -> do
+      insInfo   <- insertStationInformation (info ^. response_data . unInfoStations)
+      insStatus <- insertStationStatus (status ^. response_data . unStatusStations)
+      log D $ format "Inserted {} information records and {} status records." (length insInfo) (length insStatus)
+
+
+-- | Concurrently request station information and status.
+requestStationDataConcurrently :: AppM (Either ClientError StationInformationResponse, Either ClientError StationStatusResponse)
+requestStationDataConcurrently = concurrently
+  (runQueryM stationInformation :: AppM (Either ClientError StationInformationResponse))
+  (runQueryM stationStatus      :: AppM (Either ClientError StationStatusResponse))
 
 
 -- | Query the database for the station with the given ID.
