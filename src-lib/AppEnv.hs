@@ -7,6 +7,7 @@ module AppEnv
      , Env (..)
      , Message
      , WithAppEnv
+     , liftClientM
      , liftIO
      , mainEnv
      , runApp
@@ -17,17 +18,27 @@ module AppEnv
      , withConn
      , withManager
      , withPostgres
+       -- Lifted API client functions
+     , stationInformationM
+     , stationStatusM
+     , systemInformationM
+     , systemPricingPlansM
+     , systemRegionsM
+     , vehicleTypesM
+     , versionsM
      ) where
 
 import           API.Client
+import           API.Types
 
 import           Colog                    ( HasLog (..), LogAction (..), Message, Msg (msgSeverity), Severity (..),
-                                            filterBySeverity, richMessageAction, simpleMessageAction )
+                                            filterBySeverity, logException, richMessageAction, simpleMessageAction )
 
 import           Control.Monad.Catch
 import           Control.Monad.IO.Class   ( MonadIO )
-import           Control.Monad.Reader     ( MonadReader, ReaderT (..), asks )
+import           Control.Monad.Reader     ( MonadReader, ReaderT (..), ask, asks )
 
+import           Data.Aeson               ( Object )
 import           Data.Time                ( TimeZone, getCurrentTimeZone )
 
 import           Database.Beam.Postgres   ( Connection, Pg, runBeamPostgres, runBeamPostgresDebug )
@@ -52,6 +63,7 @@ data Env m where
          , envTimeZone      :: !TimeZone
          , envDBConnection  :: !Connection
          , envClientManager :: !Manager
+         , envBaseUrl       :: !BaseUrl
          } -> Env m
 
 {- | Type alias for constraint for:
@@ -111,6 +123,7 @@ simpleEnv timeZone conn manager = Env { envLogAction     = mainLogAction Info Fa
                                       , envTimeZone      = timeZone
                                       , envDBConnection  = conn
                                       , envClientManager = manager
+                                      , envBaseUrl       = bikeshareBaseUrl
                                       }
 
 -- | Environment for the main application.
@@ -122,6 +135,7 @@ mainEnv sev logDatabase logRichOutput timeZone conn manager =
       , envTimeZone      = timeZone
       , envDBConnection  = conn
       , envClientManager = manager
+      , envBaseUrl       = bikeshareBaseUrl
       }
 
 -- | Log action for the main application.
@@ -150,3 +164,38 @@ runWithAppDebug dbname app = do
   currentTimeZone <- getCurrentTimeZone
   clientManager <- liftIO $ newManager tlsManagerSettings
   runApp (mainEnv Debug True True currentTimeZone conn clientManager) app
+
+
+
+liftClientM :: ClientM a -> App a
+liftClientM clientM = do
+  env <- ask
+  let manager = envClientManager env
+  eitherResult <- liftIO $ runClientM clientM (mkClientEnv manager (envBaseUrl env))
+  case eitherResult of
+    Left err -> do
+      logException err
+      throwM err
+    Right res -> return res
+
+
+versionsM:: App Object
+versionsM = liftClientM versions
+
+vehicleTypesM :: App Object
+vehicleTypesM = liftClientM vehicleTypes
+
+stationInformationM :: App StationInformationResponse
+stationInformationM = liftClientM stationInformation
+
+stationStatusM :: App StationStatusResponse
+stationStatusM = liftClientM stationStatus
+
+systemRegionsM :: App Object
+systemRegionsM = liftClientM systemRegions
+
+systemInformationM :: App Object
+systemInformationM = liftClientM systemInformation
+
+systemPricingPlansM :: App Object
+systemPricingPlansM = liftClientM systemPricingPlans

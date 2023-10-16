@@ -4,6 +4,7 @@
 
 module API.Client
      ( bikeShareAPIClient
+     , bikeshareBaseUrl
      , handleResponse
      , mkClientManager
      , run
@@ -61,9 +62,9 @@ mkClientManager = newManager tlsManagerSettings
 
 runQuery :: Manager -> ClientM a -> IO (Either ClientError a)
 runQuery clientManager endpoint = runClientM endpoint (mkClientEnv clientManager bikeshareBaseUrl)
-  where
-    bikeshareBaseUrl :: BaseUrl
-    bikeshareBaseUrl = BaseUrl Https "toronto.publicbikesystem.net" 443 "customer/gbfs/v2"
+
+bikeshareBaseUrl :: BaseUrl
+bikeshareBaseUrl = BaseUrl Https "toronto.publicbikesystem.net" 443 "customer/gbfs/v2"
 
 runQueryWithEnv :: ClientM a -> IO (Either ClientError a)
 runQueryWithEnv query = do
