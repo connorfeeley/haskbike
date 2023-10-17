@@ -40,6 +40,12 @@ selectionProps selName label =
         . position Y [ PTitle "Count", PName "Count", PmType Quantitative, PStack StZero ]
         . color [ MName "Vehicle Type"
                 , MmType Nominal
+                , MScale [ SRange (RStrings [ "#FA8072" -- Available dock: grey
+                                            , "#928F8F" -- Disabled bike: salmon
+                                            , "#009ACD" -- E-Fit: light blue
+                                            , "#00688B" -- E-Fit G5: sky blue
+                                            , "#FFC300" -- Iconic: yellow
+                                            ]) ]
                 , MLegend [ LLabelExpr "'<' + datum.label + '>'" ]
                 -- , MSelectionCondition (SelectionName selName) [ MName "Vehicle Type", MmType Nominal ] [ MString "grey" ]
                 ]
