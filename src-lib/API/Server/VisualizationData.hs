@@ -13,8 +13,7 @@
 
 module API.Server.VisualizationData
      ( VisualizationDataAPI
-     , app
-     , main
+     , serveVisualization
      , server
      , statusData
      , visualizationDataAPI
@@ -122,5 +121,5 @@ visualizationDataAPI = Proxy
 app :: Application
 app = serve visualizationDataAPI server
 
-main :: IO ()
-main = run 8081 app
+serveVisualization :: Int -> IO ()
+serveVisualization port = run port app
