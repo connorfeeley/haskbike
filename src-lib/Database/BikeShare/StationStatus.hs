@@ -187,8 +187,10 @@ newtype BeamStationStatusString where
 instance (BeamBackend be, FromBackendRow be Text.Text) => FromBackendRow be BeamStationStatusString where
   fromBackendRow = do
     val <- fromBackendRow
+    -- TODO: tie this in with 'AT.StationStatusString' so that they can't get out of sync.
     case val :: Text.Text of
       "IN_SERVICE"  -> pure $ BeamStationStatusString AT.InService
+      "PLANNED"     -> pure $ BeamStationStatusString AT.Planned
       "END_OF_LIFE" -> pure $ BeamStationStatusString AT.EndOfLife
       _             -> fail ("Invalid value for BeamStationStatusString: " ++ Text.unpack val)
 

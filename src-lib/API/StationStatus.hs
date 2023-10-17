@@ -48,11 +48,13 @@ import           ReportTime
 -- | Enumeration representing a BikeShare station status string.
 data StationStatusString where
   InService :: StationStatusString
+  Planned   :: StationStatusString
   EndOfLife :: StationStatusString
   deriving (Eq, Generic, Ord)
 
 instance Show StationStatusString where
   show InService = "IN_SERVICE"
+  show Planned   = "PLANNED"
   show EndOfLife = "END_OF_LIFE"
 
 instance Read StationStatusString where
@@ -61,16 +63,19 @@ instance Read StationStatusString where
     parser :: Parser [(StationStatusString, String)]
     parser = choice
       [ string "IN_SERVICE"  $> [(InService, "")]
+      , string "PLANNED"     $> [(Planned,   "")]
       , string "END_OF_LIFE" $> [(EndOfLife, "")]
       ]
 
 instance ToJSON StationStatusString where
   toJSON InService = String (Text.pack "IN_SERVICE")
+  toJSON Planned   = String (Text.pack "PLANNED")
   toJSON EndOfLife = String (Text.pack "END_OF_LIFE")
 
 instance FromJSON StationStatusString where
   parseJSON = withText "StationStatusString" $ \t -> case t of
      "IN_SERVICE"  -> return InService
+     "PLANNED"     -> return Planned
      "END_OF_LIFE" -> return EndOfLife
      _             -> fail ("Invalid StationStatusString: " ++ show t)
 
