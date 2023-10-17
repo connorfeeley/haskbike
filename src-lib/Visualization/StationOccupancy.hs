@@ -13,7 +13,8 @@ import           Prelude                    hiding ( filter, lookup, repeat )
 -- Prepare the Vega-Lite data source
 dataSource :: Data
 dataSource =
-  dataFromUrl "https://gist.github.com/connorfeeley/53396497d4e84b3d45f557f0452eb31e/raw/af9bc760ebbc531ad80df8f90a82f2e6e988a4c8/station_status_7001_10-15-16_202310170129.csv" []
+  dataFromUrl "https://gist.github.com/connorfeeley/c612d65486e7bf3f475b6f139a605c9e/raw/c8202df753a920cae1ef5fd40e3b41271d00a3c0/station_status_7001_10-15-14_202310161955.json"
+  [ JSON "station_status" ] -- data array is under "station_status" key
 
 -- Implement Vega-Lite specification using hvega
 toVegaLite' :: VegaLite
