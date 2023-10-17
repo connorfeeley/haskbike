@@ -21,11 +21,11 @@ data StationStatusVisualizationPage where
 
 -- HTML serialization of a single person
 instance ToHtml StationStatusVisualizationPage where
-  toHtml _statusVisualization = div_ $ do
+  toHtml statusVisualization = div_ $ do
     style_ ".grid-container { display: grid; grid-template-columns: auto auto auto; } .grid-container > div { padding: 20px 0; } .vega-embed { width: 80%; height: 70%; }"
     h1_ (toHtml ("Available Bikes Over Time" :: String))
     -- div_ $ toHtml (safeLink "/")-- (T.intercalate "/" dataSourceSegments))
-    div_ vegaContainerStyle (toHtmlRaw (VL.toHtmlWith vegaEmbedCfg (availBikesOverTimeVL 7001)))
+    div_ vegaContainerStyle (toHtmlRaw (VL.toHtmlWith vegaEmbedCfg (availBikesOverTimeVL (_statusVisPageStationId statusVisualization))))
     -- tr_ $ do
     --   td_ (toHtml ("test" :: String))
     --   td_ (toHtml (show (_statusVisPageStationId statusVisualization)))

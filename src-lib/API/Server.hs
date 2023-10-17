@@ -56,22 +56,24 @@ instance MimeRender HTMLLucid (Html a) where
 
 -- | Route definitions.
 data Routes route where
-  Routes :: { _visualizationStationStatus :: route :- "visualization" :> "station-status" :> Get '[HTMLLucid] StationStatusVisualizationPage
-            , _dataStationStatus          :: route :- "data" :> "station-status" :> Capture "station-id" Int :> Get '[JSON] [StationStatusVisualization]
+  Routes :: { _visualizationStationStatus :: route :- "visualization"
+                                                :> "station-status" :> Capture "station-id" Int :> Get '[HTMLLucid] StationStatusVisualizationPage
+            , _dataStationStatus          :: route :- "data"
+                                                :> "station-status" :> Capture "station-id" Int :> Get '[JSON] [StationStatusVisualization]
             } -> Routes route
   deriving Generic
 
 record :: Routes (AsServerT AppM)
-record = Routes
-         { _visualizationStationStatus = stationStatusVisualizationPage
-         , _dataStationStatus = stationStatusData
+record =
+  Routes { _visualizationStationStatus = stationStatusVisualizationPage
+         , _dataStationStatus          = stationStatusData
          }
 
 stationStatusData :: Int -> AppM [StationStatusVisualization]
 stationStatusData = generateJsonDataSource
 
-stationStatusVisualizationPage :: AppM StationStatusVisualizationPage
-stationStatusVisualizationPage = return StationStatusVisualizationPage { _statusVisPageStationId = 7033 }
+stationStatusVisualizationPage :: Int -> AppM StationStatusVisualizationPage
+stationStatusVisualizationPage sId = return StationStatusVisualizationPage { _statusVisPageStationId = sId }
 
 routesLinks :: Routes (AsLink Link)
 routesLinks = allFieldLinks
