@@ -201,6 +201,7 @@ library
                     , Database.BikeShare.Operations
                     , Database.BikeShare.Operations.Dockings
                     , Database.BikeShare.Expressions
+                    , Visualization.StationOccupancy
 
     -- Modules included in this library but not exported.
     other-modules:    API.StationInformation
@@ -218,6 +219,8 @@ library
                     , text-show
                     , attoparsec
                     , hvega
+                    , unordered-containers
+                    , aeson-pretty
 
     -- Directories containing source files.
     hs-source-dirs:   src-lib
