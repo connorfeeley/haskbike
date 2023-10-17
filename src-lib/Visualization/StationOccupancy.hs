@@ -41,7 +41,7 @@ selectionProps selName label stationId =
     -- Implement the `fold` transform
     dataTransforms =
       transform
-        . foldAs [ "available_iconic", "available_efit", "available_efit_g5", "bikes_disabled", "docks_available" ] "Vehicle Type" "Count"
+        . foldAs [ "available_iconic", "available_efit", "available_efit_g5", "bikes_disabled", "docks_available", "docks_disabled" ] "Vehicle Type" "Count"
     -- Setup encoding common to both 'area' and 'point' marks
     areaEncoding =
       encoding
@@ -49,11 +49,13 @@ selectionProps selName label stationId =
         . position Y [ PTitle "Count", PName "Count", PmType Quantitative, PStack StZero ]
         . color [ MName "Vehicle Type"
                 , MmType Nominal
+                -- FIXME: these colours don't seem to be applied in order - I think VegaLite is sorting the data by the colour scale
                 , MScale [ SRange (RStrings [ "#FA8072" -- Available dock: grey
                                             , "#928F8F" -- Disabled bike: salmon
                                             , "#009ACD" -- E-Fit: light blue
                                             , "#00688B" -- E-Fit G5: sky blue
                                             , "#FFC300" -- Iconic: yellow
+                                            , "black"   -- Disabled dock: black
                                             ]) ]
                 , MLegend [ LLabelExpr "'<' + datum.label + '>'" ]
                 -- , MSelectionCondition (SelectionName selName) [ MName "Vehicle Type", MmType Nominal ] [ MString "grey" ]
