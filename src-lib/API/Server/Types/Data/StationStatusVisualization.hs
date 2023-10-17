@@ -1,6 +1,10 @@
--- |
+-- FIXME: remove once server is fleshed out a bit more.
+{-# OPTIONS_GHC -fno-warn-unused-imports #-}
 
-module API.Server.Types.StationStatusVisualization
+
+-- | This module contains types used to serialize station status data for use in the visualization API.
+
+module API.Server.Types.Data.StationStatusVisualization
      ( StationStatusVisualization (..)
      ) where
 

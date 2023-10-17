@@ -123,6 +123,7 @@ common api-server-depends
                     , warp
                     , aeson
                     , lucid
+                    , servant-lucid
                     , blaze-html
                     , blaze-markup
                     , directory
@@ -203,7 +204,8 @@ library
                     , API.ClientLifted
                     -- , API.DebugClient
                     , API.Server.VisualizationData
-                    , API.Server.Types.StationStatusVisualization
+                    , API.Server.Types.Page.StationStatusVisualization
+                    , API.Server.Types.Data.StationStatusVisualization
                     , CLI.Utils
                     , CLI.Poll
                     , CLI.Query

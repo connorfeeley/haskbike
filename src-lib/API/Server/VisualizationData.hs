@@ -5,11 +5,14 @@
 {-# LANGUAGE RankNTypes            #-}
 {-# LANGUAGE TypeOperators         #-}
 
--- |
+-- FIXME: remove once server is fleshed out a bit more.
+{-# OPTIONS_GHC -fno-warn-unused-imports #-}
+
+
+-- | This module contains the server API to visualize BikeShare data.
 
 module API.Server.VisualizationData
-     ( StationStatusVisualization (..)
-     , VisualizationDataAPI
+     ( VisualizationDataAPI
      , app
      , main
      , server
@@ -18,7 +21,8 @@ module API.Server.VisualizationData
      ) where
 
 
-import           API.Server.Types.StationStatusVisualization
+import           API.Server.Types.Data.StationStatusVisualization
+import           API.Server.Types.Page.StationStatusVisualization
 
 import           Control.Monad.Except
 import           Control.Monad.Reader
@@ -27,7 +31,7 @@ import           Data.Aeson
 import qualified Data.Aeson.Parser
 import           Data.Aeson.Types
 import           Data.Attoparsec.ByteString
-import           Data.ByteString                             ( ByteString )
+import           Data.ByteString                                  ( ByteString )
 import           Data.List
 import           Data.Maybe
 import           Data.String.Conversions
@@ -37,16 +41,17 @@ import           Data.Time.Calendar
 import           GHC.Generics
 
 import           Lucid
+import           Lucid.Servant
 
-import           Network.HTTP.Media                          ( (//), (/:) )
+import           Network.HTTP.Media                               ( (//), (/:) )
 import           Network.Wai
 import           Network.Wai.Handler.Warp
 
-import           Prelude                                     ()
+import           Prelude                                          ()
 import           Prelude.Compat
 
 import           Servant
-import           Servant.Types.SourceT                       ( source )
+import           Servant.Types.SourceT                            ( source )
 
 import           System.Directory
 
@@ -80,15 +85,32 @@ statusData = [ StationStatusVisualization { _statusVisStationId       = 7000
                                           , _statusVisAvailableEfitG5 = 8
                                           }
              ]
+data HTMLLucid
+instance Accept HTMLLucid where
+    contentType _ = "text" // "html" /: ("charset", "utf-8")
+instance ToHtml a => MimeRender HTMLLucid a where
+    mimeRender _ = renderBS . toHtml
 
-type VisualizationDataAPI = "station-status" :> Capture "station-id" Int :> Get '[JSON] [StationStatusVisualization]
+-- let's also provide an instance for lucid's
+-- 'Html' wrapper.
+instance MimeRender HTMLLucid (Html a) where
+    mimeRender _ = renderBS
+
+type VisualizationDataAPI = "data" :>
+                                "station-status" :> Capture "station-id" Int :> Get '[JSON] [StationStatusVisualization]
+                       :<|> "visualization"
+                                :> "station-status" :> Get '[HTMLLucid] StationStatusVisualizationPage
 
 server :: Server VisualizationDataAPI
-server = stationStatusHandler
+server = stationStatusData
+         :<|> stationStatusVisualizationPage
 
   -- TODO: query database based on 'sId', instead of filtering our example data.
-  where stationStatusHandler :: Int -> Handler [StationStatusVisualization]
-        stationStatusHandler sId = return (filter (\sId' -> _statusVisStationId sId' == sId) statusData)
+  where stationStatusData :: Int -> Handler [StationStatusVisualization]
+        stationStatusData sId = return (filter (\sId' -> _statusVisStationId sId' == sId) statusData)
+
+        stationStatusVisualizationPage :: Handler StationStatusVisualizationPage
+        stationStatusVisualizationPage = return StationStatusVisualizationPage { _statusVisPageStationId = 7001 }
 
 
 visualizationDataAPI :: Proxy VisualizationDataAPI
