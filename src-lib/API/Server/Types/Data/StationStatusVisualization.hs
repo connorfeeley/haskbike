@@ -77,10 +77,10 @@ instance FromJSON StationStatusVisualization where
     <*> v .: "available_efit_g5"
 
 -- | Convert from the Beam StationStatus type to StationStatusVisualization
-fromBeamStationStatusToVisJSON :: StationStatus -> StationStatusVisualization
-fromBeamStationStatusToVisJSON status =
+fromBeamStationStatusToVisJSON :: NominalDiffTime -> StationStatus -> StationStatusVisualization
+fromBeamStationStatusToVisJSON timeOffset status =
   StationStatusVisualization { _statusVisStationId       = fromIntegral sid
-                             , _statusVisLastReported    = reportToLocal (status ^. statusLastReported)
+                             , _statusVisLastReported    = addHours timeOffset (reportToLocal reportTimeZone (status ^. statusLastReported))
                              , _statusVisChargingStation = status ^. statusIsChargingStation
                              , _statusVisBikesAvailable  = fromIntegral $ status ^. statusNumBikesAvailable
                              , _statusVisBikesDisabled   = fromIntegral $ status ^. statusNumBikesDisabled
@@ -96,7 +96,8 @@ fromBeamStationStatusToVisJSON status =
 generateJsonDataSource :: Int -> AppM [StationStatusVisualization]
 generateJsonDataSource stationId = do
   result <- queryStationStatusBetween stationId startTime endTime
-  pure $ map fromBeamStationStatusToVisJSON result
+  -- TODO: do UTC -> local time conversion here as well.
+  pure $ map (fromBeamStationStatusToVisJSON (-4)) result
   where
-    startTime = reportTime (fromGregorian 2023 10 16) (TimeOfDay 00 00 00)
-    endTime   = reportTime (fromGregorian 2023 10 17) (TimeOfDay 00 00 00)
+    startTime = reportTime (fromGregorian 2023 10 17) (TimeOfDay 00 00 00)
+    endTime   = reportTime (fromGregorian 2023 10 18) (TimeOfDay 00 00 00)

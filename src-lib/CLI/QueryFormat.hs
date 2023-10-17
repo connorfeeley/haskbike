@@ -58,7 +58,7 @@ formatStationInfo (timeZone, name, status) =
             , ("Bikes:\t", status ^. statusNumBikesAvailable, fromIntegral $ status ^. statusNumBikesDisabled)
             ]
     in [ formattedName name status
-       , formattedLastReport timeZone $ reportToLocal $ status ^. statusLastReported
+       , formattedLastReport timeZone $ reportToLocal timeZone $ status ^. statusLastReported
        , "Charger:\t" <> formattedBool (status ^. statusIsChargingStation)
        ] ++ map fmtAvailability pairs ++ bikeAvailability
 

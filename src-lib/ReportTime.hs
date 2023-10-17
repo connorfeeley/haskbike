@@ -83,7 +83,7 @@ instance (HasSqlValueSyntax ReportTime x, HasSqlValueSyntax ReportTime SqlNull) 
 reportTimeType :: DataType Postgres ReportTime
 reportTimeType = DataType (timestampType Nothing True)
 
--- | Convert a LocalTime to a LocalTime in the system's current timezone.
+-- | Convert a LocalTime to a LocalTime in the given timezone.
 localToSystem :: TimeZone -> LocalTime -> LocalTime
 localToSystem currentTimeZone localTime = do
   -- Convert the local time to a POSIX time, using "fake UTC" as the timezone
@@ -112,8 +112,8 @@ localToPosix :: LocalTime -> Int
 localToPosix = floor . utcTimeToPOSIXSeconds . localTimeToUTC reportTimeZone
 
 -- | Convert ReportTime to LocalTime
-reportToLocal :: ReportTime -> LocalTime
-reportToLocal (ReportTime localTime) = localTime
+reportToLocal :: TimeZone -> ReportTime -> LocalTime
+reportToLocal timeZone (ReportTime localTime) = localTime
 
 systemToReport :: IO ReportTime
 systemToReport = do
