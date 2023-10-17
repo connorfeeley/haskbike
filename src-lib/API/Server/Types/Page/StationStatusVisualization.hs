@@ -4,25 +4,13 @@ module API.Server.Types.Page.StationStatusVisualization
      ( StationStatusVisualizationPage (..)
      ) where
 
-import           API.Server.Types.Data.StationStatusVisualization ( StationStatusVisualization,
-                                                                    fromBeamStationStatusToVisJSON )
-
-import           AppEnv
 
 import           Data.Aeson
-import qualified Data.Text                                        as T
-import           Data.Time
+import qualified Data.Text                      as T
 
-import           Database.BikeShare.Operations                    ( queryStationStatusBetween )
-
-import qualified Graphics.Vega.VegaLite                           as VL
+import qualified Graphics.Vega.VegaLite         as VL
 
 import           Lucid
-import           Lucid.Servant
-
-import           ReportTime
-
-import           Servant
 
 import           TextShow
 

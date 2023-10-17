@@ -9,24 +9,73 @@
 
 module API.Server
      ( apiProxy
+     , routesLinks
      , serveVisualization
      ) where
 
-import           API.Server.Routes
+import           API.Server.Types.Data.StationStatusVisualization
+import           API.Server.Types.Page.StationStatusVisualization
 
 import           AppEnv
 
+import           Control.Monad.Except
 import           Control.Monad.Reader
 
+import qualified Data.ByteString.Lazy                             as BL
 import           Data.Proxy
 
-import           Network.Wai.Handler.Warp as Warp
+import           GHC.Generics
 
-import           Prelude                  ()
+import           Lucid
+
+import           Network.HTTP.Media                               ( MediaType, (//), (/:) )
+import           Network.Wai.Handler.Warp                         as Warp
+
+import           Prelude                                          ()
 import           Prelude.Compat
 
-import           Servant                  as S
+import           Servant                                          as S
 import           Servant.Server.Generic
+
+
+data HTMLLucid
+instance Accept HTMLLucid where
+    contentType :: Proxy HTMLLucid -> MediaType
+    contentType _ = "text" // "html" /: ("charset", "utf-8")
+instance ToHtml a => MimeRender HTMLLucid a where
+    mimeRender :: ToHtml a => Proxy HTMLLucid -> a -> BL.ByteString
+    mimeRender _ = renderBS . toHtml
+
+
+-- let's also provide an instance for lucid's
+-- 'Html' wrapper.
+instance MimeRender HTMLLucid (Html a) where
+    mimeRender :: Proxy HTMLLucid -> Html a -> BL.ByteString
+    mimeRender _ = renderBS
+
+
+-- | Route definitions.
+data Routes route where
+  Routes :: { _visualizationStationStatus :: route :- "visualization" :> "station-status" :> Get '[HTMLLucid] StationStatusVisualizationPage
+            , _dataStationStatus          :: route :- "data" :> "station-status" :> Capture "station-id" Int :> Get '[JSON] [StationStatusVisualization]
+            } -> Routes route
+  deriving Generic
+
+record :: Routes (AsServerT AppM)
+record = Routes
+         { _visualizationStationStatus = stationStatusVisualizationPage
+         , _dataStationStatus = stationStatusData
+         }
+
+stationStatusData :: Int -> AppM [StationStatusVisualization]
+stationStatusData = generateJsonDataSource
+
+stationStatusVisualizationPage :: AppM StationStatusVisualizationPage
+stationStatusVisualizationPage = return StationStatusVisualizationPage { _statusVisPageStationId = 7033 }
+
+routesLinks :: Routes (AsLink Link)
+routesLinks = allFieldLinks
+
 
 
 apiProxy :: Proxy (ToServantApi Routes)
