@@ -1,6 +1,10 @@
 -- | This module contains functions for visualizing the occupancy of a station using Vega-Lite.
 
-module Visualization.StationOccupancy where
+module Visualization.StationOccupancy
+     ( availBikesOverTimeVL
+     , selectionProps
+     , tempDataSource
+     ) where
 
 import           Data.Aeson.Encode.Pretty   ( encodePretty )
 import qualified Data.ByteString.Lazy.Char8 as Char8
@@ -11,14 +15,14 @@ import           Graphics.Vega.VegaLite
 import           Prelude                    hiding ( filter, lookup, repeat )
 
 -- Prepare the Vega-Lite data source
-dataSource :: Data
-dataSource =
+tempDataSource :: Data
+tempDataSource =
   dataFromUrl "https://gist.github.com/connorfeeley/c612d65486e7bf3f475b6f139a605c9e/raw/327c87b118dfab298cddb48f7e109be5ee80ff36/station_status_7001_10-15-15_202310171026.json"
   [ JSON "station_status" ] -- data array is under "station_status" key
 
 -- Implement Vega-Lite specification using hvega
-toVegaLite' :: VegaLite
-toVegaLite' =
+availBikesOverTimeVL :: VegaLite
+availBikesOverTimeVL =
   let
     selLabel = "picked"
     sel = selection
@@ -78,7 +82,7 @@ selectionProps selName label =
 
   in
     [ title label [ TOrient SBottom ]
-    , dataSource
+    , tempDataSource
     , dataTransforms []
     , layer [ areaLayer
             , pointLayer
@@ -91,7 +95,7 @@ selectionProps selName label =
 
 main :: IO ()
 main =
-  toHtmlFile "example.html" toVegaLite'
+  toHtmlFile "example.html" availBikesOverTimeVL
 
 printVegaLiteSchema :: VegaLite -> IO ()
 printVegaLiteSchema schema = Char8.putStrLn (encodePretty (fromVL schema))

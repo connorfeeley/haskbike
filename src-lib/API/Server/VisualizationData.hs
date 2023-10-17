@@ -98,8 +98,8 @@ instance MimeRender HTMLLucid (Html a) where
 
 type VisualizationDataAPI = "data" :>
                                 "station-status" :> Capture "station-id" Int :> Get '[JSON] [StationStatusVisualization]
-                       :<|> "visualization"
-                                :> "station-status" :> Get '[HTMLLucid] StationStatusVisualizationPage
+                       :<|> "visualization" :>
+                                "station-status" :> Get '[HTMLLucid] StationStatusVisualizationPage
 
 server :: Server VisualizationDataAPI
 server = stationStatusData

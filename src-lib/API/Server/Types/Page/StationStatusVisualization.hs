@@ -4,7 +4,11 @@ module API.Server.Types.Page.StationStatusVisualization
      ( StationStatusVisualizationPage (..)
      ) where
 
+import qualified Graphics.Vega.VegaLite         as VL
+
 import           Lucid
+
+import           Visualization.StationOccupancy
 
 data StationStatusVisualizationPage where
   StationStatusVisualizationPage :: { _statusVisPageStationId :: Int } -> StationStatusVisualizationPage
@@ -12,9 +16,10 @@ data StationStatusVisualizationPage where
 -- HTML serialization of a single person
 instance ToHtml StationStatusVisualizationPage where
   toHtml statusVisualization =
-    tr_ $ do
-      td_ (toHtml ("test" :: String))
-      td_ (toHtml (show (_statusVisPageStationId statusVisualization)))
+    toHtmlRaw (VL.toHtml availBikesOverTimeVL)
+    -- tr_ $ do
+    --   td_ (toHtml ("test" :: String))
+    --   td_ (toHtml (show (_statusVisPageStationId statusVisualization)))
 
   -- do not worry too much about this
   toHtmlRaw = toHtml
