@@ -13,7 +13,7 @@ import           Prelude                    hiding ( filter, lookup, repeat )
 -- Prepare the Vega-Lite data source
 dataSource :: Data
 dataSource =
-  dataFromUrl "https://gist.github.com/connorfeeley/c612d65486e7bf3f475b6f139a605c9e/raw/c8202df753a920cae1ef5fd40e3b41271d00a3c0/station_status_7001_10-15-14_202310161955.json"
+  dataFromUrl "https://gist.github.com/connorfeeley/c612d65486e7bf3f475b6f139a605c9e/raw/327c87b118dfab298cddb48f7e109be5ee80ff36/station_status_7001_10-15-15_202310171026.json"
   [ JSON "station_status" ] -- data array is under "station_status" key
 
 -- Implement Vega-Lite specification using hvega
@@ -37,7 +37,7 @@ selectionProps selName label =
     -- Setup encoding common to both 'area' and 'point' marks
     areaEncoding =
       encoding
-        . position X [ PTitle "Last Reported", PName "last_reported", PmType Temporal]
+        . position X [ PTitle "Last Reported", PName "last_reported", PmType Temporal, PTimeUnit (TU YearMonthDateHoursMinutesSeconds), PAxis [AxLabelAngle (-50)]]
         . position Y [ PTitle "Count", PName "Count", PmType Quantitative, PStack StZero ]
         . color [ MName "Vehicle Type"
                 , MmType Nominal
