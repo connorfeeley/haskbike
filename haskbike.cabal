@@ -183,6 +183,7 @@ library
                     , API.Client
                     , API.ClientLifted
                     -- , API.DebugClient
+                    , API.Server.VisualizationData
                     , CLI.Utils
                     , CLI.Poll
                     , CLI.Query
