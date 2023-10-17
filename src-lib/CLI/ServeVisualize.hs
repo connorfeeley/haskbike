@@ -3,7 +3,7 @@ module CLI.ServeVisualize
      ( dispatchVisualize
      ) where
 
-import           API.Server.VisualizationData
+import           API.Server
 
 import           AppEnv
 
@@ -13,7 +13,7 @@ import           Colog
 
 import           Fmt
 
-import           Prelude                      hiding ( log, unlines )
+import           Prelude     hiding ( log )
 
 
 -- | Dispatch CLI arguments to the visualization server.

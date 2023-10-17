@@ -203,7 +203,7 @@ library
                     , API.Client
                     , API.ClientLifted
                     -- , API.DebugClient
-                    , API.Server.VisualizationData
+                    , API.Server
                     , API.Server.Types.Page.StationStatusVisualization
                     , API.Server.Types.Data.StationStatusVisualization
                     , CLI.Utils

@@ -5,12 +5,9 @@
 {-# LANGUAGE RankNTypes            #-}
 {-# LANGUAGE TypeOperators         #-}
 
--- FIXME: remove once server is fleshed out a bit more.
-
-
 -- | This module contains the server API to visualize BikeShare data.
 
-module API.Server.VisualizationData
+module API.Server
      ( serveVisualization
      ) where
 
