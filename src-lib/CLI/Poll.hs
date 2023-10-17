@@ -25,6 +25,8 @@ import           Control.Monad.Reader          ( MonadReader )
 
 import           Data.Maybe                    ( fromMaybe, isJust, isNothing )
 import qualified Data.Text                     as Text
+import           Data.Time                     ( ZonedTime (zonedTimeToLocalTime) )
+import           Data.Time.Extras
 
 import           Database.BikeShare
 import           Database.BikeShare.Operations
@@ -34,8 +36,6 @@ import           Fmt
 import           Formatting
 
 import           Prelude                       hiding ( log )
-
-import           ReportTime                    ( localToPosix, posixToLocal )
 
 import           TextShow                      ( showt )
 
@@ -134,12 +134,12 @@ handleTimeElapsed logPrefix apiResult lastUpdatedVar = do
   let currentTime' = apiResult ^. response_last_updated
   previousTime <- liftIO $ readTVarIO lastUpdatedVar
   let previousTime' = posixToLocal previousTime
-  let timeElapsed = localToPosix currentTime' - previousTime
+  let timeElapsed = localToPosix (zonedTimeToLocalTime currentTime') - previousTime
 
   -- Check if last_updated went backwards
   if timeElapsed >= 0
     then do -- Update last_updated variable.
-      liftIO $ atomically $ writeTVar lastUpdatedVar (localToPosix currentTime')
+      liftIO $ atomically $ writeTVar lastUpdatedVar (zonedTimeToPosix currentTime')
       log I $ format "({}) last updated [{}]" logPrefix currentTime'
       pure Nothing
     else do

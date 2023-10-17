@@ -12,6 +12,8 @@ module Data.Time.Extras
      , localToSystem
      , localToSystem'
      , posixToLocal
+     , posixToZonedTime
+     , zonedTimeToPosix
      ) where
 
 import           Data.Time
@@ -43,9 +45,17 @@ localToSystem' localTime = do
   currentTimeZone <- getCurrentTimeZone
   pure $ localToSystem currentTimeZone localTime
 
-
+-- * POSIX conversion functions
+-- NOTE: POSIX time is by nature UTC.
 posixToLocal :: Int -> LocalTime
 posixToLocal = utcToLocalTime utc . posixSecondsToUTCTime . secondsToNominalDiffTime . fromIntegral
 
 localToPosix :: LocalTime -> Int
 localToPosix = floor . utcTimeToPOSIXSeconds . localTimeToUTC utc
+
+
+zonedTimeToPosix :: ZonedTime -> Int
+zonedTimeToPosix = floor . utcTimeToPOSIXSeconds . zonedTimeToUTC
+
+posixToZonedTime :: TimeZone -> Int -> ZonedTime
+posixToZonedTime tz = utcToZonedTime tz . (posixSecondsToUTCTime . secondsToNominalDiffTime . fromIntegral)
