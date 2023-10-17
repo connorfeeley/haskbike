@@ -3,7 +3,6 @@
 module Visualization.StationOccupancy
      ( availBikesOverTimeVL
      , selectionProps
-     , tempDataSource
      ) where
 
 import           Data.Aeson.Encode.Pretty   ( encodePretty )
@@ -17,17 +16,11 @@ import           Prelude                    hiding ( filter, lookup, repeat )
 import           TextShow
 
 -- Prepare the Vega-Lite data source
-tempDataSource :: Data
-tempDataSource =
-  dataFromUrl "https://gist.github.com/connorfeeley/c612d65486e7bf3f475b6f139a605c9e/raw/327c87b118dfab298cddb48f7e109be5ee80ff36/station_status_7001_10-15-15_202310171026.json"
-  [ JSON "station_status" ] -- data array is under "station_status" key
-
--- Prepare the Vega-Lite data source
 liveDataSource :: Int -> Data
 liveDataSource stationId =
   -- data array is under "station_status" key
-  dataFromUrl (T.intercalate "/" segments) [ JSON "station_status" ]
-  where segments :: [T.Text] = [ "/", "data", "station-status", showt stationId ]
+  dataFromUrl (T.intercalate "/" segments) [ ]
+  where segments :: [T.Text] = [ "/data", "station-status", showt stationId ]
 
 -- Implement Vega-Lite specification using hvega
 availBikesOverTimeVL :: Int -> VegaLite
@@ -46,7 +39,7 @@ selectionProps selName label stationId =
     -- Implement the `fold` transform
     dataTransforms =
       transform
-        . foldAs [ "vehicle_types_available_iconic", "vehicle_types_available_efit", "vehicle_types_available_efit_g5", "num_bikes_disabled", "num_docks_available" ] "Vehicle Type" "Count"
+        . foldAs [ "available_iconic", "available_efit", "available_efit_g5", "bikes_disabled", "docks_available" ] "Vehicle Type" "Count"
     -- Setup encoding common to both 'area' and 'point' marks
     areaEncoding =
       encoding
@@ -96,8 +89,9 @@ selectionProps selName label stationId =
     , layer [ areaLayer
             , pointLayer
             ]
-    , width 1200
+    , widthOfContainer
     , height 800
+    , autosize [ AFit, APadding, AResize ]
     , config []
     ]
 

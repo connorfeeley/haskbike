@@ -4,9 +4,17 @@ module API.Server.Types.Page.StationStatusVisualization
      ( StationStatusVisualizationPage (..)
      ) where
 
+import           Data.Aeson
+import qualified Data.Text                      as T
+
 import qualified Graphics.Vega.VegaLite         as VL
 
 import           Lucid
+import           Lucid.Servant
+
+import           Servant
+
+import           TextShow
 
 import           Visualization.StationOccupancy
 
@@ -17,11 +25,16 @@ data StationStatusVisualizationPage where
 instance ToHtml StationStatusVisualizationPage where
   toHtml statusVisualization =
     div_ $ do
+    style_ ".grid-container { display: grid; grid-template-columns: auto auto auto; } .grid-container > div { padding: 20px 0; } .vega-embed { width: 80%; height: 70%; }"
     h1_ (toHtml ("Bikes Available Over Time" :: String))
-    toHtmlRaw (VL.toHtml (availBikesOverTimeVL 7001))
+    -- div_ $ toHtml (safeLink "/")-- (T.intercalate "/" dataSourceSegments))
+    div_ vegaContainerStyle (toHtmlRaw (VL.toHtmlWith vegaEmbedCfg (availBikesOverTimeVL 7001)))
     -- tr_ $ do
     --   td_ (toHtml ("test" :: String))
     --   td_ (toHtml (show (_statusVisPageStationId statusVisualization)))
+    where dataSourceSegments :: [T.Text] = [ "/data", "station-status", showt 7001]
+          vegaContainerStyle = [ style_ "flex:1 1 0%; position:relative; outline:none; display:flex; min-height:30px; min-width:100px" ]
+          vegaEmbedCfg :: Maybe Value = Just $ toJSON ("logLevel", 4)
 
   -- do not worry too much about this
   toHtmlRaw = toHtml
@@ -33,7 +46,7 @@ instance ToHtml [StationStatusVisualizationPage] where
       th_ "first name"
       th_ "last name"
 
-    -- this just calls toHtml on each person of the list
+    -- this just calls toHtml on each visualization of the list
     -- and concatenates the resulting pieces of HTML together
     foldMap toHtml visualizations
 
