@@ -12,6 +12,7 @@ import           CLI.Events
 import           CLI.Options
 import           CLI.Poll
 import           CLI.Query
+import           CLI.ServeVisualize
 
 import           Colog                    ( LogAction, Severity (..), WithLog, cmap, fmtMessage, log, logTextStdout,
                                             pattern D, pattern E, pattern I, usingLoggerT )
@@ -104,12 +105,13 @@ appMain options = do
   log I $ format "Version: {} | {}'" getCabalVersion getGitVersion
   -- Dispatch to appropriate command.
   case optCommand options of
-    (Poll p)      -> dispatchDatabase options >> dispatchPoll p
-    (Query q)     -> dispatchDatabase options >> dispatchQuery q
-    QueryApi      -> log E "Not implemented."
-    (Events e)    -> dispatchDatabase options >> dispatchEvents (optEventsSubcommand e)
-    (DebugMisc d) -> dispatchDatabase options >> dispatchDebug d
-    (Reset _)     -> void (dispatchDatabase options)
+    (Poll p)           -> dispatchDatabase options >> dispatchPoll p
+    (Query q)          -> dispatchDatabase options >> dispatchQuery q
+    QueryApi           -> log E "Not implemented."
+    (Events e)         -> dispatchDatabase options >> dispatchEvents (optEventsSubcommand e)
+    (ServeVisualize s) -> dispatchDatabase options >> dispatchVisualize s
+    (DebugMisc d)      -> dispatchDatabase options >> dispatchDebug d
+    (Reset _)          -> void (dispatchDatabase options)
 
 -- Convert CLI options to a logging severity.
 logLevel :: Options -> Severity

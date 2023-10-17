@@ -211,6 +211,7 @@ library
                     , CLI.Query
                     , CLI.Debug
                     , CLI.Events
+                    , CLI.ServeVisualize
                     , CLI.QueryFormat
                     , CLI.Database
                     , CLI.Options

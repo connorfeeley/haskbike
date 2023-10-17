@@ -65,12 +65,13 @@ parseOptions = Options
 
 -- | Top-level commands.
 data Command where
-  Poll          :: !PollOptions         -> Command
-  Query         :: !QueryOptions        -> Command
-  QueryApi      :: Command
-  Events        :: !EventsOptions       -> Command
-  DebugMisc     :: !DebugMiscOptions    -> Command
-  Reset         :: !ResetOptions        -> Command
+  Poll           :: !PollOptions           -> Command
+  Query          :: !QueryOptions          -> Command
+  QueryApi       :: Command
+  Events         :: !EventsOptions         -> Command
+  ServeVisualize :: !ServeVisualizeOptions -> Command
+  DebugMisc      :: !DebugMiscOptions      -> Command
+  Reset          :: !ResetOptions          -> Command
   deriving (Show)
 
 -- | Parser for 'Command'.
@@ -82,6 +83,8 @@ commandParser = hsubparser
                       (progDesc "Query the database."))
   <> command "events" (info (Events <$> eventsOptionsParser)
                       (progDesc "Docking and undocking events."))
+  <> command "visualize" (info (ServeVisualize <$> serveVisualizationParser)
+                      (progDesc "Visualization HTTP server."))
   <> command "debug" (info (DebugMisc <$> debugMiscOptionsParser)
                       (progDesc "Miscellaneous debugging faciilities."))
   <> command "reset" (info (Reset <$> resetOptionsParser)
@@ -175,6 +178,19 @@ data PollOptions where
 -- | Parser for 'ResetOptions'.
 pollOptionsParser :: Parser PollOptions
 pollOptionsParser = pure PollOptions
+
+data ServeVisualizeOptions where
+  ServeVisualizeOptions :: { optServeVisualizePort :: Int
+                           } -> ServeVisualizeOptions
+  deriving (Show, Read)
+
+serveVisualizationParser :: Parser ServeVisualizeOptions
+serveVisualizationParser = ServeVisualizeOptions
+  <$> argument auto
+  ( metavar "HTTP_PORT"
+ <> showDefault
+ <> value 8081
+ <> help "Port to serve visualization interface on." )
 
 -- | Options for the 'Debug' command.
 data DebugMiscOptions where
