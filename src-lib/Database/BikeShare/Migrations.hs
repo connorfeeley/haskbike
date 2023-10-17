@@ -5,6 +5,7 @@ module Database.BikeShare.Migrations where
 import           Data.String                    ( fromString )
 
 import           Database.Beam
+import           Database.Beam.Backend          ( timestampType )
 import           Database.Beam.Migrate
 import           Database.Beam.Migrate.Simple
 import           Database.Beam.Postgres
@@ -45,7 +46,7 @@ initialSetup = BikeshareDb
         })
   <*> (createTable "station_status" $ StationStatus
         { _statusStationId             = StationInformationId $ field "station_id" int notNull referenceInformationTable
-        , _statusLastReported          = field "last_reported"           reportTimeType
+        , _statusLastReported          = field "last_reported"           (DataType (timestampType Nothing True))
         , _statusNumBikesAvailable     = field "num_bikes_available"     int notNull
         , _statusNumBikesDisabled      = field "num_bikes_disabled"      int notNull
         , _statusNumDocksAvailable     = field "num_docks_available"     int notNull

@@ -38,6 +38,7 @@ import           AppEnv
 import           Control.Lens           hiding ( reuse, (<.) )
 
 import           Data.Int               ( Int32 )
+import           Data.Time
 
 import           Database.Beam
 import           Database.Beam.Postgres
@@ -54,8 +55,8 @@ data StatusVariationQuery where
 
 -- | Varient representing the type of threshold to apply to the query.
 data StatusThreshold where
-  EarliestTime  :: ReportTime   -> StatusThreshold
-  LatestTime    :: ReportTime   -> StatusThreshold
+  EarliestTime  :: UTCTime   -> StatusThreshold
+  LatestTime    :: UTCTime   -> StatusThreshold
   deriving (Show, Eq)
 
 

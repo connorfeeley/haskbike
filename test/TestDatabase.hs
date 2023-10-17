@@ -45,8 +45,6 @@ import           Database.BikeShare.Utils
 
 import           Fmt
 
-import           ReportTime
-
 import           Test.Tasty.HUnit
 
 import           UnliftIO                      ( try )
@@ -324,31 +322,29 @@ unit_queryStationStatusBetween = do
 
   -- First status for #7001 was inserted at 2023-09-15 17:16:58; last status at 2023-09-15 17:35:00.
   statusBetweenAll <- runWithAppM dbnameTest $ queryStationStatusBetween 7001
-    (ReportTime $ read "2023-09-15 17:16:58")
-    (ReportTime $ read "2023-09-15 17:35:00")
+    (UTCTime (read "2023-09-15") (timeOfDayToTime (read "17:16:58")))
+    (UTCTime (read "2023-09-15") (timeOfDayToTime (read "17:35:00")))
   assertEqual "Expected number of status records for #7001 between two valid times" 4 (length statusBetweenAll)
 
   -- Query for status records for #7001 between two times, where the start and end time match the first status report.
   statusBetweenFirst <- runWithAppM dbnameTest $ queryStationStatusBetween 7001
-    (ReportTime $ read "2000-09-15 17:16:58") -- Moment the first status was reported.
-    (ReportTime $ read "2023-09-15 17:16:58") -- Moment the first status was reported.
+    (UTCTime (read "2023-09-15") (timeOfDayToTime (read "17:16:58"))) -- Moment the first status was reported.
+    (UTCTime (read "2023-09-15") (timeOfDayToTime (read "17:16:58"))) -- Moment the first status was reported.
   assertEqual "Expected number of status records for #7001 for first status reported" 1 (length statusBetweenFirst)
 
   -- Query for status records for #7001 between two times, where the end time is before the first status was reported.
   statusBetweenTooEarly <- runWithAppM dbnameTest $ queryStationStatusBetween 7001
-    (ReportTime $ read "2000-01-01 00:00:00") -- Arbitrary date
-    (ReportTime $ read "2023-09-15 17:16:57") -- One second before first status reported.
+    (UTCTime (read "2000-01-01") (timeOfDayToTime (read "00:00:00")))-- Arbitrary date
+    (UTCTime (read "2023-09-15") (timeOfDayToTime (read "17:16:57")))-- One second before first status reported.
   assertEqual "Expected number of status records for #7001 before first status reported" 0 (length statusBetweenTooEarly)
 
   {-
   Query for status records for #7001 between two times, where the earliest time is *after* the first status was reported,
   and the end time is *before* the first status was reported.
-
-  NOTE: as an example, uses both 'ReportTime $ ...' and 'reportTime ...' to construct a 'ReportTime' value.
   -}
   statusBetweenBackwards <- runWithAppM dbnameTest $ queryStationStatusBetween 7001
-    (ReportTime $ read "2023-09-15 17:16:59")                     -- One second after first status reported.
-    (reportTime (fromGregorian 2000 01 01) (TimeOfDay 00 00 00))  -- Arbitrary date
+    (UTCTime (read "2023-09-15") (timeOfDayToTime (read "17:16:59"))) -- One second after first status reported.
+    (UTCTime (read "2000-01-01") (timeOfDayToTime (read "00:00:00"))) -- Arbitrary date
   assertEqual "Expected number of status records for #7001 with backwards time parameters" 0 (length statusBetweenBackwards)
 
 
@@ -390,14 +386,15 @@ unit_queryDockingUndockingCount = do
   checkConditions 7012     thresholds7012  3       (-1)
   checkConditions 7148     thresholds7148  2         0
   where
-    thresholds7000  = [ EarliestTime (ReportTime $ read "2023-09-01 00:00:00.0"), LatestTime (ReportTime $ read "2023-09-15 17:36:27.0") ]
-    thresholds7006  = [ EarliestTime (ReportTime $ read "2023-09-01 00:00:00.0"), LatestTime (ReportTime $ read "2023-09-15 17:34:31.0") ]
-    thresholds7012  = [ EarliestTime (ReportTime $ read "2023-09-01 00:00:00.0"), LatestTime (ReportTime $ read "2023-09-15 17:36:06.0") ]
-    thresholds7148  = [ EarliestTime (ReportTime $ read "2023-09-01 00:00:00.0"), LatestTime (ReportTime $ read "2023-09-15 17:36:37.0") ]
+    thresholds7000  = [ EarliestTime (UTCTime (read "2023-09-01") (timeOfDayToTime midnight)), LatestTime (UTCTime (read "2023-09-15") (timeOfDayToTime (read "17:36:27.0"))) ]
+    thresholds7006  = [ EarliestTime (UTCTime (read "2023-09-01") (timeOfDayToTime midnight)), LatestTime (UTCTime (read "2023-09-15") (timeOfDayToTime (read "17:34:31.0"))) ]
+    thresholds7012  = [ EarliestTime (UTCTime (read "2023-09-01") (timeOfDayToTime midnight)), LatestTime (UTCTime (read "2023-09-15") (timeOfDayToTime (read "17:36:06.0"))) ]
+    thresholds7148  = [ EarliestTime (UTCTime (read "2023-09-01") (timeOfDayToTime midnight)), LatestTime (UTCTime (read "2023-09-15") (timeOfDayToTime (read "17:36:37.0"))) ]
+
 
 checkConditions :: Int32 -> [StatusThreshold] -> Int -> Int -> IO ()
 checkConditions stationId thresholds expectDockings expectUndockings = do
-  eventCountsForStation <- findInList stationId <$> runWithAppMDebug dbnameTest (queryDockingEventsCount (StatusVariationQuery (Just stationId) thresholds))
+  eventCountsForStation <- findInList stationId <$> runWithAppM dbnameTest (queryDockingEventsCount (StatusVariationQuery (Just stationId) thresholds))
   assertEqual ("Expected number of undockings at station " ++ show stationId)
     (Just expectUndockings)
     (_eventsCountUndockings . _eventsIconicCount  <$> eventCountsForStation)

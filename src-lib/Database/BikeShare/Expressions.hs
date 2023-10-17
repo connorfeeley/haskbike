@@ -19,6 +19,7 @@ import           Control.Lens                             hiding ( reuse, (<.) )
 
 import           Data.Int                                 ( Int32 )
 import qualified Data.Text                                as Text
+import           Data.Time
 
 import           Database.Beam
 import           Database.Beam.Backend.SQL.BeamExtensions ( BeamHasInsertOnConflict (anyConflict, onConflictDoNothing),
@@ -28,7 +29,7 @@ import           Database.BikeShare
 
 
 -- | Expression to query the statuses for a station between two times.
-statusBetweenExpr :: Int32 -> ReportTime -> ReportTime -> Q Postgres BikeshareDb s (StationStatusT (QGenExpr QValueContext Postgres s))
+statusBetweenExpr :: Int32 -> UTCTime -> UTCTime -> Q Postgres BikeshareDb s (StationStatusT (QGenExpr QValueContext Postgres s))
 statusBetweenExpr station_id start_time end_time =
   do
     info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
@@ -86,8 +87,7 @@ queryStationIdLikeExpr station_name = do
 
 
 -- | Expression to query the latest statuses for all stations before a given time.
-queryAllStationsStatusBeforeTimeExpr :: ReportTime
-                                     -> With Postgres BikeshareDb (Q Postgres BikeshareDb s (StationStatusT (QExpr Postgres s)))
+queryAllStationsStatusBeforeTimeExpr :: UTCTime -> With Postgres BikeshareDb (Q Postgres BikeshareDb s (StationStatusT (QExpr Postgres s)))
 queryAllStationsStatusBeforeTimeExpr latestTime = do
   stationsWithMaxTime <- selecting $
     aggregate_ (\s -> (group_ (_statusStationId s), max_ (_statusLastReported s))) $

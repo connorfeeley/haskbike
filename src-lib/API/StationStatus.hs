@@ -40,10 +40,9 @@ import           Data.Either          ( fromRight )
 import           Data.Functor         ( ($>) )
 import qualified Data.Text            as Text
 import           Data.Time
+import           Data.Time.Extras
 
 import           GHC.Generics         ( Generic )
-
-import           ReportTime
 
 -- | Enumeration representing a BikeShare station status string.
 data StationStatusString where
@@ -86,7 +85,7 @@ data StationStatus where
                    , _statusNumBikesDisabled      :: Int
                    , _statusNumDocksAvailable     :: Int
                    , _statusNumDocksDisabled      :: Int
-                   , _statusLastReported          :: Maybe LocalTime -- In UTC time
+                   , _statusLastReported          :: Maybe UTCTime
                    , _statusIsChargingStation     :: Bool
                    , _statusStatus                :: StationStatusString
                    , _statusIsInstalled           :: Bool
@@ -96,24 +95,24 @@ data StationStatus where
                    , _statusVehicleDocksAvailable :: [VehicleDock]
                    , _statusVehicleTypesAvailable :: [VehicleType]
                    } -> StationStatus
-  deriving (Show, Generic, Eq, Ord)
+  deriving (Show, Generic)
 
 instance ToJSON StationStatus where
   toJSON station =
-    object [ "station_id"               .=  show (_statusStationId                  station)
-           , "num_bikes_available"      .= _statusNumBikesAvailable                 station
-           , "num_bikes_disabled"       .= _statusNumBikesDisabled                  station
-           , "num_docks_available"      .= _statusNumDocksAvailable                 station
-           , "num_docks_disabled"       .= _statusNumDocksDisabled                  station
-           , "last_reported"            .=  fmap localToPosix (_statusLastReported  station)
-           , "is_charging_station"      .= _statusIsChargingStation                 station
-           , "status"                   .= _statusStatus                            station
-           , "is_installed"             .= _statusIsInstalled                       station
-           , "is_renting"               .= _statusIsRenting                         station
-           , "is_returning"             .= _statusIsReturning                       station
-           , "traffic"                  .= _statusTraffic                           station
-           , "vehicle_docks_available"  .= _statusVehicleDocksAvailable             station
-           , "vehicle_types_available"  .= _statusVehicleTypesAvailable             station
+    object [ "station_id"               .=  show (_statusStationId                    station)
+           , "num_bikes_available"      .= _statusNumBikesAvailable                   station
+           , "num_bikes_disabled"       .= _statusNumBikesDisabled                    station
+           , "num_docks_available"      .= _statusNumDocksAvailable                   station
+           , "num_docks_disabled"       .= _statusNumDocksDisabled                    station
+           , "last_reported"            .=  fmap utcToPosix      (_statusLastReported station)
+           , "is_charging_station"      .= _statusIsChargingStation                   station
+           , "status"                   .= _statusStatus                              station
+           , "is_installed"             .= _statusIsInstalled                         station
+           , "is_renting"               .= _statusIsRenting                           station
+           , "is_returning"             .= _statusIsReturning                         station
+           , "traffic"                  .= _statusTraffic                             station
+           , "vehicle_docks_available"  .= _statusVehicleDocksAvailable               station
+           , "vehicle_types_available"  .= _statusVehicleTypesAvailable               station
            ]
 instance FromJSON StationStatus where
   parseJSON = withObject "StationStatus" $ \v -> StationStatus
@@ -122,7 +121,7 @@ instance FromJSON StationStatus where
     <*> v .: "num_bikes_disabled"
     <*> v .: "num_docks_available"
     <*> v .: "num_docks_disabled"
-    <*> (fmap posixToLocal <$> (v .:? "last_reported"))
+    <*> (fmap posixToUtc <$> (v .:? "last_reported"))
     <*> v .: "is_charging_station"
     <*> v .: "status"
     <*> v .: "is_installed"

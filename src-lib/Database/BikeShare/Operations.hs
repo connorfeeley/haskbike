@@ -45,6 +45,7 @@ import           Control.Monad.Catch
 import           Data.Int                                 ( Int32 )
 import           Data.Maybe                               ( mapMaybe )
 import qualified Data.Text                                as Text
+import           Data.Time
 
 import           Database.Beam
 import           Database.Beam.Backend.SQL.BeamExtensions
@@ -133,9 +134,9 @@ insertStationStatus apiStatus
 {- |
 Query the statuses for a station between two times.
 -}
-queryStationStatusBetween :: Int                 -- ^ Station ID.
-                          -> ReportTime          -- ^ Start time.
-                          -> ReportTime          -- ^ End time.
+queryStationStatusBetween :: Int                  -- ^ Station ID.
+                          -> UTCTime              -- ^ Start time.
+                          -> UTCTime              -- ^ End time.
                           -> AppM [StationStatus] -- ^ List of 'StationStatus' for the given station between the given times.
 queryStationStatusBetween stationId startTime endTime =
   withPostgres $ runSelectReturningList $ select $
@@ -234,7 +235,7 @@ queryTableSize tableName = do
 
 
 -- | Query the latest statuses for all stations before a given time.
-queryAllStationsStatusBeforeTime :: ReportTime        -- ^ Latest time to return records for.
+queryAllStationsStatusBeforeTime :: UTCTime              -- ^ Latest time to return records for.
                                  -> AppM [StationStatus] -- ^ Latest 'StationStatus' for each station before given time.
 queryAllStationsStatusBeforeTime latestTime = withPostgres $ runSelectReturningList $ selectWith $ do
   queryAllStationsStatusBeforeTimeExpr latestTime

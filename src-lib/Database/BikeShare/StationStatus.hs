@@ -12,7 +12,6 @@
 module Database.BikeShare.StationStatus
      ( BeamStationStatusString (..)
      , PrimaryKey (..)
-     , ReportTime (..)
      , StationStatus
      , StationStatusId
      , StationStatusT (..)
@@ -23,7 +22,6 @@ module Database.BikeShare.StationStatus
      , availableIconic
      , fromBeamStationStatusToJSON
      , fromJSONToBeamStationStatus
-     , reportTimeType
      , stationStatusType
      , statusIsChargingStation
      , statusLastReported
@@ -52,6 +50,7 @@ import           Data.Int
 import           Data.List                                  ( find )
 import           Data.String                                ( IsString (fromString) )
 import qualified Data.Text                                  as Text
+import           Data.Time
 
 import           Database.Beam
 import           Database.Beam.Backend                      ( BeamBackend, HasSqlValueSyntax (sqlValueSyntax) )
@@ -63,13 +62,11 @@ import           Database.PostgreSQL.Simple.FromField       ( Field (typeOid), F
 import           Database.PostgreSQL.Simple.ToField         ( ToField (..) )
 import           Database.PostgreSQL.Simple.TypeInfo.Static ( text )
 
-import           ReportTime
-
 
 -- | Declare a (Beam) table for the 'StationStatus' type.
 data StationStatusT f where
   StationStatus :: { _statusStationId             :: PrimaryKey StationInformationT f
-                   , _statusLastReported          :: Columnar f ReportTime -- In UTC time
+                   , _statusLastReported          :: Columnar f UTCTime
                    , _statusNumBikesAvailable     :: Columnar f Int32
                    , _statusNumBikesDisabled      :: Columnar f Int32
                    , _statusNumDocksAvailable     :: Columnar f Int32
@@ -89,20 +86,18 @@ data StationStatusT f where
 type StationStatus = StationStatusT Identity
 type StationStatusId = PrimaryKey StationStatusT Identity
 deriving instance Show StationStatusId
-deriving instance Eq StationStatusId
 deriving instance Show StationStatus
-deriving instance Eq StationStatus
 
 -- | Inform Beam about the table.
 instance Table StationStatusT where
   data PrimaryKey StationStatusT f = StationStatusId { _unStatusStationId    :: PrimaryKey StationInformationT f
-                                                     , _unStatusLastReported :: Columnar f ReportTime
+                                                     , _unStatusLastReported :: Columnar f UTCTime
                                                      }
     deriving (Generic, Beamable)
   primaryKey = StationStatusId <$> _statusStationId  <*> _statusLastReported
 
 -- | Lenses
-unStatusLastReported :: Lens' (PrimaryKey StationStatusT f) (Columnar f ReportTime)
+unStatusLastReported :: Lens' (PrimaryKey StationStatusT f) (Columnar f UTCTime)
 unStatusLastReported key (StationStatusId stationId lastReported) = fmap (StationStatusId stationId) (key lastReported)
 {-# INLINE unStatusLastReported #-}
 
@@ -143,7 +138,7 @@ VehicleType _ _ _ (LensFor availableEfitG5) = tableLenses
 
 -- | StationStatus Lenses
 statusStationId             :: Getter (StationStatusT Identity) (PrimaryKey StationInformationT Identity)
-statusLastReported          :: Lens' (StationStatusT f) (C f ReportTime)
+statusLastReported          :: Lens' (StationStatusT f) (C f UTCTime)
 statusNumBikesAvailable     :: Lens' (StationStatusT f) (C f Int32)
 statusNumBikesDisabled      :: Lens' (StationStatusT f) (C f Int32)
 statusNumDocksAvailable     :: Lens' (StationStatusT f) (C f Int32)

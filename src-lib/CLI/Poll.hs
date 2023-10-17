@@ -134,12 +134,12 @@ handleTimeElapsed logPrefix apiResult lastUpdatedVar = do
   let currentTime' = apiResult ^. response_last_updated
   previousTime <- liftIO $ readTVarIO lastUpdatedVar
   let previousTime' = posixToLocal previousTime
-  let timeElapsed = localToPosix (zonedTimeToLocalTime currentTime') - previousTime
+  let timeElapsed = utcToPosix currentTime' - previousTime
 
   -- Check if last_updated went backwards
   if timeElapsed >= 0
     then do -- Update last_updated variable.
-      liftIO $ atomically $ writeTVar lastUpdatedVar (zonedTimeToPosix currentTime')
+      liftIO $ atomically $ writeTVar lastUpdatedVar (utcToPosix currentTime')
       log I $ format "({}) last updated [{}]" logPrefix currentTime'
       pure Nothing
     else do

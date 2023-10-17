@@ -3,13 +3,13 @@
 -- | Command-line options.
 module CLI.Options where
 
+import           Data.Time
+
 import           Database.BikeShare.Utils
 
 import           Options.Applicative
 
 import           Prelude                  hiding ( log )
-
-import           ReportTime
 
 
 -- | Top-level options.

@@ -27,11 +27,10 @@ module Database.BikeShare.Diagnostics
 import           Control.Lens
 
 import           Data.Int
+import           Data.Time
 
 import           Database.Beam
 import           Database.Beam.Backend ( SqlSerial )
-
-import           ReportTime
 
 -- Parameterized depending on which table the entry is for.
 data DiagnosticEntry where
@@ -51,7 +50,7 @@ data StatusDiagnosticEntry where
 -- | Declare a (Beam) table for the 'Diagnostics' type
 data DiagnosticsT f where
   Diagnostics :: { _diagnosticId       :: Columnar f (SqlSerial Int32)
-                 , _diagnosticTime     :: Columnar f ReportTime
+                 , _diagnosticTime     :: Columnar f UTCTime
                  } -> DiagnosticsT f
   deriving (Generic, Beamable)
 
@@ -72,7 +71,7 @@ instance Table DiagnosticsT where
 
 -- | Diagnostics lenses
 diagnosticId   :: Lens' (DiagnosticsT f) (C f (SqlSerial Int32))
-diagnosticTime :: Lens' (DiagnosticsT f) (C f ReportTime)
+diagnosticTime :: Lens' (DiagnosticsT f) (C f UTCTime)
 
 Diagnostics (LensFor diagnosticId) _    = tableLenses
 Diagnostics _ (LensFor diagnosticTime)  = tableLenses

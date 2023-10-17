@@ -2,24 +2,19 @@
 
 module CLI.QueryFormat where
 
-import           AppEnv
-
 import           CLI.Utils
 
 import           Control.Lens
 
-import           Data.Int                      ( Int32 )
-import           Data.Text.Lazy                ( Text, chunksOf, pack, reverse, unlines, unpack, unwords )
-import           Data.Time                     ( LocalTime (..), TimeZone )
+import           Data.Int            ( Int32 )
+import           Data.Text.Lazy      ( Text, chunksOf, pack, reverse, unlines, unpack, unwords )
+import           Data.Time           ( TimeZone, UTCTime )
 
 import           Database.BikeShare
-import           Database.BikeShare.Operations
 
 import           Fmt
 
-import           Prelude                       hiding ( log, reverse, unlines, unwords )
-
-import           ReportTime                    ( reportToLocal )
+import           Prelude             hiding ( log, reverse, unlines, unwords )
 
 import           System.Console.ANSI
 
@@ -58,7 +53,7 @@ formatStationInfo (timeZone, name, status) =
             , ("Bikes:\t", status ^. statusNumBikesAvailable, fromIntegral $ status ^. statusNumBikesDisabled)
             ]
     in [ formattedName name status
-       , formattedLastReport timeZone $ reportToLocal timeZone $ status ^. statusLastReported
+       , formattedLastReport timeZone $ status ^. statusLastReported
        , "Charger:\t" <> formattedBool (status ^. statusIsChargingStation)
        ] ++ map fmtAvailability pairs ++ bikeAvailability
 
@@ -68,12 +63,12 @@ formattedName name status =
     where idPrefix = resetIntens <> "# " <> boldCode
 
 -- Format the last reported time in the specified time zone (namerly, the system's time zone).
-formattedLastReport :: TimeZone -> LocalTime -> Text
-formattedLastReport timeZone status = reportedText
+formattedLastReport :: TimeZone -> UTCTime -> Text
+formattedLastReport _timeZone status = reportedText
   where
     reportedText = "[" <> showText status <> "]"
                 <> boldCode <> "\t" <> "|" <> "\t" <> resetIntens
-                <> italCode <> pack (formatTime' timeZone status) <> resetItal <> " (local)"
+                <> italCode <> pack (formatTime' status) <> resetItal <> " (local)"
 
 formattedBool :: Bool -> Text
 formattedBool b = if b

@@ -26,19 +26,18 @@ import           Data.List
 import           Data.Maybe
 import           Data.String.Conversions
 import           Data.Time
+import           Data.Time.Extras
 
 import           Database.BikeShare.Operations
 import           Database.BikeShare.StationStatus
 
 import           GHC.Generics
 
-import           ReportTime
-
 
 -- | Type representing a the visualization data for a BikeShare station's status.
 data StationStatusVisualization where
   StationStatusVisualization :: { _statusVisStationId       :: Int
-                                , _statusVisLastReported    :: LocalTime -- In UTC time
+                                , _statusVisLastReported    :: UTCTime
                                 , _statusVisChargingStation :: Bool
                                 , _statusVisBikesAvailable  :: Int
                                 , _statusVisBikesDisabled   :: Int
@@ -77,10 +76,10 @@ instance FromJSON StationStatusVisualization where
     <*> v .: "available_efit_g5"
 
 -- | Convert from the Beam StationStatus type to StationStatusVisualization
-fromBeamStationStatusToVisJSON :: NominalDiffTime -> StationStatus -> StationStatusVisualization
+fromBeamStationStatusToVisJSON :: Int -> StationStatus -> StationStatusVisualization
 fromBeamStationStatusToVisJSON timeOffset status =
   StationStatusVisualization { _statusVisStationId       = fromIntegral sid
-                             , _statusVisLastReported    = addHours timeOffset (reportToLocal reportTimeZone (status ^. statusLastReported))
+                             , _statusVisLastReported    = addUTCTime (secondsToNominalDiffTime (fromIntegral timeOffset * 60)) (status ^. statusLastReported)
                              , _statusVisChargingStation = status ^. statusIsChargingStation
                              , _statusVisBikesAvailable  = fromIntegral $ status ^. statusNumBikesAvailable
                              , _statusVisBikesDisabled   = fromIntegral $ status ^. statusNumBikesDisabled
@@ -95,9 +94,11 @@ fromBeamStationStatusToVisJSON timeOffset status =
 
 generateJsonDataSource :: Int -> AppM [StationStatusVisualization]
 generateJsonDataSource stationId = do
+  -- Get the current TimeZone and construct our query limits.
+  tz <- liftIO getCurrentTimeZone
+  let tzOffset  = timeZoneMinutes tz
+  let startTime = localTimeToUTC tz (LocalTime (fromGregorian 2023 10 17) midnight)
+  let endTime   = localTimeToUTC tz (LocalTime (fromGregorian 2023 10 18) midnight)
+
   result <- queryStationStatusBetween stationId startTime endTime
-  -- TODO: do UTC -> local time conversion here as well.
-  pure $ map (fromBeamStationStatusToVisJSON (-4)) result
-  where
-    startTime = reportTime (fromGregorian 2023 10 17) (TimeOfDay 00 00 00)
-    endTime   = reportTime (fromGregorian 2023 10 18) (TimeOfDay 00 00 00)
+  pure $ map (fromBeamStationStatusToVisJSON tzOffset) result

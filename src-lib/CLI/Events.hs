@@ -23,7 +23,9 @@ import           Data.List                     ( sortOn )
 import           Data.Maybe                    ( fromMaybe )
 import           Data.Ord                      ( Down (Down) )
 import           Data.Text.Lazy                ( pack, unpack )
-import           Data.Time                     ( addDays, getCurrentTime, utctDay )
+import           Data.Time                     ( UTCTime (..), addDays, getCurrentTime, timeOfDayToTime, utctDay )
+import           Data.Time.Calendar
+import           Data.Time.LocalTime
 
 import           Database.Beam
 import           Database.BikeShare
@@ -34,8 +36,6 @@ import           Fmt
 import           Formatting
 
 import           Prelude                       hiding ( log )
-
-import           ReportTime                    ( Day, TimeOfDay (..), fromGregorian, reportTime )
 
 import           System.Console.ANSI
 
@@ -137,7 +137,7 @@ bikeCountsAtMoment :: Day -> TimeOfDay -> AppM (Day, TimeOfDay, Int32, Int32, In
 bikeCountsAtMoment day timeOfDay = do
 
   log I $ format "Getting number of bikes by type in the system on {} at {}" day timeOfDay
-  statusForMoment <- queryAllStationsStatusBeforeTime (reportTime day timeOfDay)
+  statusForMoment <- queryAllStationsStatusBeforeTime (UTCTime day (timeOfDayToTime timeOfDay))
   pure ( day
        , timeOfDay
        , totalBoost statusForMoment
@@ -187,7 +187,7 @@ eventsForRange stationId earliestDay earliestTime latestDay latestTime = do
     queryCondition =
       StatusVariationQuery
       (fromIntegral <$> stationId)
-      [ EarliestTime (reportTime earliestDay earliestTime) , LatestTime (reportTime latestDay latestTime) ]
+      [ EarliestTime (UTCTime earliestDay (timeOfDayToTime earliestTime)), LatestTime (UTCTime latestDay (timeOfDayToTime latestTime)) ]
 
 -- | Sort docking and undocking events.
 sortDockingEventsCount :: AvailabilityCountVariation -> [DockingEventsCount] -> [DockingEventsCount]
