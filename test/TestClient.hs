@@ -18,6 +18,10 @@ import           Data.Time                ( getCurrentTimeZone )
 import           Database.Beam.Postgres   ( connect )
 import           Database.BikeShare.Utils
 
+import           Fmt                      ( format )
+
+import           Formatting
+
 import           Network.HTTP.Client      ( newManager )
 import           Network.HTTP.Client.TLS  ( tlsManagerSettings )
 
@@ -69,12 +73,7 @@ unit_poll = do
   let env = mainEnv W False False timeZone conn clientManager
 
   -- Log the database connection parameters.
-  runAppM env (log I $ "Connected to database using: " <> unwords [ "dbname=" <> pack name
-                                                                  , pack host
-                                                                  , pack port
-                                                                  , pack username
-                                                                  , pack "password=***" -- Don't log the password.
-                                                                  ])
+  runAppM env (log I $ format "Connected to database using: {}" (pShowCompact connInfo))
   runAppM env doPoll
   where
     doPoll :: AppM ()
