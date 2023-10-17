@@ -217,6 +217,7 @@ library
                     , CLI.Options
                     , API.Types
                     , ReportTime
+                    , Data.Time.Extras
                     , Formatting
                     , Database.BikeShare.Types
                     , Database.BikeShare

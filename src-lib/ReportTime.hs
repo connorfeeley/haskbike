@@ -7,18 +7,14 @@
 
 module ReportTime
      ( ReportTime (..)
-     , addHours
-     , addMinutes
-     , localToPosix
-     , localToSystem
-     , localToSystem'
-     , posixToLocal
      , reportTime
      , reportTimeType
      , reportTimeZone
      , reportToLocal
      , systemToReport
-       -- Re-exports for ReportTime constructors
+       -- Re-export general time functions which used to be in this module.
+     , module Data.Time.Extras
+       -- Re-exports for ReportTime constructors.
      , Day (..)
      , TimeOfDay (..)
      , fromGregorian
@@ -26,6 +22,7 @@ module ReportTime
 
 import           Data.Time
 import           Data.Time.Clock.POSIX
+import           Data.Time.Extras
 
 import           Database.Beam
 import           Database.Beam.Backend                ( HasSqlValueSyntax (sqlValueSyntax),
@@ -35,15 +32,6 @@ import           Database.Beam.Postgres               ( Postgres )
 import           Database.Beam.Postgres.Syntax        ( PgValueSyntax )
 import           Database.PostgreSQL.Simple.FromField ( FromField (..) )
 import           Database.PostgreSQL.Simple.ToField   ( ToField (..) )
-
-
--- | Add a number of hours to a LocalTime.
-addHours :: NominalDiffTime -> LocalTime -> LocalTime
-addHours h time' = utcToLocalTime reportTimeZone (addUTCTime (h*3600) (localTimeToUTC utc time'))
-
--- | Add a number of hours to a LocalTime.
-addMinutes :: NominalDiffTime -> LocalTime -> LocalTime
-addMinutes m time' = utcToLocalTime reportTimeZone (addUTCTime (m*60) (localTimeToUTC utc time'))
 
 -- | Smart constructor for the ReportTime datatype.
 reportTime :: Day -> TimeOfDay -> ReportTime
@@ -88,33 +76,10 @@ instance (HasSqlValueSyntax ReportTime x, HasSqlValueSyntax ReportTime SqlNull) 
 reportTimeType :: DataType Postgres ReportTime
 reportTimeType = DataType (timestampType Nothing True)
 
--- | Convert a LocalTime to a LocalTime in the given timezone.
-localToSystem :: TimeZone -> LocalTime -> LocalTime
-localToSystem currentTimeZone localTime = do
-  -- Convert the local time to a POSIX time, using "fake UTC" as the timezone
-  let asPosix = localToPosix localTime
-  -- Convert the POSIX time to a local time, using the system's current timezone
-  posixToLocal' currentTimeZone asPosix
-  where
-    posixToLocal' timezone = utcToLocalTime timezone . posixSecondsToUTCTime . secondsToNominalDiffTime . fromIntegral
-
--- | Convert a LocalTime to a LocalTime in the system's current timezone.
-localToSystem' :: LocalTime -> IO LocalTime
-localToSystem' localTime = do
-  -- Get the current timezone
-  currentTimeZone <- getCurrentTimeZone
-  pure $ localToSystem currentTimeZone localTime
-
 
 -- | TimeZone used to convert the API.T.StationStatus.last_reported field to a local time (effectively UTC).
 reportTimeZone :: TimeZone
 reportTimeZone = TimeZone 0 False "UTC"
-
-posixToLocal :: Int -> LocalTime
-posixToLocal = utcToLocalTime reportTimeZone . posixSecondsToUTCTime . secondsToNominalDiffTime . fromIntegral
-
-localToPosix :: LocalTime -> Int
-localToPosix = floor . utcTimeToPOSIXSeconds . localTimeToUTC reportTimeZone
 
 -- | Convert ReportTime to LocalTime
 reportToLocal :: TimeZone -> ReportTime -> LocalTime
