@@ -16,7 +16,9 @@ data StationStatusVisualizationPage where
 -- HTML serialization of a single person
 instance ToHtml StationStatusVisualizationPage where
   toHtml statusVisualization =
-    toHtmlRaw (VL.toHtml availBikesOverTimeVL)
+    div_ $ do
+    h1_ (toHtml ("Bikes Available Over Time" :: String))
+    toHtmlRaw (VL.toHtml (availBikesOverTimeVL 7001))
     -- tr_ $ do
     --   td_ (toHtml ("test" :: String))
     --   td_ (toHtml (show (_statusVisPageStationId statusVisualization)))

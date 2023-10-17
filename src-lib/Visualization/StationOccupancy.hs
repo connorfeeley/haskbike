@@ -14,25 +14,34 @@ import           Graphics.Vega.VegaLite
 
 import           Prelude                    hiding ( filter, lookup, repeat )
 
+import           TextShow
+
 -- Prepare the Vega-Lite data source
 tempDataSource :: Data
 tempDataSource =
   dataFromUrl "https://gist.github.com/connorfeeley/c612d65486e7bf3f475b6f139a605c9e/raw/327c87b118dfab298cddb48f7e109be5ee80ff36/station_status_7001_10-15-15_202310171026.json"
   [ JSON "station_status" ] -- data array is under "station_status" key
 
+-- Prepare the Vega-Lite data source
+liveDataSource :: Int -> Data
+liveDataSource stationId =
+  -- data array is under "station_status" key
+  dataFromUrl (T.intercalate "/" segments) [ JSON "station_status" ]
+  where segments :: [T.Text] = [ "/", "data", "station-status", showt stationId ]
+
 -- Implement Vega-Lite specification using hvega
-availBikesOverTimeVL :: VegaLite
-availBikesOverTimeVL =
+availBikesOverTimeVL :: Int -> VegaLite
+availBikesOverTimeVL stationId =
   let
     selLabel = "picked"
     sel = selection
           . select selLabel Single []
 
   in
-    toVegaLite (sel [] : selectionProps selLabel "Available Vehicle Types Over Time")
+    toVegaLite (sel [] : selectionProps selLabel "Available Vehicle Types Over Time" stationId)
 
-selectionProps :: SelectionLabel -> T.Text -> [PropertySpec]
-selectionProps selName label =
+selectionProps :: SelectionLabel -> T.Text -> Int -> [PropertySpec]
+selectionProps selName label stationId =
   let
     -- Implement the `fold` transform
     dataTransforms =
@@ -82,7 +91,7 @@ selectionProps selName label =
 
   in
     [ title label [ TOrient SBottom ]
-    , tempDataSource
+    , liveDataSource stationId
     , dataTransforms []
     , layer [ areaLayer
             , pointLayer
@@ -95,7 +104,7 @@ selectionProps selName label =
 
 main :: IO ()
 main =
-  toHtmlFile "example.html" availBikesOverTimeVL
+  toHtmlFile "example.html" (availBikesOverTimeVL 7001)
 
 printVegaLiteSchema :: VegaLite -> IO ()
 printVegaLiteSchema schema = Char8.putStrLn (encodePretty (fromVL schema))
