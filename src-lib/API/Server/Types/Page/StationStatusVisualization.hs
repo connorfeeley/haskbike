@@ -7,6 +7,7 @@ module API.Server.Types.Page.StationStatusVisualization
 
 import           Data.Aeson
 import qualified Data.Text                      as T
+import           Data.Time
 
 import qualified Graphics.Vega.VegaLite         as VL
 
@@ -17,7 +18,9 @@ import           TextShow
 import           Visualization.StationOccupancy
 
 data StationStatusVisualizationPage where
-  StationStatusVisualizationPage :: { _statusVisPageStationId :: Int } -> StationStatusVisualizationPage
+  StationStatusVisualizationPage :: { _statusVisPageStationId :: Int
+                                    , _statusVisPageTimeRange :: Maybe (LocalTime, LocalTime)
+                                    } -> StationStatusVisualizationPage
 
 -- HTML serialization of a single person
 instance ToHtml StationStatusVisualizationPage where
@@ -26,9 +29,6 @@ instance ToHtml StationStatusVisualizationPage where
     h1_ (toHtml ("Available Bikes Over Time" :: String))
     -- div_ $ toHtml (safeLink "/")-- (T.intercalate "/" dataSourceSegments))
     div_ vegaContainerStyle (toHtmlRaw (VL.toHtmlWith vegaEmbedCfg (availBikesOverTimeVL (_statusVisPageStationId statusVisualization))))
-    -- tr_ $ do
-    --   td_ (toHtml ("test" :: String))
-    --   td_ (toHtml (show (_statusVisPageStationId statusVisualization)))
     where _dataSourceSegments :: [T.Text] = [ "/data", "station-status", showt 7001]
           vegaContainerStyle = [ style_ "flex:1 1 0%; position:relative; outline:none; display:flex; min-height:30px; min-width:100px" ]
           vegaEmbedCfg :: Maybe Value = Just $ toJSON ("logLevel", 4)

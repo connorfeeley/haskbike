@@ -8,6 +8,7 @@
 module ReportTime
      ( ReportTime (..)
      , addHours
+     , addMinutes
      , localToPosix
      , localToSystem
      , localToSystem'
@@ -36,9 +37,13 @@ import           Database.PostgreSQL.Simple.FromField ( FromField (..) )
 import           Database.PostgreSQL.Simple.ToField   ( ToField (..) )
 
 
--- | Add a number of hours from a LocalTime.
+-- | Add a number of hours to a LocalTime.
 addHours :: NominalDiffTime -> LocalTime -> LocalTime
 addHours h time' = utcToLocalTime reportTimeZone (addUTCTime (h*3600) (localTimeToUTC utc time'))
+
+-- | Add a number of hours to a LocalTime.
+addMinutes :: NominalDiffTime -> LocalTime -> LocalTime
+addMinutes m time' = utcToLocalTime reportTimeZone (addUTCTime (m*60) (localTimeToUTC utc time'))
 
 -- | Smart constructor for the ReportTime datatype.
 reportTime :: Day -> TimeOfDay -> ReportTime
