@@ -27,7 +27,7 @@ import           ReportTime
 
 -- | A type representing a BikeShare response.
 data ResponseWrapper a where
-  ResponseWrapper :: { _response_last_updated :: ZonedTime -- POSIX timestamp of the last time the data was updated.
+  ResponseWrapper :: { _response_last_updated :: UTCTime -- POSIX timestamp of the last time the data was updated.
                      , _response_ttl          :: Int       -- Time to live of the data in seconds.
                      , _response_version      :: String    -- GBFS version of the response.
                      , _response_data         :: a         -- The data contained in the response.
@@ -36,7 +36,7 @@ data ResponseWrapper a where
 
 instance FromJSON a => FromJSON (ResponseWrapper a) where
   parseJSON = withObject "ResponseWrapper" $ \v -> do
-    _response_last_updated <- fmap (posixToZonedTime utc) (v .: "last_updated")
+    _response_last_updated <- fmap posixToUtc (v .: "last_updated")
     _response_ttl          <- v .: "ttl"
     _response_version      <- v .: "version"
     _response_data         <- v .: "data"
@@ -44,7 +44,7 @@ instance FromJSON a => FromJSON (ResponseWrapper a) where
 
 instance ToJSON a => ToJSON (ResponseWrapper a) where
   toJSON ResponseWrapper {..} =
-    object [ "last_reported"    .= localToPosix (zonedTimeToLocalTime _response_last_updated)
+    object [ "last_reported"    .= utcToPosix _response_last_updated
            , "response_ttl"     .= _response_ttl
            , "response_version" .= _response_version
            , "response_data"    .= _response_data

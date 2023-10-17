@@ -12,7 +12,9 @@ module Data.Time.Extras
      , localToSystem
      , localToSystem'
      , posixToLocal
+     , posixToUtc
      , posixToZonedTime
+     , utcToPosix
      , zonedTimeToPosix
      ) where
 
@@ -47,15 +49,24 @@ localToSystem' localTime = do
 
 -- * POSIX conversion functions
 -- NOTE: POSIX time is by nature UTC.
+
+-- POSIX <-> LocalTime
 posixToLocal :: Int -> LocalTime
 posixToLocal = utcToLocalTime utc . posixSecondsToUTCTime . secondsToNominalDiffTime . fromIntegral
 
 localToPosix :: LocalTime -> Int
 localToPosix = floor . utcTimeToPOSIXSeconds . localTimeToUTC utc
 
+-- POSIX <-> ZonedTime
+posixToZonedTime :: TimeZone -> Int -> ZonedTime
+posixToZonedTime tz = utcToZonedTime tz . (posixSecondsToUTCTime . secondsToNominalDiffTime . fromIntegral)
 
 zonedTimeToPosix :: ZonedTime -> Int
 zonedTimeToPosix = floor . utcTimeToPOSIXSeconds . zonedTimeToUTC
 
-posixToZonedTime :: TimeZone -> Int -> ZonedTime
-posixToZonedTime tz = utcToZonedTime tz . (posixSecondsToUTCTime . secondsToNominalDiffTime . fromIntegral)
+-- POSIX <-> ZonedTime
+posixToUtc :: Int -> UTCTime
+posixToUtc = posixSecondsToUTCTime . secondsToNominalDiffTime . fromIntegral
+
+utcToPosix :: UTCTime -> Int
+utcToPosix = floor . utcTimeToPOSIXSeconds
