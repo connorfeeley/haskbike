@@ -5,13 +5,15 @@ module Visualization.StationOccupancy
      , selectionProps
      ) where
 
-import           Data.Aeson.Encode.Pretty   ( encodePretty )
-import qualified Data.ByteString.Lazy.Char8 as Char8
-import qualified Data.Text                  as T
+import           Data.Aeson.Encode.Pretty      ( encodePretty )
+import qualified Data.ByteString.Lazy.Char8    as Char8
+import qualified Data.Text                     as T
+
+import           Database.BikeShare.Operations
 
 import           Graphics.Vega.VegaLite
 
-import           Prelude                    hiding ( filter, lookup, repeat )
+import           Prelude                       hiding ( filter, lookup, repeat )
 
 import           TextShow
 

@@ -6,40 +6,28 @@
 {-# LANGUAGE TypeOperators         #-}
 
 -- FIXME: remove once server is fleshed out a bit more.
-{-# OPTIONS_GHC -fno-warn-unused-imports #-}
 
 
 -- | This module contains the server API to visualize BikeShare data.
 
 module API.Server.VisualizationData
-     ( --VisualizationDataAPI
-       serveVisualization
-       -- , server
-     , statusData
+     ( serveVisualization
      ) where
-
 
 import           API.Server.Types.Data.StationStatusVisualization
 import           API.Server.Types.Page.StationStatusVisualization
 
+import           AppEnv
+
 import           Control.Monad.Except
 import           Control.Monad.Reader
 
-import           Data.Aeson
-import qualified Data.Aeson.Parser
-import           Data.Aeson.Types
-import           Data.Attoparsec.ByteString
-import           Data.ByteString                                  ( ByteString )
 import           Data.List
-import           Data.Maybe
-import           Data.String.Conversions
 import           Data.Time
-import           Data.Time.Calendar
 
 import           GHC.Generics
 
 import           Lucid
-import           Lucid.Servant
 
 import           Network.HTTP.Media                               ( (//), (/:) )
 import           Network.Wai
@@ -50,13 +38,6 @@ import           Prelude.Compat
 
 import           Servant
 import           Servant.Server.Generic
-import           Servant.Types.SourceT                            ( source )
-
-import           System.Directory
-
-import           Text.Blaze
-import qualified Text.Blaze.Html
-import           Text.Blaze.Html.Renderer.Utf8
 
 
 -- | Example data.
@@ -95,6 +76,7 @@ statusData = [ StationStatusVisualization { _statusVisStationId       = 7000
                                           , _statusVisAvailableEfitG5 = 8
                                           }
              ]
+
 data HTMLLucid
 instance Accept HTMLLucid where
     contentType _ = "text" // "html" /: ("charset", "utf-8")
@@ -112,60 +94,34 @@ data Routes route where
             } -> Routes route
   deriving Generic
 
--- type VisualizationDataAPI = "data" :>
---                                 "station-status" :> Capture "station-id" Int :> Get '[JSON] [StationStatusVisualization]
---                        :<|> "visualization" :>
---                                 "station-status" :> Get '[HTMLLucid] StationStatusVisualizationPage
+record :: Routes (AsServerT AppM)
+record = Routes
+         { _visualizationStationStatus = stationStatusVisualizationPage
+         , _dataStationStatus = stationStatusData
+         } where
+                stationStatusData :: Int -> AppM [StationStatusVisualization]
+                stationStatusData = generateJsonDataSource
 
--- server :: Server (ToServantApi Routes) -- VisualizationDataAPI
--- server = stationStatusData
---          :<|> stationStatusVisualizationPage
-
---   -- TODO: query database based on 'sId', instead of filtering our example data.
---   where stationStatusData :: Int -> Handler [StationStatusVisualization]
---         stationStatusData sId = return (filter (\sId' -> _statusVisStationId sId' == sId) statusData)
-
---         stationStatusVisualizationPage :: Handler StationStatusVisualizationPage
---         stationStatusVisualizationPage = return StationStatusVisualizationPage { _statusVisPageStationId = 7001 }
-
-
--- visualizationDataAPI :: Proxy VisualizationDataAPI
--- visualizationDataAPI = Proxy
-
-api :: Proxy (ToServantApi Routes)
-api = genericApi (Proxy :: Proxy Routes)
-
--- cliRoutes :: Routes (AsClientT IO)
--- cliRoutes = genericClientHoist
---     (\x -> runClientM x env >>= either throwIO return)
---   where
---     env = error "undefined environment"
-
--- cliGet :: Int -> IO String
--- cliGet = _get cliRoutes
+                stationStatusVisualizationPage :: AppM StationStatusVisualizationPage
+                stationStatusVisualizationPage = return StationStatusVisualizationPage { _statusVisPageStationId = 7001 }
 
 routesLinks :: Routes (AsLink Link)
 routesLinks = allFieldLinks
 
 
-record :: Routes AsServer
-record = Routes
-         { _visualizationStationStatus = stationStatusVisualizationPage
-         , _dataStationStatus = stationStatusData
-         }
-
-stationStatusData :: Int -> Handler [StationStatusVisualization]
-stationStatusData sId = return (filter (\sId' -> _statusVisStationId sId' == sId) statusData)
-
-stationStatusVisualizationPage :: Handler StationStatusVisualizationPage
-stationStatusVisualizationPage = return StationStatusVisualizationPage { _statusVisPageStationId = 7001 }
+-- | Natural transformation function for AppM monad
+nt :: Env AppM -> AppM a -> Handler a
+nt s a =
+  let r = runReaderT (unAppM a) s
+  in liftIO r
 
 
--- 'serve' comes from servant and hands you a WAI Application,
--- which you can think of as an "abstract" web application,
--- not yet a webserver.
-app :: Application
-app = genericServe record
+app :: Env AppM -> Application
+app s = -- serve api $ hoistServer api (nt s) server
+  genericServeT (nt s) record
 
-serveVisualization :: Int -> IO ()
-serveVisualization port = run port app
+
+serveVisualization :: Int -> AppM ()
+serveVisualization port = do
+  env <- ask
+  liftIO $ run port (app env)

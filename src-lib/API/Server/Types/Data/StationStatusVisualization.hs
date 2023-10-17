@@ -6,8 +6,13 @@
 
 module API.Server.Types.Data.StationStatusVisualization
      ( StationStatusVisualization (..)
+     , fromBeamStationStatusToVisJSON
+     , generateJsonDataSource
      ) where
 
+import           AppEnv
+
+import           Control.Lens                     hiding ( (.=) )
 import           Control.Monad.Except
 import           Control.Monad.Reader
 
@@ -15,14 +20,19 @@ import           Data.Aeson
 import qualified Data.Aeson.Parser
 import           Data.Aeson.Types
 import           Data.Attoparsec.ByteString
-import           Data.ByteString            ( ByteString )
+import           Data.ByteString                  ( ByteString )
+import           Data.Coerce                      ( coerce )
 import           Data.List
 import           Data.Maybe
 import           Data.String.Conversions
 import           Data.Time
 
+import           Database.BikeShare.Operations
+import           Database.BikeShare.StationStatus
+
 import           GHC.Generics
 
+import           ReportTime
 
 
 -- | Type representing a the visualization data for a BikeShare station's status.
@@ -65,3 +75,28 @@ instance FromJSON StationStatusVisualization where
     <*> v .: "available_iconic"
     <*> v .: "available_efit"
     <*> v .: "available_efit_g5"
+
+-- | Convert from the Beam StationStatus type to StationStatusVisualization
+fromBeamStationStatusToVisJSON :: StationStatus -> StationStatusVisualization
+fromBeamStationStatusToVisJSON status =
+  StationStatusVisualization { _statusVisStationId       = fromIntegral sid
+                             , _statusVisLastReported    = reportToLocal (status ^. statusLastReported)
+                             , _statusVisChargingStation = status ^. statusIsChargingStation
+                             , _statusVisBikesAvailable  = fromIntegral $ status ^. statusNumBikesAvailable
+                             , _statusVisBikesDisabled   = fromIntegral $ status ^. statusNumBikesDisabled
+                             , _statusVisDocksAvailable  = fromIntegral $ status ^. statusNumDocksAvailable
+                             , _statusVisDocksDisabled   = fromIntegral $ status ^. statusNumDocksDisabled
+                             , _statusVisAvailableIconic = fromIntegral (status ^. vehicleTypesAvailableBoost)
+                             , _statusVisAvailableEfit   = fromIntegral (status ^. vehicleTypesAvailableEfit)
+                             , _statusVisAvailableEfitG5 = fromIntegral (status ^. vehicleTypesAvailableEfitG5)
+                             }
+  where
+    StationInformationId sid = _statusStationId status
+
+generateJsonDataSource :: Int -> AppM [StationStatusVisualization]
+generateJsonDataSource stationId = do
+  result <- queryStationStatusBetween stationId startTime endTime
+  pure $ map fromBeamStationStatusToVisJSON result
+  where
+    startTime = reportTime (fromGregorian 2023 10 16) (TimeOfDay 00 00 00)
+    endTime   = reportTime (fromGregorian 2023 10 17) (TimeOfDay 00 00 00)

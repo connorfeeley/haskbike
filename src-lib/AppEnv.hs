@@ -3,7 +3,7 @@
 
 -- | Application environment and monad.
 module AppEnv
-     ( AppM
+     ( AppM (..)
      , Env (..)
      , Message
      , WithAppMEnv
@@ -56,6 +56,11 @@ data Env m where
          , envBaseUrl       :: !BaseUrl
          } -> Env m
 
+-- Application type
+newtype AppM a = AppM
+  { unAppM :: ReaderT (Env AppM) IO a
+  } deriving newtype (Functor, Applicative, Monad, MonadIO, MonadUnliftIO, MonadReader (Env AppM), MonadFail, MonadThrow, MonadCatch)
+
 {- | Type alias for constraint for:
 
 1. Monad @m@ have access to environment @env@.
@@ -99,11 +104,6 @@ instance HasLog (Env m) Message m where
   setLogAction :: LogAction m Message -> Env m -> Env m
   setLogAction newLogAction env = env { envLogAction = newLogAction }
   {-# INLINE setLogAction #-}
-
--- Application type
-newtype AppM a = AppM
-  { unAppM :: ReaderT (Env AppM) IO a
-  } deriving newtype (Functor, Applicative, Monad, MonadIO, MonadUnliftIO, MonadReader (Env AppM), MonadFail, MonadThrow, MonadCatch)
 
 -- | Simple environment for the main application.
 simpleEnv :: TimeZone -> Connection -> Manager -> Env AppM
