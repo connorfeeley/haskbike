@@ -99,11 +99,10 @@ common common-depends
                     , boxes
                     , exceptions
 
--- Dependencies needed by targets excercising the API.
-common api-depends
+-- Dependencies needed by targets exercising the API client.
+common api-client-depends
     build-depends:    servant
                     , aeson
-                    , servant-server
                     , servant-client
                     , servant-client-core
                     , free
@@ -111,6 +110,25 @@ common api-depends
                     , http-client
                     , http-client-tls
                     , http-conduit
+
+-- Dependencies needed by targets exercising the API client.
+common api-server-depends
+    build-depends:    servant
+                    , servant-server
+                    , http-client
+                    , http-client-tls
+                    , http-conduit
+                    , free
+                    , wai
+                    , warp
+                    , aeson
+                    , lucid
+                    , blaze-html
+                    , blaze-markup
+                    , directory
+                    , base-compat-batteries
+                    , http-media
+                    , string-conversions
 
 -- Dependencies needed by targets excercising the database.
 common database-depends
@@ -145,7 +163,7 @@ executable haskbike
     import:           compile-flags
                     , common-extensions
                     , common-depends
-                    , api-depends
+                    , api-client-depends
                     , database-depends
 
     -- .hs or .lhs file containing the Main module.
@@ -173,7 +191,8 @@ library
     import:           compile-flags
                     , common-extensions
                     , common-depends
-                    , api-depends
+                    , api-client-depends
+                    , api-server-depends
                     , database-depends
 
     -- Modules exported by the library.
@@ -184,6 +203,7 @@ library
                     , API.ClientLifted
                     -- , API.DebugClient
                     , API.Server.VisualizationData
+                    , API.Server.Types.StationStatusVisualization
                     , CLI.Utils
                     , CLI.Poll
                     , CLI.Query
@@ -234,7 +254,7 @@ test-suite haskbike-test
     import:           compile-flags
                     , common-extensions
                     , common-depends
-                    , api-depends
+                    , api-client-depends
                     , database-depends
                     , test-depends
 

@@ -95,20 +95,20 @@ data StationStatus where
 
 instance ToJSON StationStatus where
   toJSON station =
-    object [ "station_id"               .=  show (_statusStationId                 station)
-           , "num_bikes_available"      .= _statusNumBikesAvailable               station
-           , "num_bikes_disabled"       .= _statusNumBikesDisabled                station
-           , "num_docks_available"      .= _statusNumDocksAvailable               station
-           , "num_docks_disabled"       .= _statusNumDocksDisabled                station
-           , "last_reported"            .=  fmap localToPosix (_statusLastReported station)
-           , "is_charging_station"      .= _statusIsChargingStation               station
+    object [ "station_id"               .=  show (_statusStationId                  station)
+           , "num_bikes_available"      .= _statusNumBikesAvailable                 station
+           , "num_bikes_disabled"       .= _statusNumBikesDisabled                  station
+           , "num_docks_available"      .= _statusNumDocksAvailable                 station
+           , "num_docks_disabled"       .= _statusNumDocksDisabled                  station
+           , "last_reported"            .=  fmap localToPosix (_statusLastReported  station)
+           , "is_charging_station"      .= _statusIsChargingStation                 station
            , "status"                   .= _statusStatus                            station
-           , "is_installed"             .= _statusIsInstalled                      station
-           , "is_renting"               .= _statusIsRenting                        station
-           , "is_returning"             .= _statusIsReturning                      station
+           , "is_installed"             .= _statusIsInstalled                       station
+           , "is_renting"               .= _statusIsRenting                         station
+           , "is_returning"             .= _statusIsReturning                       station
            , "traffic"                  .= _statusTraffic                           station
-           , "vehicle_docks_available"  .= _statusVehicleDocksAvailable           station
-           , "vehicle_types_available"  .= _statusVehicleTypesAvailable           station
+           , "vehicle_docks_available"  .= _statusVehicleDocksAvailable             station
+           , "vehicle_types_available"  .= _statusVehicleTypesAvailable             station
            ]
 instance FromJSON StationStatus where
   parseJSON = withObject "StationStatus" $ \v -> StationStatus
