@@ -148,7 +148,7 @@ data StationInformation where
                         , infoLat                     :: Double
                         , infoLon                     :: Double
                         , infoAltitude                :: Maybe Double
-                        , infoAddress                 :: String
+                        , infoAddress                 :: Maybe String
                         , infoCapacity                :: Int
                         , infoIsChargingStation       :: Bool
                         , infoRentalMethods           :: [RentalMethod]
@@ -193,7 +193,7 @@ instance FromJSON StationInformation where
     <*> v .:  "lat"
     <*> v .:  "lon"
     <*> v .:  "altitude"
-    <*> v .:  "address"
+    <*> v .:? "address"
     <*> v .:  "capacity"
     <*> v .:  "is_charging_station"
     <*> v .:  "rental_methods"

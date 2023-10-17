@@ -77,7 +77,7 @@ data StationInformationT f where
                         , _infoLat                   :: Columnar f Double
                         , _infoLon                   :: Columnar f Double
                         , _infoAltitude              :: Columnar f (Maybe Double)
-                        , _infoAddress               :: Columnar f Text.Text
+                        , _infoAddress               :: Columnar f (Maybe Text.Text)
                         , _infoCapacity              :: Columnar f Int32
                         , _infoIsChargingStation     :: Columnar f Bool
                         , _infoRentalMethods         :: Columnar f (Vector.Vector BeamRentalMethod)
@@ -123,7 +123,7 @@ infoPhysicalConfiguration   :: Lens' (StationInformationT f) (C f BeamPhysicalCo
 infoLat                     :: Lens' (StationInformationT f) (C f Double)
 infoLon                     :: Lens' (StationInformationT f) (C f Double)
 infoAltitude                :: Lens' (StationInformationT f) (C f (Maybe Double))
-infoAddress                 :: Lens' (StationInformationT f) (C f Text.Text)
+infoAddress                 :: Lens' (StationInformationT f) (C f (Maybe Text.Text))
 infoCapacity                :: Lens' (StationInformationT f) (C f Int32)
 infoIsChargingStation       :: Lens' (StationInformationT f) (C f Bool)
 infoRentalMethods           :: Lens' (StationInformationT f) (C f (Vector.Vector BeamRentalMethod))
@@ -259,7 +259,7 @@ fromJSONToBeamStationInformation (AT.StationInformation
                      , _infoLat                   = val_ lat
                      , _infoLon                   = val_ lon
                      , _infoAltitude              = val_ altitude
-                     , _infoAddress               = val_ $ Text.pack address
+                     , _infoAddress               = val_ $ Text.pack <$> address
                      , _infoCapacity              = fromIntegral capacity
                      , _infoIsChargingStation     = val_ is_charging_station
                      , _infoRentalMethods         = val_ $ fromList (coerce rental_methods :: [BeamRentalMethod])
@@ -308,7 +308,7 @@ fromBeamStationInformationToJSON (StationInformation
                         , AT.infoLat                     = lat
                         , AT.infoLon                     = lon
                         , AT.infoAltitude                = altitude
-                        , AT.infoAddress                 = Text.unpack address
+                        , AT.infoAddress                 = Text.unpack <$> address
                         , AT.infoCapacity                = fromIntegral capacity
                         , AT.infoIsChargingStation       = isChargingStation
                         , AT.infoRentalMethods           = coerce (toList rentalMethods) :: [AT.RentalMethod]
