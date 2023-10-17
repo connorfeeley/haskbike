@@ -64,9 +64,11 @@ main = do
 
   -- Establish a connection to the database.
   connInfo <- mkDbConnectInfo (optDatabase options)
-  usingLoggerT logStdoutAction $
+  conn <- usingLoggerT logStdoutAction $ do
     log I $ format "Connecting to database: {}" (pShowCompact (obfuscatePassword connInfo))
-  conn <- connect connInfo
+    conn <- liftIO $ connect connInfo
+    log I "Database connection established."
+    pure conn
 
   -- Create HTTPS client manager.
   clientManager <- liftIO $ newManager tlsManagerSettings
