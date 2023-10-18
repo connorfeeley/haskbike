@@ -23,6 +23,14 @@ import           Data.Time
 import           Data.Time.Clock.POSIX
 
 
+-- | Data type containing a pair of times.
+data TimePair a where
+  TimePair :: { earliestTime   :: a
+              , latestTime     :: a
+              } -> TimePair a
+  deriving (Show, Eq, Ord)
+
+
 -- | Add a number of hours to a LocalTime.
 addHours :: NominalDiffTime -> LocalTime -> LocalTime
 addHours h time' = utcToLocalTime utc (addUTCTime (h*3600) (localTimeToUTC utc time'))
@@ -48,13 +56,6 @@ localToSystem' localTime = do
   currentTimeZone <- getCurrentTimeZone
   pure $ localToSystem currentTimeZone localTime
 
-
--- | Data type containing a pair of times.
-data TimePair a where
-  TimePair :: { earliestTime   :: a
-              , latestTime     :: a
-              } -> TimePair a
-  deriving (Show, Eq, Ord)
 
 -- * POSIX conversion functions
 -- NOTE: POSIX time is by nature UTC.

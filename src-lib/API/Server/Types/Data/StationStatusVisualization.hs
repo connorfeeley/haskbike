@@ -6,6 +6,8 @@
 
 module API.Server.Types.Data.StationStatusVisualization
      ( StationStatusVisualization (..)
+     , StatusDataParams (..)
+     , enforceTimeRangeBounds
      , fromBeamStationStatusToVisJSON
      , generateJsonDataSource
      ) where
@@ -97,11 +99,28 @@ generateJsonDataSource stationId startTime endTime = do
   -- Get the current TimeZone and construct our query limits.
   tz <- liftIO getCurrentTimeZone
   currentUtc <- liftIO getCurrentTime
-  let yesterday = addUTCTime (-24 * 3600) currentUtc
-
-  -- Default to 24 hours ago -> now.
-  let start = fromMaybe (utcToLocalTime tz yesterday) startTime
-  let end   = fromMaybe (utcToLocalTime tz currentUtc) endTime
-
-  result <- queryStationStatusBetween stationId (localTimeToUTC tz start) (localTimeToUTC tz end)
+  let params = StatusDataParams tz currentUtc (TimePair startTime endTime)
+  let range = enforceTimeRangeBounds params
+  -- result <- queryStationStatusBetween stationId (earliestTime (visTimeRange params))
+  result <- queryStationStatusBetween stationId (localTimeToUTC tz (earliestTime  range)) (localTimeToUTC tz (latestTime range))
   pure $ map fromBeamStationStatusToVisJSON result
+
+data StatusDataParams a where
+  StatusDataParams :: { visTimeZone :: TimeZone
+                      , visCurrentUtc :: UTCTime
+                      , visTimeRange :: TimePair a
+                      } -> StatusDataParams a
+  deriving (Show, Generic, Eq, Ord)
+
+enforceTimeRangeBounds :: StatusDataParams (Maybe LocalTime) -> TimePair LocalTime
+enforceTimeRangeBounds params = TimePair start end
+  where
+    tz = visTimeZone params
+    currentUtc = visCurrentUtc params
+    yesterday = addUTCTime (-24 * 3600) currentUtc
+    earliest = earliestTime (visTimeRange params)
+    latest   = latestTime   (visTimeRange params)
+
+    -- Default to 24 hours ago -> now.
+    start = fromMaybe (utcToLocalTime tz yesterday)  earliest
+    end   = fromMaybe (utcToLocalTime tz currentUtc) latest

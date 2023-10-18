@@ -79,14 +79,19 @@ stationStatusData :: Int -> Maybe LocalTime -> Maybe LocalTime -> AppM [StationS
 stationStatusData = generateJsonDataSource
 
 stationStatusVisualizationPage :: Int -> Maybe LocalTime -> Maybe LocalTime -> AppM StationStatusVisualizationPage
-stationStatusVisualizationPage stationId startTime endTime =
-  return StationStatusVisualizationPage { _statusVisPageStationId = stationId
-                                        , _statusVisPageTimeRange = TimePair startTime endTime
-                                        }
+stationStatusVisualizationPage stationId startTime endTime = do
+  tz <- asks envTimeZone
+  currentUtc <- liftIO getCurrentTime
+
+  pure StationStatusVisualizationPage { _statusVisPageStationId  = stationId
+                                      , _statusVisPageTimeRange  = TimePair startTime endTime
+                                      , _statusVisPageTimeZone   = tz
+                                      , _statusVisPageCurrentUtc = currentUtc
+                                      }
+
 
 routesLinks :: Routes (AsLink Link)
 routesLinks = allFieldLinks
-
 
 
 apiProxy :: Proxy (ToServantApi Routes)

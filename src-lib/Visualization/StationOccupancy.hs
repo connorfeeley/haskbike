@@ -8,6 +8,7 @@ module Visualization.StationOccupancy
 import           Data.Aeson.Encode.Pretty      ( encodePretty )
 import qualified Data.ByteString.Lazy.Char8    as Char8
 import qualified Data.Text                     as T
+import           Data.Time
 
 import           Database.BikeShare.Operations
 
@@ -17,26 +18,21 @@ import           Prelude                       hiding ( filter, lookup, repeat )
 
 import           TextShow
 
--- Prepare the Vega-Lite data source
-liveDataSource :: Int -> Data
-liveDataSource stationId =
-  -- data array is under "station_status" key
-  dataFromUrl (T.intercalate "/" segments) [ ]
-  where segments :: [T.Text] = [ "/data", "station-status", showt stationId ]
 
 -- Implement Vega-Lite specification using hvega
-availBikesOverTimeVL :: Int -> VegaLite
-availBikesOverTimeVL stationId =
+availBikesOverTimeVL :: Int -> LocalTime -> LocalTime -> VegaLite
+availBikesOverTimeVL stationId startTime endTime =
   let
     selLabel = "picked"
     sel = selection
           . select selLabel Single []
 
   in
-    toVegaLite (sel [] : selectionProps selLabel "Available Vehicle Types Over Time" stationId)
+    toVegaLite (sel [] : selectionProps selLabel "Available Vehicle Types Over Time" stationId startTime endTime)
 
-selectionProps :: SelectionLabel -> T.Text -> Int -> [PropertySpec]
-selectionProps selName label stationId =
+
+selectionProps :: SelectionLabel -> T.Text -> Int -> LocalTime -> LocalTime -> [PropertySpec]
+selectionProps selName label stationId startTime endTime =
   let
     -- Implement the `fold` transform
     dataTransforms =
@@ -88,7 +84,7 @@ selectionProps selName label stationId =
 
   in
     [ title label [ TOrient SBottom ]
-    , liveDataSource stationId
+    , liveDataSource stationId startTime endTime
     , dataTransforms []
     , layer [ areaLayer
             , pointLayer
@@ -100,9 +96,13 @@ selectionProps selName label stationId =
     ]
 
 
-main :: IO ()
-main =
-  toHtmlFile "example.html" (availBikesOverTimeVL 7001)
+-- Prepare the Vega-Lite data source
+liveDataSource :: Int -> LocalTime -> LocalTime -> Data
+liveDataSource stationId startTime endTime =
+  -- data array is under "station_status" key
+  dataFromUrl (T.intercalate "/" segments <> "?start-time=" <> T.pack (show startTime) <> "&end-time=" <> T.pack (show endTime)) [ ]
+  where segments :: [T.Text] = [ "/data", "station-status", showt stationId ]
+
 
 printVegaLiteSchema :: VegaLite -> IO ()
 printVegaLiteSchema schema = Char8.putStrLn (encodePretty (fromVL schema))
