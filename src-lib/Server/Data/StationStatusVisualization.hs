@@ -87,7 +87,7 @@ fromBeamStationStatusToVisJSON status =
 generateJsonDataSource :: Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM [StationStatusVisualization]
 generateJsonDataSource stationId startTime endTime = do
   -- Accessing the inner environment by using the serverEnv accessor.
-  appEnv <- asks serverEnv
+  appEnv <- asks serverAppEnv
   let tz = envTimeZone appEnv
   -- AppM actions can be lifter into ServerAppM by using a combination of liftIO and runReaderT.
   currentUtc <- liftIO getCurrentTime
