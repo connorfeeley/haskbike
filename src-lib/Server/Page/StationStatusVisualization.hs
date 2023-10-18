@@ -33,6 +33,7 @@ import           TextShow
 import           Visualization.StationOccupancy
 
 
+
 dataRoutes :: Proxy (ToServantApi DataRoutes)
 dataRoutes = genericApi (Proxy :: Proxy DataRoutes)
 
@@ -60,9 +61,12 @@ instance ToHtml StationStatusVisualizationPage where
     h2_ (toHtml dateHeader)
     h3_ (toHtml stationInfoHeader)
     div_ $ do
-      input_ [ makeAttribute "type" "number", makeAttribute "value" (showt $ _statusVisPageStationId params) ]
-      input_ [ makeAttribute "type" "datetime-local", makeAttribute "value" (T.pack $ show earliest) ]
-      input_ [ makeAttribute "type" "datetime-local", makeAttribute "value" (T.pack $ show latest) ]
+      form_ [makeAttribute "action" "7148"] $ do
+        -- formmethod_ "get"
+        -- FIXME: station-id is not a query parameter - need to update URL.
+        input_ [ makeAttribute "type" "number",        makeAttribute "value" (showt $ _statusVisPageStationId params) ]
+        input_ [ makeAttribute "type" "datetime-local",makeAttribute "name" "start-time", makeAttribute "value" (T.pack $ formatTimeHtml earliest) ]
+        input_ [ makeAttribute "type" "datetime-local",makeAttribute "name" "end-time",   makeAttribute "value" (T.pack $ formatTimeHtml latest) ]
     a_ [linkHref_ "/" (_statusVisPageDataLink params)] "Station Status Data"
     -- div_ $ toHtml (safeLink "/")-- (T.intercalate "/" dataSourceSegments))
     div_ vegaContainerStyle (toHtmlRaw (VL.toHtmlWith vegaEmbedCfg vegaChart))
@@ -91,6 +95,7 @@ instance ToHtml StationStatusVisualizationPage where
 
           formatTime' :: LocalTime -> String
           formatTime' = formatTime defaultTimeLocale "%A, %b %e, %T"
+          formatTimeHtml = formatTime defaultTimeLocale "%FT%X"
 
   -- do not worry too much about this
   toHtmlRaw = toHtml
