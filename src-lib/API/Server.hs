@@ -23,6 +23,8 @@ import           Control.Monad.Reader
 
 import qualified Data.ByteString.Lazy                             as BL
 import           Data.Proxy
+import           Data.Time
+import           Data.Time.Extras
 
 import           GHC.Generics
 
@@ -57,9 +59,13 @@ instance MimeRender HTMLLucid (Html a) where
 -- | Route definitions.
 data Routes route where
   Routes :: { _visualizationStationStatus :: route :- "visualization"
-                                                :> "station-status" :> Capture "station-id" Int :> Get '[HTMLLucid] StationStatusVisualizationPage
+                                                :> "station-status"
+                                                        :> Capture "station-id" Int :> QueryParam "start-time" LocalTime :> QueryParam "end-time" LocalTime
+                                                        :> Get '[HTMLLucid] StationStatusVisualizationPage
             , _dataStationStatus          :: route :- "data"
-                                                :> "station-status" :> Capture "station-id" Int :> Get '[JSON] [StationStatusVisualization]
+                                                :> "station-status"
+                                                        :> Capture "station-id" Int :> QueryParam "start-time" LocalTime :> QueryParam "end-time" LocalTime
+                                                        :> Get '[JSON] [StationStatusVisualization]
             } -> Routes route
   deriving Generic
 
@@ -69,11 +75,14 @@ record =
          , _dataStationStatus          = stationStatusData
          }
 
-stationStatusData :: Int -> AppM [StationStatusVisualization]
+stationStatusData :: Int -> Maybe LocalTime -> Maybe LocalTime -> AppM [StationStatusVisualization]
 stationStatusData = generateJsonDataSource
 
-stationStatusVisualizationPage :: Int -> AppM StationStatusVisualizationPage
-stationStatusVisualizationPage sId = return StationStatusVisualizationPage { _statusVisPageStationId = sId }
+stationStatusVisualizationPage :: Int -> Maybe LocalTime -> Maybe LocalTime -> AppM StationStatusVisualizationPage
+stationStatusVisualizationPage stationId startTime endTime =
+  return StationStatusVisualizationPage { _statusVisPageStationId = stationId
+                                        , _statusVisPageTimeRange = TimePair startTime endTime
+                                        }
 
 routesLinks :: Routes (AsLink Link)
 routesLinks = allFieldLinks

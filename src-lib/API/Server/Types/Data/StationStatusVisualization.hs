@@ -92,12 +92,16 @@ fromBeamStationStatusToVisJSON status =
   where
     StationInformationId sid = _statusStationId status
 
-generateJsonDataSource :: Int -> AppM [StationStatusVisualization]
-generateJsonDataSource stationId = do
+generateJsonDataSource :: Int -> Maybe LocalTime -> Maybe LocalTime -> AppM [StationStatusVisualization]
+generateJsonDataSource stationId startTime endTime = do
   -- Get the current TimeZone and construct our query limits.
   tz <- liftIO getCurrentTimeZone
-  let startTime = localTimeToUTC tz (LocalTime (fromGregorian 2023 10 17) midnight)
-  let endTime   = localTimeToUTC tz (LocalTime (fromGregorian 2023 10 18) midnight)
+  currentUtc <- liftIO getCurrentTime
+  let yesterday = addUTCTime (-24 * 3600) currentUtc
 
-  result <- queryStationStatusBetween stationId startTime endTime
+  -- Default to 24 hours ago -> now.
+  let start = fromMaybe (utcToLocalTime tz yesterday) startTime
+  let end   = fromMaybe (utcToLocalTime tz currentUtc) endTime
+
+  result <- queryStationStatusBetween stationId (localTimeToUTC tz start) (localTimeToUTC tz end)
   pure $ map fromBeamStationStatusToVisJSON result

@@ -8,6 +8,7 @@ module API.Server.Types.Page.StationStatusVisualization
 import           Data.Aeson
 import qualified Data.Text                      as T
 import           Data.Time
+import           Data.Time.Extras
 
 import qualified Graphics.Vega.VegaLite         as VL
 
@@ -19,7 +20,7 @@ import           Visualization.StationOccupancy
 
 data StationStatusVisualizationPage where
   StationStatusVisualizationPage :: { _statusVisPageStationId :: Int
-                                    , _statusVisPageTimeRange :: Maybe (LocalTime, LocalTime)
+                                    , _statusVisPageTimeRange :: TimePair (Maybe LocalTime)
                                     } -> StationStatusVisualizationPage
 
 -- HTML serialization of a single person
