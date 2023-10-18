@@ -76,10 +76,10 @@ instance FromJSON StationStatusVisualization where
     <*> v .: "available_efit_g5"
 
 -- | Convert from the Beam StationStatus type to StationStatusVisualization
-fromBeamStationStatusToVisJSON :: Int -> StationStatus -> StationStatusVisualization
-fromBeamStationStatusToVisJSON timeOffset status =
+fromBeamStationStatusToVisJSON :: StationStatus -> StationStatusVisualization
+fromBeamStationStatusToVisJSON status =
   StationStatusVisualization { _statusVisStationId       = fromIntegral sid
-                             , _statusVisLastReported    = addUTCTime (secondsToNominalDiffTime (fromIntegral timeOffset * 60)) (status ^. statusLastReported)
+                             , _statusVisLastReported    = status ^. statusLastReported
                              , _statusVisChargingStation = status ^. statusIsChargingStation
                              , _statusVisBikesAvailable  = fromIntegral $ status ^. statusNumBikesAvailable
                              , _statusVisBikesDisabled   = fromIntegral $ status ^. statusNumBikesDisabled
@@ -96,9 +96,8 @@ generateJsonDataSource :: Int -> AppM [StationStatusVisualization]
 generateJsonDataSource stationId = do
   -- Get the current TimeZone and construct our query limits.
   tz <- liftIO getCurrentTimeZone
-  let tzOffset  = timeZoneMinutes tz
   let startTime = localTimeToUTC tz (LocalTime (fromGregorian 2023 10 17) midnight)
   let endTime   = localTimeToUTC tz (LocalTime (fromGregorian 2023 10 18) midnight)
 
   result <- queryStationStatusBetween stationId startTime endTime
-  pure $ map (fromBeamStationStatusToVisJSON tzOffset) result
+  pure $ map fromBeamStationStatusToVisJSON result

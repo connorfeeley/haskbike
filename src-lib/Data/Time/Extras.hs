@@ -6,7 +6,8 @@
 -- | This module include various convenience extensions to 'Data.Time'.
 
 module Data.Time.Extras
-     ( addHours
+     ( TimePair (..)
+     , addHours
      , addMinutes
      , localToPosix
      , localToSystem
@@ -47,9 +48,16 @@ localToSystem' localTime = do
   currentTimeZone <- getCurrentTimeZone
   pure $ localToSystem currentTimeZone localTime
 
+
+-- | Data type containing a pair of times.
+data TimePair a where
+  TimePair :: { earliestTime   :: a
+              , latestTime     :: a
+              } -> TimePair a
+  deriving (Show, Eq, Ord)
+
 -- * POSIX conversion functions
 -- NOTE: POSIX time is by nature UTC.
-
 -- POSIX <-> LocalTime
 posixToLocal :: Int -> LocalTime
 posixToLocal = utcToLocalTime utc . posixSecondsToUTCTime . secondsToNominalDiffTime . fromIntegral
