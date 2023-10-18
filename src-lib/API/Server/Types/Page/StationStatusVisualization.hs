@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -Wno-type-defaults #-}
+{-# OPTIONS_GHC -Wno-unused-local-binds #-}
 
 -- | This module defines the data types used to render the station status visualization page.
 
@@ -37,20 +38,25 @@ instance ToHtml StationStatusVisualizationPage where
   toHtml statusVisualization = div_ $ do
     style_ ".grid-container { display: grid; grid-template-columns: auto auto auto; } .grid-container > div { padding: 20px 0; } .vega-embed { width: 80%; height: 70%; }"
     h1_ (toHtml pageTitle)
+    h2_ (toHtml dateHeader)
     -- div_ $ toHtml (safeLink "/")-- (T.intercalate "/" dataSourceSegments))
     div_ vegaContainerStyle (toHtmlRaw (VL.toHtmlWith vegaEmbedCfg vegaChart))
     where _dataSourceSegments :: [T.Text] = [ "/data", "station-status", showt 7001]
           vegaContainerStyle = [ style_ "flex:1 1 0%; position:relative; outline:none; display:flex; min-height:30px; min-width:100px" ]
           vegaEmbedCfg :: Maybe Value = Just $ toJSON ("logLevel", 4)
-          pageTitle :: T.Text = format "Available Bikes for Station #{} from {} -> {}"
+          pageTitle :: T.Text = format "Available Bikes for Station #{}"
                                 (_statusVisPageStationId statusVisualization)
-                                (earliestTime times)
-                                (latestTime times)
+          dateHeader :: T.Text = format "{} to {}"
+                                 (formatTime' (earliestTime times))
+                                 (formatTime' (latestTime times))
           vegaChart = availBikesOverTimeVL (_statusVisPageStationId statusVisualization) earliest latest
 
           times = enforceTimeRangeBounds (StatusDataParams (_statusVisPageTimeZone statusVisualization) (_statusVisPageCurrentUtc statusVisualization) (_statusVisPageTimeRange statusVisualization))
           earliest = earliestTime times
           latest   = latestTime times
+
+          formatTime' :: LocalTime -> String
+          formatTime' = formatTime defaultTimeLocale "%A, %b %e, %T"
 
   -- do not worry too much about this
   toHtmlRaw = toHtml
