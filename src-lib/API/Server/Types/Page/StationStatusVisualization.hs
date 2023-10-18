@@ -16,6 +16,8 @@ import qualified Data.Text                                        as T
 import           Data.Time
 import           Data.Time.Extras
 
+import           Database.BikeShare.StationInformation
+
 import           Fmt
 
 import qualified Graphics.Vega.VegaLite                           as VL
@@ -27,10 +29,11 @@ import           TextShow
 import           Visualization.StationOccupancy
 
 data StationStatusVisualizationPage where
-  StationStatusVisualizationPage :: { _statusVisPageStationId  :: Int
-                                    , _statusVisPageTimeRange  :: TimePair (Maybe LocalTime)
-                                    , _statusVisPageTimeZone   :: TimeZone
-                                    , _statusVisPageCurrentUtc :: UTCTime
+  StationStatusVisualizationPage :: { _statusVisPageStationInfo :: StationInformation
+                                    , _statusVisPageStationId   :: Int
+                                    , _statusVisPageTimeRange   :: TimePair (Maybe LocalTime)
+                                    , _statusVisPageTimeZone    :: TimeZone
+                                    , _statusVisPageCurrentUtc  :: UTCTime
                                     } -> StationStatusVisualizationPage
 
 -- HTML serialization of a single person

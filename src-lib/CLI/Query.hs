@@ -33,7 +33,7 @@ import           Prelude                       hiding ( log, unlines )
 
 import           Servant.Client
 
-import           UnliftIO                      ( concurrently )
+import           UnliftIO                      ( concurrently, liftIO )
 
 
 -- | Dispatch CLI arguments to the query interface.

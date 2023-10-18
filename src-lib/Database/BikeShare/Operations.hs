@@ -145,7 +145,7 @@ queryStationStatusBetween stationId startTime endTime =
 {- |
 Query the station name given a station ID.
 -}
-queryStationName :: Int               -- ^ Station ID.
+queryStationName :: Int                 -- ^ Station ID.
                  -> AppM (Maybe String) -- ^ Station name assosicated with the given station ID.
 queryStationName stationId = do
   info <- withPostgres $ runSelectReturningOne $ select $ infoByIdExpr [fromIntegral stationId]
@@ -170,7 +170,7 @@ Get ID for "Wellesley Station Green P":
 Just 7001
 -}
 queryStationId :: String           -- ^ Station ID.
-               -> AppM (Maybe Int)  -- ^ Station ID assosicated with the given station name, if found.
+               -> AppM (Maybe Int) -- ^ Station ID assosicated with the given station name, if found.
 queryStationId stationName = do
   info <- withPostgres $ runSelectReturningOne $ select $ queryStationIdExpr stationName
 

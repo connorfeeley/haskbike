@@ -28,6 +28,8 @@ import           Prelude                       hiding ( log )
 
 import           System.Console.ANSI
 
+import           UnliftIO
+
 
 -- | Dispatch CLI arguments for debugging.
 dispatchDebug :: DebugMiscOptions

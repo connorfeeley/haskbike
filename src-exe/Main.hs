@@ -40,7 +40,7 @@ import           Prelude                  hiding ( log, unwords )
 
 import           System.Exit              ( exitSuccess )
 
-import           UnliftIO                 ( MonadUnliftIO )
+import           UnliftIO                 ( MonadUnliftIO, liftIO )
 
 import           Version
 

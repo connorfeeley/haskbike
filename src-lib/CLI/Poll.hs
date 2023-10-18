@@ -25,7 +25,6 @@ import           Control.Monad.Reader          ( MonadReader )
 
 import           Data.Maybe                    ( fromMaybe, isJust, isNothing )
 import qualified Data.Text                     as Text
-import           Data.Time                     ( ZonedTime (zonedTimeToLocalTime) )
 import           Data.Time.Extras
 
 import           Database.BikeShare
@@ -39,7 +38,7 @@ import           Prelude                       hiding ( log )
 
 import           TextShow                      ( showt )
 
-import           UnliftIO                      ( MonadIO, MonadUnliftIO )
+import           UnliftIO                      ( MonadIO, MonadUnliftIO, liftIO )
 import           UnliftIO.Async                ( concurrently_ )
 
 

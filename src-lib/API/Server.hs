@@ -26,6 +26,9 @@ import           Data.Proxy
 import           Data.Time
 import           Data.Time.Extras
 
+import           Database.Beam
+import           Database.BikeShare.Expressions
+
 import           GHC.Generics
 
 import           Lucid
@@ -83,11 +86,16 @@ stationStatusVisualizationPage stationId startTime endTime = do
   tz <- asks envTimeZone
   currentUtc <- liftIO getCurrentTime
 
-  pure StationStatusVisualizationPage { _statusVisPageStationId  = stationId
-                                      , _statusVisPageTimeRange  = TimePair startTime endTime
-                                      , _statusVisPageTimeZone   = tz
-                                      , _statusVisPageCurrentUtc = currentUtc
-                                      }
+  info <- withPostgres $ runSelectReturningOne $ select $ infoByIdExpr [fromIntegral stationId]
+  case info of
+    Just info' ->
+        pure StationStatusVisualizationPage { _statusVisPageStationInfo = info'
+                                            , _statusVisPageStationId   = stationId
+                                            , _statusVisPageTimeRange   = TimePair startTime endTime
+                                            , _statusVisPageTimeZone    = tz
+                                            , _statusVisPageCurrentUtc  = currentUtc
+                                            }
+    _ ->  throwError err404 { errBody = "Unknown station ID." }
 
 
 routesLinks :: Routes (AsLink Link)

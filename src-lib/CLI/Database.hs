@@ -40,6 +40,8 @@ import           Servant.Client                ( ClientError )
 
 import           System.Exit                   ( exitSuccess )
 
+import           UnliftIO                      ( liftIO )
+
 
 -- | Helper functions.
 

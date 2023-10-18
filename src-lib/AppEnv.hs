@@ -1,5 +1,6 @@
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE FlexibleContexts   #-}
+{-# LANGUAGE DerivingStrategies   #-}
+{-# LANGUAGE FlexibleContexts     #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 -- | Application environment and monad.
 module AppEnv
@@ -7,7 +8,6 @@ module AppEnv
      , Env (..)
      , Message
      , WithAppMEnv
-     , liftIO
      , mainEnv
      , runAppM
      , runQueryWithManager
@@ -26,7 +26,7 @@ import           Colog                    ( HasLog (..), LogAction (..), Message
                                             filterBySeverity, richMessageAction, simpleMessageAction )
 
 import           Control.Monad.Catch
-import           Control.Monad.IO.Class   ( MonadIO )
+import           Control.Monad.Except
 import           Control.Monad.Reader     ( MonadReader, ReaderT (..), asks )
 
 import           Data.Time                ( TimeZone, getCurrentTimeZone )
@@ -41,9 +41,10 @@ import           Network.HTTP.Client.TLS  ( tlsManagerSettings )
 
 import           Prelude                  hiding ( log )
 
+import           Servant                  ( ServerError )
 import           Servant.Client
 
-import           UnliftIO                 ( MonadUnliftIO, liftIO )
+import           UnliftIO                 ( MonadUnliftIO )
 
 -- Application environment
 data Env m where
@@ -61,6 +62,7 @@ newtype AppM a = AppM
   { unAppM :: ReaderT (Env AppM) IO a
   } deriving newtype (Functor, Applicative, Monad, MonadIO, MonadUnliftIO, MonadReader (Env AppM), MonadFail, MonadThrow, MonadCatch)
 
+
 {- | Type alias for constraint for:
 
 1. Monad @m@ have access to environment @env@.
@@ -71,6 +73,10 @@ If you use this constraint, function call stack will be propagated and
 you will have access to code lines that log messages.
 -}
 type WithAppMEnv env msg m = (MonadReader env m, HasLog env msg m, HasCallStack, MonadIO m, MonadUnliftIO m, MonadFail m, MonadThrow m, MonadCatch m)
+
+instance MonadError ServerError AppM where
+  throwError = AppM . throwM
+  catchError action handler = AppM $ catch (unAppM action) (unAppM . handler)
 
 -- | Fetch database connection from environment monad.
 withConn :: (WithAppMEnv (Env env) Message m) => m Connection
