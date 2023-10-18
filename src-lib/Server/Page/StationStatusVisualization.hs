@@ -22,6 +22,8 @@ import qualified Graphics.Vega.VegaLite                 as VL
 import           Lucid
 import           Lucid.Servant
 
+import           Servant
+
 import           Server.Data.StationStatusVisualization
 import           Server.DataAPI
 
@@ -44,6 +46,7 @@ instance ToHtml StationStatusVisualizationPage where
     h1_ (toHtml pageTitle)
     h2_ (toHtml dateHeader)
     h3_ (toHtml stationInfoHeader)
+    -- a_ [href_ $ renderText $ safeLink apiProxy apiDataStationStatus id] "Station Status Data"
     -- div_ $ toHtml (safeLink "/")-- (T.intercalate "/" dataSourceSegments))
     div_ vegaContainerStyle (toHtmlRaw (VL.toHtmlWith vegaEmbedCfg vegaChart))
     where _dataSourceSegments :: [T.Text] = [ "/data", "station-status", showt 7001]

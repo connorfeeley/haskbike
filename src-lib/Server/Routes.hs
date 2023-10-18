@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE DerivingStrategies    #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings     #-}
@@ -8,8 +9,9 @@
 -- | This module contains the route definitions for the visualization server.
 
 module Server.Routes
-     ( Routes (..)
-     , record
+     ( API (..)
+     , BikeShareExplorerAPI
+     , server
      ) where
 
 import           AppEnv
@@ -37,22 +39,29 @@ import           Server.VisualizationAPI
 
 import           ServerEnv
 
+data API mode = API
+    { version     :: mode :- "version" :> Get '[JSON] Version
+    , stationData :: mode :- "data" :> NamedRoutes DataRoutes
+    } deriving stock Generic
 
--- | Route definitions.
-data Routes route where
-  Routes :: { _visualizationStationStatus :: route :- VisualizationAPI
-            , _dataStationStatus          :: route :- DataAPI
-            } -> Routes route
-  deriving Generic
+type Version = String -- This will do for the sake of example.
 
-record :: Routes (AsServerT ServerAppM)
-record =
-  Routes { _visualizationStationStatus = stationStatusVisualizationPage
-         , _dataStationStatus          = stationStatusData
-         }
+type BikeShareExplorerAPI = NamedRoutes API
 
-stationStatusData :: Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM [StationStatusVisualization]
-stationStatusData = generateJsonDataSource
+versionHandler :: Handler Version
+versionHandler = pure "0.0.1"
+
+server ::  API AsServer
+server = API { version = versionHandler
+             , stationData = statusHandler
+             }
+
+statusHandler :: DataRoutes AsServer
+statusHandler = DataRoutes { dataForStation = stationStatusData }
+
+
+stationStatusData :: Int -> Maybe LocalTime -> Maybe LocalTime -> Handler [StationStatusVisualization]
+stationStatusData stationId startTime endTime = pure []
 
 stationStatusVisualizationPage :: Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM StationStatusVisualizationPage
 stationStatusVisualizationPage stationId startTime endTime = do
@@ -73,8 +82,8 @@ stationStatusVisualizationPage stationId startTime endTime = do
                                             }
     _ ->  throwError err404 { errBody = "Unknown station ID." }
 
-routesLinks :: Routes (AsLink Link)
-routesLinks = allFieldLinks
+-- routesLinks :: Routes (AsLink Link)
+-- routesLinks = allFieldLinks
 
-apiProxy :: Proxy (ToServantApi Routes)
-apiProxy = genericApi (Proxy :: Proxy Routes)
+-- apiProxy :: Proxy (ToServantApi Routes)
+-- apiProxy = genericApi (Proxy :: Proxy Routes)

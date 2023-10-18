@@ -1,23 +1,28 @@
-{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DataKinds          #-}
+{-# LANGUAGE DerivingStrategies #-}
+
 -- |
 
 module Server.DataAPI
-     ( DataAPI
-     , dataAPI
+     ( DataRoutes (..)
      ) where
 
 import           Data.Time
+
+import           GHC.Generics                           ( Generic )
 
 import           Servant
 
 import           Server.Data.StationStatusVisualization
 
 
-type DataAPI =
-  "data"
-    :> "station-status"
-      :> Capture "station-id" Int :> QueryParam "start-time" LocalTime :> QueryParam "end-time" LocalTime
-      :> Get '[JSON] [StationStatusVisualization]
-
-dataAPI :: Proxy DataAPI
-dataAPI = Proxy @DataAPI
+data DataRoutes mode where
+  DataRoutes ::
+    { dataForStation :: mode :-
+      "station-status"
+        :> Capture "station-id" Int
+        :> QueryParam "start-time" LocalTime
+        :> QueryParam "end-time" LocalTime
+        :> Get '[JSON] [StationStatusVisualization]
+    } -> DataRoutes mode
+  deriving stock Generic
