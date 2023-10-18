@@ -1,7 +1,7 @@
 {-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE DerivingStrategies    #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE RankNTypes            #-}
 {-# LANGUAGE TypeOperators         #-}
 
@@ -26,20 +26,26 @@ import           Servant.Server.Generic
 
 import           Server.Routes
 
--- | Natural transformation function for AppM monad
-nt :: Env AppM -> AppM a -> Handler a
-nt s a =
-  let r = runReaderT (unAppM a) s
-  in liftIO r
+import           ServerEnv
+
+-- app :: Env AppM -> Application
+-- app s = -- serve api $ hoistServer api (nt s) server
+--   genericServeT (nt s) record
+
+-- serveVisualization :: Int -> AppM ()
+-- serveVisualization port = do
+--   env <- ask
+--   liftIO $ run port (app env)
 
 
-app :: Env AppM -> Application
+app :: ServerEnv AppM -> Application
 app s = -- serve api $ hoistServer api (nt s) server
-  genericServeT (nt s) record
+  genericServeT (ntServerAppM s) record
 
 
-serveVisualization :: Int -> AppM ()
+serveVisualization :: Int -> ServerAppM ()
 serveVisualization port = do
-  env <- ask
-  liftIO $ run port (app env)
+  senv <- ask
+  let env = serverEnv senv
+  liftIO $ run port (app senv)
 

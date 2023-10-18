@@ -9,16 +9,26 @@ import           CLI.Options
 
 import           Colog
 
+import           Control.Monad.Reader ( ask )
+
 import           Fmt
 
-import           Prelude     hiding ( log )
+import           Prelude              hiding ( log )
 
 import           Server
+
+import           ServerEnv
+
+import           UnliftIO             ( liftIO )
 
 
 -- | Dispatch CLI arguments to the visualization server.
 dispatchVisualize :: ServeVisualizeOptions -> AppM ()
 dispatchVisualize options = do
   log I $ format "Launching visualization web server on port {}." (optServeVisualizePort options)
+  env <- ask
 
-  serveVisualization (optServeVisualizePort options)
+  let serverEnv = ServerEnv { serverPort = optServeVisualizePort options
+                            , serverEnv  = env
+                            }
+  liftIO $ runServerAppM serverEnv $ serveVisualization (optServeVisualizePort options)

@@ -204,6 +204,7 @@ library
                     , API.ClientLifted
                     -- , API.DebugClient
                     , Server
+                    , ServerEnv
                     , Server.Routes
                     , Server.DataAPI
                     , Server.VisualizationAPI

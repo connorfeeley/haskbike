@@ -35,6 +35,8 @@ import           Server.DataAPI
 import           Server.Page.StationStatusVisualization
 import           Server.VisualizationAPI
 
+import           ServerEnv
+
 
 -- | Route definitions.
 data Routes route where
@@ -43,21 +45,24 @@ data Routes route where
             } -> Routes route
   deriving Generic
 
-record :: Routes (AsServerT AppM)
+record :: Routes (AsServerT ServerAppM)
 record =
   Routes { _visualizationStationStatus = stationStatusVisualizationPage
          , _dataStationStatus          = stationStatusData
          }
 
-stationStatusData :: Int -> Maybe LocalTime -> Maybe LocalTime -> AppM [StationStatusVisualization]
+stationStatusData :: Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM [StationStatusVisualization]
 stationStatusData = generateJsonDataSource
 
-stationStatusVisualizationPage :: Int -> Maybe LocalTime -> Maybe LocalTime -> AppM StationStatusVisualizationPage
+stationStatusVisualizationPage :: Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM StationStatusVisualizationPage
 stationStatusVisualizationPage stationId startTime endTime = do
-  tz <- asks envTimeZone
+  -- Accessing the inner environment by using the serverEnv accessor.
+  appEnv <- asks serverEnv
+  let tz = envTimeZone appEnv
+  -- AppM actions can be lifter into ServerAppM by using a combination of liftIO and runReaderT.
   currentUtc <- liftIO getCurrentTime
 
-  info <- withPostgres $ runSelectReturningOne $ select $ infoByIdExpr [fromIntegral stationId]
+  info <- liftIO $ runAppM appEnv (withPostgres $ runSelectReturningOne $ select $ infoByIdExpr [fromIntegral stationId])
   case info of
     Just info' ->
         pure StationStatusVisualizationPage { _statusVisPageStationInfo = info'
@@ -67,7 +72,6 @@ stationStatusVisualizationPage stationId startTime endTime = do
                                             , _statusVisPageCurrentUtc  = currentUtc
                                             }
     _ ->  throwError err404 { errBody = "Unknown station ID." }
-
 
 routesLinks :: Routes (AsLink Link)
 routesLinks = allFieldLinks

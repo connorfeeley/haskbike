@@ -35,6 +35,8 @@ import           Database.BikeShare.StationStatus
 
 import           GHC.Generics
 
+import           ServerEnv
+
 
 -- | Type representing a the visualization data for a BikeShare station's status.
 data StationStatusVisualization where
@@ -82,15 +84,18 @@ fromBeamStationStatusToVisJSON status =
   where
     StationInformationId sid = _statusStationId status
 
-generateJsonDataSource :: Int -> Maybe LocalTime -> Maybe LocalTime -> AppM [StationStatusVisualization]
+generateJsonDataSource :: Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM [StationStatusVisualization]
 generateJsonDataSource stationId startTime endTime = do
-  -- Get the current TimeZone and construct our query limits.
-  tz <- liftIO getCurrentTimeZone
+  -- Accessing the inner environment by using the serverEnv accessor.
+  appEnv <- asks serverEnv
+  let tz = envTimeZone appEnv
+  -- AppM actions can be lifter into ServerAppM by using a combination of liftIO and runReaderT.
   currentUtc <- liftIO getCurrentTime
+
   let params = StatusDataParams tz currentUtc (TimePair startTime endTime)
   let range = enforceTimeRangeBounds params
   -- result <- queryStationStatusBetween stationId (earliestTime (visTimeRange params))
-  result <- queryStationStatusBetween stationId (localTimeToUTC tz (earliestTime  range)) (localTimeToUTC tz (latestTime range))
+  result <- liftIO $ runAppM appEnv $ queryStationStatusBetween stationId (localTimeToUTC tz (earliestTime  range)) (localTimeToUTC tz (latestTime range))
   pure $ map fromBeamStationStatusToVisJSON result
 
 data StatusDataParams a where
