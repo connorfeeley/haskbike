@@ -20,6 +20,7 @@ import           Fmt
 import qualified Graphics.Vega.VegaLite                 as VL
 
 import           Lucid
+import           Lucid.Base                             ( makeAttribute )
 import           Lucid.Servant
 
 import           Servant
@@ -31,12 +32,24 @@ import           TextShow
 
 import           Visualization.StationOccupancy
 
+
+dataRoutes :: Proxy (ToServantApi DataRoutes)
+dataRoutes = genericApi (Proxy :: Proxy DataRoutes)
+
+
+routesLinks :: DataRoutes (AsLink Link)
+routesLinks = allFieldLinks
+
+dataProxy :: Proxy (ToServantApi DataRoutes)
+dataProxy = genericApi (Proxy :: Proxy DataRoutes)
+
 data StationStatusVisualizationPage where
   StationStatusVisualizationPage :: { _statusVisPageStationInfo :: StationInformation
                                     , _statusVisPageStationId   :: Int
                                     , _statusVisPageTimeRange   :: TimePair (Maybe LocalTime)
                                     , _statusVisPageTimeZone    :: TimeZone
                                     , _statusVisPageCurrentUtc  :: UTCTime
+                                    , _statusVisPageDataLink    :: Link
                                     } -> StationStatusVisualizationPage
 
 -- HTML serialization of a single person
@@ -46,13 +59,22 @@ instance ToHtml StationStatusVisualizationPage where
     h1_ (toHtml pageTitle)
     h2_ (toHtml dateHeader)
     h3_ (toHtml stationInfoHeader)
-    -- a_ [href_ $ renderText $ safeLink apiProxy apiDataStationStatus id] "Station Status Data"
+    div_ $ do
+      input_ [ makeAttribute "type" "number", makeAttribute "value" (showt $ _statusVisPageStationId params) ]
+      input_ [ makeAttribute "type" "datetime-local", makeAttribute "value" (T.pack $ show earliest) ]
+      input_ [ makeAttribute "type" "datetime-local", makeAttribute "value" (T.pack $ show latest) ]
+    a_ [linkHref_ "/" (_statusVisPageDataLink params)] "Station Status Data"
     -- div_ $ toHtml (safeLink "/")-- (T.intercalate "/" dataSourceSegments))
     div_ vegaContainerStyle (toHtmlRaw (VL.toHtmlWith vegaEmbedCfg vegaChart))
+
     where _dataSourceSegments :: [T.Text] = [ "/data", "station-status", showt 7001]
+
           vegaContainerStyle = [ style_ "flex:1 1 0%; position:relative; outline:none; display:flex; min-height:30px; min-width:100px" ]
+
           vegaEmbedCfg :: Maybe Value = Just $ toJSON ("logLevel", 4)
+
           inf = _statusVisPageStationInfo params
+
           pageTitle :: T.Text = format "Available Bikes at {} (#{})"
                                 (_infoName inf)
                                 (_statusVisPageStationId params)
@@ -60,7 +82,8 @@ instance ToHtml StationStatusVisualizationPage where
                                  (formatTime' (earliestTime times))
                                  (formatTime' (latestTime times))
           stationInfoHeader :: T.Text = format "Capacity: {} | Charging station: {}" (_infoCapacity inf) (_infoIsChargingStation inf)
-          vegaChart = availBikesOverTimeVL (_statusVisPageStationId params) earliest latest
+
+          vegaChart = availBikesOverTimeVL ("/" <> toUrlPiece (_statusVisPageDataLink params))
 
           times = enforceTimeRangeBounds (StatusDataParams (_statusVisPageTimeZone params) (_statusVisPageCurrentUtc params) (_statusVisPageTimeRange params))
           earliest = earliestTime times

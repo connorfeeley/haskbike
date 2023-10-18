@@ -20,8 +20,9 @@ import           Server.Page.StationStatusVisualization
 data VisualizationRoutes mode where
   VisualizationRoutes ::
     { pageForStation :: mode :-
-        "station-status"
-        :> Capture "station-id" Int :> QueryParam "start-time" LocalTime :> QueryParam "end-time" LocalTime
-        :> Get '[HTML] StationStatusVisualizationPage
+        "visualization" :>
+          "station-status"
+          :> Capture "station-id" Int :> QueryParam "start-time" LocalTime :> QueryParam "end-time" LocalTime
+          :> Get '[HTML] StationStatusVisualizationPage
     } -> VisualizationRoutes mode
   deriving stock Generic

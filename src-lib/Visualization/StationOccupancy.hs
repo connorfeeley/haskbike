@@ -2,6 +2,7 @@
 
 module Visualization.StationOccupancy
      ( availBikesOverTimeVL
+     , printVegaLiteSchema
      , selectionProps
      ) where
 
@@ -18,19 +19,19 @@ import           TextShow
 
 
 -- Implement Vega-Lite specification using hvega
-availBikesOverTimeVL :: Int -> LocalTime -> LocalTime -> VegaLite
-availBikesOverTimeVL stationId startTime endTime =
+availBikesOverTimeVL :: T.Text -> VegaLite
+availBikesOverTimeVL dataUrl=
   let
     selLabel = "picked"
     sel = selection
           . select selLabel Single []
 
   in
-    toVegaLite (sel [] : selectionProps selLabel "Available Vehicle Types Over Time" stationId startTime endTime)
+    toVegaLite (sel [] : selectionProps selLabel "Available Vehicle Types Over Time" dataUrl)
 
 
-selectionProps :: SelectionLabel -> T.Text -> Int -> LocalTime -> LocalTime -> [PropertySpec]
-selectionProps selName label stationId startTime endTime =
+selectionProps :: SelectionLabel -> T.Text -> T.Text -> [PropertySpec]
+selectionProps _selName label dataUrl =
   let
     -- Implement the `fold` transform
     dataTransforms =
@@ -86,10 +87,9 @@ selectionProps selName label stationId startTime endTime =
     areaLayer = asSpec [ mark Area [ ], areaEncoding [ ]]
     -- Setup the `point` mark type with its encoding only
     pointLayer = asSpec [mark Point [], areaEncoding [] ]
-
   in
     [ title label [ TOrient SBottom ]
-    , liveDataSource stationId startTime endTime
+    , dataFromUrl dataUrl [ ]
     , dataTransforms []
     , layer [ areaLayer
             , pointLayer
@@ -99,14 +99,6 @@ selectionProps selName label stationId startTime endTime =
     , autosize [ AFit, APadding, AResize ]
     , config []
     ]
-
-
--- Prepare the Vega-Lite data source
-liveDataSource :: Int -> LocalTime -> LocalTime -> Data
-liveDataSource stationId startTime endTime =
-  -- data array is under "station_status" key
-  dataFromUrl (T.intercalate "/" segments <> "?start-time=" <> T.pack (show startTime) <> "&end-time=" <> T.pack (show endTime)) [ ]
-  where segments :: [T.Text] = [ "/data", "station-status", showt stationId ]
 
 
 printVegaLiteSchema :: VegaLite -> IO ()

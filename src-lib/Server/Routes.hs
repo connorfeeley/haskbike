@@ -1,3 +1,4 @@
+{-# LANGUAGE ConstraintKinds       #-}
 {-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE DerivingStrategies    #-}
 {-# LANGUAGE FlexibleInstances     #-}
@@ -11,6 +12,8 @@
 module Server.Routes
      ( API (..)
      , BikeShareExplorerAPI
+     , apiProxy
+     , routesLinks
      , server
      ) where
 
@@ -36,6 +39,7 @@ import           Prelude                                ()
 import           Prelude.Compat
 
 import           Servant                                as S
+import           Servant.Links
 import           Servant.Server.Generic
 
 import           Server.Data.StationStatusVisualization
@@ -47,8 +51,8 @@ import           ServerEnv
 
 data API mode = API
     { version           :: mode :- "version" :> Get '[JSON] Version
-    , stationData       :: mode :- "data" :> NamedRoutes DataRoutes
-    , visualizationPage :: mode :- "visualization" :> NamedRoutes VisualizationRoutes
+    , stationData       :: mode :- NamedRoutes DataRoutes
+    , visualizationPage :: mode :- NamedRoutes VisualizationRoutes
     } deriving stock Generic
 
 type Version = String -- This will do for the sake of example.
@@ -85,6 +89,8 @@ stationStatusVisualizationPage stationId startTime endTime = do
   -- AppM actions can be lifter into ServerAppM by using a combination of liftIO and runReaderT.
   currentUtc <- liftIO getCurrentTime
 
+  let dataLink = fieldLink dataForStation stationId startTime endTime
+
   info <- liftIO $ runAppM appEnv (withPostgres $ runSelectReturningOne $ select $ infoByIdExpr [fromIntegral stationId])
   case info of
     Just info' -> do
@@ -94,12 +100,13 @@ stationStatusVisualizationPage stationId startTime endTime = do
                                           , _statusVisPageTimeRange   = TimePair startTime endTime
                                           , _statusVisPageTimeZone    = tz
                                           , _statusVisPageCurrentUtc  = currentUtc
+                                          , _statusVisPageDataLink    = dataLink
                                           }
     _ ->  throwError err404 { errBody = "Unknown station ID." }
 
 
--- routesLinks :: Routes (AsLink Link)
--- routesLinks = allFieldLinks
+routesLinks :: API (AsLink Link)
+routesLinks = allFieldLinks
 
--- apiProxy :: Proxy (ToServantApi Routes)
--- apiProxy = genericApi (Proxy :: Proxy Routes)
+apiProxy :: Proxy (ToServantApi API)
+apiProxy = genericApi (Proxy :: Proxy API)
