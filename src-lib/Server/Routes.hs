@@ -48,19 +48,19 @@ type Version = String -- This will do for the sake of example.
 
 type BikeShareExplorerAPI = NamedRoutes API
 
-versionHandler :: Handler Version
+versionHandler :: ServerAppM Version
 versionHandler = pure "0.0.1"
 
-server ::  API AsServer
+server ::  API (AsServerT ServerAppM)
 server = API { version = versionHandler
              , stationData = statusHandler
              }
 
-statusHandler :: DataRoutes AsServer
+statusHandler :: DataRoutes (AsServerT ServerAppM)
 statusHandler = DataRoutes { dataForStation = stationStatusData }
 
 
-stationStatusData :: Int -> Maybe LocalTime -> Maybe LocalTime -> Handler [StationStatusVisualization]
+stationStatusData :: Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM [StationStatusVisualization]
 stationStatusData stationId startTime endTime = pure []
 
 stationStatusVisualizationPage :: Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM StationStatusVisualizationPage
