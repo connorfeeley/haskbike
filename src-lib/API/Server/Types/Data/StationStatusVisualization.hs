@@ -75,7 +75,7 @@ fromBeamStationStatusToVisJSON status =
                              , _statusVisBikesDisabled   = fromIntegral $ status ^. statusNumBikesDisabled
                              , _statusVisDocksAvailable  = fromIntegral $ status ^. statusNumDocksAvailable
                              , _statusVisDocksDisabled   = fromIntegral $ status ^. statusNumDocksDisabled
-                             , _statusVisAvailableIconic = fromIntegral (status ^. vehicleTypesAvailableBoost)
+                             , _statusVisAvailableIconic = fromIntegral (status ^. vehicleTypesAvailableIconic)
                              , _statusVisAvailableEfit   = fromIntegral (status ^. vehicleTypesAvailableEfit)
                              , _statusVisAvailableEfitG5 = fromIntegral (status ^. vehicleTypesAvailableEfitG5)
                              }
