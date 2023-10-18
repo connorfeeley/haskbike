@@ -47,7 +47,7 @@ import           Fmt
 
 import           Test.Tasty.HUnit
 
-import           UnliftIO                      ( try )
+import           UnliftIO                      ( liftIO, try )
 
 setupTestDatabase :: IO Connection
 setupTestDatabase = connectTestDatabase >>= dropTables >>= migrateDatabase

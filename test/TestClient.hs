@@ -12,7 +12,6 @@ import           Colog                    ( log, pattern I, pattern W )
 import           Control.Exception        ( SomeException, try )
 import           Control.Monad            ( void )
 
-import           Data.Text                ( pack, unwords )
 import           Data.Time                ( getCurrentTimeZone )
 
 import           Database.Beam.Postgres   ( connect )
@@ -29,7 +28,7 @@ import           Prelude                  hiding ( log, unwords )
 
 import           Test.Tasty.HUnit
 
-import           UnliftIO                 ( timeout )
+import           UnliftIO                 ( liftIO, timeout )
 
 
 -- | Mark a test as expected to fail.
