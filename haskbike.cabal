@@ -204,8 +204,8 @@ library
                     , API.ClientLifted
                     -- , API.DebugClient
                     , Server
-                    , Server.Types.Page.StationStatusVisualization
-                    , Server.Types.Data.StationStatusVisualization
+                    , Server.Page.StationStatusVisualization
+                    , Server.Data.StationStatusVisualization
                     , CLI.Utils
                     , CLI.Poll
                     , CLI.Query

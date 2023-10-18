@@ -4,7 +4,7 @@
 
 -- | This module contains types used to serialize station status data for use in the visualization API.
 
-module Server.Types.Data.StationStatusVisualization
+module Server.Data.StationStatusVisualization
      ( StationStatusVisualization (..)
      , StatusDataParams (..)
      , enforceTimeRangeBounds
