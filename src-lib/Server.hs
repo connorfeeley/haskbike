@@ -7,21 +7,18 @@
 
 -- | This module contains the server API to visualize BikeShare data.
 
-module API.Server
+module Server
      ( apiProxy
      , routesLinks
      , serveVisualization
      ) where
-
-import           API.Server.Types.Data.StationStatusVisualization
-import           API.Server.Types.Page.StationStatusVisualization
 
 import           AppEnv
 
 import           Control.Monad.Except
 import           Control.Monad.Reader
 
-import qualified Data.ByteString.Lazy                             as BL
+import qualified Data.ByteString.Lazy                         as BL
 import           Data.Proxy
 import           Data.Time
 import           Data.Time.Extras
@@ -33,14 +30,17 @@ import           GHC.Generics
 
 import           Lucid
 
-import           Network.HTTP.Media                               ( MediaType, (//), (/:) )
-import           Network.Wai.Handler.Warp                         as Warp
+import           Network.HTTP.Media                           ( MediaType, (//), (/:) )
+import           Network.Wai.Handler.Warp                     as Warp
 
-import           Prelude                                          ()
+import           Prelude                                      ()
 import           Prelude.Compat
 
-import           Servant                                          as S
+import           Servant                                      as S
 import           Servant.Server.Generic
+
+import           Server.Types.Data.StationStatusVisualization
+import           Server.Types.Page.StationStatusVisualization
 
 
 data HTMLLucid

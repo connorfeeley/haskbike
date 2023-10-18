@@ -3,16 +3,13 @@
 
 -- | This module defines the data types used to render the station status visualization page.
 
-module API.Server.Types.Page.StationStatusVisualization
+module Server.Types.Page.StationStatusVisualization
      ( StationStatusVisualizationPage (..)
      ) where
 
 
-import           API.Server.Types.Data.StationStatusVisualization
-
 import           Data.Aeson
-import           Data.Maybe                                       ( fromMaybe )
-import qualified Data.Text                                        as T
+import qualified Data.Text                                    as T
 import           Data.Time
 import           Data.Time.Extras
 
@@ -20,9 +17,11 @@ import           Database.BikeShare.StationInformation
 
 import           Fmt
 
-import qualified Graphics.Vega.VegaLite                           as VL
+import qualified Graphics.Vega.VegaLite                       as VL
 
 import           Lucid
+
+import           Server.Types.Data.StationStatusVisualization
 
 import           TextShow
 

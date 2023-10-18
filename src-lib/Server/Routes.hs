@@ -7,13 +7,10 @@
 
 -- | This module contains the route definitions for the visualization server.
 
-module API.Server.Routes
+module Server.Routes
      ( Routes (..)
      , record
      ) where
-
-import           API.Server.Types.Data.StationStatusVisualization
-import           API.Server.Types.Page.StationStatusVisualization
 
 import           AppEnv
 
@@ -23,13 +20,16 @@ import           GHC.Generics
 
 import           Lucid
 
-import           Network.HTTP.Media                               ( (//), (/:) )
+import           Network.HTTP.Media                           ( (//), (/:) )
 
-import           Prelude                                          ()
+import           Prelude                                      ()
 import           Prelude.Compat
 
-import           Servant                                          as S
+import           Servant                                      as S
 import           Servant.Server.Generic
+
+import           Server.Types.Data.StationStatusVisualization
+import           Server.Types.Page.StationStatusVisualization
 
 
 data HTMLLucid
