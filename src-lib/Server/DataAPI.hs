@@ -3,6 +3,7 @@
 
 module Server.DataAPI
      ( DataAPI
+     , dataAPI
      ) where
 
 import           Data.Time
@@ -17,3 +18,6 @@ type DataAPI =
     :> "station-status"
       :> Capture "station-id" Int :> QueryParam "start-time" LocalTime :> QueryParam "end-time" LocalTime
       :> Get '[JSON] [StationStatusVisualization]
+
+dataAPI :: Proxy DataAPI
+dataAPI = Proxy @DataAPI
