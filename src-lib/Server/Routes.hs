@@ -15,55 +15,62 @@ module Server.Routes
 import           AppEnv
 
 import           Control.Monad.Except
+import           Control.Monad.Reader
 
-import           GHC.Generics
+import           Data.Proxy
+import           Data.Time
+import           Data.Time.Extras
 
-import           Lucid
+import           Database.Beam
+import           Database.BikeShare.Expressions
 
-import           Network.HTTP.Media                           ( (//), (/:) )
-
-import           Prelude                                      ()
+import           Prelude                                ()
 import           Prelude.Compat
 
-import           Servant                                      as S
+import           Servant                                as S
 import           Servant.Server.Generic
 
-import           Server.Types.Data.StationStatusVisualization
-import           Server.Types.Page.StationStatusVisualization
-
-
-data HTMLLucid
-instance Accept HTMLLucid where
-    contentType _ = "text" // "html" /: ("charset", "utf-8")
-instance ToHtml a => MimeRender HTMLLucid a where
-    mimeRender _ = renderBS . toHtml
-
-
--- let's also provide an instance for lucid's
--- 'Html' wrapper.
-instance MimeRender HTMLLucid (Html a) where
-    mimeRender _ = renderBS
+import           Server.Data.StationStatusVisualization
+import           Server.DataAPI
+import           Server.Page.StationStatusVisualization
+import           Server.VisualizationAPI
 
 
 -- | Route definitions.
 data Routes route where
-  Routes :: { _visualizationStationStatus :: route :- "visualization" :> "station-status" :> Get '[HTMLLucid] StationStatusVisualizationPage
-            , _dataStationStatus          :: route :- "data" :> "station-status" :> Capture "station-id" Int :> Get '[JSON] [StationStatusVisualization]
+  Routes :: { _visualizationStationStatus :: route :- VisualizationAPI
+            , _dataStationStatus          :: route :- DataAPI
             } -> Routes route
   deriving Generic
 
 record :: Routes (AsServerT AppM)
-record = Routes
-         { _visualizationStationStatus = stationStatusVisualizationPage
-         , _dataStationStatus = stationStatusData
-         } where
-                stationStatusData :: Int -> AppM [StationStatusVisualization]
-                stationStatusData = generateJsonDataSource
+record =
+  Routes { _visualizationStationStatus = stationStatusVisualizationPage
+         , _dataStationStatus          = stationStatusData
+         }
 
-                stationStatusVisualizationPage :: AppM StationStatusVisualizationPage
-                stationStatusVisualizationPage = return StationStatusVisualizationPage { _statusVisPageStationId = 7001 }
+stationStatusData :: Int -> Maybe LocalTime -> Maybe LocalTime -> AppM [StationStatusVisualization]
+stationStatusData = generateJsonDataSource
+
+stationStatusVisualizationPage :: Int -> Maybe LocalTime -> Maybe LocalTime -> AppM StationStatusVisualizationPage
+stationStatusVisualizationPage stationId startTime endTime = do
+  tz <- asks envTimeZone
+  currentUtc <- liftIO getCurrentTime
+
+  info <- withPostgres $ runSelectReturningOne $ select $ infoByIdExpr [fromIntegral stationId]
+  case info of
+    Just info' ->
+        pure StationStatusVisualizationPage { _statusVisPageStationInfo = info'
+                                            , _statusVisPageStationId   = stationId
+                                            , _statusVisPageTimeRange   = TimePair startTime endTime
+                                            , _statusVisPageTimeZone    = tz
+                                            , _statusVisPageCurrentUtc  = currentUtc
+                                            }
+    _ ->  throwError err404 { errBody = "Unknown station ID." }
+
 
 routesLinks :: Routes (AsLink Link)
 routesLinks = allFieldLinks
 
-
+apiProxy :: Proxy (ToServantApi Routes)
+apiProxy = genericApi (Proxy :: Proxy Routes)

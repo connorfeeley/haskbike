@@ -204,6 +204,10 @@ library
                     , API.ClientLifted
                     -- , API.DebugClient
                     , Server
+                    , Server.HTML
+                    , Server.Routes
+                    , Server.DataAPI
+                    , Server.VisualizationAPI
                     , Server.Page.StationStatusVisualization
                     , Server.Data.StationStatusVisualization
                     , CLI.Utils

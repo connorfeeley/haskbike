@@ -8,9 +8,7 @@
 -- | This module contains the server API to visualize BikeShare data.
 
 module Server
-     ( apiProxy
-     , routesLinks
-     , serveVisualization
+     ( serveVisualization
      ) where
 
 import           AppEnv
@@ -18,91 +16,15 @@ import           AppEnv
 import           Control.Monad.Except
 import           Control.Monad.Reader
 
-import qualified Data.ByteString.Lazy                   as BL
-import           Data.Proxy
-import           Data.Time
-import           Data.Time.Extras
+import           Network.Wai.Handler.Warp as Warp
 
-import           Database.Beam
-import           Database.BikeShare.Expressions
-
-import           Lucid
-
-import           Network.HTTP.Media                     ( MediaType, (//), (/:) )
-import           Network.Wai.Handler.Warp               as Warp
-
-import           Prelude                                ()
+import           Prelude                  ()
 import           Prelude.Compat
 
-import           Servant                                as S
+import           Servant                  as S
 import           Servant.Server.Generic
 
-import           Server.Data.StationStatusVisualization
-import           Server.Page.StationStatusVisualization
-
-
-data HTMLLucid
-instance Accept HTMLLucid where
-    contentType :: Proxy HTMLLucid -> MediaType
-    contentType _ = "text" // "html" /: ("charset", "utf-8")
-instance ToHtml a => MimeRender HTMLLucid a where
-    mimeRender :: ToHtml a => Proxy HTMLLucid -> a -> BL.ByteString
-    mimeRender _ = renderBS . toHtml
-
-
--- let's also provide an instance for lucid's
--- 'Html' wrapper.
-instance MimeRender HTMLLucid (Html a) where
-    mimeRender :: Proxy HTMLLucid -> Html a -> BL.ByteString
-    mimeRender _ = renderBS
-
-
--- | Route definitions.
-data Routes route where
-  Routes :: { _visualizationStationStatus :: route :- "visualization"
-                                                :> "station-status"
-                                                        :> Capture "station-id" Int :> QueryParam "start-time" LocalTime :> QueryParam "end-time" LocalTime
-                                                        :> Get '[HTMLLucid] StationStatusVisualizationPage
-            , _dataStationStatus          :: route :- "data"
-                                                :> "station-status"
-                                                        :> Capture "station-id" Int :> QueryParam "start-time" LocalTime :> QueryParam "end-time" LocalTime
-                                                        :> Get '[JSON] [StationStatusVisualization]
-            } -> Routes route
-  deriving Generic
-
-record :: Routes (AsServerT AppM)
-record =
-  Routes { _visualizationStationStatus = stationStatusVisualizationPage
-         , _dataStationStatus          = stationStatusData
-         }
-
-stationStatusData :: Int -> Maybe LocalTime -> Maybe LocalTime -> AppM [StationStatusVisualization]
-stationStatusData = generateJsonDataSource
-
-stationStatusVisualizationPage :: Int -> Maybe LocalTime -> Maybe LocalTime -> AppM StationStatusVisualizationPage
-stationStatusVisualizationPage stationId startTime endTime = do
-  tz <- asks envTimeZone
-  currentUtc <- liftIO getCurrentTime
-
-  info <- withPostgres $ runSelectReturningOne $ select $ infoByIdExpr [fromIntegral stationId]
-  case info of
-    Just info' ->
-        pure StationStatusVisualizationPage { _statusVisPageStationInfo = info'
-                                            , _statusVisPageStationId   = stationId
-                                            , _statusVisPageTimeRange   = TimePair startTime endTime
-                                            , _statusVisPageTimeZone    = tz
-                                            , _statusVisPageCurrentUtc  = currentUtc
-                                            }
-    _ ->  throwError err404 { errBody = "Unknown station ID." }
-
-
-routesLinks :: Routes (AsLink Link)
-routesLinks = allFieldLinks
-
-
-apiProxy :: Proxy (ToServantApi Routes)
-apiProxy = genericApi (Proxy :: Proxy Routes)
-
+import           Server.Routes
 
 -- | Natural transformation function for AppM monad
 nt :: Env AppM -> AppM a -> Handler a
