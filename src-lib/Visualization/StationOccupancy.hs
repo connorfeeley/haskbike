@@ -44,14 +44,14 @@ selectionProps selName label stationId startTime endTime =
         . position X [ PTitle "Time",  PName "Last Reported", PmType Temporal,     PTimeUnit (TU YearMonthDateHoursMinutesSeconds), PAxis [AxLabelAngle (-50)]]
         . position Y [ PTitle "Count", PName "Count",         PmType Quantitative, PStack StZero ]
         . color [ MName "Type"
-                , MmType Ordinal -- Data are also categories, but ones which have some natural order.
+                , MmType Nominal -- Data are also categories, but ones which have some natural order.
                 , MScale [ SDomain (DStrings [ "Available Docks", "Available E-Fit", "Available E-Fit G5", "Available Mechanical", "Disabled Bikes", "Disabled Docks" ])
-                         , SRange (RStrings [ "#928F8F" -- Disabled bike: salmon
-                                            , "#009ACD" -- E-Fit: light blue
-                                            , "#00688B" -- E-Fit G5: sky blue
-                                            , "#FFC300" -- Iconic: yellow
-                                            , "#FA8072" -- Available dock: grey
-                                            , "#000000" -- Disabled dock: black
+                         , SRange (RStrings [ white     -- Available dock: white
+                                            , lightBlue -- E-Fit: light blue
+                                            , skyBlue   -- E-Fit G5: sky blue
+                                            , green     -- Iconic: Cal Poly Pomona green
+                                            , salmon    -- Disabled bike: salmon
+                                            , black     -- Disabled dock: black
                                             ]) ]
                 -- , MLegend [ LLabelExpr "'<' + datum.label + '>'" ]
                 -- , MSelectionCondition (SelectionName selName) [ MName "Vehicle Type", MmType Nominal ] [ MString "grey" ]
@@ -61,6 +61,13 @@ selectionProps selName label stationId startTime endTime =
         --             [ MNumber 0.3 ]
         --           ]
         . toolTip
+        where
+          white     = "#FFFFFF"
+          lightBlue = "#009ACD"
+          skyBlue   = "#00688B"
+          green     = "#1E4D2B"
+          salmon    = "#FA8072"
+          black     = "#000000"
 
     -- Define tooltip for 'area' mark
     toolTip =
