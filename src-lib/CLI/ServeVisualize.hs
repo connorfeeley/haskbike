@@ -28,7 +28,8 @@ dispatchVisualize options = do
   log I $ format "Launching visualization web server on port {}." (optServeVisualizePort options)
   env <- ask
 
-  let serverEnv = ServerEnv { serverAppEnv  = env
-                            , serverPort    = optServeVisualizePort options
+  let serverEnv = ServerEnv { serverAppEnv    = env
+                            , serverPort      = optServeVisualizePort options
+                            , serverLogAction = simpleMessageAction
                             }
   liftIO $ runServerAppM serverEnv serveVisualization

@@ -17,6 +17,8 @@ module ServerEnv
 
 import           AppEnv
 
+import           Colog
+
 import           Control.Monad.Catch  ( MonadCatch, MonadThrow, catch, throwM )
 import           Control.Monad.Except
 import           Control.Monad.Reader
@@ -51,19 +53,29 @@ This is helpful in maintaining a clean separation of variables specific to both 
 -- | ServerEnv data type that holds server-specific environment including App environment and the server port
 -- The m parameter is the type variable which means 'ServerEnv' can hold environment of any Monad 'm'.
 data ServerEnv m where
-  ServerEnv :: { serverAppEnv    :: Env m
+  ServerEnv :: { serverAppEnv    :: !(Env AppM)
                -- The environment specific for the application
                , serverPort      :: !Int
                -- Port number on which the server is running
+               , serverLogAction :: !(LogAction m Message)
                } -> ServerEnv m
 
+-- Implement logging for the application environment.
+instance HasLog (ServerEnv m) Message m where
+  getLogAction :: ServerEnv m -> LogAction m Message
+  getLogAction = serverLogAction
+  {-# INLINE getLogAction #-}
+
+  setLogAction :: LogAction m Message -> ServerEnv m -> ServerEnv m
+  setLogAction newLogAction env = env { serverLogAction = newLogAction }
+  {-# INLINE setLogAction #-}
 
 -- | ServerAppM is the monad in which the server side computations are carried out.
 -- It encompasses both the server-specific environment and the application-specific environment.
 -- The 'unServerAppM' function is used to strip away the ServerAppM constructor revealing the underlying ReaderT.
 newtype ServerAppM a = ServerAppM
-  { unServerAppM :: ReaderT (ServerEnv AppM) IO a
-  } deriving newtype (Functor, Applicative, Monad, MonadIO, MonadUnliftIO, MonadReader (ServerEnv AppM), MonadFail, MonadThrow, MonadCatch)
+  { unServerAppM :: ReaderT (ServerEnv ServerAppM) IO a
+  } deriving newtype (Functor, Applicative, Monad, MonadIO, MonadReader (ServerEnv ServerAppM), MonadFail, MonadThrow, MonadCatch)
 
 
 -- | This instance allows us to use Servant's throwError and catchError inside actions of the ServerAppM monad.
@@ -75,7 +87,7 @@ instance MonadError ServerError ServerAppM where
 -- | Run the server application in the IO monad.
 -- This function takes ServerEnv that has been initialized with the AppM environment and server configuration,
 -- and a ServerAppM action that it then lifts into an IO.
-runServerAppM :: ServerEnv AppM -> ServerAppM a -> IO a
+runServerAppM :: ServerEnv ServerAppM -> ServerAppM a -> IO a
 runServerAppM senv app = runReaderT (unServerAppM app) senv
 
 
@@ -89,7 +101,7 @@ getAppEnvFromServer = asks serverAppEnv
 -- ServerAppM actions are transformed into Handler actions using this function.
 -- The Handler Monad is the one used by Servant for route handlers,
 -- so the natural transformation is necessary to tell Servant how to operate with ServerAppM actions.
-ntServerAppM :: ServerEnv AppM -> ServerAppM a -> Handler a
+ntServerAppM :: ServerEnv ServerAppM -> ServerAppM a -> Handler a
 ntServerAppM s a =
   let r = runReaderT (unServerAppM a) s
   in liftIO r

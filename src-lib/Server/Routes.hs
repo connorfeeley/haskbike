@@ -16,6 +16,9 @@ module Server.Routes
 
 import           AppEnv
 
+import           Colog
+
+import           Control.Lens
 import           Control.Monad.Except
 import           Control.Monad.Reader
 
@@ -24,7 +27,10 @@ import           Data.Time
 import           Data.Time.Extras
 
 import           Database.Beam
+import           Database.BikeShare
 import           Database.BikeShare.Expressions
+
+import           Fmt
 
 import           Prelude                                ()
 import           Prelude.Compat
@@ -40,8 +46,9 @@ import           Server.VisualizationAPI
 import           ServerEnv
 
 data API mode = API
-    { version     :: mode :- "version" :> Get '[JSON] Version
-    , stationData :: mode :- "data" :> NamedRoutes DataRoutes
+    { version           :: mode :- "version" :> Get '[JSON] Version
+    , stationData       :: mode :- "data" :> NamedRoutes DataRoutes
+    , visualizationPage :: mode :- "visualization" :> NamedRoutes VisualizationRoutes
     } deriving stock Generic
 
 type Version = String -- This will do for the sake of example.
@@ -54,17 +61,24 @@ versionHandler = pure "0.0.1"
 server ::  API (AsServerT ServerAppM)
 server = API { version = versionHandler
              , stationData = statusHandler
+             , visualizationPage = visualizationHandler
              }
 
 statusHandler :: DataRoutes (AsServerT ServerAppM)
 statusHandler = DataRoutes { dataForStation = stationStatusData }
 
+visualizationHandler :: VisualizationRoutes (AsServerT ServerAppM)
+visualizationHandler = VisualizationRoutes { pageForStation = stationStatusVisualizationPage }
 
 stationStatusData :: Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM [StationStatusVisualization]
-stationStatusData stationId startTime endTime = pure []
+stationStatusData stationId startTime endTime = do
+  logInfo $ format "Creating JSON payload for {station ID: {}, start time: {}, end time: {}} " stationId startTime endTime
+  generateJsonDataSource stationId startTime endTime
+
 
 stationStatusVisualizationPage :: Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM StationStatusVisualizationPage
 stationStatusVisualizationPage stationId startTime endTime = do
+  logInfo $ format "Rendering page for {station ID: {}, start time: {}, end time: {}} " stationId startTime endTime
   -- Accessing the inner environment by using the serverEnv accessor.
   appEnv <- asks serverAppEnv
   let tz = envTimeZone appEnv
@@ -73,14 +87,16 @@ stationStatusVisualizationPage stationId startTime endTime = do
 
   info <- liftIO $ runAppM appEnv (withPostgres $ runSelectReturningOne $ select $ infoByIdExpr [fromIntegral stationId])
   case info of
-    Just info' ->
-        pure StationStatusVisualizationPage { _statusVisPageStationInfo = info'
-                                            , _statusVisPageStationId   = stationId
-                                            , _statusVisPageTimeRange   = TimePair startTime endTime
-                                            , _statusVisPageTimeZone    = tz
-                                            , _statusVisPageCurrentUtc  = currentUtc
-                                            }
+    Just info' -> do
+      logInfo $ "Matched station information: " <> (info' ^. infoName)
+      pure StationStatusVisualizationPage { _statusVisPageStationInfo = info'
+                                          , _statusVisPageStationId   = stationId
+                                          , _statusVisPageTimeRange   = TimePair startTime endTime
+                                          , _statusVisPageTimeZone    = tz
+                                          , _statusVisPageCurrentUtc  = currentUtc
+                                          }
     _ ->  throwError err404 { errBody = "Unknown station ID." }
+
 
 -- routesLinks :: Routes (AsLink Link)
 -- routesLinks = allFieldLinks

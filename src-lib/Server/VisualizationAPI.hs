@@ -1,11 +1,10 @@
-{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DataKinds          #-}
+{-# LANGUAGE DerivingStrategies #-}
 
 -- |
 
 module Server.VisualizationAPI
-     ( VisualizationAPI
-     , VisualizationRoutes (..)
-     , visualizationAPI
+     ( VisualizationRoutes (..)
      ) where
 
 import           Data.Time
@@ -18,18 +17,11 @@ import           Servant.HTML.Lucid
 import           Server.Page.StationStatusVisualization
 
 
-type VisualizationAPI =
-  "visualization"
-    :> "station-status"
-      :> Capture "station-id" Int :> QueryParam "start-time" LocalTime :> QueryParam "end-time" LocalTime
-      :> Get '[HTML] StationStatusVisualizationPage
-
-visualizationAPI :: Proxy VisualizationAPI
-visualizationAPI = Proxy @VisualizationAPI
-
-data VisualizationRoutes mode = VisualizationRoutes
-  { pageForStation ::
-      mode :- "station-status"
-      :> Capture "station-id" Int :> QueryParam "start-time" LocalTime :> QueryParam "end-time" LocalTime
-      :> Get '[HTML] StationStatusVisualizationPage
-  } deriving Generic
+data VisualizationRoutes mode where
+  VisualizationRoutes ::
+    { pageForStation :: mode :-
+        "station-status"
+        :> Capture "station-id" Int :> QueryParam "start-time" LocalTime :> QueryParam "end-time" LocalTime
+        :> Get '[HTML] StationStatusVisualizationPage
+    } -> VisualizationRoutes mode
+  deriving stock Generic
