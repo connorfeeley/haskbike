@@ -37,23 +37,23 @@ selectionProps selName label stationId startTime endTime =
     -- Implement the `fold` transform
     dataTransforms =
       transform
-        . foldAs [ "available_iconic", "available_efit", "available_efit_g5", "bikes_disabled", "docks_available", "docks_disabled" ] "Vehicle Type" "Count"
+        . foldAs [ "Available Docks", "Available E-Fit", "Available E-Fit G5", "Available Mechanical", "Disabled Bikes", "Disabled Docks" ] "Type" "Count"
     -- Setup encoding common to both 'area' and 'point' marks
     areaEncoding =
       encoding
-        . position X [ PTitle "Last Reported", PName "last_reported", PmType Temporal, PTimeUnit (TU YearMonthDateHoursMinutesSeconds), PAxis [AxLabelAngle (-50)]]
-        . position Y [ PTitle "Count", PName "Count", PmType Quantitative, PStack StZero ]
-        . color [ MName "Vehicle Type"
-                , MmType Nominal
-                -- FIXME: these colours don't seem to be applied in order - I think VegaLite is sorting the data by the colour scale
-                , MScale [ SRange (RStrings [ "#FA8072" -- Available dock: grey
-                                            , "#928F8F" -- Disabled bike: salmon
+        . position X [ PTitle "Time",  PName "Last Reported", PmType Temporal,     PTimeUnit (TU YearMonthDateHoursMinutesSeconds), PAxis [AxLabelAngle (-50)]]
+        . position Y [ PTitle "Count", PName "Count",         PmType Quantitative, PStack StZero ]
+        . color [ MName "Type"
+                , MmType Ordinal -- Data are also categories, but ones which have some natural order.
+                , MScale [ SDomain (DStrings [ "Available Docks", "Available E-Fit", "Available E-Fit G5", "Available Mechanical", "Disabled Bikes", "Disabled Docks" ])
+                         , SRange (RStrings [ "#928F8F" -- Disabled bike: salmon
                                             , "#009ACD" -- E-Fit: light blue
                                             , "#00688B" -- E-Fit G5: sky blue
                                             , "#FFC300" -- Iconic: yellow
-                                            , "black"   -- Disabled dock: black
+                                            , "#FA8072" -- Available dock: grey
+                                            , "#000000" -- Disabled dock: black
                                             ]) ]
-                , MLegend [ LLabelExpr "'<' + datum.label + '>'" ]
+                -- , MLegend [ LLabelExpr "'<' + datum.label + '>'" ]
                 -- , MSelectionCondition (SelectionName selName) [ MName "Vehicle Type", MmType Nominal ] [ MString "grey" ]
                 ]
         -- . opacity [ MSelectionCondition (SelectionName selName)
@@ -64,8 +64,8 @@ selectionProps selName label stationId startTime endTime =
 
     -- Define tooltip for 'area' mark
     toolTip =
-      tooltips [ [TTitle "Last Reported", TName "last_reported", TmType Temporal, TTimeUnit (TU YearMonthDateHoursMinutesSeconds)]
-               , [TName "Vehicle Type", TmType Nominal]
+      tooltips [ [TTitle "Time", TName "Last Reported", TmType Temporal, TTimeUnit (TU YearMonthDateHoursMinutesSeconds)]
+               , [TName "Type", TmType Nominal]
                , [TName "Count", TmType Quantitative]
                ]
 

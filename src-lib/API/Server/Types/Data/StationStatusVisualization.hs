@@ -53,29 +53,17 @@ data StationStatusVisualization where
 
 instance ToJSON StationStatusVisualization where
   toJSON station =
-    object [ "station_id"        .= _statusVisStationId        station
-           , "last_reported"     .= _statusVisLastReported     station
-           , "charging_station"  .= _statusVisChargingStation  station
-           , "bikes_available"   .= _statusVisBikesAvailable   station
-           , "bikes_disabled"    .= _statusVisBikesDisabled    station
-           , "docks_available"   .= _statusVisDocksAvailable   station
-           , "docks_disabled"    .= _statusVisDocksDisabled    station
-           , "available_iconic"  .= _statusVisAvailableIconic  station
-           , "available_efit"    .= _statusVisAvailableEfit    station
-           , "available_efit_g5" .= _statusVisAvailableEfitG5  station
+    object [ "Station ID"           .= _statusVisStationId        station
+           , "Last Reported"        .= _statusVisLastReported     station
+           , "Charging"             .= _statusVisChargingStation  station
+           , "Available Bikes "     .= _statusVisBikesAvailable   station
+           , "Disabled Bikes"       .= _statusVisBikesDisabled    station
+           , "Available Docks"      .= _statusVisDocksAvailable   station
+           , "Disabled Docks"       .= _statusVisDocksDisabled    station
+           , "Available Mechanical" .= _statusVisAvailableIconic  station
+           , "Available E-Fit"      .= _statusVisAvailableEfit    station
+           , "Available E-Fit G5"   .= _statusVisAvailableEfitG5  station
            ]
-instance FromJSON StationStatusVisualization where
-  parseJSON = withObject "StationStatus" $ \v -> StationStatusVisualization
-    <$> v .: "station_id"
-    <*> v .: "last_reported"
-    <*> v .: "charging_station"
-    <*> v .: "bikes_available"
-    <*> v .: "bikes_disabled"
-    <*> v .: "docks_available"
-    <*> v .: "docks_disabled"
-    <*> v .: "available_iconic"
-    <*> v .: "available_efit"
-    <*> v .: "available_efit_g5"
 
 -- | Convert from the Beam StationStatus type to StationStatusVisualization
 fromBeamStationStatusToVisJSON :: StationStatus -> StationStatusVisualization
