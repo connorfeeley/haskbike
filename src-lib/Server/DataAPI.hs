@@ -1,7 +1,9 @@
 {-# LANGUAGE DataKinds #-}
 -- |
 
-module Server.DataAPI where
+module Server.DataAPI
+     ( DataAPI
+     ) where
 
 import           Data.Time
 

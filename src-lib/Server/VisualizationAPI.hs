@@ -2,7 +2,9 @@
 
 -- |
 
-module Server.VisualizationAPI where
+module Server.VisualizationAPI
+     ( VisualizationAPI
+     ) where
 
 import           Data.Time
 

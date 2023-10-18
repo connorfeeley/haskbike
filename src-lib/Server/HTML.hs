@@ -1,6 +1,8 @@
 -- |
 
-module Server.HTML where
+module Server.HTML
+     ( HTMLLucid
+     ) where
 
 import qualified Data.ByteString.Lazy as BL
 import           Data.Proxy
