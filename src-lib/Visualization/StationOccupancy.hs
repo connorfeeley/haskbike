@@ -45,12 +45,12 @@ selectionProps _selName label dataUrl =
         . color [ MName "Type"
                 , MmType Nominal -- Data are also categories, but ones which have some natural order.
                 , MScale [ SDomain (DStrings [ "Available Docks", "Available E-Fit", "Available E-Fit G5", "Available Mechanical", "Disabled Bikes", "Disabled Docks" ])
-                         , SRange (RStrings [ white     -- Available dock: white
-                                            , lightBlue -- E-Fit: light blue
-                                            , skyBlue   -- E-Fit G5: sky blue
-                                            , green     -- Iconic: Cal Poly Pomona green
-                                            , salmon    -- Disabled bike: salmon
-                                            , black     -- Disabled dock: black
+                         , SRange (RStrings [ transparent -- Available dock: transparent
+                                            , lightBlue   -- E-Fit: light blue
+                                            , skyBlue     -- E-Fit G5: sky blue
+                                            , green       -- Iconic: Cal Poly Pomona green
+                                            , salmon      -- Disabled bike: salmon
+                                            , black       -- Disabled dock: black
                                             ]) ]
                 -- , MLegend [ LLabelExpr "'<' + datum.label + '>'" ]
                 -- , MSelectionCondition (SelectionName selName) [ MName "Vehicle Type", MmType Nominal ] [ MString "grey" ]
@@ -61,12 +61,12 @@ selectionProps _selName label dataUrl =
         --           ]
         . toolTip
         where
-          white     = "#FFFFFF"
-          lightBlue = "#009ACD"
-          skyBlue   = "#00688B"
-          green     = "#1E4D2B"
-          salmon    = "#FA8072"
-          black     = "#000000"
+          transparent = "rgb(0,0,0,0)" -- transparent
+          lightBlue   = "#009ACD"
+          skyBlue     = "#00688B"
+          green       = "#1E4D2B"
+          salmon      = "#FA8072"
+          black       = "#000000"
 
     -- Define tooltip for 'area' mark
     toolTip =
@@ -79,8 +79,8 @@ selectionProps _selName label dataUrl =
       configure
         . configuration (Axis [ DomainWidth 1 ])
         . configuration (ViewStyle [ ViewStroke "transparent" ])
-        . configuration (SelectionStyle [ ( Single, [ On "dblclick" ] ) ])
-        -- . configuration (BackgroundStyle "rgba(0, 0, 0, 0.1)")
+        . configuration (SelectionStyle [(Single, [On "dblclick"])])
+        . configuration (BackgroundStyle "rgba(0, 0, 0, 0.5)")
 
 
     -- Setup the `area` mark type with its encoding and interactive features
