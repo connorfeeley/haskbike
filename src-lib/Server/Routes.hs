@@ -12,8 +12,6 @@
 module Server.Routes
      ( API (..)
      , BikeShareExplorerAPI
-     , apiProxy
-     , routesLinks
      , server
      ) where
 
@@ -35,10 +33,7 @@ import           Database.BikeShare.Expressions
 
 import           Fmt
 
-import           Prelude                                ()
-import           Prelude.Compat
-
-import           Servant                                as S
+import           Servant
 import           Servant.Server.Generic
 
 import           Server.Data.StationStatusVisualization
@@ -48,27 +43,43 @@ import           Server.VisualizationAPI
 
 import           ServerEnv
 
-data API mode = API
-    { version           :: mode :- "version" :> Get '[JSON] Version
-    , stationData       :: mode :- NamedRoutes DataAPI
-    , visualizationPage :: mode :- NamedRoutes VisualizationAPI
-    } deriving stock Generic
+data API mode where
+  API :: { version           :: mode :- "version" :> Get '[JSON] Version
+         , stationData       :: mode :- NamedRoutes DataAPI
+         , visualizationPage :: mode :- NamedRoutes VisualizationAPI
+         , static            :: mode :- NamedRoutes StaticAPI
+         } -> API mode
+  deriving stock Generic
 
-type Version = String -- This will do for the sake of example.
+type Version = ((String, String), (String, String)) -- This will do for the sake of example.
 
 type BikeShareExplorerAPI = NamedRoutes API
 
 versionHandler :: ServerAppM Version
-versionHandler = pure "0.0.1"
+versionHandler = pure (("version", "0.0.1"), ("git-version", "0.0.1"))
 
 server ::  API (AsServerT ServerAppM)
 server = API { version = versionHandler
              , stationData = statusHandler
              , visualizationPage = visualizationHandler
+             , static = staticHandler
              }
+
+-- * Serve static files.
+
+data StaticAPI mode where
+  StaticAPI ::
+    { staticApi :: mode :- "static" :> Raw
+    } -> StaticAPI mode
+  deriving stock Generic
+
+-- * Handlers.
 
 statusHandler :: DataAPI (AsServerT ServerAppM)
 statusHandler =  DataAPI { dataForStation = stationStatusData }
+
+staticHandler :: StaticAPI (AsServerT ServerAppM)
+staticHandler =  StaticAPI $ serveDirectoryWebApp "static-files"
 
 visualizationHandler :: VisualizationAPI (AsServerT ServerAppM)
 visualizationHandler = VisualizationAPI { pageForStation = stationStatusVisualizationPage }
@@ -106,8 +117,8 @@ stationStatusVisualizationPage Nothing _ _ =
   throwError err404 { errBody = "Station ID parameter is required." }
 
 
-routesLinks :: API (AsLink Link)
-routesLinks = allFieldLinks
+-- routesLinks :: API (AsLink Link)
+-- routesLinks = allFieldLinks
 
-apiProxy :: Proxy (ToServantApi API)
-apiProxy = genericApi (Proxy :: Proxy API)
+-- apiProxy :: Proxy (ToServantApi API)
+-- apiProxy = genericApi (Proxy :: Proxy API)
