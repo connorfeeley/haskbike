@@ -42,14 +42,16 @@ data StationStatusVisualizationPage where
                                     , _statusVisPageTimeZone    :: TimeZone
                                     , _statusVisPageCurrentUtc  :: UTCTime
                                     , _statusVisPageDataLink    :: Link
+                                    , _statusVisPageStaticLink  :: Link
                                     } -> StationStatusVisualizationPage
 
 -- HTML serialization of a single person
 instance ToHtml StationStatusVisualizationPage where
-  toHtml params = div_ $ do
+  toHtml params = do
     head_ $ do
-      stylesheet_ "/static/css/pure/pure@3.0.0.css"
-      stylesheet_ "/static/css/haskbike.css"
+      stylesheet_ (staticPath <> "/css/pure/pure@3.0.0.css")
+      stylesheet_ (staticPath <> "/css/haskbike.css")
+      meta_ [name_ "viewport", content_ "width=device-width, initial-scale=1"]
     with div_ [class_ "entire-container"] $ do
       with div_ [class_ "header-container"] $ do
         with h1_ [class_ "header-large"] (toHtml pageTitle)
@@ -101,12 +103,12 @@ instance ToHtml StationStatusVisualizationPage where
       vegaChart :: VL.VegaLite
       vegaChart = availBikesOverTimeVL ("/" <> toUrlPiece (_statusVisPageDataLink params))
 
+      staticPath :: Text
+      staticPath = "/" <> toUrlPiece (_statusVisPageStaticLink params)
+
   -- do not worry too much about this
   toHtmlRaw = toHtml
 
 -- | Helper function to create a stylesheet link.
 stylesheet_ :: Applicative m => Text -> HtmlT m ()
-stylesheet_ url = link_ [ makeAttribute "rel" "stylesheet"
-                        , makeAttribute "type" "text/css"
-                        , makeAttribute "href" url
-                        ]
+stylesheet_ url = link_ [rel_ "stylesheet",type_ "text/css",href_ url]

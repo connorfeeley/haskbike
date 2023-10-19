@@ -99,18 +99,18 @@ stationStatusVisualizationPage (Just stationId) startTime endTime = do
   -- AppM actions can be lifter into ServerAppM by using a combination of liftIO and runReaderT.
   currentUtc <- liftIO getCurrentTime
 
-  let dataLink = fieldLink dataForStation stationId startTime endTime
-
   info <- liftIO $ runAppM appEnv (withPostgres $ runSelectReturningOne $ select $ infoByIdExpr [fromIntegral stationId])
   case info of
     Just info' -> do
       logInfo $ "Matched station information: " <> (info' ^. infoName)
+      logInfo $ "Static path: " <> toUrlPiece (fieldLink staticApi)
       pure StationStatusVisualizationPage { _statusVisPageStationInfo = info'
                                           , _statusVisPageStationId   = stationId
                                           , _statusVisPageTimeRange   = TimePair startTime endTime
                                           , _statusVisPageTimeZone    = tz
                                           , _statusVisPageCurrentUtc  = currentUtc
-                                          , _statusVisPageDataLink    = dataLink
+                                          , _statusVisPageDataLink    = fieldLink dataForStation stationId startTime endTime
+                                          , _statusVisPageStaticLink  = fieldLink staticApi
                                           }
     _ ->  throwError err404 { errBody = "Unknown station ID." }
 stationStatusVisualizationPage Nothing _ _ =
