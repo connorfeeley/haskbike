@@ -53,7 +53,7 @@ instance ToHtml StationStatusVisualizationPage where
     with h2_ [class_ "header-small"] (toHtml dateHeader)
     h3_ (toHtml stationInfoHeader)
     with div_ [class_ "main-container"] $ do
-      with div_ [name_ "vega-lite-container", class_ "graph"]
+      with div_ [class_ "graph"]
       -- , style_ "flex:1 1 0%; position:relative; outline:none; display:flex; min-height:30px; min-width:100px"
         -- VegaLite chart.
         (toHtmlRaw (VL.toHtmlWith vegaEmbedCfg vegaChart))
