@@ -95,7 +95,7 @@ selectionProps _selName label dataUrl =
             , pointLayer
             ]
     , widthOfContainer
-    , height 800
+    , heightOfContainer
     , autosize [ AFit, APadding, AResize ]
     , config []
     ]

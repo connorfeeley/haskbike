@@ -9,7 +9,7 @@ module Server.Page.StationStatusVisualization
 
 
 import           Data.Aeson
-import qualified Data.Text                              as T
+import           Data.Text
 import           Data.Time
 import           Data.Time.Extras
 
@@ -44,56 +44,59 @@ data StationStatusVisualizationPage where
 -- HTML serialization of a single person
 instance ToHtml StationStatusVisualizationPage where
   toHtml params = div_ $ do
-    style_ ".grid-container { display: grid; grid-template-columns: auto auto auto; } .grid-container > div { padding: 20px 0; } .vega-embed { width: 80%; height: 70%; }"
-    h1_ (toHtml pageTitle)
-    h2_ (toHtml dateHeader)
+    head_ $ do
+      link_ [ makeAttribute "rel" "stylesheet"
+            , makeAttribute "type" "text/css"
+            , makeAttribute "href" "/static/haskbike.css"
+            ]
+    with h1_ [class_ "header-large"] (toHtml pageTitle)
+    with h2_ [class_ "header-small"] (toHtml dateHeader)
     h3_ (toHtml stationInfoHeader)
-    div_ $ do
-      form_ [] $ do
-        p_ $ label_ $ "Station ID: " >> input_ [ makeAttribute "type" "number",         makeAttribute "name" "station-id", makeAttribute "value" (showt $ _statusVisPageStationId params) ]
-        p_ $ label_ $ "Start Time: " >> input_ [ makeAttribute "type" "datetime-local", makeAttribute "name" "start-time", makeAttribute "value" (T.pack $ formatTimeHtml earliest) ]
-        p_ $ label_ $ "End Time: "   >> input_ [ makeAttribute "type" "datetime-local", makeAttribute "name" "end-time",   makeAttribute "value" (T.pack $ formatTimeHtml latest) ]
+    with div_ [class_ "main-container"] $ do
+      with div_ [name_ "vega-lite-container", class_ "graph"]
+      -- , style_ "flex:1 1 0%; position:relative; outline:none; display:flex; min-height:30px; min-width:100px"
+        -- VegaLite chart.
+        (toHtmlRaw (VL.toHtmlWith vegaEmbedCfg vegaChart))
+      with div_ [class_ "sidebar"] $ do
+        with div_ [class_ "station-info"]
+          "Station info goes here"
+        form_ [] $ do
+          p_ $ label_ $ "Station ID: " >> input_ [ makeAttribute "type" "number",         makeAttribute "name" "station-id", makeAttribute "value" (showt $ _statusVisPageStationId params) ]
+          p_ $ label_ $ "Start Time: " >> input_ [ makeAttribute "type" "datetime-local", makeAttribute "name" "start-time", makeAttribute "value" (pack $ formatTimeHtml earliest) ]
+          p_ $ label_ $ "End Time: "   >> input_ [ makeAttribute "type" "datetime-local", makeAttribute "name" "end-time",   makeAttribute "value" (pack $ formatTimeHtml latest) ]
     a_ [linkHref_ "/" (_statusVisPageDataLink params)] "Station Status Data"
-    div_ vegaContainerStyle (toHtmlRaw (VL.toHtmlWith vegaEmbedCfg vegaChart))
+    where
+      _dataSourceSegments :: [Text] = [ "/data", "station-status", showt 7001]
 
-    where _dataSourceSegments :: [T.Text] = [ "/data", "station-status", showt 7001]
+      vegaEmbedCfg :: Maybe Value = Just $ toJSON ("logLevel", 4)
 
-          vegaContainerStyle = [ name_ "vega-lite-container", style_ "flex:1 1 0%; position:relative; outline:none; display:flex; min-height:30px; min-width:100px" ]
+      inf = _statusVisPageStationInfo params
 
-          vegaEmbedCfg :: Maybe Value = Just $ toJSON ("logLevel", 4)
+      pageTitle :: Text
+      pageTitle = format "Available Bikes at {} (#{})"
+                  (_infoName inf)
+                  (_statusVisPageStationId params)
+      dateHeader :: Text
+      dateHeader = format "{} to {}"
+                   (prettyTime (earliestTime times))
+                   (prettyTime (latestTime times))
+      stationInfoHeader :: Text
+      stationInfoHeader = format "Capacity: {} | Charging station: {}"
+                          (_infoCapacity inf)
+                          (_infoIsChargingStation inf)
 
-          inf = _statusVisPageStationInfo params
 
-          pageTitle :: T.Text = format "Available Bikes at {} (#{})"
-                                (_infoName inf)
-                                (_statusVisPageStationId params)
-          dateHeader :: T.Text = format "{} to {}"
-                                 (formatTime' (earliestTime times))
-                                 (formatTime' (latestTime times))
-          stationInfoHeader :: T.Text = format "Capacity: {} | Charging station: {}" (_infoCapacity inf) (_infoIsChargingStation inf)
+      times = enforceTimeRangeBounds (StatusDataParams (_statusVisPageTimeZone params) (_statusVisPageCurrentUtc params) (_statusVisPageTimeRange params))
+      earliest = earliestTime times
+      latest   = latestTime times
 
-          vegaChart = availBikesOverTimeVL ("/" <> toUrlPiece (_statusVisPageDataLink params))
+      prettyTime :: LocalTime -> String
+      prettyTime = formatTime defaultTimeLocale "%A, %b %e, %T"
+      formatTimeHtml = formatTime defaultTimeLocale htmlTimeFormat
 
-          times = enforceTimeRangeBounds (StatusDataParams (_statusVisPageTimeZone params) (_statusVisPageCurrentUtc params) (_statusVisPageTimeRange params))
-          earliest = earliestTime times
-          latest   = latestTime times
-
-          formatTime' :: LocalTime -> String
-          formatTime' = formatTime defaultTimeLocale "%A, %b %e, %T"
-          formatTimeHtml = formatTime defaultTimeLocale htmlTimeFormat
+      vegaChart :: VL.VegaLite
+      vegaChart = availBikesOverTimeVL ("/" <> toUrlPiece (_statusVisPageDataLink params))
 
   -- do not worry too much about this
   toHtmlRaw = toHtml
 
--- HTML serialization of a list of persons
-instance ToHtml [StationStatusVisualizationPage] where
-  toHtml visualizations = table_ $ do
-    tr_ $ do
-      th_ "first name"
-      th_ "last name"
-
-    -- this just calls toHtml on each visualization of the list
-    -- and concatenates the resulting pieces of HTML together
-    foldMap toHtml visualizations
-
-  toHtmlRaw = toHtml
