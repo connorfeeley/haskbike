@@ -49,6 +49,7 @@ data StationStatusVisualizationPage where
 instance ToHtml StationStatusVisualizationPage where
   toHtml params = do
     head_ $ do
+      makeFavicons staticPath [16, 32, 48, 96, 180, 300, 512]
       stylesheet_ (staticPath <> "/css/pure/pure@3.0.0.css")
       stylesheet_ (staticPath <> "/css/haskbike.css")
       meta_ [name_ "viewport", content_ "width=device-width, initial-scale=1"]
@@ -109,6 +110,17 @@ instance ToHtml StationStatusVisualizationPage where
   -- do not worry too much about this
   toHtmlRaw = toHtml
 
+
 -- | Helper function to create a stylesheet link.
 stylesheet_ :: Applicative m => Text -> HtmlT m ()
-stylesheet_ url = link_ [rel_ "stylesheet",type_ "text/css",href_ url]
+stylesheet_ url = link_ [rel_ "stylesheet", type_ "text/css", href_ url]
+
+
+-- | Make link elements for a list of pixel sizes, pointing to a given path.
+makeFavicons :: (Monad m, Num a, Show a) => Text -> [a] -> HtmlT m [()]
+makeFavicons staticPath = mapM (link_ . linkAttrs)
+  where
+    ssz :: (Num a, Show a) => a -> Text
+    ssz sz = pack (show sz) <> "x" <> pack (show sz)
+    hrefAttr  sz = href_ (staticPath <> "/images/favicon-" <> ssz sz <> ".png")
+    linkAttrs sz = [rel_ "icon noopener noreferrer", type_ "image/png", sizes_ (ssz sz), target_ "_blank", hrefAttr sz]
