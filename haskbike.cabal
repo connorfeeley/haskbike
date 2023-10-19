@@ -230,6 +230,7 @@ library
                     , Database.BikeShare.Operations.Dockings
                     , Database.BikeShare.Expressions
                     , Visualization.StationOccupancy
+                    , Graphics.Vega.VegaLite.Extra
 
     -- Modules included in this library but not exported.
     other-modules:    API.StationInformation
