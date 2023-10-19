@@ -211,6 +211,7 @@ library
                     , Server.Page.StationStatusVisualization
                     , Server.Page.SideMenu
                     , Server.Page.Utils
+                    , Server.PureCSS
                     , Server.Data.StationStatusVisualization
                     , CLI.Utils
                     , CLI.Poll

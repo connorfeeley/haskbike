@@ -30,6 +30,7 @@ import           Servant
 
 import           Server.Data.StationStatusVisualization
 import           Server.Page.Utils
+import           Server.PureCSS
 
 import           TextShow
 
@@ -49,29 +50,21 @@ data StationStatusVisualizationPage where
 instance ToHtml StationStatusVisualizationPage where
   toHtmlRaw = toHtml
   toHtml params = do
-    -- head_ $ do
-    --   title_ (toHtml (pageTitle (_infoName inf) (_statusVisPageStationId params)))
-    --   stylesheet_ "/static-files/css/pure/side-menu.css"
-    --   makeHeadElements staticPath
-    -- -- toHtml (PureGridComponent params)
-    with div_ [class_ "entire-container"] $ do
-      with div_ [class_ "header-container"] $ do
-        with h1_ [class_ "header-large"] (toHtml (pageTitle (_infoName inf) (_statusVisPageStationId params)))
-        with h2_ [class_ "header-small"] (toHtml dateHeader)
-        h3_ (toHtml stationInfoHeader)
+    -- Injected into 'SideMenu'
+    div_ [class_ "header"] $ do
+      h1_ [] (toHtml (pageTitle (_infoName inf) (_statusVisPageStationId params)))
+      h2_ [] (toHtml dateHeader)
+    div_ [class_ "content"] $ do
+      contentSubhead stationInfoHeader
       with div_ [class_ "main-container"] $ do
-        with div_ [class_ "graph"] $ do
-          -- VegaLite chart.
+        -- Selection form
+        form_ [] $ do
+          p_ $ label_ $ "Station ID: " >> input_ [ makeAttribute "type" "number",         makeAttribute "name" "station-id", makeAttribute "value" (showt $ _statusVisPageStationId params) ]
+          p_ $ label_ $ "Start Time: " >> input_ [ makeAttribute "type" "datetime-local", makeAttribute "name" "start-time", makeAttribute "value" (pack $ formatTimeHtml earliest) ]
+          p_ $ label_ $ "End Time: "   >> input_ [ makeAttribute "type" "datetime-local", makeAttribute "name" "end-time",   makeAttribute "value" (pack $ formatTimeHtml latest) ]
+        with div_ [class_ "graph"]
           (toHtmlRaw (toHtmlWithUrls vegaSourceUrlsLocal vegaEmbedCfg vegaChart))
-        -- with div_ [class_ "sidebar"] $ do
-        --   with div_ [class_ "station-info"]
-        --     "Station info goes here"
-          form_ [] $ do
-            p_ $ label_ $ "Station ID: " >> input_ [ makeAttribute "type" "number",         makeAttribute "name" "station-id", makeAttribute "value" (showt $ _statusVisPageStationId params) ]
-            p_ $ label_ $ "Start Time: " >> input_ [ makeAttribute "type" "datetime-local", makeAttribute "name" "start-time", makeAttribute "value" (pack $ formatTimeHtml earliest) ]
-            p_ $ label_ $ "End Time: "   >> input_ [ makeAttribute "type" "datetime-local", makeAttribute "name" "end-time",   makeAttribute "value" (pack $ formatTimeHtml latest) ]
-      -- with div_ [class_ "footer-container"] $ do
-      --   a_ [linkHref_ "/" (_statusVisPageDataLink params)] "Station Status Data"
+
     where
       _dataSourceSegments :: [Text] = [ "/data", "station-status", showt 7001]
 
