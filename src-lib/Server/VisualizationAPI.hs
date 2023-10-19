@@ -14,6 +14,7 @@ import           GHC.Generics                           ( Generic )
 import           Servant
 import           Servant.HTML.Lucid
 
+import           Server.Page.SideMenu
 import           Server.Page.StationStatusVisualization
 
 
@@ -23,6 +24,6 @@ data VisualizationAPI mode where
         "visualization" :>
           "station-status"
           :> QueryParam "station-id" Int :> QueryParam "start-time" LocalTime :> QueryParam "end-time" LocalTime
-          :> Get '[HTML] StationStatusVisualizationPage
+          :> Get '[HTML] (PureSideMenu StationStatusVisualizationPage)
     } -> VisualizationAPI mode
   deriving stock Generic

@@ -209,6 +209,8 @@ library
                     , Server.DataAPI
                     , Server.VisualizationAPI
                     , Server.Page.StationStatusVisualization
+                    , Server.Page.SideMenu
+                    , Server.Page.Utils
                     , Server.Data.StationStatusVisualization
                     , CLI.Utils
                     , CLI.Poll

@@ -38,6 +38,7 @@ import           Servant.Server.Generic
 
 import           Server.Data.StationStatusVisualization
 import           Server.DataAPI
+import           Server.Page.SideMenu
 import           Server.Page.StationStatusVisualization
 import           Server.VisualizationAPI
 
@@ -90,7 +91,7 @@ stationStatusData stationId startTime endTime = do
   generateJsonDataSource stationId startTime endTime
 
 
-stationStatusVisualizationPage :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM StationStatusVisualizationPage
+stationStatusVisualizationPage :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM (PureSideMenu StationStatusVisualizationPage)
 stationStatusVisualizationPage (Just stationId) startTime endTime = do
   logInfo $ format "Rendering page for {station ID: {}, start time: {}, end time: {}} " stationId startTime endTime
   -- Accessing the inner environment by using the serverEnv accessor.
@@ -104,7 +105,7 @@ stationStatusVisualizationPage (Just stationId) startTime endTime = do
     Just info' -> do
       logInfo $ "Matched station information: " <> (info' ^. infoName)
       logInfo $ "Static path: " <> toUrlPiece (fieldLink staticApi)
-      pure StationStatusVisualizationPage { _statusVisPageStationInfo = info'
+      let visualizationPage = StationStatusVisualizationPage { _statusVisPageStationInfo = info'
                                           , _statusVisPageStationId   = stationId
                                           , _statusVisPageTimeRange   = TimePair startTime endTime
                                           , _statusVisPageTimeZone    = tz
@@ -112,6 +113,7 @@ stationStatusVisualizationPage (Just stationId) startTime endTime = do
                                           , _statusVisPageDataLink    = fieldLink dataForStation stationId startTime endTime
                                           , _statusVisPageStaticLink  = fieldLink staticApi
                                           }
+      pure PureSideMenu { visPageParams = visualizationPage }
     _ ->  throwError err404 { errBody = "Unknown station ID." }
 stationStatusVisualizationPage Nothing _ _ =
   throwError err404 { errBody = "Station ID parameter is required." }
