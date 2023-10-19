@@ -11,6 +11,15 @@ body {
 }
 
 /* Style the headers */
+.header-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1em;
+  border: 1px solid black;
+  border-radius: 1em;
+}
 .header-large {
   font-size: 2em;
   text-align: center;
@@ -24,6 +33,15 @@ body {
 }
 
 /* Set up the overall layout */
+.entire-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  width: 100%;
+  padding: 1em;
+}
 .main-container {
   display: flex;
   align-items: center;
@@ -32,6 +50,15 @@ body {
   width: 100%;
   padding: 1em;
 }
+.footer-container {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  padding: 1em;
+  border: 1px solid black;
+  border-radius: 1em;
+}
 
 /* Style the graph area */
 .graph {
@@ -39,13 +66,19 @@ body {
   width: 80%;
   height: 70%;
   border: 1px solid black;
+  border-radius: 1em;
 }
 
 /* Style the sidebar */
 .sidebar {
   flex-grow: 3;
   padding: 1em;
-  border-left: 1px solid black;
+  border: 1px solid black;
+  border-radius: 1em;
+  width: auto;
+  display: flex;
+  flex-direction: column;
+  width: fit-content;
 }
 
 .sidebar .station-info {

@@ -48,25 +48,24 @@ data StationStatusVisualizationPage where
 instance ToHtml StationStatusVisualizationPage where
   toHtml params = div_ $ do
     head_ $ do
-      link_ [ makeAttribute "rel" "stylesheet"
-            , makeAttribute "type" "text/css"
-            , makeAttribute "href" "/static/haskbike.css"
-            ]
-    with div_ [class_ "main-container"] $ do
+      stylesheet_ "/static/css/pure/pure@3.0.0.css"
+      stylesheet_ "/static/css/haskbike.css"
+    with div_ [class_ "entire-container"] $ do
       with div_ [class_ "header-container"] $ do
         with h1_ [class_ "header-large"] (toHtml pageTitle)
         with h2_ [class_ "header-small"] (toHtml dateHeader)
         h3_ (toHtml stationInfoHeader)
-      with div_ [class_ "graph"]
-        -- VegaLite chart.
-        (toHtmlRaw (toHtmlWithUrls vegaSourceUrlsLocal vegaEmbedCfg vegaChart))
-      with div_ [class_ "sidebar"] $ do
-        with div_ [class_ "station-info"]
-          "Station info goes here"
-        form_ [] $ do
-          p_ $ label_ $ "Station ID: " >> input_ [ makeAttribute "type" "number",         makeAttribute "name" "station-id", makeAttribute "value" (showt $ _statusVisPageStationId params) ]
-          p_ $ label_ $ "Start Time: " >> input_ [ makeAttribute "type" "datetime-local", makeAttribute "name" "start-time", makeAttribute "value" (pack $ formatTimeHtml earliest) ]
-          p_ $ label_ $ "End Time: "   >> input_ [ makeAttribute "type" "datetime-local", makeAttribute "name" "end-time",   makeAttribute "value" (pack $ formatTimeHtml latest) ]
+      with div_ [class_ "main-container"] $ do
+        with div_ [class_ "graph"]
+          -- VegaLite chart.
+          (toHtmlRaw (toHtmlWithUrls vegaSourceUrlsLocal vegaEmbedCfg vegaChart))
+        with div_ [class_ "sidebar"] $ do
+          with div_ [class_ "station-info"]
+            "Station info goes here"
+          form_ [] $ do
+            p_ $ label_ $ "Station ID: " >> input_ [ makeAttribute "type" "number",         makeAttribute "name" "station-id", makeAttribute "value" (showt $ _statusVisPageStationId params) ]
+            p_ $ label_ $ "Start Time: " >> input_ [ makeAttribute "type" "datetime-local", makeAttribute "name" "start-time", makeAttribute "value" (pack $ formatTimeHtml earliest) ]
+            p_ $ label_ $ "End Time: "   >> input_ [ makeAttribute "type" "datetime-local", makeAttribute "name" "end-time",   makeAttribute "value" (pack $ formatTimeHtml latest) ]
       with div_ [class_ "footer-container"] $ do
         a_ [linkHref_ "/" (_statusVisPageDataLink params)] "Station Status Data"
     where
@@ -104,3 +103,10 @@ instance ToHtml StationStatusVisualizationPage where
 
   -- do not worry too much about this
   toHtmlRaw = toHtml
+
+-- | Helper function to create a stylesheet link.
+stylesheet_ :: Applicative m => Text -> HtmlT m ()
+stylesheet_ url = link_ [ makeAttribute "rel" "stylesheet"
+                        , makeAttribute "type" "text/css"
+                        , makeAttribute "href" url
+                        ]
