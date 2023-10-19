@@ -56,14 +56,24 @@ instance ToHtml StationStatusVisualizationPage where
       h2_ [] (toHtml dateHeader)
     div_ [class_ "content"] $ do
       contentSubhead stationInfoHeader
-      with div_ [class_ "main-container"] $ do
-        -- Selection form
-        form_ [] $ do
-          p_ $ label_ $ "Station ID: " >> input_ [ makeAttribute "type" "number",         makeAttribute "name" "station-id", makeAttribute "value" (showt $ _statusVisPageStationId params) ]
-          p_ $ label_ $ "Start Time: " >> input_ [ makeAttribute "type" "datetime-local", makeAttribute "name" "start-time", makeAttribute "value" (pack $ formatTimeHtml earliest) ]
-          p_ $ label_ $ "End Time: "   >> input_ [ makeAttribute "type" "datetime-local", makeAttribute "name" "end-time",   makeAttribute "value" (pack $ formatTimeHtml latest) ]
-        with div_ [class_ "graph"]
-          (toHtmlRaw (toHtmlWithUrls vegaSourceUrlsLocal vegaEmbedCfg vegaChart))
+      -- Selection form
+      form_ [class_ "pure-form pure-form-stacked"] $ fieldset_ $ do
+        legend_ "Select Query Parameters"
+        div_ [class_ "pure-g"] $ do
+
+          div_ [class_ "pure-u-1 pure-u-md-1-4"] $
+            label_ [for_ "station-id-input"] $ "Station ID" <> input_ [ type_ "number", id_ "station-id-input", name_ "station-id", class_ "pure-input-rounded", value_ (showt $ _statusVisPageStationId params) ]
+
+          div_ [class_ "pure-u-1 pure-u-md-1-4"] $
+            label_ [for_ "start-time-input"] $ "Start Time" <> input_ [ type_ "datetime-local", id_ "start-time-input", name_ "start-time", class_ "pure-input-rounded", value_ (pack $ formatTimeHtml earliest) ]
+
+          div_ [class_ "pure-u-1 pure-u-md-1-4"] $
+            label_ [for_ "end-time-input"] $ "End Time"      <> input_ [ type_ "datetime-local", id_ "end-time-input", name_ "end-time", class_ "pure-input-rounded", value_ (pack $ formatTimeHtml latest) ]
+
+          div_ [class_ "pure-u-1 pure-u-md-1-4"] $
+            label_ [for_ "end-time-input"] "Submit" <> input_ [ type_ "submit", id_ "submit-form", name_ "submit-form", class_ "pure-input-rounded", value_ "Submit" ]
+
+      with div_ [class_ "graph"] (toHtmlRaw (toHtmlWithUrls vegaSourceUrlsLocal vegaEmbedCfg vegaChart))
 
     where
       _dataSourceSegments :: [Text] = [ "/data", "station-status", showt 7001]
@@ -78,9 +88,9 @@ instance ToHtml StationStatusVisualizationPage where
                    (prettyTime (earliestTime times))
                    (prettyTime (latestTime times))
       stationInfoHeader :: Text
-      stationInfoHeader = format "Capacity: {} | Charging station: {}"
+      stationInfoHeader = format "Capacity: {} docks | Charging station: {}"
                           (_infoCapacity inf)
-                          (_infoIsChargingStation inf)
+                          (boolToText (_infoIsChargingStation inf))
 
 
       times = enforceTimeRangeBounds (StatusDataParams (_statusVisPageTimeZone params) (_statusVisPageCurrentUtc params) (_statusVisPageTimeRange params))
@@ -99,3 +109,7 @@ instance ToHtml StationStatusVisualizationPage where
 
       staticPath :: Text
       staticPath = "/" <> toUrlPiece (_statusVisPageStaticLink params)
+
+      boolToText :: Bool -> Text
+      boolToText True  = "Yes"
+      boolToText False = "No"

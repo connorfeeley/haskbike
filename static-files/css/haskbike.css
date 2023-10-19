@@ -63,8 +63,8 @@ body {
 /* Style the graph area */
 .graph {
   flex-grow: 7;
-  width: 80%;
-  height: 70%;
+  width: 100%;
+  height: 60%;
   border: 1px solid black;
   border-radius: 1em;
 }

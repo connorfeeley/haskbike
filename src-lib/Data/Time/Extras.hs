@@ -81,4 +81,5 @@ posixToUtc = posixSecondsToUTCTime . secondsToNominalDiffTime . fromIntegral
 utcToPosix :: UTCTime -> Int
 utcToPosix = floor . utcTimeToPOSIXSeconds
 
-htmlTimeFormat = "%FT%X"
+htmlTimeFormat :: String
+htmlTimeFormat = "%FT%H:%M"
