@@ -49,13 +49,11 @@ data StationStatusVisualizationPage where
 instance ToHtml StationStatusVisualizationPage where
   toHtml params = do
     head_ $ do
-      makeFavicons staticPath [16, 32, 48, 96, 180, 300, 512]
-      stylesheet_ (staticPath <> "/css/pure/pure@3.0.0.css")
-      stylesheet_ (staticPath <> "/css/haskbike.css")
-      meta_ [name_ "viewport", content_ "width=device-width, initial-scale=1"]
+      title_ (toHtml (pageTitle (_infoName inf) (_statusVisPageStationId params)))
+      makeHeadElements staticPath
     with div_ [class_ "entire-container"] $ do
       with div_ [class_ "header-container"] $ do
-        with h1_ [class_ "header-large"] (toHtml pageTitle)
+        with h1_ [class_ "header-large"] (toHtml (pageTitle (_infoName inf) (_statusVisPageStationId params)))
         with h2_ [class_ "header-small"] (toHtml dateHeader)
         h3_ (toHtml stationInfoHeader)
       with div_ [class_ "main-container"] $ do
@@ -76,10 +74,9 @@ instance ToHtml StationStatusVisualizationPage where
 
       inf = _statusVisPageStationInfo params
 
-      pageTitle :: Text
+      pageTitle :: Text -> Int -> Text
       pageTitle = format "Available Bikes at {} (#{})"
-                  (_infoName inf)
-                  (_statusVisPageStationId params)
+
       dateHeader :: Text
       dateHeader = format "{} to {}"
                    (prettyTime (earliestTime times))
@@ -124,3 +121,11 @@ makeFavicons staticPath = mapM (link_ . linkAttrs)
     ssz sz = pack (show sz) <> "x" <> pack (show sz)
     hrefAttr  sz = href_ (staticPath <> "/images/favicon-" <> ssz sz <> ".png")
     linkAttrs sz = [rel_ "icon noopener noreferrer", type_ "image/png", sizes_ (ssz sz), target_ "_blank", hrefAttr sz]
+
+-- | Create standard <head> elements.
+makeHeadElements :: Monad m => Text -> HtmlT m ()
+makeHeadElements staticPath = do
+  makeFavicons staticPath [16, 32, 48, 96, 180, 300, 512]
+  stylesheet_ (staticPath <> "/css/pure/pure@3.0.0.css")
+  stylesheet_ (staticPath <> "/css/haskbike.css")
+  meta_ [name_ "viewport", content_ "width=device-width, initial-scale=1"]
