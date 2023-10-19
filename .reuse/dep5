@@ -4,7 +4,7 @@ Upstream-Contact: Connor Feeley <git@cfeeley.org>
 Source: https://github.com/connorfeeley/haskbike
 
 ### Source files: exe, lib, test, etc.
-Files: src-exe/* src-lib/* test/* haskbike.cabal cabal.project.freeze hie.yaml flake.nix flake.lock .stylish-haskell.yaml
+Files: src-exe/* src-lib/* test/* haskbike.cabal cabal.project.freeze hie.yaml flake.nix flake.lock .stylish-haskell.yaml nix/VersionPure.hs
 Copyright: 2023 Connor Feeley <git@cfeeley.org>
 License: BSD-3-Clause
 
@@ -14,7 +14,7 @@ Copyright: 2023 Connor Feeley <git@cfeeley.org>
 License: BSD-3-Clause
 
 ### Other files
-Files: .dir-locals.el .envrc .gitignore .builds/check.yml
+Files: .dir-locals.el .envrc .gitignore .builds/check.yml weeder.dhall .env.template
 Copyright: 2023 Connor Feeley <git@cfeeley.org>
 License: BSD-3-Clause
 
@@ -22,3 +22,18 @@ License: BSD-3-Clause
 Files: default.nix shell.nix
 Copyright: 2020-2021 Eelco Dolstra and the flake-compat contributors
 License: MIT
+
+### SQL/Shell scripts
+Files: scripts/*
+Copyright: 2023 Connor Feeley <git@cfeeley.org>
+License: BSD-3-Clause
+
+### Static web files
+Files: static-files/*
+Copyright: 2023 Connor Feeley <git@cfeeley.org>
+License: BSD-3-Clause
+
+### Vega/Vega-Lite
+Files: static-files/js/vega/*
+Copyright: 2015 University of Washington Interactive Data Lab
+License: BSD-3-Clause
