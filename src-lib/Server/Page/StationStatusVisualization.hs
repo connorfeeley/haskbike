@@ -98,7 +98,7 @@ instance ToHtml StationStatusVisualizationPage where
       formatTimeHtml = formatTime defaultTimeLocale htmlTimeFormat
 
       vegaEmbedCfg :: Maybe Value
-      vegaEmbedCfg =  Just $ toJSON (("logLevel", 4), ("$schema", "/static/js/vega/schema/vega-lite/v4.json"))
+      vegaEmbedCfg =  Just (toJSON $ object [("logLevel", "4"), ("$schema", "/static/js/vega/schema/vega-lite/v4.json")])
 
       vegaChart :: VL.VegaLite
       vegaChart = availBikesOverTimeVL ("/" <> toUrlPiece (_statusVisPageDataLink params))
