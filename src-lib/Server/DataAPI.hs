@@ -4,7 +4,7 @@
 -- |
 
 module Server.DataAPI
-     ( DataRoutes (..)
+     ( DataAPI (..)
      ) where
 
 import           Data.Time
@@ -16,8 +16,8 @@ import           Servant
 import           Server.Data.StationStatusVisualization
 
 
-data DataRoutes mode where
-  DataRoutes ::
+data DataAPI mode where
+  DataAPI ::
     { dataForStation :: mode :-
       "data" :>
         "station-status"
@@ -25,5 +25,5 @@ data DataRoutes mode where
           :> QueryParam "start-time" LocalTime
           :> QueryParam "end-time" LocalTime
           :> Get '[JSON] [StationStatusVisualization]
-    } -> DataRoutes mode
+    } -> DataAPI mode
   deriving stock Generic

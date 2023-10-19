@@ -39,7 +39,6 @@ import           Prelude                                ()
 import           Prelude.Compat
 
 import           Servant                                as S
-import           Servant.Links
 import           Servant.Server.Generic
 
 import           Server.Data.StationStatusVisualization
@@ -51,8 +50,8 @@ import           ServerEnv
 
 data API mode = API
     { version           :: mode :- "version" :> Get '[JSON] Version
-    , stationData       :: mode :- NamedRoutes DataRoutes
-    , visualizationPage :: mode :- NamedRoutes VisualizationRoutes
+    , stationData       :: mode :- NamedRoutes DataAPI
+    , visualizationPage :: mode :- NamedRoutes VisualizationAPI
     } deriving stock Generic
 
 type Version = String -- This will do for the sake of example.
@@ -68,11 +67,11 @@ server = API { version = versionHandler
              , visualizationPage = visualizationHandler
              }
 
-statusHandler :: DataRoutes (AsServerT ServerAppM)
-statusHandler = DataRoutes { dataForStation = stationStatusData }
+statusHandler :: DataAPI (AsServerT ServerAppM)
+statusHandler =  DataAPI { dataForStation = stationStatusData }
 
-visualizationHandler :: VisualizationRoutes (AsServerT ServerAppM)
-visualizationHandler = VisualizationRoutes { pageForStation = stationStatusVisualizationPage }
+visualizationHandler :: VisualizationAPI (AsServerT ServerAppM)
+visualizationHandler = VisualizationAPI { pageForStation = stationStatusVisualizationPage }
 
 stationStatusData :: Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM [StationStatusVisualization]
 stationStatusData stationId startTime endTime = do
@@ -80,8 +79,8 @@ stationStatusData stationId startTime endTime = do
   generateJsonDataSource stationId startTime endTime
 
 
-stationStatusVisualizationPage :: Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM StationStatusVisualizationPage
-stationStatusVisualizationPage stationId startTime endTime = do
+stationStatusVisualizationPage :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM StationStatusVisualizationPage
+stationStatusVisualizationPage (Just stationId) startTime endTime = do
   logInfo $ format "Rendering page for {station ID: {}, start time: {}, end time: {}} " stationId startTime endTime
   -- Accessing the inner environment by using the serverEnv accessor.
   appEnv <- asks serverAppEnv
@@ -103,6 +102,8 @@ stationStatusVisualizationPage stationId startTime endTime = do
                                           , _statusVisPageDataLink    = dataLink
                                           }
     _ ->  throwError err404 { errBody = "Unknown station ID." }
+stationStatusVisualizationPage Nothing _ _ =
+  throwError err404 { errBody = "Station ID parameter is required." }
 
 
 routesLinks :: API (AsLink Link)

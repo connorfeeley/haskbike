@@ -9,6 +9,7 @@ module Data.Time.Extras
      ( TimePair (..)
      , addHours
      , addMinutes
+     , htmlTimeFormat
      , localToPosix
      , localToSystem
      , localToSystem'
@@ -79,3 +80,5 @@ posixToUtc = posixSecondsToUTCTime . secondsToNominalDiffTime . fromIntegral
 
 utcToPosix :: UTCTime -> Int
 utcToPosix = floor . utcTimeToPOSIXSeconds
+
+htmlTimeFormat = "%FT%X"

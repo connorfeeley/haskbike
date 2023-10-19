@@ -4,7 +4,7 @@
 -- |
 
 module Server.VisualizationAPI
-     ( VisualizationRoutes (..)
+     ( VisualizationAPI (..)
      ) where
 
 import           Data.Time
@@ -17,12 +17,12 @@ import           Servant.HTML.Lucid
 import           Server.Page.StationStatusVisualization
 
 
-data VisualizationRoutes mode where
-  VisualizationRoutes ::
+data VisualizationAPI mode where
+  VisualizationAPI ::
     { pageForStation :: mode :-
         "visualization" :>
           "station-status"
-          :> Capture "station-id" Int :> QueryParam "start-time" LocalTime :> QueryParam "end-time" LocalTime
+          :> QueryParam "station-id" Int :> QueryParam "start-time" LocalTime :> QueryParam "end-time" LocalTime
           :> Get '[HTML] StationStatusVisualizationPage
-    } -> VisualizationRoutes mode
+    } -> VisualizationAPI mode
   deriving stock Generic

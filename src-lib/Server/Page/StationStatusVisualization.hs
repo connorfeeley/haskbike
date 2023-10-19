@@ -26,23 +26,11 @@ import           Lucid.Servant
 import           Servant
 
 import           Server.Data.StationStatusVisualization
-import           Server.DataAPI
 
 import           TextShow
 
 import           Visualization.StationOccupancy
 
-
-
-dataRoutes :: Proxy (ToServantApi DataRoutes)
-dataRoutes = genericApi (Proxy :: Proxy DataRoutes)
-
-
-routesLinks :: DataRoutes (AsLink Link)
-routesLinks = allFieldLinks
-
-dataProxy :: Proxy (ToServantApi DataRoutes)
-dataProxy = genericApi (Proxy :: Proxy DataRoutes)
 
 data StationStatusVisualizationPage where
   StationStatusVisualizationPage :: { _statusVisPageStationInfo :: StationInformation
@@ -61,19 +49,16 @@ instance ToHtml StationStatusVisualizationPage where
     h2_ (toHtml dateHeader)
     h3_ (toHtml stationInfoHeader)
     div_ $ do
-      form_ [makeAttribute "action" "7148"] $ do
-        -- formmethod_ "get"
-        -- FIXME: station-id is not a query parameter - need to update URL.
-        input_ [ makeAttribute "type" "number",        makeAttribute "value" (showt $ _statusVisPageStationId params) ]
-        input_ [ makeAttribute "type" "datetime-local",makeAttribute "name" "start-time", makeAttribute "value" (T.pack $ formatTimeHtml earliest) ]
-        input_ [ makeAttribute "type" "datetime-local",makeAttribute "name" "end-time",   makeAttribute "value" (T.pack $ formatTimeHtml latest) ]
+      form_ [] $ do
+        p_ $ label_ $ "Station ID: " >> input_ [ makeAttribute "type" "number",         makeAttribute "name" "station-id", makeAttribute "value" (showt $ _statusVisPageStationId params) ]
+        p_ $ label_ $ "Start Time: " >> input_ [ makeAttribute "type" "datetime-local", makeAttribute "name" "start-time", makeAttribute "value" (T.pack $ formatTimeHtml earliest) ]
+        p_ $ label_ $ "End Time: "   >> input_ [ makeAttribute "type" "datetime-local", makeAttribute "name" "end-time",   makeAttribute "value" (T.pack $ formatTimeHtml latest) ]
     a_ [linkHref_ "/" (_statusVisPageDataLink params)] "Station Status Data"
-    -- div_ $ toHtml (safeLink "/")-- (T.intercalate "/" dataSourceSegments))
     div_ vegaContainerStyle (toHtmlRaw (VL.toHtmlWith vegaEmbedCfg vegaChart))
 
     where _dataSourceSegments :: [T.Text] = [ "/data", "station-status", showt 7001]
 
-          vegaContainerStyle = [ style_ "flex:1 1 0%; position:relative; outline:none; display:flex; min-height:30px; min-width:100px" ]
+          vegaContainerStyle = [ name_ "vega-lite-container", style_ "flex:1 1 0%; position:relative; outline:none; display:flex; min-height:30px; min-width:100px" ]
 
           vegaEmbedCfg :: Maybe Value = Just $ toJSON ("logLevel", 4)
 
@@ -95,7 +80,7 @@ instance ToHtml StationStatusVisualizationPage where
 
           formatTime' :: LocalTime -> String
           formatTime' = formatTime defaultTimeLocale "%A, %b %e, %T"
-          formatTimeHtml = formatTime defaultTimeLocale "%FT%X"
+          formatTimeHtml = formatTime defaultTimeLocale htmlTimeFormat
 
   -- do not worry too much about this
   toHtmlRaw = toHtml
