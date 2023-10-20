@@ -116,7 +116,9 @@ stationStatusVisualizationPage (Just stationId) startTime endTime = do
                                           , _statusVisPageDataLink    = fieldLink dataForStation stationId startTime endTime
                                           , _statusVisPageStaticLink  = fieldLink staticApi
                                           }
-      pure PureSideMenu { visPageParams = visualizationPage }
+      pure PureSideMenu { visPageParams = visualizationPage
+                        , staticLink = fieldLink staticApi
+                        }
     _ ->  throwError err404 { errBody = "Unknown station ID." }
 stationStatusVisualizationPage Nothing _ _ =
   throwError err404 { errBody = "Station ID parameter is required." }
@@ -131,7 +133,9 @@ stationListPage = do
                          , _staticLink = fieldLink staticApi
                          , _visualizationPageLink  = fieldLink pageForStation
                          }
-  pure PureSideMenu { visPageParams = page }
+  pure PureSideMenu { visPageParams = page
+                    , staticLink = fieldLink staticApi
+                    }
 
 -- routesLinks :: API (AsLink Link)
 -- routesLinks = allFieldLinks

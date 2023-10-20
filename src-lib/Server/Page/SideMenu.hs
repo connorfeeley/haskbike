@@ -5,19 +5,23 @@ module Server.Page.SideMenu where
 
 import           Lucid
 
+import           Servant           ( Link, toUrlPiece )
+
 import           Server.Page.Utils
 import           Server.PureCSS
 
 data PureSideMenu a where
   PureSideMenu :: (ToHtml a) => { visPageParams :: a
+                                , staticLink :: Link
                                 } -> PureSideMenu a
 
 instance (ToHtml a) => ToHtml (PureSideMenu a) where
   toHtmlRaw = toHtml
   toHtml params = do
     head_ $ do
-      makeHeadElements "/static"
-      stylesheet_ "/static/css/pure/side-menu.css"
+      makeHeadElements ("/" <> toUrlPiece (staticLink params))
+      stylesheet_ ("/" <> toUrlPiece (staticLink params) <> "/css/pure/side-menu.css")
+      script_ [src_ ("/" <> toUrlPiece (staticLink params) <> "/js/pure/ui.js"), async_ mempty] ""
     div_ [id_ "layout"] $ do
       a_ [href_ "#menu", id_ "menuLink", class_ "menu-link"] $
         span_ mempty
