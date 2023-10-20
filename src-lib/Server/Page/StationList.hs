@@ -23,6 +23,7 @@ import           Lucid.Servant
 
 import           Servant
 
+import           Server.Classes
 import           Server.PureCSS
 
 import           TextShow
@@ -95,3 +96,6 @@ stationTypeText station =
 stationIdLink :: Monad m => (Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> Link) -> StationInformation -> HtmlT m ()
 stationIdLink baseLink params =
   a_ [href_ ("/" <> toUrlPiece (baseLink (Just (fromIntegral (_infoStationId params) :: Int)) Nothing Nothing))] (toHtml (showt (_infoStationId params)))
+
+instance ToHtmlComponents StationList where
+  toMenuHeading _ = menuHeading "#station-list" "Station List"

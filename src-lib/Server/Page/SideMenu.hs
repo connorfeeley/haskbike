@@ -7,15 +7,17 @@ import           Lucid
 
 import           Servant           ( Link, toUrlPiece )
 
+import           Server.Classes
 import           Server.Page.Utils
 import           Server.PureCSS
 
 data PureSideMenu a where
-  PureSideMenu :: (ToHtml a) => { visPageParams :: a
-                                , staticLink :: Link
-                                } -> PureSideMenu a
+  PureSideMenu :: (ToHtml a, ToHtmlComponents a) =>
+    { visPageParams :: a
+    , staticLink :: Link
+    } -> PureSideMenu a
 
-instance (ToHtml a) => ToHtml (PureSideMenu a) where
+instance (ToHtml a, ToHtmlComponents a) => ToHtml (PureSideMenu a) where
   toHtmlRaw = toHtml
   toHtml params = do
     head_ $ do
@@ -27,13 +29,15 @@ instance (ToHtml a) => ToHtml (PureSideMenu a) where
         span_ mempty
       div_ [id_ "menu"] $ do
         div_ [class_ "pure-menu"] $ do
-          a_ [class_ "pure-menu-heading", href_ "#company"] (toHtml "Availability")
+          toMenuHeading (visPageParams params)
           ul_ [class_ "pure-menu-list"] $ do
-            navLink "#home" "Home"
-            navLink "#about" "About"
-            navLinkDivided
-            navLink "#contact" "Contact"
+            navLinkDivided "/" "Home"
+            navLinkDivided "/visualization" "Visualization"
+            navLink "/visualization/station-list" "Station List"
+            navLinkDivided "/#about" "About"
+            navLinkDivided "/#contact" "Contact"
       div_ [id_ "main"] $ do
+        -- Render parameterized type
         toHtml (visPageParams params)
         -- div_ [class_ "header"] $ do
         --   h1_ [] (toHtml "Title")

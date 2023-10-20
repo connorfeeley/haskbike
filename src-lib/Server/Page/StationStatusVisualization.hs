@@ -28,6 +28,7 @@ import           Lucid.Servant
 
 import           Servant
 
+import           Server.Classes
 import           Server.Data.StationStatusVisualization
 import           Server.Page.Utils
 import           Server.PureCSS
@@ -52,7 +53,7 @@ instance ToHtml StationStatusVisualizationPage where
   toHtml params = do
     -- Injected into 'SideMenu'
     div_ [class_ "header"] $ do
-      h1_ [] (toHtml (pageTitle (_infoName inf) (_statusVisPageStationId params)))
+      h1_ [] (toHtml (pageTitle (_statusVisPageStationId params) (_infoName inf)))
       h2_ [] (toHtml dateHeader)
     div_ [class_ "content"] $ do
       contentSubhead stationInfoHeader
@@ -80,11 +81,11 @@ instance ToHtml StationStatusVisualizationPage where
 
       inf = _statusVisPageStationInfo params
 
-      pageTitle :: Text -> Int -> Text
-      pageTitle = format "Available Bikes at {} (#{})"
+      pageTitle :: Int -> Text -> Text
+      pageTitle = format "#{}: {}"
 
       dateHeader :: Text
-      dateHeader = format "{} to {}"
+      dateHeader = format "{} ➜ {}"
                    (prettyTime (earliestTime times))
                    (prettyTime (latestTime times))
       stationInfoHeader :: Text
@@ -113,3 +114,6 @@ instance ToHtml StationStatusVisualizationPage where
       boolToText :: Bool -> Text
       boolToText True  = "Yes"
       boolToText False = "No"
+
+instance ToHtmlComponents StationStatusVisualizationPage where
+  toMenuHeading _ = menuHeading "#visualization" "Available Bikes"

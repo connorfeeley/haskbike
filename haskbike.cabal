@@ -213,6 +213,7 @@ library
                     , Server.Page.Utils
                     , Server.Page.StationList
                     , Server.PureCSS
+                    , Server.Classes
                     , Server.Data.StationStatusVisualization
                     , CLI.Utils
                     , CLI.Poll
