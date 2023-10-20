@@ -23,14 +23,11 @@ import qualified Graphics.Vega.VegaLite                 as VL
 import           Graphics.Vega.VegaLite.Extra
 
 import           Lucid
-import           Lucid.Base                             ( makeAttribute )
-import           Lucid.Servant
 
 import           Servant
 
 import           Server.Classes
 import           Server.Data.StationStatusVisualization
-import           Server.Page.Utils
 import           Server.PureCSS
 
 import           TextShow

@@ -3,32 +3,14 @@
 module Server.Page.Utils
      ( makeFavicons
      , makeHeadElements
+     , mkData_
      , stylesheet_
      ) where
 
-import           Data.Aeson
 import           Data.Text
-import           Data.Time
-import           Data.Time.Extras
-
-import           Database.BikeShare.StationInformation
-
-import           Fmt
-
-import qualified Graphics.Vega.VegaLite                 as VL
-import           Graphics.Vega.VegaLite.Extra
 
 import           Lucid
-import           Lucid.Base                             ( makeAttribute )
-import           Lucid.Servant
-
-import           Servant
-
-import           Server.Data.StationStatusVisualization
-
-import           TextShow
-
-import           Visualization.StationOccupancy
+import           Lucid.Base ( makeAttribute )
 
 
 -- | Helper function to create a stylesheet link.
@@ -45,6 +27,7 @@ makeFavicons staticPath = mapM (link_ . linkAttrs)
     hrefAttr  sz = href_ (staticPath <> "/images/favicon-" <> ssz sz <> ".png")
     linkAttrs sz = [rel_ "icon noopener noreferrer", type_ "image/png", sizes_ (ssz sz), target_ "_blank", hrefAttr sz]
 
+
 -- | Create standard <head> elements.
 makeHeadElements :: Monad m => Text -> HtmlT m ()
 makeHeadElements staticPath = do
@@ -60,3 +43,8 @@ makeHeadElements staticPath = do
 
   -- Project stylesheet
   stylesheet_ (staticPath <> "/css/haskbike.css")
+
+
+-- | Make a "data-" attribute suffixed with the given 'Text'.
+mkData_ :: Text -> Text -> Attribute
+mkData_ suffix = makeAttribute ("data-" <> suffix)

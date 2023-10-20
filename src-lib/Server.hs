@@ -10,8 +10,6 @@ module Server
      ( serveVisualization
      ) where
 
-import           AppEnv
-
 import           Control.Monad.Except
 import           Control.Monad.Reader
 
@@ -45,7 +43,7 @@ serveVisualization = do
   env <- ask
   -- 'ask' is from Control.Monad.Reader class. It fetches ServerEnv.
 
-  let appEnv = serverAppEnv env
+  let _appEnv = serverAppEnv env
   -- The 'serverAppEnv' function gives access to the underlying 'AppM' environment
 
   liftIO $ run (serverPort env) (app env)

@@ -23,7 +23,6 @@ import           Control.Lens
 import           Control.Monad.Except
 import           Control.Monad.Reader
 
-import           Data.Proxy
 import           Data.Time
 import           Data.Time.Extras
 

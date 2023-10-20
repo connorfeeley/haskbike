@@ -1,5 +1,3 @@
--- FIXME: remove once server is fleshed out a bit more.
-{-# OPTIONS_GHC -fno-warn-unused-imports #-}
 {-# LANGUAGE RecordWildCards #-}
 
 
@@ -15,21 +13,11 @@ module Server.Data.StationStatusVisualization
 
 import           AppEnv                           ( envTimeZone, runAppM )
 
-import           Colog
-
 import           Control.Lens                     hiding ( (.=) )
 import           Control.Monad.Except
-import           Control.Monad.Reader
 
 import           Data.Aeson
-import qualified Data.Aeson.Parser
-import           Data.Aeson.Types
-import           Data.Attoparsec.ByteString
-import           Data.ByteString                  ( ByteString )
-import           Data.Coerce                      ( coerce )
-import           Data.List
 import           Data.Maybe
-import           Data.String.Conversions
 import           Data.Time
 import           Data.Time.Extras
 

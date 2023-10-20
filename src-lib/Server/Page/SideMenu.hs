@@ -39,9 +39,3 @@ instance (ToHtml a, ToHtmlComponents a) => ToHtml (PureSideMenu a) where
       div_ [id_ "main"] $ do
         -- Render parameterized type
         toHtml (visPageParams params)
-        -- div_ [class_ "header"] $ do
-        --   h1_ [] (toHtml "Title")
-        --   h2_ [] (toHtml "Subtitle")
-        -- div_ [class_ "content"] $ do
-          -- contentSubhead "Content subhead"
-          -- contentParagraph "Content paragraph"
