@@ -146,6 +146,10 @@ appears on the left side of the page.
         margin: 0;
     }
 
+    #menu .pure-menu-list {
+        height: fit-content;
+    }
+
 /* -- Dynamic Button For Responsive Menu -------------------------------------*/
 
 /*
