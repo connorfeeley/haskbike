@@ -212,6 +212,7 @@ library
                     , Server.Page.SideMenu
                     , Server.Page.Utils
                     , Server.Page.StationList
+                    , Server.Page.IndexPage
                     , Server.PureCSS
                     , Server.Classes
                     , Server.Data.StationStatusVisualization

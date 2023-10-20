@@ -33,10 +33,12 @@ import           Database.BikeShare.Expressions
 import           Fmt
 
 import           Servant
+import           Servant.HTML.Lucid
 import           Servant.Server.Generic
 
 import           Server.Data.StationStatusVisualization
 import           Server.DataAPI
+import           Server.Page.IndexPage
 import           Server.Page.SideMenu
 import           Server.Page.StationList
 import           Server.Page.StationStatusVisualization
@@ -46,6 +48,7 @@ import           ServerEnv
 
 data API mode where
   API :: { version           :: mode :- "version" :> Get '[JSON] Version
+         , home              :: mode :- Get '[HTML] (PureSideMenu IndexPage)
          , stationData       :: mode :- NamedRoutes DataAPI
          , visualizationPage :: mode :- NamedRoutes VisualizationAPI
          , static            :: mode :- NamedRoutes StaticAPI
@@ -61,6 +64,7 @@ versionHandler = pure (("version", "0.0.1"), ("git-version", "0.0.1"))
 
 server ::  API (AsServerT ServerAppM)
 server = API { version = versionHandler
+             , home = homePageHandler
              , stationData = statusHandler
              , visualizationPage = visualizationHandler
              , static = staticHandler
@@ -131,6 +135,15 @@ stationListPage = do
   let page = StationList { _stationList = info
                          , _staticLink = fieldLink staticApi
                          , _visualizationPageLink  = fieldLink pageForStation
+                         }
+  pure PureSideMenu { visPageParams = page
+                    , staticLink = fieldLink staticApi
+                    }
+
+homePageHandler :: ServerAppM (PureSideMenu IndexPage)
+homePageHandler = do
+  _appEnv <- asks serverAppEnv
+  let page = IndexPage { _indexStaticLink = fieldLink staticApi
                          }
   pure PureSideMenu { visPageParams = page
                     , staticLink = fieldLink staticApi
