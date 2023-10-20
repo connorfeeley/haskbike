@@ -36,7 +36,7 @@ selectionProps _selName label dataUrl =
     -- Implement the `fold` transform
     dataTransforms =
       transform
-        . foldAs [ "Available Docks", "Available E-Fit", "Available E-Fit G5", "Available Mechanical", "Disabled Bikes", "Disabled Docks" ] "Type" "Count"
+        . foldAs [ "Available Docks", "Available Mechanical", "Available E-Fit", "Available E-Fit G5", "Disabled Bikes", "Disabled Docks" ] "Type" "Count"
     -- Setup encoding common to both 'area' and 'point' marks
     areaEncoding =
       encoding
@@ -44,11 +44,11 @@ selectionProps _selName label dataUrl =
         . position Y [ PTitle "Count", PName "Count",         PmType Quantitative, PStack StZero ]
         . color [ MName "Type"
                 , MmType Nominal -- Data are also categories, but ones which have some natural order.
-                , MScale [ SDomain (DStrings [ "Available Docks", "Available E-Fit", "Available E-Fit G5", "Available Mechanical", "Disabled Bikes", "Disabled Docks" ])
+                , MScale [ SDomain (DStrings [ "Available Docks", "Available Mechanical", "Available E-Fit", "Available E-Fit G5", "Disabled Bikes", "Disabled Docks" ])
                          , SRange (RStrings [ transparent -- Available dock: transparent
+                                            , green       -- Iconic: Cal Poly Pomona green
                                             , lightBlue   -- E-Fit: light blue
                                             , skyBlue     -- E-Fit G5: sky blue
-                                            , green       -- Iconic: Cal Poly Pomona green
                                             , salmon      -- Disabled bike: salmon
                                             , black       -- Disabled dock: black
                                             ]) ]

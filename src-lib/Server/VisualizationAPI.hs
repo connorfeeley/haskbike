@@ -15,6 +15,7 @@ import           Servant
 import           Servant.HTML.Lucid
 
 import           Server.Page.SideMenu
+import           Server.Page.StationList
 import           Server.Page.StationStatusVisualization
 
 
@@ -25,5 +26,10 @@ data VisualizationAPI mode where
           "station-status"
           :> QueryParam "station-id" Int :> QueryParam "start-time" LocalTime :> QueryParam "end-time" LocalTime
           :> Get '[HTML] (PureSideMenu StationStatusVisualizationPage)
+    , stationList :: mode :-
+        "visualization" :>
+          "station-list"
+          :> QueryParam "station-type" String
+          :> Get '[HTML] (PureSideMenu StationList)
     } -> VisualizationAPI mode
   deriving stock Generic

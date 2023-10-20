@@ -39,6 +39,7 @@ import           Servant.Server.Generic
 import           Server.Data.StationStatusVisualization
 import           Server.DataAPI
 import           Server.Page.SideMenu
+import           Server.Page.StationList
 import           Server.Page.StationStatusVisualization
 import           Server.VisualizationAPI
 
@@ -83,7 +84,9 @@ staticHandler :: StaticAPI (AsServerT ServerAppM)
 staticHandler =  StaticAPI $ serveDirectoryWebApp "static-files"
 
 visualizationHandler :: VisualizationAPI (AsServerT ServerAppM)
-visualizationHandler = VisualizationAPI { pageForStation = stationStatusVisualizationPage }
+visualizationHandler = VisualizationAPI { pageForStation = stationStatusVisualizationPage
+                                        , stationList = stationListPage
+                                        }
 
 stationStatusData :: Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM [StationStatusVisualization]
 stationStatusData stationId startTime endTime = do
@@ -118,6 +121,17 @@ stationStatusVisualizationPage (Just stationId) startTime endTime = do
 stationStatusVisualizationPage Nothing _ _ =
   throwError err404 { errBody = "Station ID parameter is required." }
 
+stationListPage :: Maybe String -> ServerAppM (PureSideMenu StationList)
+stationListPage stationType = do
+  appEnv <- asks serverAppEnv
+  logInfo $ format "Rendering station list for type {}" stationType
+  info <- liftIO $ runAppM appEnv $ withPostgres $ runSelectReturningList $ select $ do
+    all_ (bikeshareDb ^. bikeshareStationInformation)
+  let page = StationList { _stationList = info
+                         , _staticLink = fieldLink staticApi
+                         , _visualizationPageLink  = fieldLink pageForStation Nothing Nothing Nothing
+                         }
+  pure PureSideMenu { visPageParams = page }
 
 -- routesLinks :: API (AsLink Link)
 -- routesLinks = allFieldLinks
