@@ -23,7 +23,7 @@ instance (ToHtml a) => ToHtml (PureSideMenu a) where
         span_ mempty
       div_ [id_ "menu"] $ do
         div_ [class_ "pure-menu"] $ do
-          a_ [class_ "pure-menu-heading", href_ "#company"](toHtml "Availability")
+          a_ [class_ "pure-menu-heading", href_ "#company"] (toHtml "Availability")
           ul_ [class_ "pure-menu-list"] $ do
             navLink "#home" "Home"
             navLink "#about" "About"

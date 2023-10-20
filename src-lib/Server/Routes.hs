@@ -124,12 +124,12 @@ stationStatusVisualizationPage Nothing _ _ =
 stationListPage :: Maybe String -> ServerAppM (PureSideMenu StationList)
 stationListPage stationType = do
   appEnv <- asks serverAppEnv
-  logInfo $ format "Rendering station list for type {}" stationType
+  logInfo $ format "Rendering station list"
   info <- liftIO $ runAppM appEnv $ withPostgres $ runSelectReturningList $ select $ do
     all_ (bikeshareDb ^. bikeshareStationInformation)
   let page = StationList { _stationList = info
                          , _staticLink = fieldLink staticApi
-                         , _visualizationPageLink  = fieldLink pageForStation Nothing Nothing Nothing
+                         , _visualizationPageLink  = fieldLink pageForStation
                          }
   pure PureSideMenu { visPageParams = page }
 

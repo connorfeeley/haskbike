@@ -11,6 +11,7 @@ module Server.Page.StationList
 
 import           Data.Maybe                            ( fromMaybe )
 import           Data.Text
+import           Data.Time
 
 import           Database.BikeShare.StationInformation
 
@@ -18,6 +19,7 @@ import           Graphics.Vega.VegaLite                ( dataColumn )
 
 import           Lucid
 import           Lucid.Base                            ( makeAttribute )
+import           Lucid.Servant
 
 import           Servant
 
@@ -30,7 +32,7 @@ import           TextShow
 data StationList where
   StationList :: { _stationList :: [StationInformation]
                  , _staticLink :: Link
-                 , _visualizationPageLink :: Link
+                 , _visualizationPageLink :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> Link
                  } -> StationList
 
 instance ToHtml StationList where
@@ -44,22 +46,22 @@ instance ToHtml StationList where
     div_ [class_ "content"] $ do
       contentSubhead "Select station type"
       -- Selection form
-      form_ [class_ "pure-form pure-form-stacked", target_ (toUrlPiece (_visualizationPageLink params))] $ fieldset_ $ do
-        legend_ "Select station"
+      form_ [class_ "pure-form pure-form-stacked"] $ fieldset_ $ do
+        legend_ "Filter stations by type, name, ID, or address"
         div_ [class_ "pure-g"] $ do
-          datalist_ [id_ "station-list"] $ do
-            mapM_ (\station -> option_ [value_ (showt (_infoStationId station)), label_ (_infoName station)] (toHtml (_infoName station))) (_stationList params)
           -- Station type radio inputs
-          div_ [class_ "pure-u-1-3 pure-u-md-2-3"] $ do
-            label_ [for_ "station-type-radio-all", class_ "pure-radio"] "All" <>
-              input_ [id_ "station-type-radio-all", type_ "radio", name_ "station-type", value_ "all", checked_]
-            label_ [for_ "station-type-radio-regular", class_ "pure-radio"] "Regular" <>
-              input_ [id_ "station-type-radio-regular", type_ "radio", name_ "station-type", value_ "regular"]
-            label_ [for_ "station-type-radio-charging", class_ "pure-radio"] "Charging" <>
-              input_ [id_ "station-type-radio-charging", type_ "radio", name_ "station-type", value_ "charging"]
-          div_ [class_ "pure-u-1-3 pure-u-md-2-3"] $ do
-            label_ [for_ "station-filter-input"] "Station Name"
-            input_ [id_ "station-filter-input", class_ "pure-input-1-2", type_ "search"]
+          div_ [class_ "pure-u-1-2"] $ do
+            label_ [for_ "station-type-radio-all", class_ "pure-radio"] $
+              input_ [id_ "station-type-radio-all", type_ "radio", name_ "station-type-radio", value_ "all", mkData_ "station-type" "All", checked_] <> span_ "All"
+
+            label_ [for_ "station-type-radio-regular", class_ "pure-radio"] $
+              input_ [id_ "station-type-radio-regular", type_ "radio", name_ "station-type-radio", value_ "regular", mkData_ "station-type" "Regular"] <> span_ "Regular"
+
+            label_ [for_ "station-type-radio-charging", class_ "pure-radio"] $
+              input_ [id_ "station-type-radio-charging", type_ "radio", name_ "station-type-radio", value_ "charging", mkData_ "station-type" "Charging"] <> span_ "Charging"
+          div_ [class_ "pure-u-1-2"] $ do
+            label_ [for_ "station-filter-input"] "Filter"
+            input_ [id_ "station-filter-input", class_ "pure-input-1-2", type_ "search", placeholder_ "Type a station name, ID, or address"]
       table_ [id_ "station-list-table", class_ "pure-table pure-table-horizontal pure-table-striped"] $ do
         thead_ [] $ tr_ $ do
           th_ [id_ "station-id-col"] "ID"
@@ -69,7 +71,7 @@ instance ToHtml StationList where
           th_ [id_ "station-address-col"] "Address"
         tbody_ [] $ do
           mapM_ (\station -> tr_ $ do
-                  td_ [columnId_ "station-id-col"] (toHtml (showt (_infoStationId station)))
+                  td_ [columnId_ "station-id-col"] (stationIdLink (_visualizationPageLink params) station)
                   td_ [columnId_ "station-name-col"] (toHtml (_infoName station))
                   td_ [columnId_ "station-type-col", style_ "text-align: center"] (stationTypeText station)
                   td_ [columnId_ "station-capacity-col", style_ "text-align: center"] (toHtml (showt (_infoCapacity station)))
@@ -77,10 +79,19 @@ instance ToHtml StationList where
                 ) (_stationList params)
 
 columnId_ :: Text -> Attribute
-columnId_ = makeAttribute "data-column-id"
+columnId_ = mkData_ "column-id"
+
+mkData_ :: Text -> Text -> Attribute
+mkData_ suffix = makeAttribute ("data-" <> suffix)
 
 -- stationTypeText :: StationInformation -> Text
 stationTypeText :: Monad m => StationInformation -> HtmlT m ()
-stationTypeText station = case _infoIsChargingStation station of
-  False -> span_ (toHtml "Regular")
-  True  -> span_ [style_ "font-weight: bold"] (toHtml "Charging")
+stationTypeText station =
+  let valetText = if _infoIsValetStation station then Just "Valet" else Nothing
+  in if _infoIsChargingStation station
+  then span_ [style_ "font-weight: bold"] (toHtml "Charging")
+  else span_ (toHtml "Regular")
+
+stationIdLink :: Monad m => (Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> Link) -> StationInformation -> HtmlT m ()
+stationIdLink baseLink params =
+  a_ [href_ ("/" <> toUrlPiece (baseLink (Just (fromIntegral (_infoStationId params) :: Int)) Nothing Nothing))] (toHtml (showt (_infoStationId params)))

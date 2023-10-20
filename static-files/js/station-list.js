@@ -1,11 +1,19 @@
-const filterInput = document.getElementById('station-filter-input');
-const table = document.getElementById('station-list-table');
+
 const filterColumns = ['station-id-col', 'station-name-col', 'station-address-col'];
 
-filterInput.addEventListener('input', function() {
-    const filterValue = this.value.toLowerCase();
-    const allRadio = document.getElementById('station-type-radio-all');
-    const regularRadio = document.getElementById('station-type-radio-regular');
+const table = document.getElementById('station-list-table');
+
+const filterInput = document.getElementById('station-filter-input');
+const stationTypeRadios = document.getElementsByName('station-type-radio');
+
+filterInput.addEventListener('input', filterStationsTable);
+for (let radio of stationTypeRadios) {
+    radio.addEventListener('change', filterStationsTable);
+}
+
+function filterStationsTable() {
+    const filterValue = filterInput.value.toLowerCase();
+    const selectedStationType = getSelectedStationType();
 
     for (let i = 1; i < table.rows.length; i++) {
         let row = table.rows[i];
@@ -19,15 +27,21 @@ filterInput.addEventListener('input', function() {
             }
         }
 
-        let stationType = row.querySelector('[data-column-id="station-type-col"]').textContent;
-        if (allRadio.checked) {
-            // show all stations
-        } else if (regularRadio.checked && stationType !== 'Regular') {
-            shouldShow = false;
-        } else if (!regularRadio.checked && stationType !== 'Charging') {
+        let stationTypeCell = row.querySelector('[data-column-id="station-type-col"]');
+        let stationType = stationTypeCell ? stationTypeCell.textContent : '';
+
+        if (selectedStationType !== 'All' && stationType !== selectedStationType) {
             shouldShow = false;
         }
 
         row.style.display = shouldShow ? '' : 'none';
     }
-});
+}
+
+function getSelectedStationType() {
+    for (let radio of stationTypeRadios) {
+        if (radio.checked) {
+            return radio.dataset.stationType;  // we assume each radio button has a 'data-station-type' attribute
+        }
+    }
+}
