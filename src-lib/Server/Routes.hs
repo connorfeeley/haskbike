@@ -121,8 +121,8 @@ stationStatusVisualizationPage (Just stationId) startTime endTime = do
 stationStatusVisualizationPage Nothing _ _ =
   throwError err404 { errBody = "Station ID parameter is required." }
 
-stationListPage :: Maybe String -> ServerAppM (PureSideMenu StationList)
-stationListPage stationType = do
+stationListPage :: ServerAppM (PureSideMenu StationList)
+stationListPage = do
   appEnv <- asks serverAppEnv
   logInfo $ format "Rendering station list"
   info <- liftIO $ runAppM appEnv $ withPostgres $ runSelectReturningList $ select $ do

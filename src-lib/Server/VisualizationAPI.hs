@@ -29,7 +29,6 @@ data VisualizationAPI mode where
     , stationList :: mode :-
         "visualization" :>
           "station-list"
-          :> QueryParam "station-type" String
           :> Get '[HTML] (PureSideMenu StationList)
     } -> VisualizationAPI mode
   deriving stock Generic
