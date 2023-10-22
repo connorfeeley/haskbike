@@ -216,6 +216,7 @@ library
                     , Server.PureCSS
                     , Server.Classes
                     , Server.Data.StationStatusVisualization
+                    , Server.Data.StationStatusChargingsVisualization
                     , CLI.Utils
                     , CLI.Poll
                     , CLI.Query

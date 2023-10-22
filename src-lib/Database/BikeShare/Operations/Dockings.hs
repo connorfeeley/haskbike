@@ -28,6 +28,7 @@ module Database.BikeShare.Operations.Dockings
      , eventsIconicCount
      , eventsStation
      , eventsVariation
+     , queryChargingEventsCountExpr
      , queryDockingEventsCount
      ) where
 
@@ -187,3 +188,56 @@ queryDockingEventsCountExpr variation =
                      , fromMaybe_ 0 $ sum_ dEFit   `filterWhere_` (dEFit   `binOp` 0)
                      , fromMaybe_ 0 $ sum_ dEFitG5 `filterWhere_` (dEFitG5 `binOp` 0)
                      ))
+
+---------------------------------
+-- | Query the number of dockings and undockings for a station (returning tuples of each count for each bike type).
+queryChargingEventsCountExpr :: StatusVariationQuery -> AppM [StationStatus]
+queryChargingEventsCountExpr variation =
+  withPostgres $ runSelectReturningList $ selectWith $ do
+  -- Lag expression
+  cte <- selecting $ do
+    let statusForStation = filter_ (filterFor_ variation)
+                                   (all_ (bikeshareDb ^. bikeshareStationStatus))
+      in withWindow_ (\row -> frame_ (partitionBy_ (_statusStationId row)) (orderPartitionBy_ (asc_ $ _statusLastReported row)) noBounds_)
+                     (\row w -> ( row
+                                , lagWithDefault_ (row ^. statusNumBikesDisabled     ) (val_ 1) (row ^. statusNumBikesDisabled     ) `over_` w
+                                , lagWithDefault_ (row ^. vehicleTypesAvailableEfit  ) (val_ 1) (row ^. vehicleTypesAvailableEfit  ) `over_` w
+                                , lagWithDefault_ (row ^. vehicleTypesAvailableEfitG5) (val_ 1) (row ^. vehicleTypesAvailableEfitG5) `over_` w
+                                ))
+                     statusForStation
+
+  -- Difference between row values and lagged values
+  withDeltas <- selecting $ do
+    -- Calculate delta between current and previous availability.
+    withWindow_ (\(row, _, _, _) -> frame_ (partitionBy_ (_statusStationId row)) noOrder_ noBounds_)
+                (\(row, pBikesDisabled, pEFit, pEFitG5) _w -> ( row
+                                                               , row ^. statusNumBikesDisabled      - pBikesDisabled
+                                                               , row ^. vehicleTypesAvailableEfit   - pEFit
+                                                               , row ^. vehicleTypesAvailableEfitG5 - pEFitG5
+                                                               ))
+                (reuse cte)
+
+  -- disablings   <- selecting $ sumDeltasAggregate_ (>.) (reuse withDeltas)
+  -- undisablings <- selecting $ sumDeltasAggregate_ (<.) (reuse withDeltas)
+  -- 'undisablings' is a stupid term, but how else am I suppposed to express
+  -- "bike was disabled and then went back into the active pool"?
+
+  pure $ do
+    chargings <- reuse withDeltas
+
+    stationInfo <- all_ (bikeshareDb ^. bikeshareStationInformation)
+    guard_ ((chargings ^. _1 & _statusStationId) `references_` stationInfo &&.
+            (chargings ^. _2) <. 0 &&.
+            (((chargings ^. _3) >. 0) ||. ((chargings ^. _4) >. 0))
+           )
+    -- NOTE: Required, otherwise result is massive.
+    -- guard_ ( (disablings'   ^. _1) `references_` stationInfo  &&.
+    --          (undisablings' ^. _1) `references_` stationInfo
+    --        )
+
+    -- Return tuples of station information and the disablings and undisablings.
+    pure ( chargings ^. _1 -- row
+         -- , chargings ^. _2 -- dBikesDisabled
+         -- , chargings ^. _3 -- dEfit
+         -- , chargings ^. _4 -- dEfitG5
+         )
