@@ -191,7 +191,7 @@ queryDockingEventsCountExpr variation =
 
 ---------------------------------
 -- | Query the number of dockings and undockings for a station (returning tuples of each count for each bike type).
-queryChargingEventsCountExpr :: StatusVariationQuery -> AppM [StationStatus]
+queryChargingEventsCountExpr :: StatusVariationQuery -> AppM [(StationStatus, Int32, Int32, Int32)]
 queryChargingEventsCountExpr variation =
   withPostgres $ runSelectReturningList $ selectWith $ do
   -- Lag expression
@@ -237,7 +237,7 @@ queryChargingEventsCountExpr variation =
 
     -- Return tuples of station information and the disablings and undisablings.
     pure ( chargings ^. _1 -- row
-         -- , chargings ^. _2 -- dBikesDisabled
-         -- , chargings ^. _3 -- dEfit
-         -- , chargings ^. _4 -- dEfitG5
+         , chargings ^. _2 -- dBikesDisabled
+         , chargings ^. _3 -- dEfit
+         , chargings ^. _4 -- dEfitG5
          )

@@ -85,9 +85,8 @@ generateJsonDataSource stationId startTime endTime = do
 
   let params = StatusDataParams tz currentUtc (TimePair startTime endTime)
   let range = enforceTimeRangeBounds params
-  -- result <- queryStationStatusBetween stationId (earliestTime (visTimeRange params))
-  -- result <- liftIO $ runAppM appEnv $ queryStationStatusBetween stationId (localTimeToUTC tz (earliestTime  range)) (localTimeToUTC tz (latestTime range))
-  result <- liftIO $ runAppM appEnv $ queryChargingEventsCountExpr (StatusVariationQuery (Just (fromIntegral stationId)) [EarliestTime (localTimeToUTC tz (earliestTime  range)), LatestTime (localTimeToUTC tz (latestTime range))])
+  -- result <- liftIO $ runAppM appEnv $ queryChargingEventsCountExpr (StatusVariationQuery (Just (fromIntegral stationId)) [EarliestTime (localTimeToUTC tz (earliestTime  range)), LatestTime (localTimeToUTC tz (latestTime range))])
+  result <- liftIO $ runAppM appEnv $ queryStationStatusBetween stationId (localTimeToUTC tz (earliestTime  range)) (localTimeToUTC tz (latestTime range))
   pure $ map fromBeamStationStatusToVisJSON result
 
 data StatusDataParams a where
