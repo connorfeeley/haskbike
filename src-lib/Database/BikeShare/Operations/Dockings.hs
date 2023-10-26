@@ -191,7 +191,7 @@ queryDockingEventsCountExpr variation =
 
 ---------------------------------
 -- | Query the number of dockings and undockings for a station (returning tuples of each count for each bike type).
-queryChargingEventsCountExpr :: StatusVariationQuery -> AppM [(StationStatus, Int32, Int32, Int32, Int32)]
+queryChargingEventsCountExpr :: StatusVariationQuery -> AppM [(StationStatus, Int32, Int32, Int32, Int32, Int32, Int32)]
 queryChargingEventsCountExpr variation =
   withPostgres $ runSelectReturningList $ selectWith $ do
   -- Lag expression
@@ -239,4 +239,6 @@ queryChargingEventsCountExpr variation =
          , chargings ^. _3    -- dEfit
          , chargings ^. _4    -- dEfitG5
          , chargingsSum ^. _2 -- sum of charging events over queried range
+         , chargingsSum ^. _3 -- sum of E-Fit charging events over queried range
+         , chargingsSum ^. _4 -- sum of E-Fit G5 charging events over queried range
          )

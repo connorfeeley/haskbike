@@ -30,7 +30,7 @@ import           Database.Beam
 import           Database.BikeShare
 import           Database.BikeShare.Expressions
 import           Database.BikeShare.Operations          ( StatusThreshold (..), StatusVariationQuery (..),
-                                                          queryChargingEventsCountExpr )
+                                                          queryChargingEventsCountExpr, queryDockingEventsCount )
 
 import           Fmt
 
@@ -114,23 +114,33 @@ stationStatusVisualizationPage (Just stationId) startTime endTime = do
   let times = enforceTimeRangeBounds (StatusDataParams tz currentUtc (TimePair startTime endTime))
   let earliest = earliestTime times
   let latest = latestTime times
+
+  -- * Query the database for the number of bikes charged at this station.
   chargings <- liftIO $ runAppM appEnv $
     queryChargingEventsCountExpr
-    (StatusVariationQuery (Just 7001) [ EarliestTime (localTimeToUTC tz earliest)
-                                      , LatestTime   (localTimeToUTC tz latest)
-                                      ])
+    (StatusVariationQuery (Just (fromIntegral stationId)) [ EarliestTime (localTimeToUTC tz earliest)
+                                                          , LatestTime   (localTimeToUTC tz latest)
+                                                          ])
+  -- * Query the database for the number of bikes docked and undocked at this station.
+  -- TODO: awkward having to compute time bounds here and in 'StationStatusVisualization'
+  dockings <- liftIO $ runAppM appEnv $
+    queryDockingEventsCount
+    (StatusVariationQuery (Just (fromIntegral stationId)) [ EarliestTime (localTimeToUTC tz earliest)
+                                                          , LatestTime   (localTimeToUTC tz latest)
+                                                          ])
   case info of
     Just info' -> do
       logInfo $ "Matched station information: " <> (info' ^. infoName)
       logInfo $ "Static path: " <> toUrlPiece (fieldLink staticApi)
-      let visualizationPage = StationStatusVisualizationPage { _statusVisPageStationInfo = info'
-                                                             , _statusVisPageStationId   = stationId
-                                                             , _statusVisPageTimeRange   = TimePair startTime endTime
-                                                             , _statusVisPageTimeZone    = tz
-                                                             , _statusVisPageCurrentUtc  = currentUtc
-                                                             , _statusVisPageChargings   = head chargings ^. _5 & fromIntegral
-                                                             , _statusVisPageDataLink    = fieldLink dataForStation stationId startTime endTime
-                                                             , _statusVisPageStaticLink  = fieldLink staticApi
+      let visualizationPage = StationStatusVisualizationPage { _statusVisPageStationInfo   = info'
+                                                             , _statusVisPageStationId     = stationId
+                                                             , _statusVisPageTimeRange     = TimePair startTime endTime
+                                                             , _statusVisPageTimeZone      = tz
+                                                             , _statusVisPageCurrentUtc    = currentUtc
+                                                             , _statusVisPageDockingEvents = head dockings
+                                                             , _statusVisPageChargings     = (head chargings ^. _5 & fromIntegral, head chargings ^. _6 & fromIntegral, head chargings ^. _7 & fromIntegral)
+                                                             , _statusVisPageDataLink      = fieldLink dataForStation stationId startTime endTime
+                                                             , _statusVisPageStaticLink    = fieldLink staticApi
                                                              }
       pure PureSideMenu { visPageParams = visualizationPage
                         , staticLink = fieldLink staticApi

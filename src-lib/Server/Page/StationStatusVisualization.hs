@@ -10,11 +10,14 @@ module Server.Page.StationStatusVisualization
      ) where
 
 
+import           Control.Lens
+
 import           Data.Aeson
 import           Data.Text
 import           Data.Time
 import           Data.Time.Extras
 
+import           Database.BikeShare.Operations          ( DockingEventsCount (..), EventsCountResult (..) )
 import           Database.BikeShare.StationInformation
 
 import           Fmt
@@ -36,14 +39,15 @@ import           Visualization.StationOccupancy
 
 
 data StationStatusVisualizationPage where
-  StationStatusVisualizationPage :: { _statusVisPageStationInfo :: StationInformation
-                                    , _statusVisPageStationId   :: Int
-                                    , _statusVisPageTimeRange   :: TimePair (Maybe LocalTime)
-                                    , _statusVisPageTimeZone    :: TimeZone
-                                    , _statusVisPageCurrentUtc  :: UTCTime
-                                    , _statusVisPageChargings   :: Int
-                                    , _statusVisPageDataLink    :: Link
-                                    , _statusVisPageStaticLink  :: Link
+  StationStatusVisualizationPage :: { _statusVisPageStationInfo   :: StationInformation
+                                    , _statusVisPageStationId     :: Int
+                                    , _statusVisPageTimeRange     :: TimePair (Maybe LocalTime)
+                                    , _statusVisPageTimeZone      :: TimeZone
+                                    , _statusVisPageCurrentUtc    :: UTCTime
+                                    , _statusVisPageDockingEvents :: DockingEventsCount
+                                    , _statusVisPageChargings     :: (Int, Int, Int)
+                                    , _statusVisPageDataLink      :: Link
+                                    , _statusVisPageStaticLink    :: Link
                                     } -> StationStatusVisualizationPage
 
 instance ToHtml StationStatusVisualizationPage where
@@ -87,11 +91,19 @@ instance ToHtml StationStatusVisualizationPage where
                    (prettyTime (earliestTime times))
                    (prettyTime (latestTime times))
       stationInfoHeader :: Text
-      stationInfoHeader = format "Capacity: {} docks | Charging station: {} | Bikes charged over time range: {}"
+      stationInfoHeader = format "Capacity: {} docks | Charging station: {} | Undockings(I/E/E5): {} [{}/{}/{}] | Dockings(I/E/E5): {} [{}/{}/{}] | Bikes charged: {}"
                           (_infoCapacity inf)
                           (boolToText (_infoIsChargingStation inf))
-                          (abs (_statusVisPageChargings params))
-
+                          (abs (_eventsCountUndockings (_eventsIconicCount events) + _eventsCountUndockings (_eventsEfitCount events) + _eventsCountUndockings (_eventsEfitG5Count events)))
+                            (abs (_eventsCountUndockings (_eventsIconicCount events))) (abs (_eventsCountUndockings (_eventsEfitCount events))) (abs (_eventsCountUndockings (_eventsEfitG5Count events)))
+                          (_eventsCountDockings (_eventsIconicCount events) + _eventsCountDockings (_eventsEfitCount events) + _eventsCountDockings (_eventsEfitG5Count events))
+                            (_eventsCountDockings (_eventsIconicCount events)) (_eventsCountDockings (_eventsEfitCount events)) (_eventsCountDockings (_eventsEfitG5Count events))
+                          (abs (_statusVisPageChargings params ^. _1))
+                          -- FIXME: these values make no sense
+                          -- (abs (_statusVisPageChargings params ^. _2)) (abs (_statusVisPageChargings params ^. _3))
+        where
+          events = _statusVisPageDockingEvents params
+          undockings = _eventsBoostCount events
 
       times = enforceTimeRangeBounds (StatusDataParams (_statusVisPageTimeZone params) (_statusVisPageCurrentUtc params) (_statusVisPageTimeRange params))
       earliest = earliestTime times
