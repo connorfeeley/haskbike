@@ -29,6 +29,8 @@ import           Data.Time.Extras
 import           Database.Beam
 import           Database.BikeShare
 import           Database.BikeShare.Expressions
+import           Database.BikeShare.Operations          ( StatusThreshold (..), StatusVariationQuery (..),
+                                                          queryChargingEventsCountExpr )
 
 import           Fmt
 
@@ -107,18 +109,25 @@ stationStatusVisualizationPage (Just stationId) startTime endTime = do
   currentUtc <- liftIO getCurrentTime
 
   info <- liftIO $ runAppM appEnv (withPostgres $ runSelectReturningOne $ select $ infoByIdExpr [fromIntegral stationId])
+  ctz <- liftIO getCurrentTimeZone
+  chargings <- liftIO $ runAppM appEnv $
+    queryChargingEventsCountExpr -- FIXME: hardcoded
+    (StatusVariationQuery (Just 7001) [ EarliestTime (localTimeToUTC ctz (LocalTime (read "2023-10-19") (read "00:00:00.0")))
+                                      , LatestTime   (localTimeToUTC ctz (LocalTime (read "2023-10-19") (read "04:00:00.0")))
+                                      ])
   case info of
     Just info' -> do
       logInfo $ "Matched station information: " <> (info' ^. infoName)
       logInfo $ "Static path: " <> toUrlPiece (fieldLink staticApi)
       let visualizationPage = StationStatusVisualizationPage { _statusVisPageStationInfo = info'
-                                          , _statusVisPageStationId   = stationId
-                                          , _statusVisPageTimeRange   = TimePair startTime endTime
-                                          , _statusVisPageTimeZone    = tz
-                                          , _statusVisPageCurrentUtc  = currentUtc
-                                          , _statusVisPageDataLink    = fieldLink dataForStation stationId startTime endTime
-                                          , _statusVisPageStaticLink  = fieldLink staticApi
-                                          }
+                                                             , _statusVisPageStationId   = stationId
+                                                             , _statusVisPageTimeRange   = TimePair startTime endTime
+                                                             , _statusVisPageTimeZone    = tz
+                                                             , _statusVisPageCurrentUtc  = currentUtc
+                                                             , _statusVisPageChargings   = head chargings ^. _5 & fromIntegral
+                                                             , _statusVisPageDataLink    = fieldLink dataForStation stationId startTime endTime
+                                                             , _statusVisPageStaticLink  = fieldLink staticApi
+                                                             }
       pure PureSideMenu { visPageParams = visualizationPage
                         , staticLink = fieldLink staticApi
                         }

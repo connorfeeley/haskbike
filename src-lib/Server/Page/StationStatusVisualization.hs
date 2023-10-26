@@ -41,6 +41,7 @@ data StationStatusVisualizationPage where
                                     , _statusVisPageTimeRange   :: TimePair (Maybe LocalTime)
                                     , _statusVisPageTimeZone    :: TimeZone
                                     , _statusVisPageCurrentUtc  :: UTCTime
+                                    , _statusVisPageChargings   :: Int
                                     , _statusVisPageDataLink    :: Link
                                     , _statusVisPageStaticLink  :: Link
                                     } -> StationStatusVisualizationPage
@@ -86,9 +87,10 @@ instance ToHtml StationStatusVisualizationPage where
                    (prettyTime (earliestTime times))
                    (prettyTime (latestTime times))
       stationInfoHeader :: Text
-      stationInfoHeader = format "Capacity: {} docks | Charging station: {}"
+      stationInfoHeader = format "Capacity: {} docks | Charging station: {} | Bikes charged over time range: {}"
                           (_infoCapacity inf)
                           (boolToText (_infoIsChargingStation inf))
+                          (abs (_statusVisPageChargings params))
 
 
       times = enforceTimeRangeBounds (StatusDataParams (_statusVisPageTimeZone params) (_statusVisPageCurrentUtc params) (_statusVisPageTimeRange params))
