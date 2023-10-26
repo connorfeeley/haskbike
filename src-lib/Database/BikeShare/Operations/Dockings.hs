@@ -191,7 +191,7 @@ queryDockingEventsCountExpr variation =
 
 ---------------------------------
 -- | Query the number of dockings and undockings for a station (returning tuples of each count for each bike type).
-queryChargingEventsCountExpr :: StatusVariationQuery -> AppM [(StationStatus, Int32, Int32, Int32)]
+queryChargingEventsCountExpr :: StatusVariationQuery -> AppM [(StationStatus, Int32, Int32, Int32, Int32)]
 queryChargingEventsCountExpr variation =
   withPostgres $ runSelectReturningList $ selectWith $ do
   -- Lag expression
@@ -219,14 +219,24 @@ queryChargingEventsCountExpr variation =
   pure $ do
     chargings <- reuse withDeltas
 
+    chargingsSum <-
+      aggregate_ (\(status, dBikesDisabled, dEFit, dEFitG5) ->
+                     ( group_ (_statusStationId status)
+                     , fromMaybe_ 0 $ sum_ dBikesDisabled  `filterWhere_` (dBikesDisabled  <. 0)
+                     , fromMaybe_ 0 $ sum_ dEFit   `filterWhere_` (dEFit   <. 0)
+                     , fromMaybe_ 0 $ sum_ dEFitG5 `filterWhere_` (dEFitG5 <. 0)
+                     ))
+                  (reuse withDeltas)
+
     stationInfo <- all_ (bikeshareDb ^. bikeshareStationInformation)
     guard_ ((chargings ^. _1 & _statusStationId) `references_` stationInfo &&.
             (chargings ^. _2) <. 0 &&.
             (((chargings ^. _3) >. 0) ||. ((chargings ^. _4) >. 0))
            )
 
-    pure ( chargings ^. _1 -- row
-         , chargings ^. _2 -- dBikesDisabled
-         , chargings ^. _3 -- dEfit
-         , chargings ^. _4 -- dEfitG5
+    pure ( chargings ^. _1    -- row
+         , chargings ^. _2    -- dBikesDisabled
+         , chargings ^. _3    -- dEfit
+         , chargings ^. _4    -- dEfitG5
+         , chargingsSum ^. _2 -- sum of charging events over queried range
          )
