@@ -210,18 +210,12 @@ queryChargingEventsCountExpr variation =
   withDeltas <- selecting $ do
     -- Calculate delta between current and previous availability.
     withWindow_ (\(row, _, _, _) -> frame_ (partitionBy_ (_statusStationId row)) noOrder_ noBounds_)
-                (\(row, pBikesDisabled, pEFit, pEFitG5) _w -> ( row
-                                                               , row ^. statusNumBikesDisabled      - pBikesDisabled
-                                                               , row ^. vehicleTypesAvailableEfit   - pEFit
-                                                               , row ^. vehicleTypesAvailableEfitG5 - pEFitG5
+                (\(row, pBikesDisabled, pEFit, pEFitG5) _w -> ( row                                                  -- _1
+                                                               , row ^. statusNumBikesDisabled      - pBikesDisabled -- _2
+                                                               , row ^. vehicleTypesAvailableEfit   - pEFit          -- _3
+                                                               , row ^. vehicleTypesAvailableEfitG5 - pEFitG5        -- _4
                                                                ))
                 (reuse cte)
-
-  -- disablings   <- selecting $ sumDeltasAggregate_ (>.) (reuse withDeltas)
-  -- undisablings <- selecting $ sumDeltasAggregate_ (<.) (reuse withDeltas)
-  -- 'undisablings' is a stupid term, but how else am I suppposed to express
-  -- "bike was disabled and then went back into the active pool"?
-
   pure $ do
     chargings <- reuse withDeltas
 
@@ -230,12 +224,7 @@ queryChargingEventsCountExpr variation =
             (chargings ^. _2) <. 0 &&.
             (((chargings ^. _3) >. 0) ||. ((chargings ^. _4) >. 0))
            )
-    -- NOTE: Required, otherwise result is massive.
-    -- guard_ ( (disablings'   ^. _1) `references_` stationInfo  &&.
-    --          (undisablings' ^. _1) `references_` stationInfo
-    --        )
 
-    -- Return tuples of station information and the disablings and undisablings.
     pure ( chargings ^. _1 -- row
          , chargings ^. _2 -- dBikesDisabled
          , chargings ^. _3 -- dEfit
