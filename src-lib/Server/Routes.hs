@@ -105,15 +105,19 @@ stationStatusVisualizationPage (Just stationId) startTime endTime = do
   -- Accessing the inner environment by using the serverEnv accessor.
   appEnv <- asks serverAppEnv
   let tz = envTimeZone appEnv
-  -- AppM actions can be lifter into ServerAppM by using a combination of liftIO and runReaderT.
+  -- AppM actions can be lifted into ServerAppM by using a combination of liftIO and runReaderT.
   currentUtc <- liftIO getCurrentTime
 
   info <- liftIO $ runAppM appEnv (withPostgres $ runSelectReturningOne $ select $ infoByIdExpr [fromIntegral stationId])
-  ctz <- liftIO getCurrentTimeZone
+
+  -- TODO: awkward having to compute time bounds here and in 'StationStatusVisualization'
+  let times = enforceTimeRangeBounds (StatusDataParams tz currentUtc (TimePair startTime endTime))
+  let earliest = earliestTime times
+  let latest = latestTime times
   chargings <- liftIO $ runAppM appEnv $
-    queryChargingEventsCountExpr -- FIXME: hardcoded
-    (StatusVariationQuery (Just 7001) [ EarliestTime (localTimeToUTC ctz (LocalTime (read "2023-10-19") (read "00:00:00.0")))
-                                      , LatestTime   (localTimeToUTC ctz (LocalTime (read "2023-10-19") (read "04:00:00.0")))
+    queryChargingEventsCountExpr
+    (StatusVariationQuery (Just 7001) [ EarliestTime (localTimeToUTC tz earliest)
+                                      , LatestTime   (localTimeToUTC tz latest)
                                       ])
   case info of
     Just info' -> do
