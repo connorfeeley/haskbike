@@ -44,8 +44,8 @@ data StationStatusVisualizationPage where
                                     , _statusVisPageTimeRange     :: TimePair (Maybe LocalTime)
                                     , _statusVisPageTimeZone      :: TimeZone
                                     , _statusVisPageCurrentUtc    :: UTCTime
-                                    , _statusVisPageDockingEvents :: DockingEventsCount
-                                    , _statusVisPageChargings     :: (Int, Int, Int)
+                                    , _statusVisPageDockingEvents :: Maybe DockingEventsCount
+                                    , _statusVisPageChargings     :: Maybe (Int, Int, Int)
                                     , _statusVisPageDataLink      :: Link
                                     , _statusVisPageStaticLink    :: Link
                                     } -> StationStatusVisualizationPage
@@ -91,19 +91,26 @@ instance ToHtml StationStatusVisualizationPage where
                    (prettyTime (earliestTime times))
                    (prettyTime (latestTime times))
       stationInfoHeader :: Text
-      stationInfoHeader = format "Capacity: {} docks | Charging station: {} | Undockings(I/E/E5): {} [{}/{}/{}] | Dockings(I/E/E5): {} [{}/{}/{}] | Bikes charged: {}"
+      stationInfoHeader = format "Capacity: {} docks {} {}"
                           (_infoCapacity inf)
-                          (boolToText (_infoIsChargingStation inf))
-                          (abs (_eventsCountUndockings (_eventsIconicCount events) + _eventsCountUndockings (_eventsEfitCount events) + _eventsCountUndockings (_eventsEfitG5Count events)))
-                            (abs (_eventsCountUndockings (_eventsIconicCount events))) (abs (_eventsCountUndockings (_eventsEfitCount events))) (abs (_eventsCountUndockings (_eventsEfitG5Count events)))
-                          (_eventsCountDockings (_eventsIconicCount events) + _eventsCountDockings (_eventsEfitCount events) + _eventsCountDockings (_eventsEfitG5Count events))
-                            (_eventsCountDockings (_eventsIconicCount events)) (_eventsCountDockings (_eventsEfitCount events)) (_eventsCountDockings (_eventsEfitG5Count events))
-                          (abs (_statusVisPageChargings params ^. _1))
-                          -- FIXME: these values make no sense
-                          -- (abs (_statusVisPageChargings params ^. _2)) (abs (_statusVisPageChargings params ^. _3))
-        where
-          events = _statusVisPageDockingEvents params
-          undockings = _eventsBoostCount events
+                          chargingsHeader
+                          undockingsHeader
+      undockingsHeader :: Text
+      undockingsHeader = case _statusVisPageDockingEvents params of
+        Nothing     ->    ""
+        Just events' ->    format "| Undockings(I/E/E5): {} [{}/{}/{}] | Dockings(I/E/E5): {} [{}/{}/{}]"
+                          (abs (_eventsCountUndockings (_eventsIconicCount events') + _eventsCountUndockings (_eventsEfitCount events') + _eventsCountUndockings (_eventsEfitG5Count events')))
+                            (abs (_eventsCountUndockings (_eventsIconicCount events'))) (abs (_eventsCountUndockings (_eventsEfitCount events'))) (abs (_eventsCountUndockings (_eventsEfitG5Count events')))
+                          (_eventsCountDockings (_eventsIconicCount events') + _eventsCountDockings (_eventsEfitCount events') + _eventsCountDockings (_eventsEfitG5Count events'))
+                            (_eventsCountDockings (_eventsIconicCount events')) (_eventsCountDockings (_eventsEfitCount events')) (_eventsCountDockings (_eventsEfitG5Count events'))
+      chargingsHeader :: Text
+      chargingsHeader = format "| Charging station: {}" (boolToText (_infoIsChargingStation inf))
+                        <> case _statusVisPageChargings params of
+                             Nothing        ->    ""
+                             Just chargings -> format "| Bikes charged: {}"
+                                               (abs (chargings ^. _1))
+                                               -- FIXME: these values make no sense
+                                               -- (abs (_statusVisPageChargings params ^. _2)) (abs (_statusVisPageChargings params ^. _3))
 
       times = enforceTimeRangeBounds (StatusDataParams (_statusVisPageTimeZone params) (_statusVisPageCurrentUtc params) (_statusVisPageTimeRange params))
       earliest = earliestTime times

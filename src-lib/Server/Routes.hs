@@ -24,6 +24,7 @@ import           Control.Monad.Except
 import           Control.Monad.Reader
 
 import           Data.List                              ( sortOn )
+import           Data.Maybe                             ( listToMaybe )
 import           Data.Time
 import           Data.Time.Extras
 
@@ -48,6 +49,8 @@ import           Server.Page.StationStatusVisualization
 import           Server.VisualizationAPI
 
 import           ServerEnv
+
+import           TextShow
 
 data API mode where
   API :: { version           :: mode :- "version" :> Get '[JSON] Version
@@ -115,6 +118,7 @@ stationStatusVisualizationPage (Just stationId) startTime endTime = do
   let times = enforceTimeRangeBounds (StatusDataParams tz currentUtc (TimePair startTime endTime))
   let earliest = earliestTime times
   let latest = latestTime times
+  logDebug $ format "earliest={}, latest={}" earliest latest
 
   -- * Query the database for the number of bikes charged at this station.
   chargings <- liftIO $ runAppM appEnv $
@@ -129,6 +133,11 @@ stationStatusVisualizationPage (Just stationId) startTime endTime = do
     (StatusVariationQuery (Just (fromIntegral stationId)) [ EarliestTime (localTimeToUTC tz earliest)
                                                           , LatestTime   (localTimeToUTC tz latest)
                                                           ])
+  logDebug $ "Dockings: " <> showt (length dockings)
+  let dockingsResult = listToMaybe dockings
+  logDebug $ "Chargings: " <> showt (length chargings)
+  let chargingsHead = listToMaybe chargings
+  let chargingsResult = (\c -> (c ^. _5 & fromIntegral,  c ^. _6 & fromIntegral,  c ^. _7 & fromIntegral)) <$> chargingsHead
   case info of
     Just info' -> do
       logInfo $ "Matched station information: " <> (info' ^. infoName)
@@ -138,8 +147,8 @@ stationStatusVisualizationPage (Just stationId) startTime endTime = do
                                                              , _statusVisPageTimeRange     = TimePair startTime endTime
                                                              , _statusVisPageTimeZone      = tz
                                                              , _statusVisPageCurrentUtc    = currentUtc
-                                                             , _statusVisPageDockingEvents = head dockings
-                                                             , _statusVisPageChargings     = (head chargings ^. _5 & fromIntegral, head chargings ^. _6 & fromIntegral, head chargings ^. _7 & fromIntegral)
+                                                             , _statusVisPageDockingEvents = dockingsResult
+                                                             , _statusVisPageChargings     = chargingsResult
                                                              , _statusVisPageDataLink      = fieldLink dataForStation stationId startTime endTime
                                                              , _statusVisPageStaticLink    = fieldLink staticApi
                                                              }

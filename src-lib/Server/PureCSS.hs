@@ -1,8 +1,7 @@
 -- |
 
 module Server.PureCSS
-     ( contentParagraph
-     , contentSubhead
+     ( contentSubhead
      , image
      , navLink
      , navLinkDivided
@@ -22,13 +21,10 @@ navLinkDivided href text =
   li_ [class_ "pure-menu-item menu-item-divided pure-menu-selected"] $
     a_ [class_ "pure-menu-link", href_ href] (toHtml text)
 
+-- | Create an 'h2_' with the "content-subhead" class.
 contentSubhead :: Monad m => Text -> HtmlT m ()
 contentSubhead text =
   h2_ [class_ "content-subhead"] (toHtml text)
-
-contentParagraph :: Monad m => Text -> HtmlT m ()
-contentParagraph text =
-  p_ [] (toHtml text)
 
 image :: Monad m => Text -> Text -> HtmlT m ()
 image src alt =
