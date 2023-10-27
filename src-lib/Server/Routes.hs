@@ -23,6 +23,7 @@ import           Control.Lens
 import           Control.Monad.Except
 import           Control.Monad.Reader
 
+import           Data.List                              ( sortOn )
 import           Data.Time
 import           Data.Time.Extras
 
@@ -155,7 +156,9 @@ stationListPage = do
   logInfo $ format "Rendering station list"
   info <- liftIO $ runAppM appEnv $ withPostgres $ runSelectReturningList $ select $ do
     all_ (bikeshareDb ^. bikeshareStationInformation)
-  let page = StationList { _stationList = info
+
+  let sortedInfo = sortOn _infoStationId info
+  let page = StationList { _stationList = sortedInfo
                          , _staticLink = fieldLink staticApi
                          , _visualizationPageLink  = fieldLink pageForStation
                          }
