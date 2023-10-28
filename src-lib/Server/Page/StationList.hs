@@ -1,10 +1,12 @@
 {-# OPTIONS_GHC -Wno-type-defaults #-}
 {-# OPTIONS_GHC -Wno-unused-local-binds #-}
+{-# LANGUAGE DerivingStrategies #-}
 
 -- | This module defines the data types used to render the station status visualization page.
 
 module Server.Page.StationList
      ( StationList (..)
+     , StationRadioInputSelection (..)
      ) where
 
 import           Data.Maybe                            ( catMaybes, fromMaybe )
@@ -26,9 +28,17 @@ import           Server.PureCSS
 import           TextShow
 
 
+-- | Which radio button to pre-select.
+data StationRadioInputSelection where
+  SelectionAll      :: StationRadioInputSelection
+  SelectionRegular  :: StationRadioInputSelection
+  SelectionCharging :: StationRadioInputSelection
+  deriving stock (Eq, Show)
+
 data StationList where
   StationList :: { _stationList :: [StationInformation]
                  , _staticLink :: Link
+                 , _stationListSelection :: StationRadioInputSelection
                  , _visualizationPageLink :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> Link
                  } -> StationList
 
@@ -40,7 +50,7 @@ instance ToHtml StationList where
       h1_ [] (toHtml "Station List")
     div_ [class_ "content"] $ do
       contentSubhead "Select station type"
-      toHtml (StationListForm {})
+      toHtml (StationListForm { _stationListFormSelection = _stationListSelection params })
       toHtml (toStationListTable params)
 
 -- | Table displaying station information.
@@ -63,11 +73,11 @@ toStationListTable params = do
             ) (_stationList params)
 
 -- | Form use to select station information filter parameters.
-data StationListForm where StationListForm :: { } -> StationListForm
+data StationListForm where StationListForm :: { _stationListFormSelection :: StationRadioInputSelection } -> StationListForm
 
 instance ToHtml StationListForm where
   toHtmlRaw = toHtml
-  toHtml _params = do
+  toHtml params = do
     -- Selection form
     form_ [class_ "pure-form pure-form-stacked"] $ fieldset_ $ do
       legend_ "Filter stations by type, name, ID, or address"
@@ -75,16 +85,30 @@ instance ToHtml StationListForm where
         -- Station type radio inputs
         div_ [class_ "pure-u-1-2"] $ do
           label_ [for_ "station-type-radio-all", class_ "pure-radio"] $
-            input_ [id_ "station-type-radio-all", type_ "radio", name_ "station-type-radio", value_ "all", mkData_ "station-type" "All", checked_] <> span_ "All"
+            inputCheckedIfSelection_ SelectionAll
+              [id_ "station-type-radio-all", type_ "radio", name_ "station-type-radio", value_ "all", mkData_ "station-type" "All"] <> span_ "All"
 
           label_ [for_ "station-type-radio-regular", class_ "pure-radio"] $
-            input_ [id_ "station-type-radio-regular", type_ "radio", name_ "station-type-radio", value_ "regular", mkData_ "station-type" "Regular"] <> span_ "Regular"
+            inputCheckedIfSelection_ SelectionRegular
+              [id_ "station-type-radio-regular", type_ "radio", name_ "station-type-radio", value_ "regular", mkData_ "station-type" "Regular"] <> span_ "Regular"
 
           label_ [for_ "station-type-radio-charging", class_ "pure-radio"] $
-            input_ [id_ "station-type-radio-charging", type_ "radio", name_ "station-type-radio", value_ "charging", mkData_ "station-type" "Charging"] <> span_ "Charging"
+            inputCheckedIfSelection_ SelectionCharging
+              [id_ "station-type-radio-charging", type_ "radio", name_ "station-type-radio", value_ "charging", mkData_ "station-type" "Charging"] <> span_ "Charging"
+
         div_ [class_ "pure-u-1-2"] $ do
           label_ [for_ "station-filter-input"] "Filter"
           input_ [id_ "station-filter-input", class_ "pure-input-1-2", type_ "search", placeholder_ "Type a station name, ID, or address"]
+    where
+      inputCheckedIfSelection_ :: Applicative m => StationRadioInputSelection -> [Attribute] -> HtmlT m ()
+      inputCheckedIfSelection_ selection =
+        inputCheckedIf_ (_stationListFormSelection params == selection)
+
+inputCheckedIf_ :: Applicative m => Bool -> [Attribute] -> HtmlT m ()
+inputCheckedIf_ cond attrs =
+  if cond
+  then input_ (checked_ : attrs)
+  else input_ attrs
 
 
 columnId_ :: Text -> Attribute

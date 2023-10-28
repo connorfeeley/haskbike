@@ -7,6 +7,7 @@ module Server.VisualizationAPI
      ( VisualizationAPI (..)
      ) where
 
+import           Data.Text
 import           Data.Time
 
 import           GHC.Generics                           ( Generic )
@@ -29,6 +30,6 @@ data VisualizationAPI mode where
     , stationList :: mode :-
         "visualization" :>
           "station-list"
-          :> Get '[HTML] (PureSideMenu StationList)
+          :> QueryParam "station-type" Text :> Get '[HTML] (PureSideMenu StationList)
     } -> VisualizationAPI mode
   deriving stock Generic

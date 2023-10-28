@@ -25,6 +25,7 @@ import           Control.Monad.Reader
 
 import           Data.List                              ( sortOn )
 import           Data.Maybe                             ( listToMaybe )
+import           Data.Text                              hiding ( length )
 import           Data.Time
 import           Data.Time.Extras
 
@@ -159,16 +160,23 @@ stationStatusVisualizationPage (Just stationId) startTime endTime = do
 stationStatusVisualizationPage Nothing _ _ =
   throwError err404 { errBody = "Station ID parameter is required." }
 
-stationListPage :: ServerAppM (PureSideMenu StationList)
-stationListPage = do
+stationListPage :: Maybe Text -> ServerAppM (PureSideMenu StationList)
+stationListPage selection = do
   appEnv <- asks serverAppEnv
   logInfo $ format "Rendering station list"
   info <- liftIO $ runAppM appEnv $ withPostgres $ runSelectReturningList $ select $ do
     all_ (bikeshareDb ^. bikeshareStationInformation)
 
+  -- Convert 'station-type' query-param to 'StationRadioInputSelection' value.
+  selectionVal <- case toLower <$> selection of
+    Just "regular"  -> logInfo "Filtering for regular stations" >> pure SelectionRegular
+    Just "charging" -> logInfo "Filtering for charging stations" >> pure SelectionCharging
+    Just "all"      -> logInfo "Filtering for all stations" >> pure SelectionAll
+    _               -> logInfo "No filter applied" >> pure SelectionAll
   let sortedInfo = sortOn _infoStationId info
   let page = StationList { _stationList = sortedInfo
                          , _staticLink = fieldLink staticApi
+                         , _stationListSelection = selectionVal
                          , _visualizationPageLink  = fieldLink pageForStation
                          }
   pure PureSideMenu { visPageParams = page
