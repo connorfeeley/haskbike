@@ -1,9 +1,9 @@
+
 const filterColumns = ['station-id-col', 'station-name-col', 'station-address-col'];
-
 const table = document.getElementById('station-list-table');
-
 const filterInput = document.getElementById('station-filter-input');
 const stationTypeRadios = document.getElementsByName('station-type-radio');
+const urlParams = new URLSearchParams(window.location.search);
 
 filterInput.addEventListener('input', filterStationsTable);
 for (let radio of stationTypeRadios) {
@@ -40,7 +40,11 @@ function filterStationsTable() {
 function getSelectedStationType() {
     for (let radio of stationTypeRadios) {
         if (radio.checked) {
-            return radio.dataset.stationType;  // we assume each radio button has a 'data-station-type' attribute
+            // Update the URL's search params
+            urlParams.set('station-type', radio.dataset.stationType);
+            window.history.replaceState({}, '', `${window.location.pathname}?${urlParams}`);
+
+            return radio.dataset.stationType;
         }
     }
 }
