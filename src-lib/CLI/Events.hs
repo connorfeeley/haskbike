@@ -23,7 +23,7 @@ import           Data.List                     ( sortOn )
 import           Data.Maybe                    ( fromMaybe )
 import           Data.Ord                      ( Down (Down) )
 import           Data.Text.Lazy                ( pack, unpack )
-import           Data.Time                     ( UTCTime (..), addDays, getCurrentTime, timeOfDayToTime, utctDay )
+import           Data.Time                     ( UTCTime (..), getCurrentTime, utctDay )
 import           Data.Time.Calendar
 import           Data.Time.LocalTime
 
@@ -46,15 +46,21 @@ import           UnliftIO
 -- | Dispatch CLI arguments for debugging.
 dispatchEvents :: EventSubcommand -> AppM ()
 dispatchEvents (EventRange options)  = do
+  -- For defaults
+  today <- liftIO $ utctDay <$> getCurrentTime
+  let yesterday = previousDay today
+
+  -- From arguments, with defaults
+  let firstDay = fromMaybe yesterday (startDay options)
+  let lastDay = fromMaybe today (endDay options)
+
   log I $ format "Getting counts of each bike time every two hours between {} and {}." firstDay lastDay
   log D $ format "Options: {}" (pShowCompact options)
 
   -- Run queries concurrently (automatic thread pool size).
-  countsAtTimes <- pooledMapConcurrently (uncurry bikeCountsAtMoment) dayTimes
+  countsAtTimes <- pooledMapConcurrently (uncurry bikeCountsAtMoment) (dayTimesRange firstDay lastDay)
   liftIO . formatBikeCounts $ countsAtTimes
-  where
-    firstDay = fromGregorian 2023 0 06
-    lastDay  = fromGregorian 2023 10 08
+
 
 dispatchEvents (EventCounts options) = do
   -- Calculate number of dockings and undockings
@@ -152,6 +158,11 @@ dayTimes :: [(Day, TimeOfDay)]
 dayTimes = [(addDays n refDay, TimeOfDay h 0 0) | n <- [0..3], h <- [0,2..22]]
   where refDay = fromGregorian 2023 10 8  -- Replace with reference day.
 
+
+-- | Create a list of (Day, TimeOfDay) given a starting and ending day.
+dayTimesRange :: Day -> Day -> [(Day, TimeOfDay)]
+dayTimesRange startDay endDay = [(addDays n startDay, TimeOfDay h 0 0) | n <- [0..(diffDays endDay startDay)], h <- [0,2..22]]
+-- ^ TODO: handle start and end times.
 
 
 totalBoost, totalIconic, totalEbikeEfit, totalEbikeEfitG5 :: Num (Columnar f Int32) => [StationStatusT f] -> Columnar f Int32
