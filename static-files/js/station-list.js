@@ -1,4 +1,3 @@
-
 const filterColumns = ['station-id-col', 'station-name-col', 'station-address-col'];
 
 const table = document.getElementById('station-list-table');
@@ -45,3 +44,6 @@ function getSelectedStationType() {
         }
     }
 }
+
+// Call the filterStationsTable function at load time
+filterStationsTable();
