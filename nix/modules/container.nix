@@ -34,18 +34,24 @@ in
 
           # Network configuration.
           networking.useDHCP = false;
-          networking.firewall.allowedTCPPorts = [ 80 ];
+          networking.firewall.allowedTCPPorts = [ 80 443 ];
 
           environment.systemPackages = [ config.packages.haskbike ];
 
-          # Enable a web server.
-          services.httpd = {
-            enable = true;
-            adminAddr = "morty@example.org";
+          # Enable NGINX as a reverse proxy, with LetsEncrypt.
+          services.nginx.enable = true;
+          services.nginx.virtualHosts."bikes.cfeeley.org" = {
+            addSSL = true;
+            enableACME = true;
+            root = "/var/www/bikes.cfeeley.org";
+          };
+          security.acme = {
+            acceptTerms = true;
+            email = "bikes@cfeeley.org";
           };
         }
       );
-      nixosConfigurations.container = withSystem "x86_64-linux" (ctx@{ config, inputs', system, ... }:
+      nixosConfigurations.container = withSystem "aarch64-linux" (ctx@{ config, inputs', system, ... }:
         inputs.nixpkgs.lib.nixosSystem {
           # Expose `packages`, `inputs` and `inputs'` as module arguments.
           # Use specialArgs permits use in `imports`.
@@ -67,7 +73,7 @@ in
             })
           ];
         });
-      nixosConfigurations.vm = withSystem "x86_64-linux" (ctx@{ config, inputs', system, ... }:
+      nixosConfigurations.vm = withSystem "aarch64-linux" (ctx@{ config, inputs', system, ... }:
         inputs.nixpkgs.lib.nixosSystem {
           # Expose `packages`, `inputs` and `inputs'` as module arguments.
           # Use specialArgs permits use in `imports`.
