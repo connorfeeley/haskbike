@@ -117,6 +117,7 @@ in
                 settings.PasswordAuthentication = false;
                 settings.PermitRootLogin = lib.mkDefault "prohibit-password";
               };
+
               # Add Haskbike to system packages
               environment.systemPackages = [ packages.haskbike ];
 
