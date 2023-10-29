@@ -49,8 +49,7 @@ instance ToHtml IndexPage where
 
 
         contentSubhead "Source Code"
-        p_ $
-          a_ [href_ "https://github.com/connorfeeley/haskbike"] "GitHub: connorfeeley/haskbike"
+        p_ $ "GitHub: " <> a_ [href_ "https://github.com/connorfeeley/haskbike"] "connorfeeley/haskbike"
 
         contentSubhead "Report an issue"
         p_ $

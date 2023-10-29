@@ -97,8 +97,8 @@ instance ToHtml StationStatusVisualizationPage where
                           undockingsHeader
       undockingsHeader :: Text
       undockingsHeader = case _statusVisPageDockingEvents params of
-        Nothing     ->    ""
-        Just events' ->    format "| Undockings(I/E/E5): {} [{}/{}/{}] | Dockings(I/E/E5): {} [{}/{}/{}]"
+        Nothing      ->    ""
+        Just events' ->    format " | Undockings(I/E/E5): {} [{}/{}/{}] | Dockings(I/E/E5): {} [{}/{}/{}]"
                           (abs (_eventsCountUndockings (_eventsIconicCount events') + _eventsCountUndockings (_eventsEfitCount events') + _eventsCountUndockings (_eventsEfitG5Count events')))
                             (abs (_eventsCountUndockings (_eventsIconicCount events'))) (abs (_eventsCountUndockings (_eventsEfitCount events'))) (abs (_eventsCountUndockings (_eventsEfitG5Count events')))
                           (_eventsCountDockings (_eventsIconicCount events') + _eventsCountDockings (_eventsEfitCount events') + _eventsCountDockings (_eventsEfitG5Count events'))
