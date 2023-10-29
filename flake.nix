@@ -42,7 +42,14 @@
                       inherit (super.haskbike) version;
                     };
                   in
-                  { postPatch = o.postPatch or "" + "cp ${versionFile} src-exe/Version.hs"; doCheck = false; }))
+                  {
+                    postPatch = o.postPatch or "" + "cp ${versionFile} src-exe/Version.hs";
+                    doCheck = false;
+                    postInstall = o.postInstall or "" + ''
+                      mkdir -p $out/share/haskbike/www/static
+                      cp -r ${./static-files} $out/share/haskbike/www/static
+                    '';
+                  }))
 
                 # Add optparse-applicative completions to the derivation output.
                 (self.generateOptparseApplicativeCompletions [ "haskbike" ])
