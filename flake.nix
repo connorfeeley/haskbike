@@ -120,6 +120,7 @@
                   pgadmin
                   litecli
                   pgformatter
+                  nixos-rebuild
                   ;
                 inherit (pkgs.nodePackages)
                   prettier
