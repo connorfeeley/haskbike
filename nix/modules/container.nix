@@ -121,6 +121,12 @@ in
               # Add Haskbike to system packages
               environment.systemPackages = [ packages.haskbike ];
 
+              services.earlyoom = {
+                enable = true;
+                freeSwapThreshold = 2;
+                freeMemThreshold = 2;
+              };
+
               # Enable NGINX as a reverse proxy, with LetsEncrypt.
               services.nginx.enable = true;
               services.nginx.virtualHosts."bikes.cfeeley.org" = {
