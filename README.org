@@ -19,7 +19,7 @@ However, many of us who use the system regularily
 
 Those of us who think the system is great, and who therefore use the system regularly, are also probably dearly familiar with with the ways in with the system is /not/ great.
 Depending on the time of day and how close you are to the core, your local station probably spends most of it's time (nearly) full or (nearly) empty[fn:2].
-E-Bikes - dramatically more common now than earlier even this year (which is great!) - seem to be disabled whenever you want to use one. Over
+E-Bikes - dramatically more common now than earlier even this year (which is great!) - seem to be disabled whenever you want to use one[fn:3].
 http://localhost:8081/visualization/station-list?station-type=charging
 
 One night - presumably sometime in September - I had a frustrating
@@ -28,3 +28,7 @@ One night - presumably sometime in September - I had a frustrating
 [fn:1] Bike Share's operating loss of a handful of millions of dollars per year for it's TKTK yearly rides gives us a rough subsidy of $TKTK/ride. When considered against the subsudies for various other transportation modes (TTC: TKTK; driving: unknown, but immense) this strikes me as superb value given the near-zero carbon impact of biking - not to mention the positive health impacts.
 
 [fn:2] I don't actually have a reliable statistic for whether or not this is true. It /feels/ true, but I realize that may just be an availability bias. By collecting this data and making it viewable - and, in the future, making the raw data easily exportable - I hope to someday be able to statistically confirm or deny that statement.
+
+[fn:3] Between October 1st and October 28th, the average[fn:4] number of available e-bikes across the entire system was 266.
+
+[fn:4] Bike counts by type

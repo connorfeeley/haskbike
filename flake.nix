@@ -120,6 +120,7 @@
                   pgadmin
                   litecli
                   pgformatter
+                  nixos-rebuild
                   ;
                 inherit (pkgs.nodePackages)
                   prettier
@@ -143,31 +144,6 @@
         };
 
         packages.haskbike-static = pkgs.haskell.lib.justStaticExecutables self'.packages.haskbike;
-
-        packages.haskbike-docker = pkgs.dockerTools.buildImage {
-          # Name of the container
-          name = "haskbike-docker";
-
-          # Install nginx
-          copyToRoot = [ self'.packages.haskbike-static pkgs.cacert ];
-
-          # Extra build commands
-          # extraCommands = ''
-          # '';
-
-          # Create the user
-          # runAsRoot = ''
-          #   #!${pkgs.stdenv.shell}
-          #   ${pkgs.dockerTools.shadowSetup}
-          #   groupadd --system nginx
-          #   useradd --system --gid nginx nginx
-          # '';
-
-          # Start the service and expose the port
-          config = {
-            Cmd = [ "haskbike" "-v" "--plain" "--enable-migrations" "poll" ];
-          };
-        };
 
         treefmt.config = {
           inherit (config.flake-root) projectRootFile;
