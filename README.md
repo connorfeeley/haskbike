@@ -1,9 +1,3 @@
----
-author: Connor Feeley
-date: 2023-09-10
-title: README
----
-
 # Toronto Bike Share Historical Data Explorer
 
 I started collecting station-level data from Toronto's Bike Share API so
