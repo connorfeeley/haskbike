@@ -17,9 +17,12 @@ module Database.BikeShare.Utils
      , uncurry5
      ) where
 
-import           Control.Monad                 ( void )
+import           Colog                         ( logWarning )
 
-import           Data.Maybe                    ( fromMaybe )
+import           Control.Monad                 ( void )
+import           Control.Monad.Cont            ( when )
+
+import           Data.Maybe                    ( fromMaybe, isNothing )
 import           Data.String                   ( fromString )
 import           Data.Word                     ( Word16 )
 
@@ -113,6 +116,12 @@ mkDbConnectInfo dbName = do
   envPgDbPortParam <- lookupEnv "HASKBIKE_PGDBPORT"
   envUsernameParam <- lookupEnv "HASKBIKE_USERNAME"
   envPasswordParam <- lookupEnv "HASKBIKE_PASSWORD"
+
+  -- Log when using defaults.
+  when (isNothing envPgDbHostParam) $ putStrLn "No HASKBIKE_PGDBHOST value found, using default"
+  when (isNothing envPgDbPortParam) $ putStrLn "No HASKBIKE_PGDBPORT value found, using default"
+  when (isNothing envUsernameParam) $ putStrLn "No HASKBIKE_USERNAME value found, using default"
+  when (isNothing envPasswordParam) $ putStrLn "No HASKBIKE_PASSWORD value found, using default"
 
   pure $ ConnectInfo (fromMaybe (connectHost     defaultConnectInfo) envPgDbHostParam)
                      (fromMaybe (connectPort     defaultConnectInfo) ((readMaybe :: String -> Maybe Word16) =<< envPgDbPortParam))
