@@ -145,6 +145,12 @@ in
                 freeMemThreshold = 2;
               };
 
+              # For Tailscale to work as a bridge to the RDS.
+              boot.kernel.sysctl = {
+                "net.ipv4.ip_forward" = 1;
+                "net.ipv6.conf.all.forwarding" = 1;
+              };
+
               # Enable NGINX as a reverse proxy, with LetsEncrypt.
               services.nginx.enable = true;
               services.nginx.user = "haskbike";
