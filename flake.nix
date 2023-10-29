@@ -16,9 +16,6 @@
 
         inputs.treefmt-nix.flakeModule
         inputs.flake-root.flakeModule
-
-        # Import this repo's modules.
-        ./nix/modules
       ];
 
       perSystem = { self', config, pkgs, ... }: {
