@@ -224,5 +224,32 @@ in
         });
       packages.aarch64-darwin.darwin-vm = self.nixosConfigurations.darwin-vm.config.system.build.vm;
     };
+
+    perSystem = { self', config, pkgs, ... }: {
+      packages.haskbike-docker = pkgs.dockerTools.buildImage {
+        # Name of the container
+        name = "haskbike-docker";
+
+        # Install nginx
+        copyToRoot = [ self'.packages.haskbike-static pkgs.cacert ];
+
+        # Extra build commands
+        # extraCommands = ''
+        # '';
+
+        # Create the user
+        # runAsRoot = ''
+        #   #!${pkgs.stdenv.shell}
+        #   ${pkgs.dockerTools.shadowSetup}
+        #   groupadd --system nginx
+        #   useradd --system --gid nginx nginx
+        # '';
+
+        # Start the service and expose the port
+        config = {
+          Cmd = [ "haskbike" "-v" "--plain" "--enable-migrations" "poll" ];
+        };
+      };
+    };
   };
 }
