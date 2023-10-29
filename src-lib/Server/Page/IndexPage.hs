@@ -42,7 +42,7 @@ instance ToHtml IndexPage where
           li_ [style_ "margin-left: 40px;"] "- the number of disabled docks at each station"
         br_ []
         div_ [] $ do
-          p_ $ "This project was borne out of my frustration for why " <> a_ [href_ "/visualization/station-status?station-id=7001&start-time=2023-09-24T00%3A00"] "Wellesley Station" <> " has had a complement of at least 9 - often more - disabled e-bikes ever since the station was converted to a charging station a few months ago."
+          p_ $ "This project was borne out of my frustration for why " <> a_ [href_ "/visualization/station-status?station-id=7001"] "Wellesley Station" <> " has had a complement of at least 9 - often more - disabled e-bikes ever since the station was converted to a charging station a few months ago."
           p_ [style_ "font-style: italic; margin-left: 40px"] "Click the link to see the last 24 hours of data for Wellesley Station."
         br_ []
         p_ [style_ "font-style: italic"] "This is a work-in-progress."
