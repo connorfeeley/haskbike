@@ -19,6 +19,7 @@ data Options where
              , optVerbose         :: ![Bool] -- ^ Verbosity flags.
              , optLogDatabase     :: !Bool   -- ^ If database queries should be logged.
              , optLogRichOutput   :: !Bool   -- ^ If log output should use rich messages.
+             , optLogBuffering    :: !Bool   -- ^ If log output should be buffered.
              , optDatabase        :: !String
              , optEnableMigration :: !Bool
              } -> Options
@@ -33,6 +34,7 @@ parseOptions = Options
   <*> many verboseFlag
   <*> logDatabase
   <*> logPlain
+  <*> logBuffering
   <*> strOption
       ( long "database"
      <> metavar "DATABASE"
@@ -62,6 +64,10 @@ parseOptions = Options
             <> short 'p'
             <> help "Plain logging output, instead of rich messages."
             <> showDefault)
+    logBuffering = flag True False
+             (long "unbuffered"
+           <> help "Disable stdout and stderr bufferring."
+           <> showDefault)
 
 -- | Top-level commands.
 data Command where

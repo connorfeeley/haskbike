@@ -17,7 +17,7 @@ import           CLI.ServeVisualize
 import           Colog                    ( LogAction, Severity (..), WithLog, cmap, fmtMessage, log, logTextStdout,
                                             pattern D, pattern E, pattern I, usingLoggerT )
 
-import           Control.Monad            ( void, when )
+import           Control.Monad            ( unless, void, when )
 import           Control.Monad.IO.Class   ( MonadIO )
 
 import qualified Data.Text                as Text
@@ -39,6 +39,7 @@ import           Options.Applicative
 import           Prelude                  hiding ( log, unwords )
 
 import           System.Exit              ( exitSuccess )
+import           System.IO
 
 import           UnliftIO                 ( MonadUnliftIO, liftIO )
 
@@ -75,6 +76,9 @@ main = do
 
   -- Create the application environment.
   let env = mainEnv (logLevel options) (logDatabase options) (optLogRichOutput options) timeZone conn clientManager
+
+  -- Disable stdout and stderr bufferring when --unbuffered is set.
+  unless (optLogBuffering options) disableOutputBuffering
 
   -- Run the application.
   runAppM env (appMain options)
@@ -123,3 +127,9 @@ logLevel options = case length (optVerbose options) of
   2 -> Debug
   3 -> Debug
   _ -> Debug
+
+
+disableOutputBuffering :: IO ()
+disableOutputBuffering = do
+  hSetBuffering stdout NoBuffering
+  hSetBuffering stderr NoBuffering
