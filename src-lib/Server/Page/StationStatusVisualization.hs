@@ -161,4 +161,4 @@ instance ToHtmlComponents StationStatusVisualizationPage where
 
 -- This helper creates an input field with the provided 'id' and 'type' attributes.
 makeInputField :: Monad m => HtmlT m () -> Text -> Text -> Text -> HtmlT m ()
-makeInputField f t id' val = label_ [for_ id', style_ "width: 95%"] $ f <> input_ [type_ t, id_ (id' <> pack "-input"), name_ id', class_ "pure-input-rounded", value_ val, style_ "width: 95%"]
+makeInputField f t id' val = label_ [for_ id', style_ "width: fit-content"] $ f <> input_ [type_ t, id_ (id' <> pack "-input"), name_ id', class_ "pure-input-rounded", value_ val, style_ "width: 95%"]
