@@ -10,14 +10,18 @@ module Server.Page.StationStatusVisualization
      ) where
 
 
-import           Control.Lens
+import           API.Types                              ( TorontoVehicleType (..) )
+
+import           Control.Monad                          ( when )
 
 import           Data.Aeson
-import           Data.Text                              hiding ( intersperse, length, map )
+import           Data.Text                              hiding ( concat, filter, intersperse, length, map )
 import           Data.Time
 import           Data.Time.Extras
 
-import           Database.BikeShare.Operations          ( DockingEventsCount (..), EventsCountResult (..) )
+import           Database.BikeShare                     ( StationStatus )
+import           Database.BikeShare.Operations          ( ChargingEvent (..), DockingEventsCount (..),
+                                                          EventsCountResult (..) )
 import           Database.BikeShare.StationInformation
 
 import           Fmt
@@ -31,7 +35,6 @@ import           Servant
 
 import           Server.Classes
 import           Server.Data.StationStatusVisualization
-import           Server.Page.Utils
 
 import           TextShow
 
@@ -45,10 +48,13 @@ data StationStatusVisualizationPage where
                                     , _statusVisPageTimeZone      :: TimeZone
                                     , _statusVisPageCurrentUtc    :: UTCTime
                                     , _statusVisPageDockingEvents :: Maybe DockingEventsCount
-                                    , _statusVisPageChargings     :: Maybe (Int, Int, Int)
+                                    , _statusVisPageChargings     :: [(StationStatus, [ChargingEvent])]
                                     , _statusVisPageDataLink      :: Link
                                     , _statusVisPageStaticLink    :: Link
                                     } -> StationStatusVisualizationPage
+
+instance ToHtmlComponents StationStatusVisualizationPage where
+  toMenuHeading _ = menuHeading "#visualization" "Available Bikes"
 
 instance ToHtml StationStatusVisualizationPage where
   toHtmlRaw = toHtml
@@ -136,15 +142,17 @@ instance ToHtml StationStatusVisualizationPage where
 
       chargingHeader :: Monad m => HtmlT m ()
       chargingHeader = div_ $ do
-        label_ [for_ "charging"] (h3_"Charging station")
+        label_ [for_ "charging"] (h3_"Charging Station")
         div_ [id_ "charging"] (toHtml (boolToText (_infoIsChargingStation inf)))
 
       chargingsHeader :: Monad m => HtmlT m ()
-      chargingsHeader = maybe mempty
-        (\chargings -> div_ $ do
-            label_ [for_ "charging-count"] (h3_"Bikes charged")
-            div_ [id_ "charging-count"] (toHtml (showt (abs (chargings ^. _1)))))
-        (_statusVisPageChargings params)
+      chargingsHeader = when (_infoIsChargingStation inf) $ div_ $ do
+        div_ [class_ "tooltip"] $ do
+          label_ [for_ "charging-count"] (h3_"Bikes Charged")
+          div_ [class_ "tooltip-bottom"] $ do -- Tooltip content
+            p_ (b_ "E-Fit: "    <> toHtml (showt (sumEfit params)))
+            p_ (b_ "E-Fit G5: " <> toHtml (showt (sumEfitG5 params)))
+        div_ [id_ "charging-count"] (toHtml (showt (sumAll params)))
 
       times = enforceTimeRangeBounds (StatusDataParams (_statusVisPageTimeZone params) (_statusVisPageCurrentUtc params) (_statusVisPageTimeRange params))
       earliest = earliestTime times
@@ -157,7 +165,7 @@ instance ToHtml StationStatusVisualizationPage where
       vegaEmbedCfg :: Maybe Value
       vegaEmbedCfg =  Just (toJSON $ object [ ("logLevel", "4")
                                             , ("$schema", "/static/js/vega/schema/vega-lite/v4.json")
-                                            , ("actions", Bool False)
+                                            -- , ("actions", Bool False)
                                             ])
 
       vegaChart :: VL.VegaLite
@@ -170,9 +178,17 @@ instance ToHtml StationStatusVisualizationPage where
       boolToText True  = "Yes"
       boolToText False = "No"
 
-instance ToHtmlComponents StationStatusVisualizationPage where
-  toMenuHeading _ = menuHeading "#visualization" "Available Bikes"
-
 -- This helper creates an input field with the provided 'id' and 'type' attributes.
 makeInputField :: Monad m => HtmlT m () -> Text -> Text -> Text -> HtmlT m ()
 makeInputField f t id' val = label_ [for_ id', style_ "width: fit-content"] $ f <> input_ [type_ t, id_ (id' <> pack "-input"), name_ id', class_ "pure-input-rounded", value_ val, style_ "width: 95%"]
+
+sumAll, sumEfit, sumEfitG5 :: StationStatusVisualizationPage -> Int
+sumAll    params = sumChargings (const True) (map snd (_statusVisPageChargings params))
+sumEfit   params = sumChargings (\c -> _chargedBikeType c == EFit)   (map snd (_statusVisPageChargings params))
+sumEfitG5 params = sumChargings (\c -> _chargedBikeType c == EFitG5) (map snd (_statusVisPageChargings params))
+
+-- | Sum number of chargings (for a given filter condition).
+sumChargings :: (ChargingEvent -> Bool) -> [[ChargingEvent]] -> Int
+sumChargings cond chargings = sumBikes (filter cond (concat chargings))
+  where
+    sumBikes = sum . map _chargedBikeNumber

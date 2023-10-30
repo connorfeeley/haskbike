@@ -33,7 +33,8 @@ import           Database.Beam
 import           Database.BikeShare
 import           Database.BikeShare.Expressions
 import           Database.BikeShare.Operations          ( StatusThreshold (..), StatusVariationQuery (..),
-                                                          queryChargingEventsCountExpr, queryDockingEventsCount )
+                                                          queryChargingEventsCount, queryChargingEventsCountExpr,
+                                                          queryDockingEventsCount )
 
 import           Fmt
 
@@ -123,7 +124,7 @@ stationStatusVisualizationPage (Just stationId) startTime endTime = do
 
   -- * Query the database for the number of bikes charged at this station.
   chargings <- liftIO $ runAppM appEnv $
-    queryChargingEventsCountExpr
+    queryChargingEventsCount
     (StatusVariationQuery (Just (fromIntegral stationId)) [ EarliestTime (localTimeToUTC tz earliest)
                                                           , LatestTime   (localTimeToUTC tz latest)
                                                           ])
@@ -137,8 +138,6 @@ stationStatusVisualizationPage (Just stationId) startTime endTime = do
   logDebug $ "Dockings: " <> showt (length dockings)
   let dockingsResult = listToMaybe dockings
   logDebug $ "Chargings: " <> showt (length chargings)
-  let chargingsHead = listToMaybe chargings
-  let chargingsResult = (\c -> (c ^. _5 & fromIntegral,  c ^. _6 & fromIntegral,  c ^. _7 & fromIntegral)) <$> chargingsHead
   case info of
     Just info' -> do
       logInfo $ "Matched station information: " <> (info' ^. infoName)
@@ -149,7 +148,7 @@ stationStatusVisualizationPage (Just stationId) startTime endTime = do
                                                              , _statusVisPageTimeZone      = tz
                                                              , _statusVisPageCurrentUtc    = currentUtc
                                                              , _statusVisPageDockingEvents = dockingsResult
-                                                             , _statusVisPageChargings     = chargingsResult
+                                                             , _statusVisPageChargings     = chargings
                                                              , _statusVisPageDataLink      = fieldLink dataForStation stationId startTime endTime
                                                              , _statusVisPageStaticLink    = fieldLink staticApi
                                                              }

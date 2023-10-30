@@ -14,6 +14,7 @@
 
 module Database.BikeShare.Operations.Dockings
      ( AvailabilityCountVariation (..)
+     , ChargingEvent (..)
      , DockingEventsCount (..)
      , EventsCountResult (..)
      , StatusThreshold (..)
@@ -28,6 +29,7 @@ module Database.BikeShare.Operations.Dockings
      , eventsIconicCount
      , eventsStation
      , eventsVariation
+     , queryChargingEventsCount
      , queryChargingEventsCountExpr
      , queryDockingEventsCount
      ) where
@@ -96,6 +98,13 @@ data DockingEventsCount where
                         , _eventsEfitCount   :: EventsCountResult
                         , _eventsEfitG5Count :: EventsCountResult
                         } -> DockingEventsCount
+  deriving (Generic, Show, Eq)
+
+-- | Wrapper for a station and its undocking and docking counts.
+data ChargingEvent where
+  ChargingEvent :: { _chargedBikeType     :: TorontoVehicleType
+                   , _chargedBikeNumber   :: Int
+                   } -> ChargingEvent
   deriving (Generic, Show, Eq)
 
 
@@ -190,7 +199,29 @@ queryDockingEventsCountExpr variation =
                      ))
 
 ---------------------------------
--- | Query the number of dockings and undockings for a station (returning tuples of each count for each bike type).
+
+-- | Query the number of charging events for a station (returning status record and charging event records).
+queryChargingEventsCount :: StatusVariationQuery -> AppM [(StationStatus, [ChargingEvent])]
+queryChargingEventsCount variation =  do
+  counts <- queryChargingEventsCountExpr variation
+  pure $ map (\( status
+               , _dBikesDisabled
+               , dEFit
+               , dEFitG5
+               , _sumDisabled
+               , _sumEfit
+               , _sumEfitG5
+               )
+              -> (status, filter notZero
+                   [ ChargingEvent { _chargedBikeType = EFit,   _chargedBikeNumber = fromIntegral dEFit   }
+                   , ChargingEvent { _chargedBikeType = EFitG5, _chargedBikeNumber = fromIntegral dEFitG5 }
+                   ]
+                 )
+             ) counts
+  where
+    notZero c = _chargedBikeNumber c /= 0
+
+-- | Query the number of charging events for a station (returning status record and tuples of (dDisabled, dEfit, dEfitG5, sumDisabled, sumEfit, sumEfitG5).
 queryChargingEventsCountExpr :: StatusVariationQuery -> AppM [(StationStatus, Int32, Int32, Int32, Int32, Int32, Int32)]
 queryChargingEventsCountExpr variation =
   withPostgres $ runSelectReturningList $ selectWith $ do
@@ -222,9 +253,12 @@ queryChargingEventsCountExpr variation =
     chargingsSum <-
       aggregate_ (\(status, dBikesDisabled, dEFit, dEFitG5) ->
                      ( group_ (_statusStationId status)
-                     , fromMaybe_ 0 $ sum_ dBikesDisabled  `filterWhere_` (dBikesDisabled  <. 0)
-                     , fromMaybe_ 0 $ sum_ dEFit   `filterWhere_` (dEFit   <. 0)
-                     , fromMaybe_ 0 $ sum_ dEFitG5 `filterWhere_` (dEFitG5 <. 0)
+                     -- Sum of all instances where an e-bike was disabled, then enabled.
+                     , fromMaybe_ 0 $ sum_ dBikesDisabled  `filterWhere_` (dBikesDisabled  <. 0 &&. (dEFit >. 0 ||. dEFitG5 >. 0))
+                     -- Sum of all instances where an E-Fit bike was disabled, then enabled.
+                     , fromMaybe_ 0 $ sum_ dEFit   `filterWhere_`         (dBikesDisabled  <. 0 &&. dEFit >. 0)
+                     -- Sum of all instances where an E-Fit G5 bike was disabled, then enabled.
+                     , fromMaybe_ 0 $ sum_ dEFitG5 `filterWhere_`         (dBikesDisabled  <. 0 &&. dEFitG5 >. 0)
                      ))
                   (reuse withDeltas)
 
@@ -238,7 +272,7 @@ queryChargingEventsCountExpr variation =
          , chargings ^. _2    -- dBikesDisabled
          , chargings ^. _3    -- dEfit
          , chargings ^. _4    -- dEfitG5
-         , chargingsSum ^. _2 -- sum of charging events over queried range
-         , chargingsSum ^. _3 -- sum of E-Fit charging events over queried range
-         , chargingsSum ^. _4 -- sum of E-Fit G5 charging events over queried range
+         , chargingsSum ^. _2 -- sum of charging events over queried range (negative; reflects change in disabled bikes)
+         , chargingsSum ^. _3 -- sum of E-Fit charging events over queried range (positive; reflects change in available e-fit)
+         , chargingsSum ^. _4 -- sum of E-Fit G5 charging events over queried range (positive; reflects change in available e-fit g5)
          )
