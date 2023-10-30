@@ -85,9 +85,9 @@ selectionProps _selName label dataUrl =
 
 
     -- Setup the `area` mark type with its encoding and interactive features
-    areaLayer = asSpec [ mark Area [ ], areaEncoding [ ]]
+    areaLayer  = asSpec [mark Area  [MInterpolate StepAfter], areaEncoding []]
     -- Setup the `point` mark type with its encoding only
-    pointLayer = asSpec [mark Point [], areaEncoding [] ]
+    pointLayer = asSpec [mark Point [MInterpolate StepAfter], areaEncoding []]
   in
     [ title label [ TOrient SBottom ]
     , dataFromUrl dataUrl [ ]
