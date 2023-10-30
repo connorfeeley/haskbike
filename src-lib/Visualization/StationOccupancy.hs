@@ -81,6 +81,7 @@ selectionProps _selName label dataUrl =
         . configuration (ViewStyle [ ViewStroke "transparent" ])
         . configuration (SelectionStyle [(Single, [On "dblclick"])])
         . configuration (BackgroundStyle "rgba(0, 0, 0, 0.5)")
+        . configuration (LegendStyle [LeOrient LOBottom])
 
 
     -- Setup the `area` mark type with its encoding and interactive features
