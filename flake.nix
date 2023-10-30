@@ -44,7 +44,7 @@
                     doCheck = false;
                     postInstall = o.postInstall or "" + ''
                       mkdir -p $out/share/haskbike/www/static
-                      cp -r ${./static-files} $out/share/haskbike/www/static
+                      cp -r ${./static-files}/* $out/share/haskbike/www/static/
                     '';
                   }))
 
