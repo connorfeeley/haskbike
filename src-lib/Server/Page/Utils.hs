@@ -4,6 +4,7 @@ module Server.Page.Utils
      ( makeFavicons
      , makeHeadElements
      , mkData_
+     , showth
      , stylesheet_
      ) where
 
@@ -11,6 +12,8 @@ import           Data.Text
 
 import           Lucid
 import           Lucid.Base ( makeAttribute )
+
+import           TextShow
 
 
 -- | Helper function to create a stylesheet link.
@@ -49,3 +52,8 @@ makeHeadElements staticPath = do
 -- | Make a "data-" attribute suffixed with the given 'Text'.
 mkData_ :: Text -> Text -> Attribute
 mkData_ suffix = makeAttribute ("data-" <> suffix)
+
+showth :: (Monad m, TextShow a)
+       => a -- ^ The (TextShow-able) value to be converted to HTML.
+       -> HtmlT m ()
+showth = toHtml . showt

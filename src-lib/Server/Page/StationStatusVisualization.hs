@@ -35,6 +35,7 @@ import           Servant
 
 import           Server.Classes
 import           Server.Data.StationStatusVisualization
+import           Server.Page.Utils
 
 import           TextShow
 
@@ -104,7 +105,7 @@ instance ToHtml StationStatusVisualizationPage where
       capacityHeader :: Monad m => HtmlT m ()
       capacityHeader = div_ $ do
         label_ [for_ "capacity"] (h3_ "Capacity")
-        div_ [id_ "capacity"] (toHtml (showt (_infoCapacity inf) <> " docks"))
+        div_ [id_ "capacity"] (showth (_infoCapacity inf) <> " docks")
 
 
       undock = abs . _eventsCountUndockings
@@ -120,10 +121,10 @@ instance ToHtml StationStatusVisualizationPage where
                      , class_ "tooltip"
                      ] (h3_ "Undockings")
               div_ [class_ "tooltip-bottom"] $ do -- Tooltip content
-                p_ (b_ "Iconic: "   <> toHtml (showt (undock (_eventsIconicCount events'))))
-                p_ (b_ "E-Fit: "    <> toHtml (showt (undock (_eventsEfitCount   events'))))
-                p_ (b_ "E-Fit G5: " <> toHtml (showt (undock (_eventsEfitG5Count events'))))
-            div_ [id_ "undockings"] (toHtml (showt (sumUndockings events')))
+                p_ (b_ "Iconic: "   <> showth (undock (_eventsIconicCount events')))
+                p_ (b_ "E-Fit: "    <> showth (undock (_eventsEfitCount   events')))
+                p_ (b_ "E-Fit G5: " <> showth (undock (_eventsEfitG5Count events')))
+            div_ [id_ "undockings"] (showth (sumUndockings events'))
         ) (_statusVisPageDockingEvents params)
 
       dockingsHeader :: Monad m => HtmlT m ()
@@ -134,10 +135,10 @@ instance ToHtml StationStatusVisualizationPage where
                      , class_ "tooltip"
                      ] (h3_ "Dockings")
               div_ [class_ "tooltip-bottom"] $ do -- Tooltip content
-                p_ (b_ "Iconic: "   <> toHtml (showt (dock (_eventsIconicCount events'))))
-                p_ (b_ "E-Fit: "    <> toHtml (showt (dock (_eventsEfitCount   events'))))
-                p_ (b_ "E-Fit G5: " <> toHtml (showt (dock (_eventsEfitG5Count events'))))
-            div_ [id_ "dockings"] (toHtml (showt (sumDockings events')))
+                p_ (b_ "Iconic: "   <> showth (dock (_eventsIconicCount events')))
+                p_ (b_ "E-Fit: "    <> showth (dock (_eventsEfitCount   events')))
+                p_ (b_ "E-Fit G5: " <> showth (dock (_eventsEfitG5Count events')))
+            div_ [id_ "dockings"] (showth (sumDockings events'))
         ) (_statusVisPageDockingEvents params)
 
       chargingHeader :: Monad m => HtmlT m ()
@@ -150,9 +151,9 @@ instance ToHtml StationStatusVisualizationPage where
         div_ [class_ "tooltip"] $ do
           label_ [for_ "charging-count"] (h3_"Bikes Charged")
           div_ [class_ "tooltip-bottom"] $ do -- Tooltip content
-            p_ (b_ "E-Fit: "    <> toHtml (showt (sumEfit params)))
-            p_ (b_ "E-Fit G5: " <> toHtml (showt (sumEfitG5 params)))
-        div_ [id_ "charging-count"] (toHtml (showt (sumAll params)))
+            p_ (b_ "E-Fit: "    <> showth (sumEfit params))
+            p_ (b_ "E-Fit G5: " <> showth (sumEfitG5 params))
+        div_ [id_ "charging-count"] (showth (sumAll params))
 
       times = enforceTimeRangeBounds (StatusDataParams (_statusVisPageTimeZone params) (_statusVisPageCurrentUtc params) (_statusVisPageTimeRange params))
       earliest = earliestTime times
