@@ -43,6 +43,7 @@ makeHeadElements staticPath = do
 
   -- Project stylesheet
   stylesheet_ (staticPath <> "/css/haskbike.css")
+  stylesheet_ (staticPath <> "/css/tooltips.css")
 
 
 -- | Make a "data-" attribute suffixed with the given 'Text'.

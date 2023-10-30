@@ -1,4 +1,3 @@
-
 /* Global CSS resets */
 * {
   margin: 0;
@@ -108,13 +107,13 @@ body {
 
 /* Fix VegaLite rendering as 0-width */
 .grid-container {
-    display: grid;
-    grid-template-columns: auto auto auto;
+  display: grid;
+  grid-template-columns: auto auto auto;
 }
 .grid-container > div {
-    padding: 20px 0;
+  padding: 20px 0;
 }
 .vega-embed {
-    width: 100%;
-    height: 100%;
+  width: 100%;
+  height: 100%;
 }

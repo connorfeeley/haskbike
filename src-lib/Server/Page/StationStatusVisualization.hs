@@ -31,6 +31,7 @@ import           Servant
 
 import           Server.Classes
 import           Server.Data.StationStatusVisualization
+import           Server.Page.Utils
 
 import           TextShow
 
@@ -108,18 +109,28 @@ instance ToHtml StationStatusVisualizationPage where
       undockingsHeader :: Monad m => HtmlT m ()
       undockingsHeader = maybe mempty
         (\events' -> div_ $ do
-            label_ [ for_ "undockings"
-                   , title_ (format "Iconic: {}, E-Fit: {}, E-Fit G5: {}" (undock (_eventsIconicCount events')) (undock (_eventsEfitCount events')) (undock (_eventsEfitG5Count events')))
-                   ] (h3_ "Undockings")
+            div_ [class_ "tooltip"] $ do
+              label_ [ for_ "undockings"
+                     , class_ "tooltip"
+                     ] (h3_ "Undockings")
+              div_ [class_ "tooltip-bottom"] $ do -- Tooltip content
+                p_ (b_ "Iconic: "   <> toHtml (showt (undock (_eventsIconicCount events'))))
+                p_ (b_ "E-Fit: "    <> toHtml (showt (undock (_eventsEfitCount   events'))))
+                p_ (b_ "E-Fit G5: " <> toHtml (showt (undock (_eventsEfitG5Count events'))))
             div_ [id_ "undockings"] (toHtml (showt (sumUndockings events')))
         ) (_statusVisPageDockingEvents params)
 
       dockingsHeader :: Monad m => HtmlT m ()
       dockingsHeader = maybe mempty
         (\events' -> div_ $ do
-            label_ [ for_ "dockings"
-                   , title_ (format "Iconic: {}, E-Fit: {}, E-Fit G5: {}" (dock (_eventsIconicCount events')) (dock (_eventsEfitCount events')) (dock (_eventsEfitG5Count events')))
-                   ] (h3_ "Dockings")
+            div_ [class_ "tooltip"] $ do
+              label_ [ for_ "dockings"
+                     , class_ "tooltip"
+                     ] (h3_ "Dockings")
+              div_ [class_ "tooltip-bottom"] $ do -- Tooltip content
+                p_ (b_ "Iconic: "   <> toHtml (showt (dock (_eventsIconicCount events'))))
+                p_ (b_ "E-Fit: "    <> toHtml (showt (dock (_eventsEfitCount   events'))))
+                p_ (b_ "E-Fit G5: " <> toHtml (showt (dock (_eventsEfitG5Count events'))))
             div_ [id_ "dockings"] (toHtml (showt (sumDockings events')))
         ) (_statusVisPageDockingEvents params)
 
@@ -144,7 +155,10 @@ instance ToHtml StationStatusVisualizationPage where
       formatTimeHtml = formatTime defaultTimeLocale htmlTimeFormat
 
       vegaEmbedCfg :: Maybe Value
-      vegaEmbedCfg =  Just (toJSON $ object [("logLevel", "4"), ("$schema", "/static/js/vega/schema/vega-lite/v4.json")])
+      vegaEmbedCfg =  Just (toJSON $ object [ ("logLevel", "4")
+                                            , ("$schema", "/static/js/vega/schema/vega-lite/v4.json")
+                                            , ("actions", Bool False)
+                                            ])
 
       vegaChart :: VL.VegaLite
       vegaChart = availBikesOverTimeVL ("/" <> toUrlPiece (_statusVisPageDataLink params))
