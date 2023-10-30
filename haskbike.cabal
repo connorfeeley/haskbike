@@ -232,6 +232,7 @@ library
                     , Formatting
                     , Database.BikeShare.Types
                     , Database.BikeShare
+                    , Database.BikeShare.ImportExport
                     , Database.BikeShare.Migrations
                     , Database.BikeShare.Utils
                     , Database.BikeShare.Operations
@@ -258,6 +259,7 @@ library
                     , hvega
                     , unordered-containers
                     , aeson-pretty
+                    , filepath
 
     -- Directories containing source files.
     hs-source-dirs:   src-lib
