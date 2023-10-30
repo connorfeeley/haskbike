@@ -33,8 +33,7 @@ import           Database.Beam
 import           Database.BikeShare
 import           Database.BikeShare.Expressions
 import           Database.BikeShare.Operations          ( StatusThreshold (..), StatusVariationQuery (..),
-                                                          queryChargingEventsCount, queryChargingEventsCountExpr,
-                                                          queryDockingEventsCount )
+                                                          queryChargingEventsCount, queryDockingEventsCount )
 
 import           Fmt
 
@@ -48,6 +47,7 @@ import           Server.Page.IndexPage
 import           Server.Page.SideMenu
 import           Server.Page.StationList
 import           Server.Page.StationStatusVisualization
+import           Server.Page.SystemStatusVisualization
 import           Server.VisualizationAPI
 
 import           ServerEnv
@@ -96,6 +96,7 @@ staticHandler =  StaticAPI $ serveDirectoryWebApp "static-files"
 
 visualizationHandler :: VisualizationAPI (AsServerT ServerAppM)
 visualizationHandler = VisualizationAPI { pageForStation = stationStatusVisualizationPage
+                                        , systemStatus = systemStatusVisualizationPage
                                         , stationList = stationListPage
                                         }
 
@@ -158,6 +159,52 @@ stationStatusVisualizationPage (Just stationId) startTime endTime = do
     _ ->  throwError err404 { errBody = "Unknown station ID." }
 stationStatusVisualizationPage Nothing _ _ =
   throwError err404 { errBody = "Station ID parameter is required." }
+
+systemStatusVisualizationPage :: Maybe LocalTime -> Maybe LocalTime -> ServerAppM (PureSideMenu SystemStatusVisualizationPage)
+systemStatusVisualizationPage startTime endTime = do
+  logInfo $ format "Rendering page for {start time: {}, end time: {}} " startTime endTime
+  -- Accessing the inner environment by using the serverEnv accessor.
+  appEnv <- asks serverAppEnv
+  let tz = envTimeZone appEnv
+  -- AppM actions can be lifted into ServerAppM by using a combination of liftIO and runReaderT.
+  currentUtc <- liftIO getCurrentTime
+
+  -- TODO: awkward having to compute time bounds here and in 'StationStatusVisualization'
+  let times = enforceTimeRangeBounds (StatusDataParams tz currentUtc (TimePair startTime endTime))
+  let earliest = earliestTime times
+  let latest = latestTime times
+  logDebug $ format "earliest={}, latest={}" earliest latest
+
+  -- * Query the database for the number of bikes charged at this station.
+  chargings <- liftIO $ runAppM appEnv $
+    queryChargingEventsCount
+    (StatusVariationQuery Nothing [ EarliestTime (localTimeToUTC tz earliest)
+                                  , LatestTime   (localTimeToUTC tz latest)
+                                  ])
+  -- * Query the database for the number of bikes docked and undocked at this station.
+  -- TODO: awkward having to compute time bounds here and in 'StationStatusVisualization'
+  dockings <- liftIO $ runAppM appEnv $
+    queryDockingEventsCount
+    (StatusVariationQuery Nothing [ EarliestTime (localTimeToUTC tz earliest)
+                                  , LatestTime   (localTimeToUTC tz latest)
+                                  ])
+
+  logDebug $ "Dockings: " <> showt (length dockings)
+  let dockingsResult = listToMaybe dockings
+  logDebug $ "Chargings: " <> showt (length chargings)
+
+  logInfo $ "Static path: " <> toUrlPiece (fieldLink staticApi)
+  let visualizationPage = SystemStatusVisualizationPage { _systemStatusVisPageTimeRange     = TimePair startTime endTime
+                                                        , _systemStatusVisPageTimeZone      = tz
+                                                        , _systemStatusVisPageCurrentUtc    = currentUtc
+                                                        , _systemStatusVisPageDockingEvents = dockingsResult
+                                                        , _systemStatusVisPageChargings     = chargings
+                                                        -- , _systemStatusVisPageDataLink      = fieldLink dataForStation stationId startTime endTime
+                                                        , _systemStatusVisPageStaticLink    = fieldLink staticApi
+                                                        }
+  pure PureSideMenu { visPageParams = visualizationPage
+                    , staticLink = fieldLink staticApi
+                    }
 
 stationListPage :: Maybe Text -> ServerAppM (PureSideMenu StationList)
 stationListPage selection = do

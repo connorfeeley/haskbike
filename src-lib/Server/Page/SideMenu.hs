@@ -34,6 +34,7 @@ instance (ToHtml a, ToHtmlComponents a) => ToHtml (PureSideMenu a) where
             navLink "/" "Home"
             -- navLink "/visualization" "Visualization"
             navLink "/visualization/station-list" "Station List"
+            navLink "/visualization/system-status" "System Status"
             -- navLink "/#about" "About"
             -- navLink "/#contact" "Contact"
       div_ [id_ "main"] $ do

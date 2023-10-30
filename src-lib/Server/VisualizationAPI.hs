@@ -18,6 +18,7 @@ import           Servant.HTML.Lucid
 import           Server.Page.SideMenu
 import           Server.Page.StationList
 import           Server.Page.StationStatusVisualization
+import           Server.Page.SystemStatusVisualization
 
 
 data VisualizationAPI mode where
@@ -27,6 +28,11 @@ data VisualizationAPI mode where
           "station-status"
           :> QueryParam "station-id" Int :> QueryParam "start-time" LocalTime :> QueryParam "end-time" LocalTime
           :> Get '[HTML] (PureSideMenu StationStatusVisualizationPage)
+    , systemStatus :: mode :-
+        "visualization" :>
+          "system-status"
+          :> QueryParam "start-time" LocalTime :> QueryParam "end-time" LocalTime
+          :> Get '[HTML] (PureSideMenu SystemStatusVisualizationPage)
     , stationList :: mode :-
         "visualization" :>
           "station-list"

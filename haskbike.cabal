@@ -209,6 +209,7 @@ library
                     , Server.DataAPI
                     , Server.VisualizationAPI
                     , Server.Page.StationStatusVisualization
+                    , Server.Page.SystemStatusVisualization
                     , Server.Page.SideMenu
                     , Server.Page.Utils
                     , Server.Page.StationList
