@@ -18,7 +18,7 @@ import           Data.Time.Extras
 
 import           Database.BikeShare                     ( StationStatus )
 import           Database.BikeShare.Operations          ( ChargingEvent (..), DockingEventsCount (..),
-                                                          EventsCountResult (..) )
+                                                          EventsCountResult (..), sumChargings )
 import           Database.BikeShare.StationInformation
 
 import           Fmt
@@ -66,7 +66,7 @@ instance ToHtml SystemStatusVisualizationPage where
       br_ []
       div_ [class_ "pure-g", style_ "text-align: center"] $ do
         mconcat $
-          let headers = [undockingsHeader, dockingsHeader]
+          let headers = [undockingsHeader, dockingsHeader, chargingsHeader]
           in map (`with` [class_ ("pure-u-md-1-" <> showt (length headers))]) headers
 
       br_ []
@@ -93,7 +93,7 @@ instance ToHtml SystemStatusVisualizationPage where
       undock = abs . _eventsCountUndockings
       dock = abs . _eventsCountDockings
       sumUndockings events' = abs (_eventsCountUndockings (_eventsIconicCount events') + _eventsCountUndockings (_eventsEfitCount events') + _eventsCountUndockings (_eventsEfitG5Count events'))
-      sumDockings   events' = abs (_eventsCountDockings   (_eventsIconicCount events') + _eventsCountDockings (_eventsEfitCount events')   + _eventsCountDockings   (_eventsEfitG5Count events'))
+      sumDockings   events' = abs (_eventsCountDockings   (_eventsIconicCount events') + _eventsCountDockings   (_eventsEfitCount events') + _eventsCountDockings   (_eventsEfitG5Count events'))
 
       undockingsHeader :: Monad m => HtmlT m ()
       undockingsHeader = maybe mempty
@@ -122,6 +122,16 @@ instance ToHtml SystemStatusVisualizationPage where
                 p_ [class_ "pure-g"] (b_ [class_ "pure-u-1-2"] "E-Fit G5: " <> span_ [class_ "pure-u-1-2"] (showth (dock (_eventsEfitG5Count events'))))
             div_ [id_ "dockings"] (showth (sumDockings events'))
         ) (_systemStatusVisPageDockingEvents params)
+
+      chargingsHeader :: Monad m => HtmlT m ()
+      chargingsHeader = div_ $ do
+        div_ [class_ "tooltip"] $ do
+          label_ [for_ "charging-count"] (h3_ "Bikes Charged")
+          div_ [class_ "tooltip-bottom"] $ do -- Tooltip content
+            p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "E-Fit: "    <> span_ [class_ "pure-u-1-2"] (showth (sumEfit   params))
+            p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "E-Fit G5: " <> span_ [class_ "pure-u-1-2"] (showth (sumEfitG5 params))
+        div_ [id_ "charging-count"] (showth (sumAll params))
+
       times = enforceTimeRangeBounds (StatusDataParams (_systemStatusVisPageTimeZone params) (_systemStatusVisPageCurrentUtc params) (_systemStatusVisPageTimeRange params))
       earliest = earliestTime times
       latest   = latestTime times
@@ -144,12 +154,6 @@ sumAll, sumEfit, sumEfitG5 :: SystemStatusVisualizationPage -> Int
 sumAll    params = sumChargings (const True)                         (map snd (_systemStatusVisPageChargings params))
 sumEfit   params = sumChargings (\c -> _chargedBikeType c == EFit)   (map snd (_systemStatusVisPageChargings params))
 sumEfitG5 params = sumChargings (\c -> _chargedBikeType c == EFitG5) (map snd (_systemStatusVisPageChargings params))
-
--- | Sum number of chargings (for a given filter condition).
-sumChargings :: (ChargingEvent -> Bool) -> [[ChargingEvent]] -> Int
-sumChargings cond chargings = sumBikes (filter cond (concat chargings))
-  where
-    sumBikes = sum . map _chargedBikeNumber
 
 data ShowVegaActions = ShowActions | HideActions
 

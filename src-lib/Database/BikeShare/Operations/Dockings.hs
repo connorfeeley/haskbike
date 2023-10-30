@@ -32,6 +32,10 @@ module Database.BikeShare.Operations.Dockings
      , queryChargingEventsCount
      , queryChargingEventsCountExpr
      , queryDockingEventsCount
+     , sumAllCharging
+     , sumChargings
+     , sumEfitCharging
+     , sumEfitG5Charging
      ) where
 
 import           API.Types              ( TorontoVehicleType (..) )
@@ -247,9 +251,10 @@ queryChargingEventsCountExpr variation =
                                                                , row ^. vehicleTypesAvailableEfitG5 - pEFitG5        -- _4
                                                                ))
                 (reuse cte)
-  pure $ do
-    chargings <- reuse withDeltas
+  chargings <- selecting $ reuse withDeltas
 
+  pure $ do
+    chargings' <- reuse chargings
     chargingsSum <-
       aggregate_ (\(status, dBikesDisabled, dEFit, dEFitG5) ->
                      ( group_ (_statusStationId status)
@@ -260,19 +265,31 @@ queryChargingEventsCountExpr variation =
                      -- Sum of all instances where an E-Fit G5 bike was disabled, then enabled.
                      , fromMaybe_ 0 $ sum_ dEFitG5 `filterWhere_`         (dBikesDisabled  <. 0 &&. dEFitG5 >. 0)
                      ))
-                  (reuse withDeltas)
+                  (reuse chargings)
 
     stationInfo <- all_ (bikeshareDb ^. bikeshareStationInformation)
-    guard_ ((chargings ^. _1 & _statusStationId) `references_` stationInfo &&.
-            (chargings ^. _2) <. 0 &&.
-            (((chargings ^. _3) >. 0) ||. ((chargings ^. _4) >. 0))
+    guard_ ((chargings'   ^. _1 & _statusStationId) `references_` stationInfo &&.
+            (chargingsSum ^. _1)                    `references_` stationInfo &&.
+            (chargings'   ^. _2) <. 0 &&.
+            (((chargings' ^. _3) >. 0) ||. ((chargings' ^. _4) >. 0))
            )
 
-    pure ( chargings ^. _1    -- row
-         , chargings ^. _2    -- dBikesDisabled
-         , chargings ^. _3    -- dEfit
-         , chargings ^. _4    -- dEfitG5
+    pure ( chargings' ^. _1    -- row
+         , chargings' ^. _2    -- dBikesDisabled
+         , chargings' ^. _3    -- dEfit
+         , chargings' ^. _4    -- dEfitG5
          , chargingsSum ^. _2 -- sum of charging events over queried range (negative; reflects change in disabled bikes)
          , chargingsSum ^. _3 -- sum of E-Fit charging events over queried range (positive; reflects change in available e-fit)
          , chargingsSum ^. _4 -- sum of E-Fit G5 charging events over queried range (positive; reflects change in available e-fit g5)
          )
+
+sumAllCharging, sumEfitCharging, sumEfitG5Charging :: [(StationStatus, [ChargingEvent])] -> Int
+sumAllCharging    events = sumChargings (const True)                         (map snd events)
+sumEfitCharging   events = sumChargings (\c -> _chargedBikeType c == EFit)   (map snd events)
+sumEfitG5Charging events = sumChargings (\c -> _chargedBikeType c == EFitG5) (map snd events)
+
+-- | Sum number of chargings (for a given filter condition).
+sumChargings :: (ChargingEvent -> Bool) -> [[ChargingEvent]] -> Int
+sumChargings cond chargings = sumBikes (filter cond (concat chargings))
+  where
+    sumBikes = sum . map _chargedBikeNumber

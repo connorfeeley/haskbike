@@ -124,6 +124,7 @@ stationStatusVisualizationPage (Just stationId) startTime endTime = do
   logDebug $ format "earliest={}, latest={}" earliest latest
 
   -- * Query the database for the number of bikes charged at this station.
+  logDebug $ "Querying chargings for station " <> showt stationId
   chargings <- liftIO $ runAppM appEnv $
     queryChargingEventsCount
     (StatusVariationQuery (Just (fromIntegral stationId)) [ EarliestTime (localTimeToUTC tz earliest)
@@ -131,6 +132,7 @@ stationStatusVisualizationPage (Just stationId) startTime endTime = do
                                                           ])
   -- * Query the database for the number of bikes docked and undocked at this station.
   -- TODO: awkward having to compute time bounds here and in 'StationStatusVisualization'
+  logDebug $ "Querying dockings for station " <> showt stationId
   dockings <- liftIO $ runAppM appEnv $
     queryDockingEventsCount
     (StatusVariationQuery (Just (fromIntegral stationId)) [ EarliestTime (localTimeToUTC tz earliest)
@@ -176,6 +178,7 @@ systemStatusVisualizationPage startTime endTime = do
   logDebug $ format "earliest={}, latest={}" earliest latest
 
   -- * Query the database for the number of bikes charged at this station.
+  logDebug $ "Querying chargings for entire system"
   chargings <- liftIO $ runAppM appEnv $
     queryChargingEventsCount
     (StatusVariationQuery Nothing [ EarliestTime (localTimeToUTC tz earliest)
@@ -183,6 +186,7 @@ systemStatusVisualizationPage startTime endTime = do
                                   ])
   -- * Query the database for the number of bikes docked and undocked at this station.
   -- TODO: awkward having to compute time bounds here and in 'StationStatusVisualization'
+  logDebug $ "Querying dockings for entire system"
   dockings <- liftIO $ runAppM appEnv $
     queryDockingEventsCount
     (StatusVariationQuery Nothing [ EarliestTime (localTimeToUTC tz earliest)

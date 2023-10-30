@@ -18,6 +18,7 @@ module TestDatabase
      , unit_insertStationInformationApi
      , unit_insertStationStatus
      , unit_insertStationStatusApi
+     , unit_queryChargings
      , unit_queryDockingUndockingCount
      , unit_queryStationByIdAndName
      , unit_queryStationStatus
@@ -38,6 +39,7 @@ import           Data.Functor                  ( void )
 import           Data.Int                      ( Int32 )
 import           Data.Time
 
+import           Database.Beam
 import           Database.Beam.Postgres
 import           Database.BikeShare
 import           Database.BikeShare.Operations
@@ -95,7 +97,6 @@ initDBWithAllTestData = do
             statusResponse <- getDecodedFileStatus $ "docs/json/2.3/station_status-"+|i|+".json"
             void $ runWithAppM dbnameTest $ insertStationStatus $ statusResponse ^. response_data . unStatusStations
         ) [(1 :: Int) .. (22 :: Int)]
-
 
 -- | HUnit test for inserting station information.
 unit_insertStationInformation :: IO ()
@@ -405,3 +406,18 @@ checkConditions stationId thresholds expectDockings expectUndockings = do
 findInList :: Int32 -> [DockingEventsCount] -> Maybe DockingEventsCount
 findInList key tuples = tuples ^? folded . filtered (\k -> k ^. eventsStation . infoStationId == key)
 
+
+-- | HUnit test to query all charging events
+unit_queryChargings :: IO ()
+unit_queryChargings = do
+  setupTestDatabase
+  initDBWithAllTestData
+
+  chargings <- runWithAppMDebug dbnameTest (queryChargingEventsCount variation)
+  assertEqual "Expected number of chargings for entire system" 0 (sumAllCharging chargings)
+  where
+    -- Query for all stations, for all data in the test dataset.
+    variation = StatusVariationQuery Nothing
+      [ EarliestTime (UTCTime (read "2023-01-01") (timeOfDayToTime midnight))
+      , LatestTime   (UTCTime (read "2024-01-01") (timeOfDayToTime midnight))
+      ]

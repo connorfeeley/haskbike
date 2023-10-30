@@ -17,7 +17,7 @@ module Database.BikeShare.Utils
      , uncurry5
      ) where
 
-import           Colog                         ( logWarning )
+
 
 import           Control.Monad                 ( void )
 import           Control.Monad.Cont            ( when )

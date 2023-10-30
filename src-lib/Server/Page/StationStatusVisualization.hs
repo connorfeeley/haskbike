@@ -18,7 +18,8 @@ import           Data.Time.Extras
 
 import           Database.BikeShare                     ( StationStatus )
 import           Database.BikeShare.Operations          ( ChargingEvent (..), DockingEventsCount (..),
-                                                          EventsCountResult (..) )
+                                                          EventsCountResult (..), sumAllCharging, sumEfitCharging,
+                                                          sumEfitG5Charging )
 import           Database.BikeShare.StationInformation
 
 import           Fmt
@@ -143,9 +144,9 @@ instance ToHtml StationStatusVisualizationPage where
         div_ [class_ "tooltip"] $ do
           label_ [for_ "charging-count"] (h3_ "Bikes Charged")
           div_ [class_ "tooltip-bottom"] $ do -- Tooltip content
-            p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "E-Fit: "    <> span_ [class_ "pure-u-1-2"] (showth (sumEfit   params))
-            p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "E-Fit G5: " <> span_ [class_ "pure-u-1-2"] (showth (sumEfitG5 params))
-        div_ [id_ "charging-count"] (showth (sumAll params))
+            p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "E-Fit: "    <> span_ [class_ "pure-u-1-2"] (showth (sumEfitCharging   (_statusVisPageChargings params)))
+            p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "E-Fit G5: " <> span_ [class_ "pure-u-1-2"] (showth (sumEfitG5Charging (_statusVisPageChargings params)))
+        div_ [id_ "charging-count"] (showth (sumAllCharging (_statusVisPageChargings params)))
 
       times = enforceTimeRangeBounds (StatusDataParams (_statusVisPageTimeZone params) (_statusVisPageCurrentUtc params) (_statusVisPageTimeRange params))
       earliest = earliestTime times
@@ -165,19 +166,9 @@ instance ToHtml StationStatusVisualizationPage where
 makeInputField :: Monad m => HtmlT m () -> Text -> Text -> Text -> HtmlT m ()
 makeInputField f t id' val = label_ [for_ id', style_ "width: fit-content"] $ f <> input_ [type_ t, id_ (id' <> pack "-input"), name_ id', class_ "pure-input-rounded", value_ val, style_ "width: 95%"]
 
-sumAll, sumEfit, sumEfitG5 :: StationStatusVisualizationPage -> Int
-sumAll    params = sumChargings (const True)                         (map snd (_statusVisPageChargings params))
-sumEfit   params = sumChargings (\c -> _chargedBikeType c == EFit)   (map snd (_statusVisPageChargings params))
-sumEfitG5 params = sumChargings (\c -> _chargedBikeType c == EFitG5) (map snd (_statusVisPageChargings params))
-
--- | Sum number of chargings (for a given filter condition).
-sumChargings :: (ChargingEvent -> Bool) -> [[ChargingEvent]] -> Int
-sumChargings cond chargings = sumBikes (filter cond (concat chargings))
-  where
-    sumBikes = sum . map _chargedBikeNumber
-
 data ShowVegaActions = ShowActions | HideActions
 
+-- | JSON configuration passed to Vega-Embed.
 vegaEmbedCfg :: ShowVegaActions -> Maybe Value
 vegaEmbedCfg showActions =
   Just (toJSON (object [ ("logLevel", "4")
