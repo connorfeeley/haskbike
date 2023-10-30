@@ -78,7 +78,7 @@ instance ToHtml StationStatusVisualizationPage where
 
           div_ [class_ "pure-u-1 pure-u-md-1-4"] (makeInputField "End Time" "datetime-local" "end-time" (pack (formatTimeHtml latest)))
 
-          div_ [class_ "pure-u-1 pure-u-md-1-4"] (makeInputField (br_ []) "submit" "submit-form" "Submit")
+          div_ [class_ "pure-u-1 pure-u-md-1-4"] (makeInputField (i_ "Or hit Enter") "submit" "submit-form" "Submit")
 
       with div_ [class_ "graph"] (toHtmlRaw (toHtmlWithUrls vegaSourceUrlsLocal vegaEmbedCfg vegaChart))
 
