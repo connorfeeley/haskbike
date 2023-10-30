@@ -1,6 +1,3 @@
-{-# OPTIONS_GHC -Wno-type-defaults #-}
-{-# OPTIONS_GHC -Wno-unused-local-binds #-}
-
 -- | This module defines the data types used to render the station status visualization page.
 
 module Server.Page.StationStatusVisualization
@@ -79,20 +76,15 @@ instance ToHtml StationStatusVisualizationPage where
       -- Selection form
       form_ [class_ "pure-form pure-form-stacked", style_ "text-align: center"] $ fieldset_ $ do
         legend_ $ h3_ "Query Parameters"
-        div_ [class_ "pure-g"] $ do
+        div_ [class_ "pure-g"] $ do -- Grid layout for form
+          div_ [class_ "pure-u-1 pure-u-md-1-4"] (stationIdInput params)
+          div_ [class_ "pure-u-1 pure-u-md-1-4"] (startTimeInput earliest)
+          div_ [class_ "pure-u-1 pure-u-md-1-4"] (endTimeInput latest)
+          div_ [class_ "pure-u-1 pure-u-md-1-4"] submitInput
 
-          div_ [class_ "pure-u-1 pure-u-md-1-4"] (makeInputField "Station ID" "number" "station-id" (showt $ _statusVisPageStationId params))
-          div_ [class_ "pure-u-1 pure-u-md-1-4"] (makeInputField "Start Time" "datetime-local" "start-time" (pack (formatTimeHtml earliest)))
-
-          div_ [class_ "pure-u-1 pure-u-md-1-4"] (makeInputField "End Time" "datetime-local" "end-time" (pack (formatTimeHtml latest)))
-
-          div_ [class_ "pure-u-1 pure-u-md-1-4"] (makeInputField (i_ "Or hit Enter") "submit" "submit-form" "Submit")
-
-      with div_ [class_ "graph"] (toHtmlRaw (toHtmlWithUrls vegaSourceUrlsLocal vegaEmbedCfg vegaChart))
+      with div_ [class_ "graph"] (toHtmlRaw (toHtmlWithUrls vegaSourceUrlsLocal (vegaEmbedCfg HideActions) vegaChart))
 
     where
-      _dataSourceSegments :: [Text] = [ "/data", "station-status", showt 7001]
-
       inf = _statusVisPageStationInfo params
 
       pageTitle :: Int -> Text -> Text
@@ -121,9 +113,9 @@ instance ToHtml StationStatusVisualizationPage where
                      , class_ "tooltip"
                      ] (h3_ "Undockings")
               div_ [class_ "tooltip-bottom"] $ do -- Tooltip content
-                p_ (b_ "Iconic: "   <> showth (undock (_eventsIconicCount events')))
-                p_ (b_ "E-Fit: "    <> showth (undock (_eventsEfitCount   events')))
-                p_ (b_ "E-Fit G5: " <> showth (undock (_eventsEfitG5Count events')))
+                p_ [class_ "pure-g"] (b_ [class_ "pure-u-1-2"] "Iconic: "   <> span_ [class_ "pure-u-1-2"] (showth (undock (_eventsIconicCount events'))))
+                p_ [class_ "pure-g"] (b_ [class_ "pure-u-1-2"] "E-Fit: "    <> span_ [class_ "pure-u-1-2"] (showth (undock (_eventsEfitCount   events'))))
+                p_ [class_ "pure-g"] (b_ [class_ "pure-u-1-2"] "E-Fit G5: " <> span_ [class_ "pure-u-1-2"] (showth (undock (_eventsEfitG5Count events'))))
             div_ [id_ "undockings"] (showth (sumUndockings events'))
         ) (_statusVisPageDockingEvents params)
 
@@ -135,24 +127,24 @@ instance ToHtml StationStatusVisualizationPage where
                      , class_ "tooltip"
                      ] (h3_ "Dockings")
               div_ [class_ "tooltip-bottom"] $ do -- Tooltip content
-                p_ (b_ "Iconic: "   <> showth (dock (_eventsIconicCount events')))
-                p_ (b_ "E-Fit: "    <> showth (dock (_eventsEfitCount   events')))
-                p_ (b_ "E-Fit G5: " <> showth (dock (_eventsEfitG5Count events')))
+                p_ [class_ "pure-g"] (b_ [class_ "pure-u-1-2"] "Iconic: "   <> span_ [class_ "pure-u-1-2"] (showth (dock (_eventsIconicCount events'))))
+                p_ [class_ "pure-g"] (b_ [class_ "pure-u-1-2"] "E-Fit: "    <> span_ [class_ "pure-u-1-2"] (showth (dock (_eventsEfitCount   events'))))
+                p_ [class_ "pure-g"] (b_ [class_ "pure-u-1-2"] "E-Fit G5: " <> span_ [class_ "pure-u-1-2"] (showth (dock (_eventsEfitG5Count events'))))
             div_ [id_ "dockings"] (showth (sumDockings events'))
         ) (_statusVisPageDockingEvents params)
 
       chargingHeader :: Monad m => HtmlT m ()
       chargingHeader = div_ $ do
-        label_ [for_ "charging"] (h3_"Charging Station")
+        label_ [for_ "charging"] (h3_ "Charging Station")
         div_ [id_ "charging"] (toHtml (boolToText (_infoIsChargingStation inf)))
 
       chargingsHeader :: Monad m => HtmlT m ()
       chargingsHeader = when (_infoIsChargingStation inf) $ div_ $ do
         div_ [class_ "tooltip"] $ do
-          label_ [for_ "charging-count"] (h3_"Bikes Charged")
+          label_ [for_ "charging-count"] (h3_ "Bikes Charged")
           div_ [class_ "tooltip-bottom"] $ do -- Tooltip content
-            p_ (b_ "E-Fit: "    <> showth (sumEfit params))
-            p_ (b_ "E-Fit G5: " <> showth (sumEfitG5 params))
+            p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "E-Fit: "    <> span_ [class_ "pure-u-1-2"] (showth (sumEfit   params))
+            p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "E-Fit G5: " <> span_ [class_ "pure-u-1-2"] (showth (sumEfitG5 params))
         div_ [id_ "charging-count"] (showth (sumAll params))
 
       times = enforceTimeRangeBounds (StatusDataParams (_statusVisPageTimeZone params) (_statusVisPageCurrentUtc params) (_statusVisPageTimeRange params))
@@ -161,19 +153,9 @@ instance ToHtml StationStatusVisualizationPage where
 
       prettyTime :: LocalTime -> String
       prettyTime = formatTime defaultTimeLocale "%A, %b %e, %T"
-      formatTimeHtml = formatTime defaultTimeLocale htmlTimeFormat
-
-      vegaEmbedCfg :: Maybe Value
-      vegaEmbedCfg =  Just (toJSON $ object [ ("logLevel", "4")
-                                            , ("$schema", "/static/js/vega/schema/vega-lite/v4.json")
-                                            -- , ("actions", Bool False)
-                                            ])
 
       vegaChart :: VL.VegaLite
       vegaChart = availBikesOverTimeVL ("/" <> toUrlPiece (_statusVisPageDataLink params))
-
-      staticPath :: Text
-      staticPath = "/" <> toUrlPiece (_statusVisPageStaticLink params)
 
       boolToText :: Bool -> Text
       boolToText True  = "Yes"
@@ -184,7 +166,7 @@ makeInputField :: Monad m => HtmlT m () -> Text -> Text -> Text -> HtmlT m ()
 makeInputField f t id' val = label_ [for_ id', style_ "width: fit-content"] $ f <> input_ [type_ t, id_ (id' <> pack "-input"), name_ id', class_ "pure-input-rounded", value_ val, style_ "width: 95%"]
 
 sumAll, sumEfit, sumEfitG5 :: StationStatusVisualizationPage -> Int
-sumAll    params = sumChargings (const True) (map snd (_statusVisPageChargings params))
+sumAll    params = sumChargings (const True)                         (map snd (_statusVisPageChargings params))
 sumEfit   params = sumChargings (\c -> _chargedBikeType c == EFit)   (map snd (_statusVisPageChargings params))
 sumEfitG5 params = sumChargings (\c -> _chargedBikeType c == EFitG5) (map snd (_statusVisPageChargings params))
 
@@ -193,3 +175,29 @@ sumChargings :: (ChargingEvent -> Bool) -> [[ChargingEvent]] -> Int
 sumChargings cond chargings = sumBikes (filter cond (concat chargings))
   where
     sumBikes = sum . map _chargedBikeNumber
+
+data ShowVegaActions = ShowActions | HideActions
+
+vegaEmbedCfg :: ShowVegaActions -> Maybe Value
+vegaEmbedCfg showActions =
+  Just (toJSON (object [ ("logLevel", "4")
+                        , ("$schema", "/static/js/vega/schema/vega-lite/v4.json")
+                        , ("actions", actionToBool showActions)
+                        ]))
+  where
+    actionToBool action = case action of ShowActions -> Bool True
+                                         HideActions -> Bool False
+
+formatTimeHtml :: LocalTime -> Text
+formatTimeHtml = pack . formatTime defaultTimeLocale htmlTimeFormat
+
+-- * Input helpers
+stationIdInput :: Monad m => StationStatusVisualizationPage -> HtmlT m ()
+stationIdInput = makeInputField "Station ID"        "number"          "station-id" . showt . _statusVisPageStationId
+
+startTimeInput, endTimeInput :: Monad m => LocalTime -> HtmlT m ()
+startTimeInput  = makeInputField "Start Time"        "datetime-local" "start-time" . formatTimeHtml
+endTimeInput    = makeInputField "End Time"          "datetime-local" "end-time"   . formatTimeHtml
+
+submitInput :: Monad m => HtmlT m ()
+submitInput    = makeInputField (i_ "Or hit Enter")  "submit"         "submit-form" "Submit"

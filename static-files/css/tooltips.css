@@ -25,6 +25,16 @@
   transition: opacity 0.8s;
 }
 
+/* Align tooltip labels to the right */
+.tooltip-bottom > p > b {
+    text-align: right;
+}
+/* Align tooltip values to the center */
+.tooltip-bottom > p > span {
+    text-align: center;
+}
+
+
 .tooltip:hover .tooltip-bottom {
   visibility: visible;
   opacity: 1;
