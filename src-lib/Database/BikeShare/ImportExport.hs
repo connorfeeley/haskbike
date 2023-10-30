@@ -1,18 +1,25 @@
 -- |
 
-module Database.BikeShare.ImportExport where
+module Database.BikeShare.ImportExport
+     ( exportDbTestData
+     , importDbTestData
+     ) where
+
+import qualified API.Types                     as AT
+
 import           AppEnv
 
 import           Control.Lens
+import           Control.Monad
 
-import           Data.Aeson           ( encode )
-import qualified Data.ByteString.Lazy as L
+import           Data.Aeson                    ( eitherDecode, encode )
+import qualified Data.ByteString.Lazy          as L
 import           Data.Time
 
 import           Database.Beam
 import           Database.BikeShare
-
-import           System.FilePath
+import           Database.BikeShare.Operations
+import           Database.BikeShare.Utils
 
 
 -- * Export functions.
@@ -20,28 +27,22 @@ import           System.FilePath
 {- |
 Export table data to a JSON file.
 
->>> exportDbTestData "test/dumps" (fromGregorian 2023 10 29) (fromGregorian 2023 10 30)
+>>> exportDbTestData "test/dumps/" (fromGregorian 2023 10 30) (fromGregorian 2023 10 30)
 -}
 exportDbTestData :: FilePath -> Day -> Day -> IO FilePath
 exportDbTestData outputDir startDay endDay = do
-  putStrLn "Exporting station information"
-  infoFile   <- exportDbTestDataInfo   outputDir ("station_information_" <> show endDay <> ".json")
-  putStrLn ("Exported station information JSON to " <> relOutputFile infoFile)
+  exportDbTestDataInfo   outputDir ("station_information_" <> show endDay <> ".json")
 
-  putStrLn "Exporting station status"
-  statusFile <- exportDbTestDataStatus outputDir ("station_status_" <> show startDay <> "_" <> show endDay <> ".json")
-                (UTCTime startDay (timeOfDayToTime midnight)) (UTCTime endDay (timeOfDayToTime midnight))
-  putStrLn ("Exported station status JSON to "      <> relOutputFile statusFile)
+  exportDbTestDataStatus outputDir ("station_status_" <> show startDay <> "_" <> show endDay <> ".json")
+    (UTCTime startDay (timeOfDayToTime midnight)) (UTCTime endDay (timeOfDayToTime (TimeOfDay 12 0 0)))
 
   pure outputDir
-  where
-    relOutputFile = makeRelative outputDir
 
 
 {- |
 Export station information to a JSON file.
 
->>> exportDbTestDataInfo "test/dumps" "station_information_2023-10-30.json"
+>>> exportDbTestDataInfo "test/dumps/" "station_information_2023-10-30.json"
 -}
 exportDbTestDataInfo :: FilePath -> FilePath -> IO FilePath
 exportDbTestDataInfo outputDir filePrefix = do
@@ -59,13 +60,13 @@ exportDbTestDataInfo outputDir filePrefix = do
 
   pure outputFile
   where
-    outputFile = makeRelative outputDir filePrefix
+    outputFile = outputDir <> filePrefix
 
 
 {- |
 Export station status to a JSON file.
 
->>> exportDbTestDataStatus "test/dumps" "station_status_2023-10-29_2023-10-30.json" (UTCTime (fromGregorian 2023 10 29) (timeOfDayToTime midnight)) (UTCTime (fromGregorian 2023 10 30) (timeOfDayToTime midnight))
+>>> exportDbTestDataStatus "test/dumps/" "station_status_2023-10-29_2023-10-30.json" (UTCTime (fromGregorian 2023 10 29) (timeOfDayToTime midnight)) (UTCTime (fromGregorian 2023 10 30) (timeOfDayToTime midnight))
 -}
 exportDbTestDataStatus :: FilePath -> FilePath -> UTCTime -> UTCTime -> IO FilePath
 exportDbTestDataStatus outputDir filePrefix startTime endTime = do
@@ -86,4 +87,51 @@ exportDbTestDataStatus outputDir filePrefix startTime endTime = do
 
   pure outputFile
   where
-    outputFile = makeRelative outputDir filePrefix
+    outputFile = outputDir <> filePrefix
+
+
+-- * Import functions.
+
+{- |
+Export table data to a JSON file.
+
+>>> importDbTestData "test/dumps/" "station_information_2023-10-30.json" "station_status_2023-10-29_2023-10-30.json"
+-}
+importDbTestData :: FilePath -> FilePath -> FilePath -> IO ()
+importDbTestData inputDir infoFile statusFile = do
+  importDbTestDataInfo inputDir infoFile
+
+  importDbTestDataStatus inputDir statusFile
+
+
+{- |
+Import station information from a JSON file.
+
+>>> importDbTestDataInfo "test/dumps/" "station_information_2023-10-30.json"
+-}
+importDbTestDataInfo :: FilePath -> FilePath -> IO ()
+importDbTestDataInfo inputDir filePrefix = do
+  infoJson <- L.readFile (inputDir <> filePrefix)
+  let info = eitherDecode infoJson :: Either String [AT.StationInformation]
+
+  case info of
+    Left err -> do
+      putStrLn ("Error decoding JSON dump: " <> err)
+      pure ()
+    Right info' -> void $ runWithAppM dbnameTest $ insertStationInformation info'
+
+{- |
+Import station status from a JSON file.
+
+>>> importDbTestDataStatus "test/dumps/" "station_status_2023-10-29_2023-10-30.json"
+-}
+importDbTestDataStatus :: FilePath -> FilePath -> IO ()
+importDbTestDataStatus inputDir filePrefix = do
+  statusJson <- L.readFile (inputDir <> filePrefix)
+  let status = eitherDecode statusJson :: Either String [AT.StationStatus]
+
+  case status of
+    Left err -> do
+      putStrLn ("Error decoding JSON dump: " <> err)
+      pure ()
+    Right status' -> void $ runWithAppM dbnameTest $ insertStationStatus status'

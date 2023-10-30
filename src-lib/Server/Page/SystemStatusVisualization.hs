@@ -9,8 +9,6 @@ module Server.Page.SystemStatusVisualization
 
 import           API.Types                              ( TorontoVehicleType (..) )
 
-import           Control.Monad                          ( when )
-
 import           Data.Aeson
 import           Data.Text                              hiding ( concat, filter, intersperse, length, map )
 import           Data.Time
@@ -19,7 +17,6 @@ import           Data.Time.Extras
 import           Database.BikeShare                     ( StationStatus )
 import           Database.BikeShare.Operations          ( ChargingEvent (..), DockingEventsCount (..),
                                                           EventsCountResult (..), sumChargings )
-import           Database.BikeShare.StationInformation
 
 import           Fmt
 

@@ -165,7 +165,7 @@ data StationInformation where
 
 instance ToJSON StationInformation where
   toJSON station =
-    object [ "station_id"               .= infoStationId                station
+    object [ "station_id"               .= show (infoStationId          station)
            , "name"                     .= infoName                     station
            , "physical_configuration"   .= infoPhysicalConfiguration    station
            , "lat"                      .= infoLat                      station

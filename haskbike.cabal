@@ -228,6 +228,7 @@ library
                     , CLI.Database
                     , CLI.Options
                     , API.Types
+                    , API.Utils
                     , Data.Time.Extras
                     , Formatting
                     , Database.BikeShare.Types
@@ -259,7 +260,6 @@ library
                     , hvega
                     , unordered-containers
                     , aeson-pretty
-                    , filepath
 
     -- Directories containing source files.
     hs-source-dirs:   src-lib
@@ -283,6 +283,7 @@ test-suite haskbike-test
     other-modules:    TestDecoding
                     , TestClient
                     , TestDatabase
+                    , TestChargings
                     , TestMisc
 
     -- LANGUAGE extensions used by modules in this package.

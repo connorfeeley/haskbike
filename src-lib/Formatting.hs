@@ -2,7 +2,9 @@
 
 module Formatting
      ( compactOutputOptionsDarkBg
+     , pPrint
      , pPrintCompact
+     , pShow
      , pShowCompact
      ) where
 

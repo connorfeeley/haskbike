@@ -70,7 +70,7 @@ printDisabledDocks :: AppM ()
 printDisabledDocks = queryDisabledDocks >>= pPrintCompact
 
 -- | Query database for station status.
-queryStationStatus :: Maybe Integer                            -- ^ Limit number of rows returned.
+queryStationStatus :: Maybe Integer                              -- ^ Limit number of rows returned.
                    -> AppM [(StationInformation, StationStatus)] -- ^ List of tuples of (station information, station status).
 queryStationStatus limit =
   withPostgres $ runSelectReturningList $ select $

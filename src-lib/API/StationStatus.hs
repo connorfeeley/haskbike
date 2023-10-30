@@ -140,7 +140,7 @@ data VehicleDock where
 
 instance ToJSON VehicleDock where
   toJSON docks_available =
-    object [ "vehicle_type_ids" .= show (vehicle_type_ids docks_available)
+    object [ "vehicle_type_ids" .= vehicle_type_ids docks_available
             , "count"           .= dock_count             docks_available
             ]
 instance FromJSON VehicleDock where

@@ -10,7 +10,9 @@
 -- | Test the database.
 
 module TestDatabase
-     ( unit_insertNewerStatusRecords
+     ( initDBWithAllTestData
+     , setupTestDatabase
+     , unit_insertNewerStatusRecords
      , unit_insertNewerStatusRecordsInsert
      , unit_insertNewerStatusRecordsInsertTwice
      , unit_insertStationApi
@@ -18,7 +20,6 @@ module TestDatabase
      , unit_insertStationInformationApi
      , unit_insertStationStatus
      , unit_insertStationStatusApi
-     , unit_queryChargings
      , unit_queryDockingUndockingCount
      , unit_queryStationByIdAndName
      , unit_queryStationStatus
@@ -49,7 +50,7 @@ import           Fmt
 
 import           Test.Tasty.HUnit
 
-import           UnliftIO                      ( liftIO, try )
+import           UnliftIO                      ( try )
 
 setupTestDatabase :: IO Connection
 setupTestDatabase = connectTestDatabase >>= dropTables >>= migrateDatabase
@@ -405,19 +406,3 @@ checkConditions stationId thresholds expectDockings expectUndockings = do
 
 findInList :: Int32 -> [DockingEventsCount] -> Maybe DockingEventsCount
 findInList key tuples = tuples ^? folded . filtered (\k -> k ^. eventsStation . infoStationId == key)
-
-
--- | HUnit test to query all charging events
-unit_queryChargings :: IO ()
-unit_queryChargings = do
-  setupTestDatabase
-  initDBWithAllTestData
-
-  chargings <- runWithAppMDebug dbnameTest (queryChargingEventsCount variation)
-  assertEqual "Expected number of chargings for entire system" 0 (sumAllCharging chargings)
-  where
-    -- Query for all stations, for all data in the test dataset.
-    variation = StatusVariationQuery Nothing
-      [ EarliestTime (UTCTime (read "2023-01-01") (timeOfDayToTime midnight))
-      , LatestTime   (UTCTime (read "2024-01-01") (timeOfDayToTime midnight))
-      ]
