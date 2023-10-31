@@ -7,19 +7,13 @@ module Server.Page.StationStatusVisualization
      ) where
 
 
-import           API.Types                              ( TorontoVehicleType (..) )
-
-import           Control.Monad                          ( when )
-
-import           Data.Aeson
-import           Data.Text                              hiding ( concat, filter, intersperse, length, map )
+import           Data.Maybe                             ( catMaybes )
+import qualified Data.Text                              as T
 import           Data.Time
 import           Data.Time.Extras
 
 import           Database.BikeShare                     ( StationStatus )
-import           Database.BikeShare.Operations          ( ChargingEvent (..), DockingEventsCount (..),
-                                                          EventsCountResult (..), sumAllCharging, sumEfitCharging,
-                                                          sumEfitG5Charging )
+import           Database.BikeShare.Operations
 import           Database.BikeShare.StationInformation
 
 import           Fmt
@@ -46,7 +40,7 @@ data StationStatusVisualizationPage where
                                     , _statusVisPageTimeRange     :: TimePair (Maybe LocalTime)
                                     , _statusVisPageTimeZone      :: TimeZone
                                     , _statusVisPageCurrentUtc    :: UTCTime
-                                    , _statusVisPageDockingEvents :: Maybe DockingEventsCount
+                                    , _statusVisPageDockingEvents :: [DockingEventsCount]
                                     , _statusVisPageChargings     :: [(StationStatus, [ChargingEvent])]
                                     , _statusVisPageDataLink      :: Link
                                     , _statusVisPageStaticLink    :: Link
@@ -68,9 +62,8 @@ instance ToHtml StationStatusVisualizationPage where
       h2_ [style_ "text-align: center"] "Station Information & Statistics"
       br_ []
       div_ [class_ "pure-g", style_ "text-align: center"] $ do
-        mconcat $
-          let headers = [capacityHeader, undockingsHeader, dockingsHeader, chargingHeader, chargingsHeader]
-          in map (`with` [class_ ("pure-u-md-1-" <> showt (length headers))]) headers
+        let headers = catMaybes [Just capacityHeader, Just undockingsHeader, Just dockingsHeader, Just chargingHeader, Just chargingsHeader, valetHeader, virtualHeader]
+        mconcat $ map (`with` [class_ ("pure-u-md-1-" <> showt (length headers))]) headers
 
       br_ []
 
@@ -83,15 +76,15 @@ instance ToHtml StationStatusVisualizationPage where
           div_ [class_ "pure-u-1 pure-u-md-1-4"] (endTimeInput latest)
           div_ [class_ "pure-u-1 pure-u-md-1-4"] submitInput
 
-      with div_ [class_ "graph"] (toHtmlRaw (toHtmlWithUrls vegaSourceUrlsLocal (vegaEmbedCfg HideActions) vegaChart))
+      with div_ [class_ "graph"] (toHtmlRaw (toHtmlWithUrls vegaSourceUrlsLocal (vegaEmbedCfg ShowActions) vegaChart))
 
     where
       inf = _statusVisPageStationInfo params
 
-      pageTitle :: Int -> Text -> Text
+      pageTitle :: Int -> T.Text -> T.Text
       pageTitle = format "Station #{}: {}"
 
-      dateHeader :: Text
+      dateHeader :: T.Text
       dateHeader = format "{} ➜ {}"
                    (prettyTime (earliestTime times))
                    (prettyTime (latestTime times))
@@ -101,52 +94,66 @@ instance ToHtml StationStatusVisualizationPage where
         div_ [id_ "capacity"] (showth (_infoCapacity inf) <> " docks")
 
 
-      undock = abs . _eventsCountUndockings
-      dock = abs . _eventsCountDockings
-      sumUndockings events' = abs (_eventsCountUndockings (_eventsIconicCount events') + _eventsCountUndockings (_eventsEfitCount events') + _eventsCountUndockings (_eventsEfitG5Count events'))
-      sumDockings   events' = abs (_eventsCountDockings   (_eventsIconicCount events') + _eventsCountDockings (_eventsEfitCount events')   + _eventsCountDockings   (_eventsEfitG5Count events'))
-
       undockingsHeader :: Monad m => HtmlT m ()
-      undockingsHeader = maybe mempty
+      undockingsHeader =
         (\events' -> div_ $ do
             div_ [class_ "tooltip"] $ do
               label_ [ for_ "undockings"
                      , class_ "tooltip"
                      ] (h3_ "Undockings")
               div_ [class_ "tooltip-bottom"] $ do -- Tooltip content
-                p_ [class_ "pure-g"] (b_ [class_ "pure-u-1-2"] "Iconic: "   <> span_ [class_ "pure-u-1-2"] (showth (undock (_eventsIconicCount events'))))
-                p_ [class_ "pure-g"] (b_ [class_ "pure-u-1-2"] "E-Fit: "    <> span_ [class_ "pure-u-1-2"] (showth (undock (_eventsEfitCount   events'))))
-                p_ [class_ "pure-g"] (b_ [class_ "pure-u-1-2"] "E-Fit G5: " <> span_ [class_ "pure-u-1-2"] (showth (undock (_eventsEfitG5Count events'))))
-            div_ [id_ "undockings"] (showth (sumUndockings events'))
+                p_ [class_ "pure-g"] (b_ [class_ "pure-u-1-2"] "Iconic: "   <> span_ [class_ "pure-u-1-2"] (showth (sumEvents Undocking (iconicEvents events'))))
+                p_ [class_ "pure-g"] (b_ [class_ "pure-u-1-2"] "E-Fit: "    <> span_ [class_ "pure-u-1-2"] (showth (sumEvents Undocking (efitEvents   events'))))
+                p_ [class_ "pure-g"] (b_ [class_ "pure-u-1-2"] "E-Fit G5: " <> span_ [class_ "pure-u-1-2"] (showth (sumEvents Undocking (efitG5Events events'))))
+            div_ [id_ "undockings"] (showth (sumEvents Undocking (allBikeEvents events')))
         ) (_statusVisPageDockingEvents params)
 
       dockingsHeader :: Monad m => HtmlT m ()
-      dockingsHeader = maybe mempty
+      dockingsHeader =
         (\events' -> div_ $ do
             div_ [class_ "tooltip"] $ do
-              label_ [ for_ "dockings"
+              label_ [ for_ "undockings"
                      , class_ "tooltip"
-                     ] (h3_ "Dockings")
+                     ] (h3_ "Undockings")
               div_ [class_ "tooltip-bottom"] $ do -- Tooltip content
-                p_ [class_ "pure-g"] (b_ [class_ "pure-u-1-2"] "Iconic: "   <> span_ [class_ "pure-u-1-2"] (showth (dock (_eventsIconicCount events'))))
-                p_ [class_ "pure-g"] (b_ [class_ "pure-u-1-2"] "E-Fit: "    <> span_ [class_ "pure-u-1-2"] (showth (dock (_eventsEfitCount   events'))))
-                p_ [class_ "pure-g"] (b_ [class_ "pure-u-1-2"] "E-Fit G5: " <> span_ [class_ "pure-u-1-2"] (showth (dock (_eventsEfitG5Count events'))))
-            div_ [id_ "dockings"] (showth (sumDockings events'))
+                p_ [class_ "pure-g"] (b_ [class_ "pure-u-1-2"] "Iconic: "   <> span_ [class_ "pure-u-1-2"] (showth (sumEvents Docking (iconicEvents events'))))
+                p_ [class_ "pure-g"] (b_ [class_ "pure-u-1-2"] "E-Fit: "    <> span_ [class_ "pure-u-1-2"] (showth (sumEvents Docking (efitEvents   events'))))
+                p_ [class_ "pure-g"] (b_ [class_ "pure-u-1-2"] "E-Fit G5: " <> span_ [class_ "pure-u-1-2"] (showth (sumEvents Docking (efitG5Events events'))))
+            div_ [id_ "undockings"] (showth (sumEvents Docking (allBikeEvents events')))
         ) (_statusVisPageDockingEvents params)
+
+      chargingsHeader :: Monad m => HtmlT m ()
+      chargingsHeader =
+        div_ (do
+          div_ [class_ "tooltip"] $ do
+            label_ [for_ "charging-count"] (h3_ "Bikes Charged")
+            div_ [class_ "tooltip-bottom"] $ do -- Tooltip content
+              p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "E-Fit: "    <> span_ [class_ "pure-u-1-2"] (showth (sumEfitCharging   (_statusVisPageChargings params)))
+              p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "E-Fit G5: " <> span_ [class_ "pure-u-1-2"] (showth (sumEfitG5Charging (_statusVisPageChargings params)))
+          div_ [id_ "charging-count"] (showth (sumAllCharging (_statusVisPageChargings params))))
 
       chargingHeader :: Monad m => HtmlT m ()
       chargingHeader = div_ $ do
         label_ [for_ "charging"] (h3_ "Charging Station")
         div_ [id_ "charging"] (toHtml (boolToText (_infoIsChargingStation inf)))
 
-      chargingsHeader :: Monad m => HtmlT m ()
-      chargingsHeader = when (_infoIsChargingStation inf) $ div_ $ do
-        div_ [class_ "tooltip"] $ do
-          label_ [for_ "charging-count"] (h3_ "Bikes Charged")
-          div_ [class_ "tooltip-bottom"] $ do -- Tooltip content
-            p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "E-Fit: "    <> span_ [class_ "pure-u-1-2"] (showth (sumEfitCharging   (_statusVisPageChargings params)))
-            p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "E-Fit G5: " <> span_ [class_ "pure-u-1-2"] (showth (sumEfitG5Charging (_statusVisPageChargings params)))
-        div_ [id_ "charging-count"] (showth (sumAllCharging (_statusVisPageChargings params)))
+      virtualHeader :: Monad m => Maybe (HtmlT m ())
+      virtualHeader = maybeHeader (_infoIsVirtualStation inf) $
+        div_ $ do
+          label_ [for_ "virtual"] (h3_ "Virtual Station")
+          div_ [id_ "virtual"] (toHtml (boolToText (_infoIsVirtualStation inf)))
+
+      valetHeader :: Monad m => Maybe (HtmlT m ())
+      valetHeader = maybeHeader (_infoIsValetStation inf) $
+        div_ $ do
+          label_ [for_ "valet"] (h3_ "Valet Station")
+          div_ [id_ "valet"] (toHtml (boolToText (_infoIsValetStation inf)))
+
+      maybeHeader :: Monad m => Bool -> HtmlT m () -> Maybe (HtmlT m ())
+      maybeHeader cond expr =
+        if cond
+        then Just expr
+        else Nothing
 
       times = enforceTimeRangeBounds (StatusDataParams (_statusVisPageTimeZone params) (_statusVisPageCurrentUtc params) (_statusVisPageTimeRange params))
       earliest = earliestTime times
@@ -158,29 +165,16 @@ instance ToHtml StationStatusVisualizationPage where
       vegaChart :: VL.VegaLite
       vegaChart = availBikesOverTimeVL ("/" <> toUrlPiece (_statusVisPageDataLink params))
 
-      boolToText :: Bool -> Text
+      boolToText :: Bool -> T.Text
       boolToText True  = "Yes"
       boolToText False = "No"
 
 -- This helper creates an input field with the provided 'id' and 'type' attributes.
-makeInputField :: Monad m => HtmlT m () -> Text -> Text -> Text -> HtmlT m ()
-makeInputField f t id' val = label_ [for_ id', style_ "width: fit-content"] $ f <> input_ [type_ t, id_ (id' <> pack "-input"), name_ id', class_ "pure-input-rounded", value_ val, style_ "width: 95%"]
+makeInputField :: Monad m => HtmlT m () -> T.Text -> T.Text -> T.Text -> HtmlT m ()
+makeInputField f t id' val = label_ [for_ id', style_ "width: fit-content"] $ f <> input_ [type_ t, id_ (id' <> T.pack "-input"), name_ id', class_ "pure-input-rounded", value_ val, style_ "width: 95%"]
 
-data ShowVegaActions = ShowActions | HideActions
-
--- | JSON configuration passed to Vega-Embed.
-vegaEmbedCfg :: ShowVegaActions -> Maybe Value
-vegaEmbedCfg showActions =
-  Just (toJSON (object [ ("logLevel", "4")
-                        , ("$schema", "/static/js/vega/schema/vega-lite/v4.json")
-                        , ("actions", actionToBool showActions)
-                        ]))
-  where
-    actionToBool action = case action of ShowActions -> Bool True
-                                         HideActions -> Bool False
-
-formatTimeHtml :: LocalTime -> Text
-formatTimeHtml = pack . formatTime defaultTimeLocale htmlTimeFormat
+formatTimeHtml :: LocalTime -> T.Text
+formatTimeHtml = T.pack . formatTime defaultTimeLocale htmlTimeFormat
 
 -- * Input helpers
 stationIdInput :: Monad m => StationStatusVisualizationPage -> HtmlT m ()

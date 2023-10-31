@@ -29,8 +29,6 @@ import           Prelude.Compat
 
 import           Servant
 
-import           UnliftIO             ( MonadUnliftIO )
-
 
 {-
 The difference between 'ServerEnv AppM' and 'ServerEnv ServerAppM' lies in the context of how they are used.

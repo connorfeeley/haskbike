@@ -1,6 +1,3 @@
-{-# LANGUAGE RecordWildCards #-}
-
-
 -- | This module contains types used to serialize station status data for use in the visualization API.
 
 module Server.Data.StationStatusChargingsVisualization

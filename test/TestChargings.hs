@@ -229,21 +229,35 @@ unit_queryDockingsManual = do
     -- | Assert that the number of docking events is as expected.
     assertDockings expectedAll expectedIconic expectedEfit expectedEfitG5 cond = do
       events <- cond
-      assertEqual "Expected total dockings"    expectedAll    (abs $ _eventsCountDockings (_eventsIconicCount (head events)) + _eventsCountDockings (_eventsEfitCount (head events)) + _eventsCountDockings (_eventsEfitG5Count (head events)))
-      assertEqual "Expected Iconic dockings"   expectedIconic (abs $ _eventsCountDockings (_eventsIconicCount (head events)))
-      assertEqual "Expected E-Fit dockings"    expectedEfit   (abs $ _eventsCountDockings (_eventsEfitCount   (head events)))
-      assertEqual "Expected E-Fit G5 dockings" expectedEfitG5 (abs $ _eventsCountDockings (_eventsEfitG5Count (head events)))
+      assertEqual "Expected total dockings"    expectedAll    (abs (sumEvents Docking (allBikeEvents events)))
+      assertEqual "Expected Iconic dockings"   expectedIconic (abs (sumEvents Docking (iconicEvents  events)))
+      assertEqual "Expected E-Fit dockings"    expectedEfit   (abs (sumEvents Docking (efitEvents    events)))
+      assertEqual "Expected E-Fit G5 dockings" expectedEfitG5 (abs (sumEvents Docking (efitG5Events  events)))
 
     -- | Assert that the number of undocking events is as expected.
     assertUndockings expectedAll expectedIconic expectedEfit expectedEfitG5 cond = do
       events <- cond
-      assertEqual "Expected total undockings"    expectedAll    (abs $ _eventsCountUndockings (_eventsIconicCount (head events)) + _eventsCountUndockings (_eventsEfitCount (head events)) + _eventsCountUndockings (_eventsEfitG5Count (head events)))
-      assertEqual "Expected Iconic undockings"   expectedIconic (abs $ _eventsCountUndockings (_eventsIconicCount (head events)))
-      assertEqual "Expected E-Fit undockings"    expectedEfit   (abs $ _eventsCountUndockings (_eventsEfitCount   (head events)))
-      assertEqual "Expected E-Fit G5 undockings" expectedEfitG5 (abs $ _eventsCountUndockings (_eventsEfitG5Count (head events)))
+      assertEqual "Expected total undockings"    expectedAll    (abs (sumEvents Undocking (allBikeEvents events)))
+      assertEqual "Expected Iconic undockings"   expectedIconic (abs (sumEvents Undocking (iconicEvents  events)))
+      assertEqual "Expected E-Fit undockings"    expectedEfit   (abs (sumEvents Undocking (efitEvents    events)))
+      assertEqual "Expected E-Fit G5 undockings" expectedEfitG5 (abs (sumEvents Undocking (efitG5Events  events)))
 
     -- Query charging events between two minutes, for all stations.
     variation startMinute endMinute = StatusVariationQuery Nothing
       [ EarliestTime (UTCTime (fromGregorian 2023 01 01) (timeOfDayToTime (TimeOfDay 0 startMinute 0)))
       , LatestTime   (UTCTime (fromGregorian 2023 01 01) (timeOfDayToTime (TimeOfDay 0 endMinute   0)))
       ]
+
+-- | HUnit test to query all charging events (using exported database dump).
+-- unit_queryDisabledBikeSeconds :: IO ()
+-- unit_queryDisabledBikeSeconds = do
+--   setupTestDatabase
+--   initDBWithExportedData
+
+--   assertChargings 135 41 94 (runWithAppM dbnameTest $ queryDisabledBikeSeconds variation)
+--   where
+--     -- Query for all stations, for all data in the test dataset.
+--     variation = StatusVariationQuery (Just 7001)
+--       [ EarliestTime (UTCTime (read "2023-01-01") (timeOfDayToTime midnight))
+--       , LatestTime   (UTCTime (read "2024-01-01") (timeOfDayToTime midnight))
+--       ]

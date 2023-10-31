@@ -1,21 +1,21 @@
 -- | This module contains functions for visualizing the occupancy of a station using Vega-Lite.
 
 module Visualization.StationOccupancy
-     ( availBikesOverTimeVL
+     ( ShowVegaActions (..)
+     , availBikesOverTimeVL
      , printVegaLiteSchema
      , selectionProps
+     , vegaEmbedCfg
      ) where
 
+import           Data.Aeson
 import           Data.Aeson.Encode.Pretty   ( encodePretty )
 import qualified Data.ByteString.Lazy.Char8 as Char8
 import qualified Data.Text                  as T
-import           Data.Time
 
 import           Graphics.Vega.VegaLite
 
 import           Prelude                    hiding ( filter, lookup, repeat )
-
-import           TextShow
 
 
 -- Implement Vega-Lite specification using hvega
@@ -104,3 +104,16 @@ selectionProps _selName label dataUrl =
 
 printVegaLiteSchema :: VegaLite -> IO ()
 printVegaLiteSchema schema = Char8.putStrLn (encodePretty (fromVL schema))
+
+data ShowVegaActions = ShowActions | HideActions
+
+-- | JSON configuration passed to Vega-Embed.
+vegaEmbedCfg :: ShowVegaActions -> Maybe Value
+vegaEmbedCfg showActions =
+  Just (toJSON (object [ ("logLevel", "4")
+                        , ("$schema", "/static/js/vega/schema/vega-lite/v4.json")
+                        , ("actions", actionToBool showActions)
+                        ]))
+  where
+    actionToBool action = case action of ShowActions -> Bool True
+                                         HideActions -> Bool False

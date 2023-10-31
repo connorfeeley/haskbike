@@ -24,16 +24,14 @@ import           Control.Monad.Except
 import           Control.Monad.Reader
 
 import           Data.List                              ( sortOn )
-import           Data.Maybe                             ( listToMaybe )
-import           Data.Text                              hiding ( length )
+import qualified Data.Text                              as T
 import           Data.Time
 import           Data.Time.Extras
 
 import           Database.Beam
 import           Database.BikeShare
 import           Database.BikeShare.Expressions
-import           Database.BikeShare.Operations          ( StatusThreshold (..), StatusVariationQuery (..),
-                                                          queryChargingEventsCount, queryDockingEventsCount )
+import           Database.BikeShare.Operations
 
 import           Fmt
 
@@ -121,36 +119,34 @@ stationStatusVisualizationPage (Just stationId) startTime endTime = do
   let times = enforceTimeRangeBounds (StatusDataParams tz currentUtc (TimePair startTime endTime))
   let earliest = earliestTime times
   let latest = latestTime times
+
+  let variation = StatusVariationQuery (Just (fromIntegral stationId)) [ EarliestTime (localTimeToUTC tz earliest)
+                                                                       , LatestTime   (localTimeToUTC tz latest)
+                                                                       ]
   logDebug $ format "earliest={}, latest={}" earliest latest
 
   -- * Query the database for the number of bikes charged at this station.
   logDebug $ "Querying chargings for station " <> showt stationId
-  chargings <- liftIO $ runAppM appEnv $
-    queryChargingEventsCount
-    (StatusVariationQuery (Just (fromIntegral stationId)) [ EarliestTime (localTimeToUTC tz earliest)
-                                                          , LatestTime   (localTimeToUTC tz latest)
-                                                          ])
-  -- * Query the database for the number of bikes docked and undocked at this station.
-  -- TODO: awkward having to compute time bounds here and in 'StationStatusVisualization'
-  logDebug $ "Querying dockings for station " <> showt stationId
-  dockings <- liftIO $ runAppM appEnv $
-    queryDockingEventsCount
-    (StatusVariationQuery (Just (fromIntegral stationId)) [ EarliestTime (localTimeToUTC tz earliest)
-                                                          , LatestTime   (localTimeToUTC tz latest)
-                                                          ])
-  logDebug $ "Dockings: " <> showt (length dockings)
-  let dockingsResult = listToMaybe dockings
-  logDebug $ "Chargings: " <> showt (length chargings)
+  chargings <- liftIO $ runAppM appEnv $ queryChargingEventsCount variation
+  logDebug $ "Chargings (all): " <> showt (sumAllCharging chargings)
+
+  -- * Query the database for the number of bikes docked and undocked across entire system.
+  logDebug $ "Querying events for station " <> showt stationId
+  events <- liftIO $ runAppM appEnv $ queryDockingEventsCount variation
+
+  logDebug $ "Dockings (all): "   <> showt (sumEvents Docking   (allBikeEvents events))
+  logDebug $ "Undockings (all): " <> showt (sumEvents Undocking (allBikeEvents events))
+
   case info of
     Just info' -> do
-      logInfo $ "Matched station information: " <> (info' ^. infoName)
+      logInfo $ "Matched station information: " <> info' ^. infoName
       logInfo $ "Static path: " <> toUrlPiece (fieldLink staticApi)
       let visualizationPage = StationStatusVisualizationPage { _statusVisPageStationInfo   = info'
                                                              , _statusVisPageStationId     = stationId
                                                              , _statusVisPageTimeRange     = TimePair startTime endTime
                                                              , _statusVisPageTimeZone      = tz
                                                              , _statusVisPageCurrentUtc    = currentUtc
-                                                             , _statusVisPageDockingEvents = dockingsResult
+                                                             , _statusVisPageDockingEvents = events
                                                              , _statusVisPageChargings     = chargings
                                                              , _statusVisPageDataLink      = fieldLink dataForStation stationId startTime endTime
                                                              , _statusVisPageStaticLink    = fieldLink staticApi
@@ -175,33 +171,28 @@ systemStatusVisualizationPage startTime endTime = do
   let times = enforceTimeRangeBounds (StatusDataParams tz currentUtc (TimePair startTime endTime))
   let earliest = earliestTime times
   let latest = latestTime times
+  let variation = StatusVariationQuery Nothing [ EarliestTime (localTimeToUTC tz earliest)
+                                               , LatestTime   (localTimeToUTC tz latest)
+                                               ]
   logDebug $ format "earliest={}, latest={}" earliest latest
 
-  -- * Query the database for the number of bikes charged at this station.
-  logDebug $ "Querying chargings for entire system"
-  chargings <- liftIO $ runAppM appEnv $
-    queryChargingEventsCount
-    (StatusVariationQuery Nothing [ EarliestTime (localTimeToUTC tz earliest)
-                                  , LatestTime   (localTimeToUTC tz latest)
-                                  ])
-  -- * Query the database for the number of bikes docked and undocked at this station.
-  -- TODO: awkward having to compute time bounds here and in 'StationStatusVisualization'
-  logDebug $ "Querying dockings for entire system"
-  dockings <- liftIO $ runAppM appEnv $
-    queryDockingEventsCount
-    (StatusVariationQuery Nothing [ EarliestTime (localTimeToUTC tz earliest)
-                                  , LatestTime   (localTimeToUTC tz latest)
-                                  ])
+  -- * Query the database for the number of bikes charged across entire system.
+  logDebug "Querying chargings for entire system"
+  chargings <- liftIO $ runAppM appEnv $ queryChargingEventsCount variation
+  logDebug $ "Chargings (all): " <> showt (sumAllCharging chargings)
 
-  logDebug $ "Dockings: " <> showt (length dockings)
-  let dockingsResult = listToMaybe dockings
-  logDebug $ "Chargings: " <> showt (length chargings)
+  -- * Query the database for the number of bikes docked and undocked across entire system.
+  logDebug "Querying events for entire system"
+  events <- liftIO $ runAppM appEnv $ queryDockingEventsCount variation
+
+  logDebug $ "Dockings (all): "   <> showt (sumEvents Docking   (allBikeEvents events))
+  logDebug $ "Undockings (all): " <> showt (sumEvents Undocking (allBikeEvents events))
 
   logInfo $ "Static path: " <> toUrlPiece (fieldLink staticApi)
   let visualizationPage = SystemStatusVisualizationPage { _systemStatusVisPageTimeRange     = TimePair startTime endTime
                                                         , _systemStatusVisPageTimeZone      = tz
                                                         , _systemStatusVisPageCurrentUtc    = currentUtc
-                                                        , _systemStatusVisPageDockingEvents = dockingsResult
+                                                        , _systemStatusVisPageDockingEvents = events
                                                         , _systemStatusVisPageChargings     = chargings
                                                         -- , _systemStatusVisPageDataLink      = fieldLink dataForStation stationId startTime endTime
                                                         , _systemStatusVisPageStaticLink    = fieldLink staticApi
@@ -210,15 +201,14 @@ systemStatusVisualizationPage startTime endTime = do
                     , staticLink = fieldLink staticApi
                     }
 
-stationListPage :: Maybe Text -> ServerAppM (PureSideMenu StationList)
+stationListPage :: Maybe T.Text -> ServerAppM (PureSideMenu StationList)
 stationListPage selection = do
   appEnv <- asks serverAppEnv
   logInfo $ format "Rendering station list"
-  info <- liftIO $ runAppM appEnv $ withPostgres $ runSelectReturningList $ select $ do
-    all_ (bikeshareDb ^. bikeshareStationInformation)
+  info <- liftIO $ runAppM appEnv $ withPostgres $ runSelectReturningList $ select $ all_ (bikeshareDb ^. bikeshareStationInformation)
 
   -- Convert 'station-type' query-param to 'StationRadioInputSelection' value.
-  selectionVal <- case toLower <$> selection of
+  selectionVal <- case T.toLower <$> selection of
     Just "regular"  -> logInfo "Filtering for regular stations" >> pure SelectionRegular
     Just "charging" -> logInfo "Filtering for charging stations" >> pure SelectionCharging
     Just "all"      -> logInfo "Filtering for all stations" >> pure SelectionAll
