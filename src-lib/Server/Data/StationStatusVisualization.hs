@@ -1,12 +1,7 @@
-{-# LANGUAGE RecordWildCards #-}
-
-
 -- | This module contains types used to serialize station status data for use in the visualization API.
 
 module Server.Data.StationStatusVisualization
      ( StationStatusVisualization (..)
-     , StatusDataParams (..)
-     , enforceTimeRangeBounds
      , fromBeamStationStatusToVisJSON
      , generateJsonDataSource
      ) where
@@ -17,7 +12,6 @@ import           Control.Lens                     hiding ( (.=) )
 import           Control.Monad.Except
 
 import           Data.Aeson
-import           Data.Maybe
 import           Data.Time
 import           Data.Time.Extras
 
@@ -25,6 +19,8 @@ import           Database.BikeShare.Operations
 import           Database.BikeShare.StationStatus
 
 import           GHC.Generics
+
+import           Server.Page.StatusVisualization
 
 import           ServerEnv
 
@@ -88,22 +84,3 @@ generateJsonDataSource stationId startTime endTime = do
   result <- liftIO $ runAppM appEnv $ queryStationStatusBetween stationId (localTimeToUTC tz (earliestTime  range)) (localTimeToUTC tz (latestTime range))
   pure $ map fromBeamStationStatusToVisJSON result
 
-data StatusDataParams a where
-  StatusDataParams :: { visTimeZone :: TimeZone
-                      , visCurrentUtc :: UTCTime
-                      , visTimeRange :: TimePair a
-                      } -> StatusDataParams a
-  deriving (Show, Generic, Eq, Ord)
-
-enforceTimeRangeBounds :: StatusDataParams (Maybe LocalTime) -> TimePair LocalTime
-enforceTimeRangeBounds params = TimePair start end
-  where
-    tz = visTimeZone params
-    currentUtc = visCurrentUtc params
-    yesterday = addUTCTime (-24 * 3600) currentUtc
-    earliest = earliestTime (visTimeRange params)
-    latest   = latestTime   (visTimeRange params)
-
-    -- Default to 24 hours ago -> now.
-    start = fromMaybe (utcToLocalTime tz yesterday)  earliest
-    end   = fromMaybe (utcToLocalTime tz currentUtc) latest

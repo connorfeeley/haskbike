@@ -45,6 +45,7 @@ import           Server.Page.IndexPage
 import           Server.Page.SideMenu
 import           Server.Page.StationList
 import           Server.Page.StationStatusVisualization
+import           Server.Page.StatusVisualization
 import           Server.Page.SystemStatusVisualization
 import           Server.VisualizationAPI
 
@@ -103,32 +104,30 @@ stationStatusData stationId startTime endTime = do
   logInfo $ format "Creating JSON payload for {station ID: {}, start time: {}, end time: {}} " stationId startTime endTime
   generateJsonDataSource stationId startTime endTime
 
-
-stationStatusVisualizationPage :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM (PureSideMenu StationStatusVisualizationPage)
-stationStatusVisualizationPage (Just stationId) startTime endTime = do
-  logInfo $ format "Rendering page for {station ID: {}, start time: {}, end time: {}} " stationId startTime endTime
+statusVisualizationPage :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM (TimePair (Maybe LocalTime), TimeZone, UTCTime, [DockingEventsCount], [(StationStatus, [ChargingEvent])])
+statusVisualizationPage stationId startTime endTime = do
   -- Accessing the inner environment by using the serverEnv accessor.
   appEnv <- asks serverAppEnv
   let tz = envTimeZone appEnv
   -- AppM actions can be lifted into ServerAppM by using a combination of liftIO and runReaderT.
   currentUtc <- liftIO getCurrentTime
 
-  info <- liftIO $ runAppM appEnv (withPostgres $ runSelectReturningOne $ select $ infoByIdExpr [fromIntegral stationId])
+  logInfo $ format "Rendering page for {station ID: {}, start time: {}, end time: {}} " stationId startTime endTime
 
   -- TODO: awkward having to compute time bounds here and in 'StationStatusVisualization'
-  let times = enforceTimeRangeBounds (StatusDataParams tz currentUtc (TimePair startTime endTime))
-  let earliest = earliestTime times
-  let latest = latestTime times
+  let times' = enforceTimeRangeBounds (StatusDataParams tz currentUtc (TimePair startTime endTime))
+  let earliest = earliestTime times'
+  let latest = latestTime times'
 
-  let variation = StatusVariationQuery (Just (fromIntegral stationId)) [ EarliestTime (localTimeToUTC tz earliest)
-                                                                       , LatestTime   (localTimeToUTC tz latest)
-                                                                       ]
+  let variation = StatusVariationQuery (fromIntegral <$> stationId) [ EarliestTime (localTimeToUTC tz earliest)
+                                                                    , LatestTime   (localTimeToUTC tz latest)
+                                                                    ]
   logDebug $ format "earliest={}, latest={}" earliest latest
 
   -- * Query the database for the number of bikes charged at this station.
   logDebug $ "Querying chargings for station " <> showt stationId
-  chargings <- liftIO $ runAppM appEnv $ queryChargingEventsCount variation
-  logDebug $ "Chargings (all): " <> showt (sumAllCharging chargings)
+  chargingEvents <- liftIO $ runAppM appEnv $ queryChargingEventsCount variation
+  logDebug $ "Chargings (all): " <> showt (sumAllCharging chargingEvents)
 
   -- * Query the database for the number of bikes docked and undocked across entire system.
   logDebug $ "Querying events for station " <> showt stationId
@@ -137,17 +136,27 @@ stationStatusVisualizationPage (Just stationId) startTime endTime = do
   logDebug $ "Dockings (all): "   <> showt (sumEvents Docking   (allBikeEvents events))
   logDebug $ "Undockings (all): " <> showt (sumEvents Undocking (allBikeEvents events))
 
+  pure (TimePair startTime endTime, tz, currentUtc, events, chargingEvents)
+
+
+stationStatusVisualizationPage :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM (PureSideMenu StationStatusVisualizationPage)
+stationStatusVisualizationPage (Just stationId) startTime endTime = do
+  appEnv <- asks serverAppEnv
+
+  info <- liftIO $ runAppM appEnv (withPostgres $ runSelectReturningOne $ select $ infoByIdExpr [fromIntegral stationId])
+
+  (timePair, tz, currentUtc, events, chargingEvents) <- statusVisualizationPage (Just stationId)  startTime endTime
   case info of
     Just info' -> do
       logInfo $ "Matched station information: " <> info' ^. infoName
       logInfo $ "Static path: " <> toUrlPiece (fieldLink staticApi)
       let visualizationPage = StationStatusVisualizationPage { _statusVisPageStationInfo   = info'
                                                              , _statusVisPageStationId     = stationId
-                                                             , _statusVisPageTimeRange     = TimePair startTime endTime
+                                                             , _statusVisPageTimeRange     = timePair
                                                              , _statusVisPageTimeZone      = tz
                                                              , _statusVisPageCurrentUtc    = currentUtc
                                                              , _statusVisPageDockingEvents = events
-                                                             , _statusVisPageChargings     = chargings
+                                                             , _statusVisPageChargings     = chargingEvents
                                                              , _statusVisPageDataLink      = fieldLink dataForStation stationId startTime endTime
                                                              , _statusVisPageStaticLink    = fieldLink staticApi
                                                              }
@@ -160,41 +169,15 @@ stationStatusVisualizationPage Nothing _ _ =
 
 systemStatusVisualizationPage :: Maybe LocalTime -> Maybe LocalTime -> ServerAppM (PureSideMenu SystemStatusVisualizationPage)
 systemStatusVisualizationPage startTime endTime = do
-  logInfo $ format "Rendering page for {start time: {}, end time: {}} " startTime endTime
-  -- Accessing the inner environment by using the serverEnv accessor.
-  appEnv <- asks serverAppEnv
-  let tz = envTimeZone appEnv
-  -- AppM actions can be lifted into ServerAppM by using a combination of liftIO and runReaderT.
-  currentUtc <- liftIO getCurrentTime
-
-  -- TODO: awkward having to compute time bounds here and in 'StationStatusVisualization'
-  let times = enforceTimeRangeBounds (StatusDataParams tz currentUtc (TimePair startTime endTime))
-  let earliest = earliestTime times
-  let latest = latestTime times
-  let variation = StatusVariationQuery Nothing [ EarliestTime (localTimeToUTC tz earliest)
-                                               , LatestTime   (localTimeToUTC tz latest)
-                                               ]
-  logDebug $ format "earliest={}, latest={}" earliest latest
-
-  -- * Query the database for the number of bikes charged across entire system.
-  logDebug "Querying chargings for entire system"
-  chargings <- liftIO $ runAppM appEnv $ queryChargingEventsCount variation
-  logDebug $ "Chargings (all): " <> showt (sumAllCharging chargings)
-
-  -- * Query the database for the number of bikes docked and undocked across entire system.
-  logDebug "Querying events for entire system"
-  events <- liftIO $ runAppM appEnv $ queryDockingEventsCount variation
-
-  logDebug $ "Dockings (all): "   <> showt (sumEvents Docking   (allBikeEvents events))
-  logDebug $ "Undockings (all): " <> showt (sumEvents Undocking (allBikeEvents events))
+  (timePair, tz, currentUtc, events, chargingEvents) <- statusVisualizationPage Nothing startTime endTime
 
   logInfo $ "Static path: " <> toUrlPiece (fieldLink staticApi)
-  let visualizationPage = SystemStatusVisualizationPage { _systemStatusVisPageTimeRange     = TimePair startTime endTime
+
+  let visualizationPage = SystemStatusVisualizationPage { _systemStatusVisPageTimeRange     = timePair
                                                         , _systemStatusVisPageTimeZone      = tz
                                                         , _systemStatusVisPageCurrentUtc    = currentUtc
                                                         , _systemStatusVisPageDockingEvents = events
-                                                        , _systemStatusVisPageChargings     = chargings
-                                                        -- , _systemStatusVisPageDataLink      = fieldLink dataForStation stationId startTime endTime
+                                                        , _systemStatusVisPageChargings     = chargingEvents
                                                         , _systemStatusVisPageStaticLink    = fieldLink staticApi
                                                         }
   pure PureSideMenu { visPageParams = visualizationPage
