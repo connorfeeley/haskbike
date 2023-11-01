@@ -99,12 +99,15 @@ visualizationHandler = VisualizationAPI { pageForStation = stationStatusVisualiz
                                         , stationList = stationListPage
                                         }
 
-stationStatusData :: Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM [StationStatusVisualization]
+stationStatusData :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM [StationStatusVisualization]
 stationStatusData stationId startTime endTime = do
   logInfo $ format "Creating JSON payload for {station ID: {}, start time: {}, end time: {}} " stationId startTime endTime
   generateJsonDataSource stationId startTime endTime
 
-statusVisualizationPage :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM (TimePair (Maybe LocalTime), TimeZone, UTCTime, [DockingEventsCount], [(StationStatus, [ChargingEvent])])
+
+-- | Create common values between system and station status visualization page record.
+statusVisualizationPage :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime
+                        -> ServerAppM (TimePair (Maybe LocalTime), TimeZone, UTCTime, [DockingEventsCount], [(StationStatus, [ChargingEvent])])
 statusVisualizationPage stationId startTime endTime = do
   -- Accessing the inner environment by using the serverEnv accessor.
   appEnv <- asks serverAppEnv
@@ -139,6 +142,7 @@ statusVisualizationPage stationId startTime endTime = do
   pure (TimePair startTime endTime, tz, currentUtc, events, chargingEvents)
 
 
+-- | Create the station status visualization page record.
 stationStatusVisualizationPage :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM (PureSideMenu StationStatusVisualizationPage)
 stationStatusVisualizationPage (Just stationId) startTime endTime = do
   appEnv <- asks serverAppEnv
@@ -157,7 +161,7 @@ stationStatusVisualizationPage (Just stationId) startTime endTime = do
                                                              , _statusVisPageCurrentUtc    = currentUtc
                                                              , _statusVisPageDockingEvents = events
                                                              , _statusVisPageChargings     = chargingEvents
-                                                             , _statusVisPageDataLink      = fieldLink dataForStation stationId startTime endTime
+                                                             , _statusVisPageDataLink      = fieldLink dataForStation (Just stationId) startTime endTime
                                                              , _statusVisPageStaticLink    = fieldLink staticApi
                                                              }
       pure PureSideMenu { visPageParams = visualizationPage
@@ -167,6 +171,8 @@ stationStatusVisualizationPage (Just stationId) startTime endTime = do
 stationStatusVisualizationPage Nothing _ _ =
   throwError err404 { errBody = "Station ID parameter is required." }
 
+
+-- | Create the system status visualization page record.
 systemStatusVisualizationPage :: Maybe LocalTime -> Maybe LocalTime -> ServerAppM (PureSideMenu SystemStatusVisualizationPage)
 systemStatusVisualizationPage startTime endTime = do
   (timePair, tz, currentUtc, events, chargingEvents) <- statusVisualizationPage Nothing startTime endTime
@@ -178,6 +184,7 @@ systemStatusVisualizationPage startTime endTime = do
                                                         , _systemStatusVisPageCurrentUtc    = currentUtc
                                                         , _systemStatusVisPageDockingEvents = events
                                                         , _systemStatusVisPageChargings     = chargingEvents
+                                                        , _systemStatusVisPageDataLink      = fieldLink dataForStation Nothing startTime endTime
                                                         , _systemStatusVisPageStaticLink    = fieldLink staticApi
                                                         }
   pure PureSideMenu { visPageParams = visualizationPage

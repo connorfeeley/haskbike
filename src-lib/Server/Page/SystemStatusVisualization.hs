@@ -29,12 +29,15 @@ import           Server.Page.StatusVisualization
 
 import           TextShow
 
+import           Visualization.StationOccupancy
+
 data SystemStatusVisualizationPage where
   SystemStatusVisualizationPage :: { _systemStatusVisPageTimeRange     :: TimePair (Maybe LocalTime)
                                    , _systemStatusVisPageTimeZone      :: TimeZone
                                    , _systemStatusVisPageCurrentUtc    :: UTCTime
                                    , _systemStatusVisPageDockingEvents :: [DockingEventsCount]
                                    , _systemStatusVisPageChargings     :: [(StationStatus, [ChargingEvent])]
+                                   , _systemStatusVisPageDataLink      :: Link
                                    , _systemStatusVisPageStaticLink    :: Link
                                    } -> SystemStatusVisualizationPage
 
@@ -70,7 +73,7 @@ instance ToHtml SystemStatusVisualizationPage where
           div_ [class_ "pure-u-1 pure-u-md-1-4"] (endTimeInput latest)
           div_ [class_ "pure-u-1 pure-u-md-1-4"] submitInput
 
-      -- with div_ [class_ "graph"] (toHtmlRaw (toHtmlWithUrls vegaSourceUrlsLocal (vegaEmbedCfg HideActions) vegaChart))
+      with div_ [class_ "graph"] (toHtmlRaw (toHtmlWithUrls vegaSourceUrlsLocal (vegaEmbedCfg ShowActions) (vegaChart (_systemStatusVisPageDataLink params))))
 
     where
       dateHeader :: T.Text

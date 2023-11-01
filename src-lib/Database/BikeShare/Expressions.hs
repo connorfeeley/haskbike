@@ -6,11 +6,12 @@ module Database.BikeShare.Expressions
      ( disabledDocksExpr
      , infoByIdExpr
      , insertStationInformationExpr
-     , queryAllStationsStatusBeforeTimeExpr
+     , queryLatestStatusBeforeTimeExpr
      , queryStationIdExpr
      , queryStationIdLikeExpr
      , queryStationStatusExpr
      , statusBetweenExpr
+     , systemStatusBetweenExpr
      ) where
 
 import qualified API.Types                                as AT
@@ -27,6 +28,17 @@ import           Database.Beam.Backend.SQL.BeamExtensions ( BeamHasInsertOnConfl
 import           Database.Beam.Postgres
 import           Database.BikeShare
 
+
+-- | Expression to query the all statuses for the system between two times.
+systemStatusBetweenExpr :: UTCTime -> UTCTime -> Q Postgres BikeshareDb s (StationStatusT (QGenExpr QValueContext Postgres s))
+systemStatusBetweenExpr start_time end_time =
+  do
+    info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
+    status <- all_ (bikeshareDb ^. bikeshareStationStatus)
+    guard_ (_statusStationId status `references_` info &&.
+            (status ^. statusLastReported) >=. val_ start_time &&.
+            (status ^. statusLastReported) <=. val_ end_time)
+    pure status
 
 -- | Expression to query the statuses for a station between two times.
 statusBetweenExpr :: Int32 -> UTCTime -> UTCTime -> Q Postgres BikeshareDb s (StationStatusT (QGenExpr QValueContext Postgres s))
@@ -86,17 +98,20 @@ queryStationIdLikeExpr station_name = do
   pure info
 
 
--- | Expression to query the latest statuses for all stations before a given time.
-queryAllStationsStatusBeforeTimeExpr :: UTCTime -> With Postgres BikeshareDb (Q Postgres BikeshareDb s (StationStatusT (QExpr Postgres s)))
-queryAllStationsStatusBeforeTimeExpr latestTime = do
-  stationsWithMaxTime <- selecting $
-    aggregate_ (\s -> (group_ (_statusStationId s), max_ (_statusLastReported s))) $
-               filter_ (\status -> _statusLastReported status <=. val_ latestTime)
-               (all_ (bikeshareDb ^. bikeshareStationStatus))
-  pure $ do
-    (stationId, maxTime) <- reuse stationsWithMaxTime
-    stationStatus <- all_ (bikeshareDb ^. bikeshareStationStatus)
-    guard_ ((_statusStationId stationStatus ==. stationId) &&.
-             isJust_ maxTime &&.
-             (just_ (_statusLastReported stationStatus) ==.  maxTime))
-    pure stationStatus
+-- | Expression to query the latest statuse not later than a given time for each station.
+queryLatestStatusBeforeTimeExpr :: UTCTime -> Q Postgres BikeshareDb s (StationStatusT (QExpr Postgres s))
+queryLatestStatusBeforeTimeExpr latestTime = do
+  (stationId, maxTime) <-
+    aggregate_ (\s -> ( group_ (_statusStationId    s)
+                      , max_   (_statusLastReported s)
+                      )
+               ) $
+    filter_ (\ss -> _statusLastReported ss <=. val_ latestTime) $
+    all_ (bikeshareDb ^. bikeshareStationStatus)
+
+  join_'
+    (bikeshareDb ^. bikeshareStationStatus)
+    (\status ->
+       (stationId ==?. _statusStationId status            ) &&?.
+       (maxTime ==?. just_ (_statusLastReported status))
+    )

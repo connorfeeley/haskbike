@@ -6,7 +6,7 @@ module Server.Data.StationStatusVisualization
      , generateJsonDataSource
      ) where
 
-import           AppEnv                           ( envTimeZone, runAppM )
+import           AppEnv                           ( envTimeZone, runAppM, withPostgres )
 
 import           Control.Lens                     hiding ( (.=) )
 import           Control.Monad.Except
@@ -15,6 +15,8 @@ import           Data.Aeson
 import           Data.Time
 import           Data.Time.Extras
 
+import           Database.Beam
+import           Database.BikeShare.Expressions
 import           Database.BikeShare.Operations
 import           Database.BikeShare.StationStatus
 
@@ -27,7 +29,7 @@ import           ServerEnv
 
 -- | Type representing a the visualization data for a BikeShare station's status.
 data StationStatusVisualization where
-  StationStatusVisualization :: { _statusVisStationId       :: Int
+  StationStatusVisualization :: { _statusVisStationId       :: Maybe Int
                                 , _statusVisLastReported    :: UTCTime
                                 , _statusVisChargingStation :: Bool
                                 , _statusVisBikesAvailable  :: Int
@@ -57,7 +59,7 @@ instance ToJSON StationStatusVisualization where
 -- | Convert from the Beam StationStatus type to StationStatusVisualization
 fromBeamStationStatusToVisJSON :: StationStatus -> StationStatusVisualization
 fromBeamStationStatusToVisJSON status =
-  StationStatusVisualization { _statusVisStationId       = fromIntegral sid
+  StationStatusVisualization { _statusVisStationId       = Just (fromIntegral sid)
                              , _statusVisLastReported    = status ^. statusLastReported
                              , _statusVisChargingStation = status ^. statusIsChargingStation
                              , _statusVisBikesAvailable  = fromIntegral (status ^. statusNumBikesAvailable)
@@ -71,8 +73,8 @@ fromBeamStationStatusToVisJSON status =
   where
     StationInformationId sid = _statusStationId status
 
-generateJsonDataSource :: Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM [StationStatusVisualization]
-generateJsonDataSource stationId startTime endTime = do
+generateJsonDataSource :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM [StationStatusVisualization]
+generateJsonDataSource (Just stationId) startTime endTime = do
   -- Accessing the inner environment by using the serverEnv accessor.
   appEnv <- getAppEnvFromServer
   let tz = envTimeZone appEnv
@@ -81,6 +83,23 @@ generateJsonDataSource stationId startTime endTime = do
 
   let params = StatusDataParams tz currentUtc (TimePair startTime endTime)
   let range = enforceTimeRangeBounds params
-  result <- liftIO $ runAppM appEnv $ queryStationStatusBetween stationId (localTimeToUTC tz (earliestTime  range)) (localTimeToUTC tz (latestTime range))
+  result <- liftIO $ runAppM appEnv $ withPostgres $
+    runSelectReturningList $ select $ limit_ 10000 $
+    statusBetweenExpr (fromIntegral stationId) (localTimeToUTC tz (earliestTime  range)) (localTimeToUTC tz (latestTime range))
+
   pure $ map fromBeamStationStatusToVisJSON result
 
+generateJsonDataSource Nothing startTime endTime = do
+  -- Accessing the inner environment by using the serverEnv accessor.
+  appEnv <- getAppEnvFromServer
+  let tz = envTimeZone appEnv
+  -- AppM actions can be lifter into ServerAppM by using a combination of liftIO and runReaderT.
+  currentUtc <- liftIO getCurrentTime
+
+  let params = StatusDataParams tz currentUtc (TimePair startTime endTime)
+  let range = enforceTimeRangeBounds params
+  result <- liftIO $ runAppM appEnv $ withPostgres $
+    runSelectReturningList $ select $
+    systemStatusBetweenExpr (localTimeToUTC tz (earliestTime  range)) (localTimeToUTC tz (latestTime range))
+
+  pure $ map fromBeamStationStatusToVisJSON result

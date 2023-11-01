@@ -18,7 +18,6 @@ module Database.BikeShare.Operations
      , insertStationInformation
      , insertStationStatus
      , printDisabledDocks
-     , queryAllStationsStatusBeforeTime
      , queryDisabledDocks
      , queryRowCount
      , queryStationId
@@ -213,7 +212,7 @@ queryStationStatusLatest station_id = withPostgres $ runSelectReturningOne $ sel
   info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
   guard_ (_infoStationId info ==. val_ ( fromIntegral station_id))
   status <- orderBy_ (desc_ . _statusLastReported)
-              (all_ (bikeshareDb ^. bikeshareStationStatus))
+            (all_ (bikeshareDb ^. bikeshareStationStatus))
   guard_ (_statusStationId status `references_` info)
   pure status
 
@@ -232,10 +231,3 @@ queryTableSize tableName = do
   conn <- withConn
   [Only size] <- liftIO $ query_ conn $ fromString ("SELECT pg_size_pretty(pg_total_relation_size('" ++ tableName ++ "'))")
   return size
-
-
--- | Query the latest statuses for all stations before a given time.
-queryAllStationsStatusBeforeTime :: UTCTime              -- ^ Latest time to return records for.
-                                 -> AppM [StationStatus] -- ^ Latest 'StationStatus' for each station before given time.
-queryAllStationsStatusBeforeTime latestTime = withPostgres $ runSelectReturningList $ selectWith $ do
-  queryAllStationsStatusBeforeTimeExpr latestTime

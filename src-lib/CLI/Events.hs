@@ -15,31 +15,32 @@ import           CLI.QueryFormat
 
 import           Colog
 
-import           Control.Lens                  hiding ( para )
+import           Control.Lens                   hiding ( para )
 
-import qualified Data.Char                     as Char
-import           Data.Int                      ( Int32 )
-import           Data.List                     ( sortOn )
-import           Data.Maybe                    ( fromMaybe )
-import           Data.Ord                      ( Down (Down) )
-import           Data.Text.Lazy                ( pack, unpack )
-import           Data.Time                     ( UTCTime (..), getCurrentTime, utctDay )
+import qualified Data.Char                      as Char
+import           Data.Int                       ( Int32 )
+import           Data.List                      ( sortOn )
+import           Data.Maybe                     ( fromMaybe )
+import           Data.Ord                       ( Down (Down) )
+import           Data.Text.Lazy                 ( pack, unpack )
+import           Data.Time                      ( UTCTime (..), getCurrentTime, utctDay )
 import           Data.Time.Calendar
 import           Data.Time.LocalTime
 
 import           Database.Beam
 import           Database.BikeShare
+import           Database.BikeShare.Expressions
 import           Database.BikeShare.Operations
 
 import           Fmt
 
 import           Formatting
 
-import           Prelude                       hiding ( log )
+import           Prelude                        hiding ( log )
 
 import           System.Console.ANSI
 
-import qualified Text.PrettyPrint.Boxes        as Box
+import qualified Text.PrettyPrint.Boxes         as Box
 
 import           UnliftIO
 
@@ -141,9 +142,9 @@ takeMaybe Nothing xs      = xs
 
 bikeCountsAtMoment :: Day -> TimeOfDay -> AppM (Day, TimeOfDay, Int32, Int32, Int32, Int32)
 bikeCountsAtMoment day timeOfDay = do
-
   log I $ format "Getting number of bikes by type in the system on {} at {}" day timeOfDay
-  statusForMoment <- queryAllStationsStatusBeforeTime (UTCTime day (timeOfDayToTime timeOfDay))
+  statusForMoment <- withPostgres $ runSelectReturningList $ select $
+    queryLatestStatusBeforeTimeExpr (UTCTime day (timeOfDayToTime timeOfDay))
   pure ( day
        , timeOfDay
        , totalBoost statusForMoment
@@ -166,10 +167,10 @@ dayTimesRange startDay endDay = [(addDays n startDay, TimeOfDay h 0 0) | n <- [0
 
 
 totalBoost, totalIconic, totalEbikeEfit, totalEbikeEfitG5 :: Num (Columnar f Int32) => [StationStatusT f] -> Columnar f Int32
-totalBoost bikeCount            = sum $ map (^. vehicleTypesAvailableBoost)   bikeCount
-totalIconic bikeCount           = sum $ map (^. vehicleTypesAvailableIconic)  bikeCount
-totalEbikeEfit bikeCount        = sum $ map (^. vehicleTypesAvailableEfit)    bikeCount
-totalEbikeEfitG5 bikeCount      = sum $ map (^. vehicleTypesAvailableEfitG5) bikeCount
+totalBoost       bikeCount = sum $ map (^. vehicleTypesAvailableBoost ) bikeCount
+totalIconic      bikeCount = sum $ map (^. vehicleTypesAvailableIconic) bikeCount
+totalEbikeEfit   bikeCount = sum $ map (^. vehicleTypesAvailableEfit  ) bikeCount
+totalEbikeEfitG5 bikeCount = sum $ map (^. vehicleTypesAvailableEfitG5) bikeCount
 
 formatBikeCounts :: [(Day, TimeOfDay, Int32, Int32, Int32, Int32)] -> IO ()
 formatBikeCounts allCounts = Box.printBox table

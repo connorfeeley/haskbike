@@ -21,7 +21,7 @@ data DataAPI mode where
     { dataForStation :: mode :-
       "data" :>
         "station-status"
-          :> Capture "station-id" Int
+          :> QueryParam "station-id" Int
           :> QueryParam "start-time" LocalTime
           :> QueryParam "end-time" LocalTime
           :> Get '[JSON] [StationStatusVisualization]
