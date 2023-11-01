@@ -27,6 +27,7 @@ import           Servant
 
 import           Server.Classes
 import           Server.Page.StatusVisualization
+import           Server.Page.Utils
 
 import           TextShow
 
@@ -43,6 +44,22 @@ data SystemStatusVisualizationInfo where
                                    , sysStatVisInfNumEfitG5     :: Int
                                    } -> SystemStatusVisualizationInfo
   deriving (Show, Eq)
+
+instance ToHtml SystemStatusVisualizationInfo where
+  toHtmlRaw = toHtml
+  toHtml params = do
+    div_ $ do
+      label_ [for_ "capacity"] (h3_ "System Capacity")
+      div_ [id_ "capacity"] $ do
+        div_ [class_ "capacity"] $ do
+          div_ $ do -- Tooltip content
+            p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "Docks available: " <> span_ [class_ "pure-u-1-2"] (showth (sysStatVisInfNumDocksAvail params))
+            p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "Docks disabled: "  <> span_ [class_ "pure-u-1-2"] (showth (sysStatVisInfNumDocksDisab params))
+            p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "Bikes available: " <> span_ [class_ "pure-u-1-2"] (showth (sysStatVisInfNumBikesAvail params))
+
+            p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "Iconic: "   <> span_ [class_ "pure-u-1-2"] (showth (sysStatVisInfNumIconic params))
+            p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "E-Fit: "    <> span_ [class_ "pure-u-1-2"] (showth (sysStatVisInfNumEfit params))
+            p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "E-Fit G5: " <> span_ [class_ "pure-u-1-2"] (showth (sysStatVisInfNumEfitG5 params))
 
 data SystemStatusVisualizationPage where
   SystemStatusVisualizationPage :: { _systemStatusVisPageTimeRange     :: TimePair (Maybe LocalTime)
@@ -72,7 +89,8 @@ instance ToHtml SystemStatusVisualizationPage where
       h2_ [style_ "text-align: center"] "System Information & Statistics"
       br_ []
       div_ [class_ "pure-g", style_ "text-align: center"] $ do
-        let headers = catMaybes [ Just (toHtml (eventsHeader :: DockingEventsHeader 'Undocking))
+        let headers = catMaybes [ Just (toHtml (_systemStatusVisPageInfo params))
+                                , Just (toHtml (eventsHeader :: DockingEventsHeader 'Undocking))
                                 , Just (toHtml (eventsHeader :: DockingEventsHeader 'Docking))
                                 , Just (toHtml (ChargingEventsHeader (_systemStatusVisPageChargings params)))
                                 ]

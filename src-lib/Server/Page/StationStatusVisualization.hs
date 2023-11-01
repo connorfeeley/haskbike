@@ -98,6 +98,7 @@ instance ToHtml StationStatusVisualizationPage where
       dateHeader = format "{} ➜ {}"
                    (prettyTime (earliestTime times'))
                    (prettyTime (latestTime   times'))
+
       capacityHeader :: Monad m => HtmlT m ()
       capacityHeader = div_ $ do
         label_ [for_ "capacity"] (h3_ "Capacity")
