@@ -181,9 +181,21 @@ systemStatusVisualizationPage startTime endTime = do
 
   logInfo $ "Static path: " <> toUrlPiece (fieldLink staticApi)
 
+  let systemStatusInfo = SystemStatusVisualizationInfo
+        { sysStatVisInfNumStations   = 0
+        , sysStatVisInfNumDocksAvail = 0
+        , sysStatVisInfNumDocksDisab = 0
+        , sysStatVisInfNumBikesAvail = 0
+        , sysStatVisInfNumBikesDisab = 0
+        , sysStatVisInfNumIconic     = 0
+        , sysStatVisInfNumEfit       = 0
+        , sysStatVisInfNumEfitG5     = 0
+        }
+
   let visualizationPage = SystemStatusVisualizationPage { _systemStatusVisPageTimeRange     = timePair
                                                         , _systemStatusVisPageTimeZone      = tz
                                                         , _systemStatusVisPageCurrentUtc    = currentUtc
+                                                        , _systemStatusVisPageInfo          = systemStatusInfo
                                                         , _systemStatusVisPageDockingEvents = events
                                                         , _systemStatusVisPageChargings     = chargingEvents
                                                         , _systemStatusVisPageDataLink      = fieldLink dataForStation Nothing startTime endTime

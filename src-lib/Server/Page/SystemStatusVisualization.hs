@@ -2,7 +2,8 @@
 -- | This module defines the data types used to render the station status visualization page.
 
 module Server.Page.SystemStatusVisualization
-     ( SystemStatusVisualizationPage (..)
+     ( SystemStatusVisualizationInfo (..)
+     , SystemStatusVisualizationPage (..)
      , vegaSourceUrlsCdn
      , vegaSourceUrlsLocal
      ) where
@@ -31,15 +32,29 @@ import           TextShow
 
 import           Visualization.StationOccupancy
 
+data SystemStatusVisualizationInfo where
+  SystemStatusVisualizationInfo :: { sysStatVisInfNumStations   :: Int
+                                   , sysStatVisInfNumDocksAvail :: Int
+                                   , sysStatVisInfNumDocksDisab :: Int
+                                   , sysStatVisInfNumBikesAvail :: Int
+                                   , sysStatVisInfNumBikesDisab :: Int
+                                   , sysStatVisInfNumIconic     :: Int
+                                   , sysStatVisInfNumEfit       :: Int
+                                   , sysStatVisInfNumEfitG5     :: Int
+                                   } -> SystemStatusVisualizationInfo
+  deriving (Show, Eq)
+
 data SystemStatusVisualizationPage where
   SystemStatusVisualizationPage :: { _systemStatusVisPageTimeRange     :: TimePair (Maybe LocalTime)
                                    , _systemStatusVisPageTimeZone      :: TimeZone
                                    , _systemStatusVisPageCurrentUtc    :: UTCTime
+                                   , _systemStatusVisPageInfo          :: SystemStatusVisualizationInfo
                                    , _systemStatusVisPageDockingEvents :: [DockingEventsCount]
                                    , _systemStatusVisPageChargings     :: [(StationStatus, [ChargingEvent])]
                                    , _systemStatusVisPageDataLink      :: Link
                                    , _systemStatusVisPageStaticLink    :: Link
                                    } -> SystemStatusVisualizationPage
+  deriving (Show)
 
 instance ToHtmlComponents SystemStatusVisualizationPage where
   toMenuHeading _ = menuHeading "#visualization" "Available Bikes"
