@@ -14,6 +14,7 @@ module TestChargings
      , unit_queryChargings'
      , unit_queryChargingsManual
      , unit_queryDockingsManual
+     , unit_querySystemStatus
      ) where
 
 import           API.Types                       ()
@@ -261,3 +262,26 @@ unit_queryDockingsManual = do
 --       [ EarliestTime (UTCTime (read "2023-01-01") (timeOfDayToTime midnight))
 --       , LatestTime   (UTCTime (read "2024-01-01") (timeOfDayToTime midnight))
 --       ]
+
+-- | HUnit test to query the number of {bikes, docks} {available, disabled} and {iconic, efit, efit g5} available across entire system at a point in time.
+unit_querySystemStatus :: IO ()
+unit_querySystemStatus = do
+  setupTestDatabase
+  initDBWithExportedData
+
+  ctz <- getCurrentTimeZone
+  systemStatus <- runWithAppM dbnameTest $
+    querySystemStatusAtRange (earliest ctz) (latest ctz) 60 -- 60 minute interval
+  assertEqual "" (expected ctz) (last systemStatus)
+  where
+    earliest ctz = localTimeToUTC ctz (LocalTime (fromGregorian 2023 10 30) (TimeOfDay 07 00 00))
+    latest   ctz = localTimeToUTC ctz (LocalTime (fromGregorian 2023 10 30) (TimeOfDay 08 00 00))
+    expected ctz = ( latest ctz -- Latest time
+                   , 6038 -- Total available bikes
+                   , 200  -- Total disabled  bikes
+                   , 7336 -- Total available docks
+                   , 62   -- Total disabled  docks
+                   , 5663 -- Total available iconic  bikes
+                   , 102  -- Total available efit    bikes
+                   , 273  -- Total available efit g5 bikes
+                   )

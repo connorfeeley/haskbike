@@ -179,23 +179,29 @@ systemStatusVisualizationPage :: Maybe LocalTime -> Maybe LocalTime -> ServerApp
 systemStatusVisualizationPage startTime endTime = do
   (timePair, tz, currentUtc, events, chargingEvents) <- statusVisualizationPage Nothing startTime endTime
 
-  logInfo $ "Static path: " <> toUrlPiece (fieldLink staticApi)
+  appEnv <- asks serverAppEnv
 
-  let systemStatusInfo = SystemStatusVisualizationInfo
+  let latest   = maybe currentUtc (localTimeToUTC tz) endTime
+  let earliest = hourBefore latest
+  let increment = 15 -- 15 minutes
+
+  -- TODO: querySystemStatusAtTime should probably just return this type directly.
+  systemStatus <- liftIO $ runAppM appEnv $ querySystemStatusAtRange earliest latest increment
+  let systemStatusInfo st = SystemStatusVisualizationInfo
         { sysStatVisInfNumStations   = 0
-        , sysStatVisInfNumDocksAvail = 0
-        , sysStatVisInfNumDocksDisab = 0
-        , sysStatVisInfNumBikesAvail = 0
-        , sysStatVisInfNumBikesDisab = 0
-        , sysStatVisInfNumIconic     = 0
-        , sysStatVisInfNumEfit       = 0
-        , sysStatVisInfNumEfitG5     = 0
+        , sysStatVisInfNumDocksAvail = st ^. _2 & fromIntegral
+        , sysStatVisInfNumDocksDisab = st ^. _3 & fromIntegral
+        , sysStatVisInfNumBikesAvail = st ^. _4 & fromIntegral
+        , sysStatVisInfNumBikesDisab = st ^. _5 & fromIntegral
+        , sysStatVisInfNumIconic     = st ^. _6 & fromIntegral
+        , sysStatVisInfNumEfit       = st ^. _7 & fromIntegral
+        , sysStatVisInfNumEfitG5     = st ^. _8 & fromIntegral
         }
 
   let visualizationPage = SystemStatusVisualizationPage { _systemStatusVisPageTimeRange     = timePair
                                                         , _systemStatusVisPageTimeZone      = tz
                                                         , _systemStatusVisPageCurrentUtc    = currentUtc
-                                                        , _systemStatusVisPageInfo          = systemStatusInfo
+                                                        , _systemStatusVisPageInfo          = (last . map systemStatusInfo) systemStatus -- use the latest value
                                                         , _systemStatusVisPageDockingEvents = events
                                                         , _systemStatusVisPageChargings     = chargingEvents
                                                         , _systemStatusVisPageDataLink      = fieldLink dataForStation Nothing startTime endTime

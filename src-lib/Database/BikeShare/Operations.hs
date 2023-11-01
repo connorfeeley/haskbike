@@ -29,6 +29,7 @@ module Database.BikeShare.Operations
      , queryStationStatusBetween
      , queryStationStatusFields
      , queryStationStatusLatest
+     , querySystemStatusAtRange
      , queryTableSize
      ) where
 
@@ -231,3 +232,25 @@ queryTableSize tableName = do
   conn <- withConn
   [Only size] <- liftIO $ query_ conn $ fromString ("SELECT pg_size_pretty(pg_total_relation_size('" ++ tableName ++ "'))")
   return size
+
+querySystemStatusAtRange :: UTCTime -> UTCTime -> Int
+                        -> AppM [(UTCTime, Integer, Integer, Integer, Integer, Integer, Integer, Integer)]
+querySystemStatusAtRange earliestTime latestTime intervalMins = do
+  -- Execute query expression, returning 'Just (tup)' if one row was returned; otherwise 'Nothing'.
+  statusAtTime <-
+    withPostgres $ runSelectReturningList $ selectWith $
+    querySystemStatusAtRangeExpr earliestTime latestTime intervalMins
+
+  (pure . map statusFieldsToInt) statusAtTime
+  where
+    -- Convert fields from 'Int32' to 'Int'.
+    statusFieldsToInt =
+      (\statusAtTime -> (statusAtTime ^. _1
+        , fromIntegral (statusAtTime ^. _2)
+        , fromIntegral (statusAtTime ^. _3)
+        , fromIntegral (statusAtTime ^. _4)
+        , fromIntegral (statusAtTime ^. _5)
+        , fromIntegral (statusAtTime ^. _6)
+        , fromIntegral (statusAtTime ^. _7)
+        , fromIntegral (statusAtTime ^. _8)
+      ))
