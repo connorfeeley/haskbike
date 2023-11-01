@@ -14,17 +14,28 @@ module ServerEnv
      , ntAppM
      , ntServerAppM
      , runServerAppM
+     , runWithServerAppM
+     , runWithServerAppMDebug
+     , runWithServerAppMSuppressLog
      ) where
 
 import           AppEnv
 
 import           Colog
 
-import           Control.Monad.Catch  ( MonadCatch, MonadThrow, catch, throwM )
+import           Control.Monad.Catch      ( MonadCatch, MonadThrow, catch, throwM )
 import           Control.Monad.Except
 import           Control.Monad.Reader
 
-import           Prelude              ()
+import           Data.Time
+
+import           Database.Beam.Postgres
+import           Database.BikeShare.Utils
+
+import           Network.HTTP.Client
+import           Network.HTTP.Client.TLS
+
+import           Prelude                  ()
 import           Prelude.Compat
 
 import           Servant
@@ -112,3 +123,44 @@ ntAppM :: Env AppM -> AppM a -> Handler a
 ntAppM s a =
   let r = runReaderT (unAppM a) s
   in liftIO r
+
+-- *
+
+-- | Helper function to run a computation in the ServerAppM monad, returning an IO monad.
+runWithServerAppM :: String -> ServerAppM a -> IO a
+runWithServerAppM dbname action = do
+  conn <- mkDbConnectInfo dbname >>= connect
+  currentTimeZone <- getCurrentTimeZone
+  clientManager <- liftIO $ newManager tlsManagerSettings
+  let env = mainEnv Info False True currentTimeZone conn clientManager
+  let serverEnv = ServerEnv { serverAppEnv    = env
+                            , serverPort      = 8081
+                            , serverLogAction = simpleMessageAction
+                            }
+  liftIO $ runServerAppM serverEnv action
+
+-- | This function is the same as runWithServerAppM, but overrides the log action to be a no-op.
+runWithServerAppMSuppressLog :: String -> ServerAppM a -> IO a
+runWithServerAppMSuppressLog dbname action = do
+  conn <- mkDbConnectInfo dbname >>= connect
+  currentTimeZone <- getCurrentTimeZone
+  clientManager <- liftIO $ newManager tlsManagerSettings
+  let env = mainEnv Info False True currentTimeZone conn clientManager
+  let serverEnv = ServerEnv { serverAppEnv    = env
+                            , serverPort      = 8081
+                            , serverLogAction = mempty
+                            }
+  liftIO $ runServerAppM serverEnv action
+
+-- | Helper function to run a computation in the ServerAppM monad with debug and database logging, returning an IO monad.
+runWithServerAppMDebug :: String -> ServerAppM a -> IO a
+runWithServerAppMDebug dbname action = do
+  conn <- mkDbConnectInfo dbname >>= connect
+  currentTimeZone <- getCurrentTimeZone
+  clientManager <- liftIO $ newManager tlsManagerSettings
+  let env = mainEnv Debug True True currentTimeZone conn clientManager
+  let serverEnv = ServerEnv { serverAppEnv    = env
+                            , serverPort      = 8081
+                            , serverLogAction = simpleMessageAction
+                            }
+  liftIO $ runServerAppM serverEnv action
