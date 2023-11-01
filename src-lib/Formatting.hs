@@ -1,9 +1,10 @@
 -- | Formatting utilities.
 
 module Formatting
-     ( compactOutputOptionsDarkBg
+     ( compactOutputOptions
      , pPrint
      , pPrintCompact
+     , pPrintCompactNoColor
      , pShow
      , pShowCompact
      ) where
@@ -18,13 +19,18 @@ import           Text.Pretty.Simple
 
 -- | pPrint with compact output.
 pPrintCompact :: (MonadIO m, Show a) => a -> m ()
-pPrintCompact = pPrintOpt CheckColorTty compactOutputOptionsDarkBg
+pPrintCompact = pPrintOpt CheckColorTty (compactOutputOptions defaultOutputOptionsDarkBg)
+
+pPrintCompactNoColor :: (MonadIO m, Show a) => a -> m ()
+pPrintCompactNoColor = pPrintOpt CheckColorTty (compactOutputOptions defaultOutputOptionsNoColor)
 
 -- | pShow with compact output.
 pShowCompact :: Show a => a -> TextL.Text
-pShowCompact = pShowOpt compactOutputOptionsDarkBg
+pShowCompact = pShowOpt (compactOutputOptions defaultOutputOptionsDarkBg)
 
-compactOutputOptionsDarkBg :: OutputOptions
-compactOutputOptionsDarkBg = defaultOutputOptionsDarkBg { outputOptionsCompact = True
-                                                        , outputOptionsCompactParens = True
-                                                        }
+compactOutputOptions :: OutputOptions -> OutputOptions
+compactOutputOptions opts = opts { outputOptionsCompact = True
+                                 , outputOptionsCompactParens = False
+                                 , outputOptionsPageWidth = 60
+                                 , outputOptionsIndentAmount = 4
+                                 }
