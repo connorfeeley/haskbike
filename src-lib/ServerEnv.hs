@@ -40,6 +40,8 @@ import           Prelude.Compat
 
 import           Servant
 
+import           UnliftIO                 ( MonadUnliftIO )
+
 
 {-
 The difference between 'ServerEnv AppM' and 'ServerEnv ServerAppM' lies in the context of how they are used.
@@ -85,7 +87,7 @@ instance HasLog (ServerEnv m) Message m where
 -- The 'unServerAppM' function is used to strip away the ServerAppM constructor revealing the underlying ReaderT.
 newtype ServerAppM a = ServerAppM
   { unServerAppM :: ReaderT (ServerEnv ServerAppM) IO a
-  } deriving newtype (Functor, Applicative, Monad, MonadIO, MonadReader (ServerEnv ServerAppM), MonadFail, MonadThrow, MonadCatch)
+  } deriving newtype (Functor, Applicative, Monad, MonadIO, MonadUnliftIO, MonadReader (ServerEnv ServerAppM), MonadFail, MonadThrow, MonadCatch)
 
 
 -- | This instance allows us to use Servant's throwError and catchError inside actions of the ServerAppM monad.

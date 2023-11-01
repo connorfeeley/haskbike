@@ -6,12 +6,13 @@ module Server.Data.StationStatusVisualization
      , generateJsonDataSource
      ) where
 
-import           AppEnv                           ( envTimeZone, runAppM, withPostgres )
+import           AppEnv
 
 import           Control.Lens                     hiding ( (.=) )
 import           Control.Monad.Except
 
 import           Data.Aeson
+import           Data.Foldable                    ( fold )
 import           Data.Time
 import           Data.Time.Extras
 
@@ -25,6 +26,8 @@ import           GHC.Generics
 import           Server.Page.StatusVisualization
 
 import           ServerEnv
+
+import           UnliftIO
 
 
 -- | Type representing a the visualization data for a BikeShare station's status.
@@ -97,9 +100,59 @@ generateJsonDataSource Nothing startTime endTime = do
   currentUtc <- liftIO getCurrentTime
 
   let params = StatusDataParams tz currentUtc (TimePair startTime endTime)
-  let range = enforceTimeRangeBounds params
-  result <- liftIO $ runAppM appEnv $ withPostgres $
-    runSelectReturningList $ select $
-    systemStatusBetweenExpr (localTimeToUTC tz (earliestTime  range)) (localTimeToUTC tz (latestTime range))
+  let rangeBounded = enforceTimeRangeBounds params
+  let rangeIncrement =
+        -- 1 -- 1 minute
+        15 -- 15 minutes
+  let range = generateTimeRange (localTimeToUTC tz (earliestTime rangeBounded)) (localTimeToUTC tz (latestTime rangeBounded)) rangeIncrement
 
-  pure $ map fromBeamStationStatusToVisJSON result
+  allStatus <- pooledMapConcurrently systemStatusAtTime range
+  pure allStatus
+
+systemStatusAtTime :: UTCTime -> ServerAppM StationStatusVisualization
+systemStatusAtTime latestTime = do
+  -- Accessing the inner environment by using the serverEnv accessor.
+  appEnv <- getAppEnvFromServer
+
+  allStatusForMinute <- liftIO $ runAppM appEnv $ withPostgres $
+    runSelectReturningList $ select $
+    queryLatestStatusBetweenExpr (hourBefore latestTime) latestTime
+
+  pure $ foldr (concatStatusVisToMinute . fromBeamStationStatusToVisJSON) statusVisFoldAcc allStatusForMinute
+
+
+{- Generate a list of times between two times, incrementing every whole unit of the specified number of minutes.
+>>> generateTimeRange (UTCTime (fromGregorian 2023 10 27) (timeOfDayToTime midnight)) (UTCTime (fromGregorian 2023 10 28) (timeOfDayToTime midnight)) 10
+-}
+generateTimeRange :: UTCTime -> UTCTime -> Integer -> [UTCTime]
+generateTimeRange start end increment =
+    [addUTCTime (fromInteger $ increment*60*n) start | n <- [0..increments]]
+        where increments = ceiling (diffUTCTime end start / fromInteger (60*increment)) :: Integer
+
+concatStatusVisToMinute :: StationStatusVisualization -> StationStatusVisualization -> StationStatusVisualization
+concatStatusVisToMinute a b =
+  StationStatusVisualization { _statusVisStationId       = Nothing
+                             , _statusVisLastReported    = max (_statusVisLastReported a)   (_statusVisLastReported    b)
+                             , _statusVisChargingStation = _statusVisChargingStation   a  || _statusVisChargingStation b
+                             , _statusVisBikesAvailable  = _statusVisBikesAvailable    a  +  _statusVisBikesAvailable  b
+                             , _statusVisBikesDisabled   = _statusVisBikesDisabled     a  +  _statusVisBikesDisabled   b
+                             , _statusVisDocksAvailable  = _statusVisDocksAvailable    a  +  _statusVisDocksAvailable  b
+                             , _statusVisDocksDisabled   = _statusVisDocksDisabled     a  +  _statusVisDocksDisabled   b
+                             , _statusVisAvailableIconic = _statusVisAvailableIconic   a  +  _statusVisAvailableIconic b
+                             , _statusVisAvailableEfit   = _statusVisAvailableEfit     a  +  _statusVisAvailableEfit   b
+                             , _statusVisAvailableEfitG5 = _statusVisAvailableEfitG5   a  +  _statusVisAvailableEfitG5 b
+                             }
+
+statusVisFoldAcc :: StationStatusVisualization
+statusVisFoldAcc =
+  StationStatusVisualization { _statusVisStationId       = Nothing
+                             , _statusVisLastReported    = UTCTime (fromGregorian 1970 1 1) (timeOfDayToTime midnight)
+                             , _statusVisChargingStation = False
+                             , _statusVisBikesAvailable  = 0
+                             , _statusVisBikesDisabled   = 0
+                             , _statusVisDocksAvailable  = 0
+                             , _statusVisDocksDisabled   = 0
+                             , _statusVisAvailableIconic = 0
+                             , _statusVisAvailableEfit   = 0
+                             , _statusVisAvailableEfitG5 = 0
+                             }

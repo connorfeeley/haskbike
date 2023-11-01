@@ -23,9 +23,8 @@ import           Data.List                      ( sortOn )
 import           Data.Maybe                     ( fromMaybe )
 import           Data.Ord                       ( Down (Down) )
 import           Data.Text.Lazy                 ( pack, unpack )
-import           Data.Time                      ( UTCTime (..), getCurrentTime, utctDay )
-import           Data.Time.Calendar
-import           Data.Time.LocalTime
+import           Data.Time
+import           Data.Time.Extras
 
 import           Database.Beam
 import           Database.BikeShare
@@ -144,7 +143,7 @@ bikeCountsAtMoment :: Day -> TimeOfDay -> AppM (Day, TimeOfDay, Int32, Int32, In
 bikeCountsAtMoment day timeOfDay = do
   log I $ format "Getting number of bikes by type in the system on {} at {}" day timeOfDay
   statusForMoment <- withPostgres $ runSelectReturningList $ select $
-    queryLatestStatusBeforeTimeExpr (UTCTime day (timeOfDayToTime timeOfDay))
+    queryLatestStatusBetweenExpr earliestTime latestTime
   pure ( day
        , timeOfDay
        , totalBoost statusForMoment
@@ -152,7 +151,10 @@ bikeCountsAtMoment day timeOfDay = do
        , totalEbikeEfit statusForMoment
        , totalEbikeEfitG5 statusForMoment
        )
-
+    where
+      earliestTime, latestTime :: UTCTime
+      latestTime   = UTCTime day (timeOfDayToTime timeOfDay)
+      earliestTime = hourBefore latestTime
 
 -- | Create a list of (Day, TimeOfDay).
 dayTimes :: [(Day, TimeOfDay)]

@@ -102,7 +102,9 @@ visualizationHandler = VisualizationAPI { pageForStation = stationStatusVisualiz
 stationStatusData :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM [StationStatusVisualization]
 stationStatusData stationId startTime endTime = do
   logInfo $ format "Creating JSON payload for {station ID: {}, start time: {}, end time: {}} " stationId startTime endTime
-  generateJsonDataSource stationId startTime endTime
+  dataSource <- generateJsonDataSource stationId startTime endTime
+  logDebug "Created JSON payload"
+  pure dataSource
 
 
 -- | Create common values between system and station status visualization page record.

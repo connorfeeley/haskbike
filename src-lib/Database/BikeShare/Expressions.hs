@@ -1,4 +1,5 @@
 {-# LANGUAGE PartialTypeSignatures #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 -- | This module contains expressions for querying the database.
 
@@ -6,7 +7,7 @@ module Database.BikeShare.Expressions
      ( disabledDocksExpr
      , infoByIdExpr
      , insertStationInformationExpr
-     , queryLatestStatusBeforeTimeExpr
+     , queryLatestStatusBetweenExpr
      , queryStationIdExpr
      , queryStationIdLikeExpr
      , queryStationStatusExpr
@@ -15,6 +16,8 @@ module Database.BikeShare.Expressions
      ) where
 
 import qualified API.Types                                as AT
+
+import           AppEnv
 
 import           Control.Lens                             hiding ( reuse, (<.) )
 
@@ -99,14 +102,14 @@ queryStationIdLikeExpr station_name = do
 
 
 -- | Expression to query the latest statuse not later than a given time for each station.
-queryLatestStatusBeforeTimeExpr :: UTCTime -> Q Postgres BikeshareDb s (StationStatusT (QExpr Postgres s))
-queryLatestStatusBeforeTimeExpr latestTime = do
+queryLatestStatusBetweenExpr :: UTCTime -> UTCTime -> Q Postgres BikeshareDb s (StationStatusT (QExpr Postgres s))
+queryLatestStatusBetweenExpr earliestTime latestTime = do
   (stationId, maxTime) <-
     aggregate_ (\s -> ( group_ (_statusStationId    s)
                       , max_   (_statusLastReported s)
                       )
                ) $
-    filter_ (\ss -> _statusLastReported ss <=. val_ latestTime) $
+    filter_ (\ss -> _statusLastReported ss >=. val_ earliestTime &&. _statusLastReported ss <. val_ latestTime) $
     all_ (bikeshareDb ^. bikeshareStationStatus)
 
   join_'

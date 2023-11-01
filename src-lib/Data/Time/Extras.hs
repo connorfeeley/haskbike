@@ -9,6 +9,7 @@ module Data.Time.Extras
      ( TimePair (..)
      , addHours
      , addMinutes
+     , hourBefore
      , htmlTimeFormat
      , localToPosix
      , localToSystem
@@ -31,6 +32,10 @@ data TimePair a where
               } -> TimePair a
   deriving (Show, Eq, Ord)
 
+
+-- | Subtract an hour from a UTCTime.
+hourBefore :: UTCTime -> UTCTime
+hourBefore = addUTCTime (-3600)
 
 -- | Add a number of hours to a LocalTime.
 addHours :: NominalDiffTime -> LocalTime -> LocalTime
