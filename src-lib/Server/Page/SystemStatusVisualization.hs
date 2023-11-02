@@ -1,4 +1,6 @@
-{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DataKinds      #-}
+{-# LANGUAGE DeriveAnyClass #-}
+
 -- | This module defines the data types used to render the station status visualization page.
 
 module Server.Page.SystemStatusVisualization
@@ -9,6 +11,7 @@ module Server.Page.SystemStatusVisualization
      ) where
 
 
+import           Data.Default.Class
 import           Data.Maybe                      ( catMaybes )
 import qualified Data.Text                       as T
 import           Data.Time
@@ -44,6 +47,17 @@ data SystemStatusVisualizationInfo where
                                    , sysStatVisInfNumEfitG5     :: Int
                                    } -> SystemStatusVisualizationInfo
   deriving (Show, Eq)
+instance Default SystemStatusVisualizationInfo where
+  def = SystemStatusVisualizationInfo
+    { sysStatVisInfNumStations   = 0
+    , sysStatVisInfNumDocksAvail = 0
+    , sysStatVisInfNumDocksDisab = 0
+    , sysStatVisInfNumBikesAvail = 0
+    , sysStatVisInfNumBikesDisab = 0
+    , sysStatVisInfNumIconic     = 0
+    , sysStatVisInfNumEfit       = 0
+    , sysStatVisInfNumEfitG5     = 0
+    }
 
 instance ToHtml SystemStatusVisualizationInfo where
   toHtmlRaw = toHtml

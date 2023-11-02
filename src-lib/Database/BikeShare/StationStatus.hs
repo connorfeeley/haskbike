@@ -48,6 +48,7 @@ import qualified Data.ByteString.Char8                      as B
 import           Data.Coerce                                ( coerce )
 import           Data.Int
 import           Data.List                                  ( find )
+import           Data.Maybe                                 ( listToMaybe )
 import           Data.String                                ( IsString (fromString) )
 import qualified Data.Text                                  as Text
 import           Data.Time
@@ -224,7 +225,7 @@ fromJSONToBeamStationStatus status
                 , _statusIsRenting             = val_ $ status ^. AT.statusIsRenting
                 , _statusIsReturning           = val_ $ status ^. AT.statusIsReturning
                 , _statusTraffic               = val_ $ fmap Text.pack $ status ^. AT.statusTraffic
-                , _statusVehicleDocksAvailable = fromIntegral $ AT.dock_count $ head $ status ^. AT.statusVehicleDocksAvailable
+                , _statusVehicleDocksAvailable = maybe 0 (fromIntegral . AT.dock_count) $ listToMaybe $ status ^. AT.statusVehicleDocksAvailable
                 , _statusVehicleTypesAvailable = val_ $ VehicleType num_boost num_iconic num_efit num_efit_g5
                 }
   | otherwise = Nothing

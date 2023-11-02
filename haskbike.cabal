@@ -261,6 +261,7 @@ library
                     , hvega
                     , unordered-containers
                     , aeson-pretty
+                    , data-default-class
 
     -- Directories containing source files.
     hs-source-dirs:   src-lib

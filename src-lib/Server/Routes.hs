@@ -23,7 +23,9 @@ import           Control.Lens
 import           Control.Monad.Except
 import           Control.Monad.Reader
 
+import           Data.Default.Class                     ( def )
 import           Data.List                              ( sortOn )
+import           Data.Maybe                             ( fromMaybe, listToMaybe )
 import qualified Data.Text                              as T
 import           Data.Time
 import           Data.Time.Extras
@@ -201,7 +203,7 @@ systemStatusVisualizationPage startTime endTime = do
   let visualizationPage = SystemStatusVisualizationPage { _systemStatusVisPageTimeRange     = timePair
                                                         , _systemStatusVisPageTimeZone      = tz
                                                         , _systemStatusVisPageCurrentUtc    = currentUtc
-                                                        , _systemStatusVisPageInfo          = (last . map systemStatusInfo) systemStatus -- use the latest value
+                                                        , _systemStatusVisPageInfo          = (fromMaybe def . listToMaybe . reverse . map systemStatusInfo) systemStatus -- use the latest value
                                                         , _systemStatusVisPageDockingEvents = events
                                                         , _systemStatusVisPageChargings     = chargingEvents
                                                         , _systemStatusVisPageDataLink      = fieldLink dataForStation Nothing startTime endTime
