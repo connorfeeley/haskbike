@@ -144,14 +144,14 @@ mkTime  = (`cast_` (DataType $ timestampType Nothing True)) . val_
       querySystemStatusAtRangeExpr
       (UTCTime (fromGregorian 2023 10 27) (timeOfDayToTime (TimeOfDay 06 00 00)))
       (UTCTime (fromGregorian 2023 10 27) (timeOfDayToTime (TimeOfDay 06 45 00)))
-      15 -- every 15 minutes
+      (minsPerHourlyInterval 4) -- 15 minutes
 [ (2023-10-27 06:00:00 UTC, Just 5998, Just 301, Just 7216, Just 69, Just 5742, Just 70, Just 186)
 , (2023-10-27 06:15:00 UTC, Just 5991, Just 304, Just 7221, Just 69, Just 5731, Just 70, Just 190)
 , (2023-10-27 06:30:00 UTC, Just 6004, Just 296, Just 7192, Just 70, Just 5739, Just 70, Just 195)
 , (2023-10-27 06:45:00 UTC, Just 6023, Just 285, Just 7186, Just 68, Just 5755, Just 73, Just 195)
 ]
 -}
-querySystemStatusAtRangeExpr :: UTCTime -> UTCTime -> Int -> With Postgres BikeshareDb (Q Postgres
+querySystemStatusAtRangeExpr :: UTCTime -> UTCTime -> Integer -> With Postgres BikeshareDb (Q Postgres
                     BikeshareDb
                     s
                     (QGenExpr QValueContext Postgres s UTCTime,

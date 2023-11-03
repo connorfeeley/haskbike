@@ -233,7 +233,7 @@ queryTableSize tableName = do
   [Only size] <- liftIO $ query_ conn $ fromString ("SELECT pg_size_pretty(pg_total_relation_size('" ++ tableName ++ "'))")
   return size
 
-querySystemStatusAtRange :: UTCTime -> UTCTime -> Int
+querySystemStatusAtRange :: UTCTime -> UTCTime -> Integer
                         -> AppM [(UTCTime, Integer, Integer, Integer, Integer, Integer, Integer, Integer)]
 querySystemStatusAtRange earliestTime latestTime intervalMins = do
   -- Execute query expression, returning 'Just (tup)' if one row was returned; otherwise 'Nothing'.

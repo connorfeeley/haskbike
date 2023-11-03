@@ -185,7 +185,7 @@ systemStatusVisualizationPage startTime endTime = do
 
   let latest   = maybe currentUtc (localTimeToUTC tz) endTime
   let earliest = hourBefore latest
-  let increment = 15 -- 15 minutes
+  let increment = minsPerHourlyInterval 4 -- 15 minutes
 
   -- TODO: querySystemStatusAtTime should probably just return this type directly.
   systemStatus <- liftIO $ runAppM appEnv $ querySystemStatusAtRange earliest latest increment
