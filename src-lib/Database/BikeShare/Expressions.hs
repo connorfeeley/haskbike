@@ -6,6 +6,7 @@
 
 module Database.BikeShare.Expressions
      ( disabledDocksExpr
+     , incrementsPerRange
      , infoByIdExpr
      , insertStationInformationExpr
      , queryLatestStatusBetweenExpr
@@ -211,3 +212,19 @@ generateTimeRange start end incMinutes =
     [addUTCTime (fromInteger $ incMinutes * 60 * n) start | n <- [0 .. deltaIncrements]]
         where
           deltaIncrements = ceiling (diffUTCTime end start / fromInteger (60 * incMinutes)) :: Integer
+
+{-
+
+>>> incrementsPerRange
+    (UTCTime (fromGregorian 2023 10 27) (timeOfDayToTime (TimeOfDay 01 00 00)))
+    (UTCTime (fromGregorian 2023 10 27) (timeOfDayToTime (TimeOfDay 01 15 00)))
+    (60*15)
+-}
+incrementsPerRange :: UTCTime -> UTCTime -> NominalDiffTime -> Integer
+incrementsPerRange start end intervalSecs = intervals
+  where
+    diff :: NominalDiffTime -- ^ Difference in seconds between end and start
+    diff = diffUTCTime end start
+
+    intervals :: Integer    -- ^ Intervals within time range; rounded up.
+    intervals = ceiling (diff / intervalSecs)

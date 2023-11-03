@@ -245,12 +245,12 @@ querySystemStatusAtRange earliestTime latestTime intervalMins = do
   where
     -- Convert fields from 'Int32' to 'Int'.
     statusFieldsToInt =
-      (\statusAtTime -> (statusAtTime ^. _1
-        , fromIntegral (statusAtTime ^. _2)
-        , fromIntegral (statusAtTime ^. _3)
-        , fromIntegral (statusAtTime ^. _4)
-        , fromIntegral (statusAtTime ^. _5)
-        , fromIntegral (statusAtTime ^. _6)
-        , fromIntegral (statusAtTime ^. _7)
-        , fromIntegral (statusAtTime ^. _8)
+      (\statusAtTime -> (               statusAtTime ^. _1
+                        , fromIntegral (statusAtTime ^. _2)
+                        , fromIntegral (statusAtTime ^. _3)
+                        , fromIntegral (statusAtTime ^. _4)
+                        , fromIntegral (statusAtTime ^. _5)
+                        , fromIntegral (statusAtTime ^. _6)
+                        , fromIntegral (statusAtTime ^. _7)
+                        , fromIntegral (statusAtTime ^. _8)
       ))
