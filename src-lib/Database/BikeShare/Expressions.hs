@@ -9,6 +9,9 @@ module Database.BikeShare.Expressions
      , incrementsPerRange
      , infoByIdExpr
      , insertStationInformationExpr
+     , minsPerHourlyInterval
+     , oneHour
+     , oneMinute
      , queryLatestStatusBetweenExpr
      , queryStationIdExpr
      , queryStationIdLikeExpr
@@ -228,3 +231,16 @@ incrementsPerRange start end intervalSecs = intervals
 
     intervals :: Integer    -- ^ Intervals within time range; rounded up.
     intervals = ceiling (diff / intervalSecs)
+
+
+oneMinute, oneHour :: NominalDiffTime
+oneMinute = secondsToNominalDiffTime 60
+oneHour = secondsToNominalDiffTime (60 * 60)
+
+
+{- Calculate number of minutes per interval in an hour.
+>>> minsPerHourlyInterval 4
+15
+-}
+minsPerHourlyInterval :: NominalDiffTime -> Integer
+minsPerHourlyInterval = (ceiling . (/) oneHour) . (*) 60
