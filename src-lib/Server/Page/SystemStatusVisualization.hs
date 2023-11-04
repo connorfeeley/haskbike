@@ -1,5 +1,4 @@
-{-# LANGUAGE DataKinds      #-}
-{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DataKinds #-}
 
 -- | This module defines the data types used to render the station status visualization page.
 

@@ -23,6 +23,8 @@ import           Server.Page.StatusVisualization
 
 import           ServerEnv
 
+import           TimeInterval
+
 
 -- | Type representing a the visualization data for a BikeShare station's status.
 data StationStatusVisualization where

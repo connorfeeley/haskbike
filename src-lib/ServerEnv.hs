@@ -65,11 +65,13 @@ This is helpful in maintaining a clean separation of variables specific to both 
 -- | ServerEnv data type that holds server-specific environment including App environment and the server port
 -- The m parameter is the type variable which means 'ServerEnv' can hold environment of any Monad 'm'.
 data ServerEnv m where
-  ServerEnv :: { serverAppEnv    :: !(Env AppM)
+  ServerEnv :: { serverAppEnv       :: !(Env AppM)
                -- The environment specific for the application
-               , serverPort      :: !Int
+               , serverPort         :: !Int
                -- Port number on which the server is running
-               , serverLogAction :: !(LogAction m Message)
+               , serverLogAction    :: !(LogAction m Message)
+               -- Maximum number of intervals to query for
+               , serverMaxIntervals :: Integer
                } -> ServerEnv m
 
 -- Implement logging for the application environment.
@@ -118,6 +120,7 @@ ntServerAppM s a =
   let r = runReaderT (unServerAppM a) s
   in liftIO r
 
+
 -- | Natural transformation function to lift AppM into the Handler monad.
 -- This function allows us to lift actions from AppM monad into the Handler monad,
 -- so that Servant can understand and utilize the AppM functionalities.
@@ -126,7 +129,8 @@ ntAppM s a =
   let r = runReaderT (unAppM a) s
   in liftIO r
 
--- *
+
+-- * Helper functions to run ServerAppM actions (for debugging and test).
 
 -- | Helper function to run a computation in the ServerAppM monad, returning an IO monad.
 runWithServerAppM :: String -> ServerAppM a -> IO a
@@ -141,6 +145,7 @@ runWithServerAppM dbname action = do
                             }
   liftIO $ runServerAppM serverEnv action
 
+
 -- | This function is the same as runWithServerAppM, but overrides the log action to be a no-op.
 runWithServerAppMSuppressLog :: String -> ServerAppM a -> IO a
 runWithServerAppMSuppressLog dbname action = do
@@ -148,11 +153,13 @@ runWithServerAppMSuppressLog dbname action = do
   currentTimeZone <- getCurrentTimeZone
   clientManager <- liftIO $ newManager tlsManagerSettings
   let env = mainEnv Info False True currentTimeZone conn clientManager
-  let serverEnv = ServerEnv { serverAppEnv    = env
-                            , serverPort      = 8081
-                            , serverLogAction = mempty
+  let serverEnv = ServerEnv { serverAppEnv       = env
+                            , serverPort         = 8081
+                            , serverLogAction    = mempty
+                            , serverMaxIntervals = 4
                             }
   liftIO $ runServerAppM serverEnv action
+
 
 -- | Helper function to run a computation in the ServerAppM monad with debug and database logging, returning an IO monad.
 runWithServerAppMDebug :: String -> ServerAppM a -> IO a

@@ -55,6 +55,9 @@ import           ServerEnv
 
 import           TextShow
 
+import           TimeInterval
+
+
 data API mode where
   API :: { version           :: mode :- "version" :> Get '[JSON] Version
          , home              :: mode :- Get '[HTML] (PureSideMenu IndexPage)
@@ -183,13 +186,14 @@ systemStatusVisualizationPage startTime endTime = do
 
   appEnv <- asks serverAppEnv
 
-  let latest   = maybe currentUtc (localTimeToUTC tz) endTime
-  let earliest = hourBefore latest
+  let latest    = maybe currentUtc (localTimeToUTC tz) endTime
+  let earliest  = hourBefore latest
   let increment = minsPerHourlyInterval 4 -- 15 minutes
 
   -- TODO: querySystemStatusAtTime should probably just return this type directly.
   systemStatus <- liftIO $ runAppM appEnv $ querySystemStatusAtRange earliest latest increment
-  let systemStatusInfo st = SystemStatusVisualizationInfo
+  let systemStatusInfo st =
+        SystemStatusVisualizationInfo
         { sysStatVisInfNumStations   = 0
         , sysStatVisInfNumDocksAvail = st ^. _2 & fromIntegral
         , sysStatVisInfNumDocksDisab = st ^. _3 & fromIntegral

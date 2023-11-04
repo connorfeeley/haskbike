@@ -203,6 +203,7 @@ library
                     , API.Client
                     , API.ClientLifted
                     -- , API.DebugClient
+                    , TimeInterval
                     , Server
                     , ServerEnv
                     , Server.Routes
