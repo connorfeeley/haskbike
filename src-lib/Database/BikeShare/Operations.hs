@@ -234,7 +234,7 @@ queryTableSize tableName = do
   return size
 
 querySystemStatusAtRange :: UTCTime -> UTCTime -> Integer
-                        -> AppM [(UTCTime, Integer, Integer, Integer, Integer, Integer, Integer, Integer)]
+                         -> AppM [(UTCTime, Integer, Integer, Integer, Integer, Integer, Integer, Integer)]
 querySystemStatusAtRange earliestTime latestTime intervalMins = do
   -- Execute query expression, returning 'Just (tup)' if one row was returned; otherwise 'Nothing'.
   statusAtTime <-
@@ -253,4 +253,5 @@ querySystemStatusAtRange earliestTime latestTime intervalMins = do
                         , fromIntegral (statusAtTime ^. _6)
                         , fromIntegral (statusAtTime ^. _7)
                         , fromIntegral (statusAtTime ^. _8)
-      ))
+                        )
+      )
