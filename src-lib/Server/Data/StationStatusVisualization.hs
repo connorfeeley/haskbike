@@ -97,10 +97,12 @@ generateJsonDataSource Nothing startTime endTime = do
 
   let params = StatusDataParams tz currentUtc (TimePair startTime endTime)
   let rangeBounded = enforceTimeRangeBounds params
-  let rangeIncrement = minsPerHourlyInterval 4 -- 15 minutes
+  let start = localTimeToUTC tz (earliestTime rangeBounded)
+  let end = localTimeToUTC tz (latestTime rangeBounded)
+  let rangeIncrement = secondsPerIntervalForRange start end 120
 
   statusAtRange <- liftIO $ runAppM appEnv $ withPostgres $ runSelectReturningList $ selectWith $
-    querySystemStatusAtRangeExpr (localTimeToUTC tz (earliestTime rangeBounded)) (localTimeToUTC tz (latestTime rangeBounded)) rangeIncrement
+    querySystemStatusAtRangeExpr start end rangeIncrement
   (pure . map toVisualization) statusAtRange
   where
     toVisualization st =

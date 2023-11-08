@@ -156,7 +156,7 @@ runWithServerAppMSuppressLog dbname action = do
   let serverEnv = ServerEnv { serverAppEnv       = env
                             , serverPort         = 8081
                             , serverLogAction    = mempty
-                            , serverMaxIntervals = 4
+                            , serverMaxIntervals = 120
                             }
   liftIO $ runServerAppM serverEnv action
 

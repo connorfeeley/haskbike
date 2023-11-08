@@ -6,8 +6,10 @@ module TimeInterval
      , minsPerHourlyInterval
      , oneHour
      , oneMinute
+     , secondsPerIntervalForRange
      ) where
 
+import           Data.Fixed         ( Fixed (MkFixed), Pico )
 import           Data.Int           ( Int32 )
 import           Data.Time
 
@@ -62,3 +64,10 @@ oneHour   = secondsToNominalDiffTime (60 * 60)
 -}
 minsPerHourlyInterval :: NominalDiffTime -> Integer
 minsPerHourlyInterval = (ceiling . (/) oneHour) . (*) 60
+
+secondsPerIntervalForRange :: UTCTime -> UTCTime -> Pico -> Integer
+secondsPerIntervalForRange start end numMaxIntervals = (div 1000000000000 . fromPico) (nominalDiffTimeToSeconds (diffUTCTime end start) / numMaxIntervals)
+
+
+fromPico :: Pico -> Integer
+fromPico (MkFixed i) = i
