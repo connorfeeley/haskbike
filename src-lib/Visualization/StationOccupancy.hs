@@ -40,12 +40,12 @@ selectionProps _selName label dataUrl =
     -- Setup encoding common to both 'area' and 'point' marks
     areaEncoding =
       encoding
-        . position X [ PTitle "Time",  PName "Last Reported", PmType Temporal,     PTimeUnit (TU YearMonthDateHoursMinutesSeconds), PAxis [AxLabelAngle (-50)]]
+        . position X [ PTitle "Time",  PName "Last Reported", PmType Temporal,     PTimeUnit (TU YearMonthDateHoursMinutesSeconds), PAxis [AxLabelAngle (-90)]]
         . position Y [ PTitle "Count", PName "Count",         PmType Quantitative, PStack StZero ]
         . color [ MName "Type"
                 , MmType Nominal -- Data are also categories, but ones which have some natural order.
                 , MScale [ SDomain (DStrings [ "Available Docks", "Available Mechanical", "Available E-Fit", "Available E-Fit G5", "Disabled Bikes", "Disabled Docks" ])
-                         , SRange (RStrings [ transparent -- Available dock: transparent
+                         , SRange (RStrings [ lemon       -- Available dock: lemon chiffron
                                             , green       -- Iconic: Cal Poly Pomona green
                                             , lightBlue   -- E-Fit: light blue
                                             , skyBlue     -- E-Fit G5: sky blue
@@ -61,12 +61,13 @@ selectionProps _selName label dataUrl =
         --           ]
         . toolTip
         where
-          transparent = "rgb(0,0,0,0)" -- transparent
-          lightBlue   = "#009ACD"
-          skyBlue     = "#00688B"
-          green       = "#1E4D2B"
-          salmon      = "#FA8072"
-          black       = "#000000"
+          _transparent = "rgb(0,0,0,0)" -- transparent
+          lemon        = "#fffacd"
+          lightBlue    = "#009ACD"
+          skyBlue      = "#00688B"
+          green        = "#1E4D2B"
+          salmon       = "#FA8072"
+          black        = "#000000"
 
     -- Define tooltip for 'area' mark
     toolTip =
