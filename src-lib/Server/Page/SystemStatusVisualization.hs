@@ -120,7 +120,7 @@ instance ToHtml SystemStatusVisualizationPage where
           div_ [class_ "pure-u-1 pure-u-md-1-4"] (endTimeInput latest)
           div_ [class_ "pure-u-1 pure-u-md-1-4"] submitInput
 
-      with div_ [class_ "graph"] (toHtmlRaw (toHtmlWithUrls vegaSourceUrlsLocal (vegaEmbedCfg ShowActions) (vegaChart (_systemStatusVisPageDataLink params))))
+      with div_ [class_ "graph"] (toHtmlRaw (toHtmlWithUrls vegaSourceUrlsLocal (vegaEmbedCfg ShowActions) (vegaChart (map T.pack . drop 2) (_systemStatusVisPageDataLink params))))
 
     where
       dateHeader :: T.Text

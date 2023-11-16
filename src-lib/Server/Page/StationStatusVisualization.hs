@@ -83,7 +83,7 @@ instance ToHtml StationStatusVisualizationPage where
           div_ [class_ "pure-u-1 pure-u-md-1-4"] (endTimeInput latest)
           div_ [class_ "pure-u-1 pure-u-md-1-4"] submitInput
 
-      with div_ [class_ "graph"] (toHtmlRaw (toHtmlWithUrls vegaSourceUrlsLocal (vegaEmbedCfg ShowActions) (vegaChart (_statusVisPageDataLink params))))
+      with div_ [class_ "graph"] (toHtmlRaw (toHtmlWithUrls vegaSourceUrlsLocal (vegaEmbedCfg ShowActions) (vegaChart (map T.pack) (_statusVisPageDataLink params))))
 
     where
       inf = _statusVisPageStationInfo params

@@ -1,3 +1,4 @@
+{-# LANGUAGE PartialTypeSignatures #-}
 -- | This module contains functions for visualizing the occupancy of a station using Vega-Lite.
 
 module Visualization.StationOccupancy
@@ -19,24 +20,24 @@ import           Prelude                    hiding ( filter, lookup, repeat )
 
 
 -- Implement Vega-Lite specification using hvega
-availBikesOverTimeVL :: T.Text -> VegaLite
-availBikesOverTimeVL dataUrl=
+availBikesOverTimeVL :: ([String] -> [T.Text]) -> T.Text -> VegaLite
+availBikesOverTimeVL filterFn dataUrl =
   let
     selLabel = "picked"
     sel = selection
           . select selLabel Single []
 
   in
-    toVegaLite (sel [] : selectionProps selLabel "Available Vehicle Types Over Time" dataUrl)
+    toVegaLite (sel [] : selectionProps selLabel filterFn "Available Vehicle Types Over Time" dataUrl)
 
 
-selectionProps :: SelectionLabel -> T.Text -> T.Text -> [PropertySpec]
-selectionProps _selName label dataUrl =
+selectionProps :: SelectionLabel -> ([String] -> [T.Text]) -> T.Text -> T.Text -> [PropertySpec]
+selectionProps _selName filterFn label dataUrl =
   let
     -- Implement the `fold` transform
     dataTransforms =
       transform
-        . foldAs [ "Available Docks", "Available Mechanical", "Available E-Fit", "Available E-Fit G5", "Disabled Bikes", "Disabled Docks" ] "Type" "Count"
+        . foldAs (filterFn [ "Available Docks", "Available Mechanical", "Available E-Fit", "Available E-Fit G5", "Disabled Bikes", "Disabled Docks" ]) "Type" "Count"
     -- Setup encoding common to both 'area' and 'point' marks
     areaEncoding =
       encoding
@@ -44,14 +45,14 @@ selectionProps _selName label dataUrl =
         . position Y [ PTitle "Count", PName "Count",         PmType Quantitative, PStack StZero ]
         . color [ MName "Type"
                 , MmType Nominal -- Data are also categories, but ones which have some natural order.
-                , MScale [ SDomain (DStrings [ "Available Docks", "Available Mechanical", "Available E-Fit", "Available E-Fit G5", "Disabled Bikes", "Disabled Docks" ])
-                         , SRange (RStrings [ lemon       -- Available dock: lemon chiffron
-                                            , green       -- Iconic: Cal Poly Pomona green
-                                            , lightBlue   -- E-Fit: light blue
-                                            , skyBlue     -- E-Fit G5: sky blue
-                                            , salmon      -- Disabled bike: salmon
-                                            , black       -- Disabled dock: black
-                                            ]) ]
+                , MScale [ SDomain (DStrings (filterFn [ "Available Docks", "Available Mechanical", "Available E-Fit", "Available E-Fit G5", "Disabled Bikes", "Disabled Docks" ]))
+                         , SRange (RStrings (filterFn [ lemon       -- Available dock: lemon chiffron
+                                                      , green       -- Iconic: Cal Poly Pomona green
+                                                      , lightBlue   -- E-Fit: light blue
+                                                      , skyBlue     -- E-Fit G5: sky blue
+                                                      , salmon      -- Disabled bike: salmon
+                                                      , black       -- Disabled dock: black
+                                                      ])) ]
                 -- , MLegend [ LLabelExpr "'<' + datum.label + '>'" ]
                 -- , MSelectionCondition (SelectionName selName) [ MName "Vehicle Type", MmType Nominal ] [ MString "grey" ]
                 ]
@@ -81,7 +82,7 @@ selectionProps _selName label dataUrl =
         . configuration (Axis [ DomainWidth 1 ])
         . configuration (ViewStyle [ ViewStroke "transparent" ])
         . configuration (SelectionStyle [(Single, [On "dblclick"])])
-        . configuration (BackgroundStyle "rgba(0, 0, 0, 0.5)")
+        . configuration (BackgroundStyle "rgba(0, 0, 0, 0)")
         . configuration (LegendStyle [LeOrient LOBottom])
 
 

@@ -104,8 +104,8 @@ submitInput    = makeInputField (i_ "Or hit Enter")  "submit"         "submit-fo
 prettyTime :: LocalTime -> String
 prettyTime = formatTime defaultTimeLocale "%A, %b %e, %T"
 
-vegaChart :: Link -> VL.VegaLite
-vegaChart dataLink = availBikesOverTimeVL ("/" <> toUrlPiece dataLink)
+vegaChart :: ([String] -> [T.Text]) -> Link -> VL.VegaLite
+vegaChart filterFn dataLink = availBikesOverTimeVL filterFn ("/" <> toUrlPiece dataLink)
 
 boolToText :: Bool -> T.Text
 boolToText True  = "Yes"
