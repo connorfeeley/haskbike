@@ -110,8 +110,6 @@ instance ToHtml SystemStatusVisualizationPage where
                                 ]
         mconcat $ map (`with` [class_ ("pure-u-md-1-" <> showt (length headers))]) headers
 
-      br_ []
-
       -- Selection form
       form_ [class_ "pure-form pure-form-stacked", style_ "text-align: center"] $ fieldset_ $ do
         legend_ $ h3_ "Query Parameters"
