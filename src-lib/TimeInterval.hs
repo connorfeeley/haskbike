@@ -66,7 +66,7 @@ minsPerHourlyInterval :: NominalDiffTime -> Integer
 minsPerHourlyInterval = (ceiling . (/) oneHour) . (*) 60
 
 secondsPerIntervalForRange :: UTCTime -> UTCTime -> Pico -> Integer
-secondsPerIntervalForRange start end numMaxIntervals = (div 1000000000000 . fromPico) (nominalDiffTimeToSeconds (diffUTCTime end start) / numMaxIntervals)
+secondsPerIntervalForRange start end numMaxIntervals = (flip div 1000000000000 . fromPico) (nominalDiffTimeToSeconds (diffUTCTime end start) / numMaxIntervals)
 
 
 fromPico :: Pico -> Integer

@@ -8,6 +8,8 @@ module Server.Data.StationStatusVisualization
 
 import           AppEnv
 
+import           Colog
+
 import           Control.Lens                     hiding ( (.=) )
 import           Control.Monad.Except
 
@@ -18,6 +20,8 @@ import           Data.Time.Extras
 import           Database.Beam
 import           Database.BikeShare.Expressions
 import           Database.BikeShare.StationStatus
+
+import           Fmt                              ( format )
 
 import           Server.Page.StatusVisualization
 
@@ -101,6 +105,7 @@ generateJsonDataSource Nothing startTime endTime = do
   let end = localTimeToUTC tz (latestTime rangeBounded)
   let rangeIncrement = secondsPerIntervalForRange start end 120
 
+  logDebug $ format "Start: {}, end: {}, increment: {}s " start end rangeIncrement
   statusAtRange <- liftIO $ runAppM appEnv $ withPostgres $ runSelectReturningList $ selectWith $
     querySystemStatusAtRangeExpr start end rangeIncrement
   (pure . map toVisualization) statusAtRange
