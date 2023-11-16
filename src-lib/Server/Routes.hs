@@ -195,10 +195,10 @@ systemStatusVisualizationPage startTime endTime = do
   let systemStatusInfo st =
         SystemStatusVisualizationInfo
         { sysStatVisInfNumStations   = 0
-        , sysStatVisInfNumDocksAvail = st ^. _2 & fromIntegral
-        , sysStatVisInfNumDocksDisab = st ^. _3 & fromIntegral
-        , sysStatVisInfNumBikesAvail = st ^. _4 & fromIntegral
-        , sysStatVisInfNumBikesDisab = st ^. _5 & fromIntegral
+        , sysStatVisInfNumBikesAvail = st ^. _2 & fromIntegral
+        , sysStatVisInfNumBikesDisab = st ^. _3 & fromIntegral
+        , sysStatVisInfNumDocksAvail = st ^. _4 & fromIntegral
+        , sysStatVisInfNumDocksDisab = st ^. _5 & fromIntegral
         , sysStatVisInfNumIconic     = st ^. _6 & fromIntegral
         , sysStatVisInfNumEfit       = st ^. _7 & fromIntegral
         , sysStatVisInfNumEfitG5     = st ^. _8 & fromIntegral

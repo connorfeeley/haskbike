@@ -66,9 +66,10 @@ instance ToHtml SystemStatusVisualizationInfo where
       div_ [id_ "capacity"] $ do
         div_ [class_ "capacity"] $ do
           div_ $ do -- Tooltip content
+            p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "Bikes available: " <> span_ [class_ "pure-u-1-2"] (showth (sysStatVisInfNumBikesAvail params))
+            p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "Bikes disabled: "  <> span_ [class_ "pure-u-1-2"] (showth (sysStatVisInfNumBikesDisab params))
             p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "Docks available: " <> span_ [class_ "pure-u-1-2"] (showth (sysStatVisInfNumDocksAvail params))
             p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "Docks disabled: "  <> span_ [class_ "pure-u-1-2"] (showth (sysStatVisInfNumDocksDisab params))
-            p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "Bikes available: " <> span_ [class_ "pure-u-1-2"] (showth (sysStatVisInfNumBikesAvail params))
 
             p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "Iconic: "   <> span_ [class_ "pure-u-1-2"] (showth (sysStatVisInfNumIconic params))
             p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "E-Fit: "    <> span_ [class_ "pure-u-1-2"] (showth (sysStatVisInfNumEfit params))
