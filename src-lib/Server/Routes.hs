@@ -57,6 +57,8 @@ import           TextShow
 
 import           TimeInterval
 
+import           UnliftIO                               ( concurrently )
+
 
 data API mode where
   API :: { version           :: mode :- "version" :> Get '[JSON] Version
@@ -134,14 +136,11 @@ statusVisualizationPage stationId startTime endTime = do
                                                                     ]
   logDebug $ format "earliest={}, latest={}" earliest latest
 
-  -- * Query the database for the number of bikes charged at this station.
-  logDebug $ "Querying chargings for station " <> showt stationId
-  chargingEvents <- liftIO $ runAppM appEnv $ queryChargingEventsCount variation
-  logDebug $ "Chargings (all): " <> showt (sumAllCharging chargingEvents)
-
-  -- * Query the database for the number of bikes docked and undocked across entire system.
-  logDebug $ "Querying events for station " <> showt stationId
-  events <- liftIO $ runAppM appEnv $ queryDockingEventsCount variation
+  -- * Query the database for the number of bikes charged at this station, and number of bikes docked and undocked at this station.
+  logDebug $ "Querying chargings and events for station " <> showt stationId
+  (chargingEvents, events) <- concurrently
+      (liftIO $ runAppM appEnv $ queryChargingEventsCount variation)
+      (liftIO $ runAppM appEnv $ queryDockingEventsCount variation)
 
   logDebug $ "Dockings (all): "   <> showt (sumEvents Docking   (allBikeEvents events))
   logDebug $ "Undockings (all): " <> showt (sumEvents Undocking (allBikeEvents events))
