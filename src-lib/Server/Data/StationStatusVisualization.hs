@@ -12,6 +12,7 @@ import           Colog
 
 import           Control.Lens                     hiding ( (.=) )
 import           Control.Monad.Except
+import           Control.Monad.Reader             ( ask )
 
 import           Data.Aeson
 import           Data.Time
@@ -93,6 +94,7 @@ generateJsonDataSource (Just stationId) startTime endTime = do
   pure $ map fromBeamStationStatusToVisJSON result
 
 generateJsonDataSource Nothing startTime endTime = do
+  env <- ask
   -- Accessing the inner environment by using the serverEnv accessor.
   appEnv <- getAppEnvFromServer
   let tz = envTimeZone appEnv
@@ -103,11 +105,11 @@ generateJsonDataSource Nothing startTime endTime = do
   let rangeBounded = enforceTimeRangeBounds params
   let start = localTimeToUTC tz (earliestTime rangeBounded)
   let end = localTimeToUTC tz (latestTime rangeBounded)
-  let rangeIncrement = secondsPerIntervalForRange start end 120
+  let rangeIncrement = secondsPerIntervalForRange start end (serverMaxIntervals env)
 
   logDebug $ format "Start: {}, end: {}, increment: {}s " start end rangeIncrement
   statusAtRange <- liftIO $ runAppM appEnv $ withPostgres $ runSelectReturningList $ selectWith $
-    querySystemStatusAtRangeExpr start end rangeIncrement
+    querySystemStatusAtRangeExpr start end (div rangeIncrement 60)
   (pure . map toVisualization) statusAtRange
   where
     toVisualization st =

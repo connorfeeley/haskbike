@@ -27,6 +27,7 @@ import           Control.Monad.Catch      ( MonadCatch, MonadThrow, catch, throw
 import           Control.Monad.Except
 import           Control.Monad.Reader
 
+import           Data.Fixed               ( Pico )
 import           Data.Time
 
 import           Database.Beam.Postgres
@@ -71,7 +72,7 @@ data ServerEnv m where
                -- Port number on which the server is running
                , serverLogAction    :: !(LogAction m Message)
                -- Maximum number of intervals to query for
-               , serverMaxIntervals :: Integer
+               , serverMaxIntervals :: Pico
                } -> ServerEnv m
 
 -- Implement logging for the application environment.
@@ -156,7 +157,7 @@ runWithServerAppMSuppressLog dbname action = do
   let serverEnv = ServerEnv { serverAppEnv       = env
                             , serverPort         = 8081
                             , serverLogAction    = mempty
-                            , serverMaxIntervals = 120
+                            , serverMaxIntervals = 20
                             }
   liftIO $ runServerAppM serverEnv action
 

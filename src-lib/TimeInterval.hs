@@ -1,7 +1,8 @@
 -- | Functions for handling time intervals/ranges.
 
 module TimeInterval
-     ( generateTimeRange
+     ( fromPico
+     , generateTimeRange
      , incrementsPerRange
      , minsPerHourlyInterval
      , oneHour
