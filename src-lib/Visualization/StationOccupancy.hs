@@ -13,7 +13,7 @@ import           Data.Aeson.Encode.Pretty   ( encodePretty )
 import qualified Data.ByteString.Lazy.Char8 as Char8
 import qualified Data.Text                  as T
 
-import           Graphics.Vega.VegaLite
+import           Graphics.Vega.VegaLite     hiding ( Number )
 
 import           Prelude                    hiding ( filter, lookup, repeat )
 
@@ -114,6 +114,7 @@ vegaEmbedCfg showActions =
   Just (toJSON (object [ ("logLevel", "4")
                         , ("$schema", "/static/js/vega/schema/vega-lite/v4.json")
                         , ("actions", actionToBool showActions)
+                        , ("scaleFactor", Number 10)
                         ]))
   where
     actionToBool action = case action of ShowActions -> Bool True
