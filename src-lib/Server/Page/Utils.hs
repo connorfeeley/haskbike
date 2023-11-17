@@ -48,6 +48,8 @@ makeHeadElements staticPath = do
   stylesheet_ (staticPath <> "/css/haskbike.css")
   stylesheet_ (staticPath <> "/css/tooltips.css")
 
+  script_ [mkData_ "goatcounter" "", async_ mempty, src_ "//bikes.cfeeley.org/count.js"] ("" :: Text)
+
 
 -- | Make a "data-" attribute suffixed with the given 'Text'.
 mkData_ :: Text -> Text -> Attribute
