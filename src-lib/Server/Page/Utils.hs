@@ -49,7 +49,7 @@ makeHeadElements staticPath = do
   stylesheet_ (staticPath <> "/css/tooltips.css")
 
   -- TODO: get this from the server's environment.
-  script_ [mkData_ "goatcounter" "", async_ mempty, src_ "//stats.bikes.cfeeley.org/count.js"] ("" :: Text)
+  script_ [mkData_ "goatcounter" "https://stats.bikes.cfeeley.org/count", async_ mempty, src_ "//stats.bikes.cfeeley.org/count.js"] ("" :: Text)
 
 
 -- | Make a "data-" attribute suffixed with the given 'Text'.
