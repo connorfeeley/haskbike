@@ -127,6 +127,7 @@
                   litecli
                   pgformatter
                   nixos-rebuild
+                  pgtop
                   ;
                 inherit (pkgs.nodePackages)
                   prettier
