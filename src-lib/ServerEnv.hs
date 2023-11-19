@@ -143,6 +143,7 @@ runWithServerAppM dbname action = do
   let serverEnv = ServerEnv { serverAppEnv    = env
                             , serverPort      = 8081
                             , serverLogAction = simpleMessageAction
+                            , serverMaxIntervals = 20
                             }
   liftIO $ runServerAppM serverEnv action
 
@@ -172,5 +173,6 @@ runWithServerAppMDebug dbname action = do
   let serverEnv = ServerEnv { serverAppEnv    = env
                             , serverPort      = 8081
                             , serverLogAction = simpleMessageAction
+                            , serverMaxIntervals = 20
                             }
   liftIO $ runServerAppM serverEnv action
