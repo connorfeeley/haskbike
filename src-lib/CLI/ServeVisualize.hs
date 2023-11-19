@@ -30,7 +30,7 @@ dispatchVisualize options = do
 
   let serverEnv = ServerEnv { serverAppEnv       = env
                             , serverPort         = optServeVisualizePort options
-                            , serverLogAction    = simpleMessageAction
+                            , serverLogAction    = adaptLogAction (envLogAction env)
                             , serverMaxIntervals = 20
                             }
   liftIO $ runServerAppM serverEnv serveVisualization

@@ -10,6 +10,7 @@
 module ServerEnv
      ( ServerAppM (..)
      , ServerEnv (..)
+     , adaptLogAction
      , getAppEnvFromServer
      , ntAppM
      , ntServerAppM
@@ -176,3 +177,11 @@ runWithServerAppMDebug dbname action = do
                             , serverMaxIntervals = 20
                             }
   liftIO $ runServerAppM serverEnv action
+
+
+-- Function to adapt LogAction from AppM to ServerAppM
+adaptLogAction :: LogAction AppM Message -> LogAction ServerAppM Message
+adaptLogAction (LogAction logAction') = LogAction $ \msg -> ServerAppM $ do
+  env <- ask -- Get the ServerEnv within ServerAppM context
+  let appEnv = serverAppEnv env
+  liftIO $ runReaderT (unAppM $ logAction' msg) appEnv
