@@ -34,6 +34,7 @@ import           Database.Beam
 import           Database.BikeShare
 import           Database.BikeShare.Expressions
 import           Database.BikeShare.Operations
+import           Database.BikeShare.Operations.Factors
 import           Database.BikeShare.StatusVariationQuery
 
 import           Fmt
@@ -96,7 +97,9 @@ data StaticAPI mode where
 -- * Handlers.
 
 statusHandler :: DataAPI (AsServerT ServerAppM)
-statusHandler =  DataAPI { dataForStation = stationStatusData }
+statusHandler =  DataAPI { dataForStation       = stationStatusData
+                         , integralForStation   = stationIntegralData
+                         }
 
 staticHandler :: StaticAPI (AsServerT ServerAppM)
 staticHandler =  StaticAPI $ serveDirectoryWebApp "static-files"
@@ -112,6 +115,14 @@ stationStatusData stationId startTime endTime = do
   logInfo $ format "Creating JSON payload for {station ID: {}, start time: {}, end time: {}} " stationId startTime endTime
   dataSource <- generateJsonDataSource stationId startTime endTime
   logDebug "Created JSON payload"
+  pure dataSource
+
+
+stationIntegralData :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM [StatusIntegral]
+stationIntegralData stationId startTime endTime = do
+  logInfo $ format "Creating integral JSON payload for {station ID: {}, start time: {}, end time: {}} " stationId startTime endTime
+  dataSource <- generateJsonDataSourceIntegral  stationId startTime endTime
+  logDebug "Created integral JSON payload"
   pure dataSource
 
 

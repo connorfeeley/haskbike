@@ -9,7 +9,9 @@ module Database.BikeShare.Operations.Factors
      ) where
 import           AppEnv
 
-import           Control.Lens
+import           Control.Lens                            hiding ( (.=) )
+
+import           Data.Aeson
 
 import           Database.Beam
 import           Database.BikeShare.Expressions          ( integrateColumns )
@@ -34,6 +36,22 @@ data StatusIntegral where
                     , intStatusSecEfitG5Available :: Integer
                     } -> StatusIntegral
   deriving (Generic, Show, Eq)
+
+instance ToJSON StatusIntegral where
+  toJSON integral =
+    object [ "station_id"       .= intStatusStationId integral
+           , "capacity"         .= intStatusCapacity  integral
+           , "total_seconds"    .= intStatusTotalSeconds  integral
+
+           , "bikes_available_seconds"   .= intStatusSecBikesAvailable  integral
+           , "bikes_disabled_seconds"    .= intStatusSecBikesDisabled   integral
+           , "docks_available_seconds"   .= intStatusSecDocksAvailable  integral
+           , "docks_disabled_seconds"    .= intStatusSecDocksDisabled   integral
+
+           , "iconic_available_seconds"  .= intStatusSecIconicAvailable integral
+           , "efit_available_seconds"    .= intStatusSecEfitAvailable   integral
+           , "efit_g5_available_seconds" .= intStatusSecEfitG5Available integral
+           ]
 
 queryIntegratedStatus :: StatusVariationQuery -> AppM [StatusIntegral]
 queryIntegratedStatus variation = do
