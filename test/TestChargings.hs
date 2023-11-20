@@ -189,16 +189,25 @@ unit_querySystemStatus = do
   ctz <- getCurrentTimeZone
   systemStatus <- runWithAppM dbnameTest $
     querySystemStatusAtRange (earliest ctz) (latest ctz) 60 -- 60 minute interval
-  assertEqual "" (expected ctz) (last systemStatus)
+  assertEqual "" (expected ctz) systemStatus
   where
     earliest ctz = localTimeToUTC ctz (LocalTime (fromGregorian 2023 10 30) (TimeOfDay 07 00 00))
     latest   ctz = localTimeToUTC ctz (LocalTime (fromGregorian 2023 10 30) (TimeOfDay 08 00 00))
-    expected ctz = ( latest ctz -- Latest time
-                   , 6038 -- Total available bikes
-                   , 200  -- Total disabled  bikes
-                   , 7336 -- Total available docks
-                   , 62   -- Total disabled  docks
-                   , 5663 -- Total available iconic  bikes
-                   , 102  -- Total available efit    bikes
-                   , 273  -- Total available efit g5 bikes
-                   )
+    expected ctz = [ ( earliest ctz -- Latest time
+                     , 6041 -- Total available bikes
+                     , 201  -- Total disabled  bikes
+                     , 7345 -- Total available docks
+                     , 62   -- Total disabled  docks
+                     , 5666 -- Total available iconic  bikes
+                     , 102  -- Total available efit    bikes
+                     , 273  -- Total available efit g5 bikes
+                     )
+                   , ( latest ctz -- Latest time
+                     , 3 -- Total available bikes
+                     , 1 -- Total disabled  bikes
+                     , 9 -- Total available docks
+                     , 0 -- Total disabled  docks
+                     , 3 -- Total available iconic  bikes
+                     , 0 -- Total available efit    bikes
+                     , 0 -- Total available efit g5 bikes
+                     ) ]
