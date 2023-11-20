@@ -241,6 +241,7 @@ library
                     , Database.BikeShare.Utils
                     , Database.BikeShare.Operations
                     , Database.BikeShare.Operations.Dockings
+                    , Database.BikeShare.Operations.Factors
                     , Database.BikeShare.Expressions
                     , Visualization.StationOccupancy
                     , Graphics.Vega.VegaLite.Extra
@@ -289,6 +290,7 @@ test-suite haskbike-test
                     , TestDatabase
                     , TestChargings
                     , TestMisc
+                    , Utils
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:

@@ -26,31 +26,32 @@ module TestDatabase
      , unit_queryStationStatusBetween
      ) where
 
-import           API.ResponseWrapper           ( response_data )
-import           API.Types                     ( StationInformationResponse, StationStatusResponse, _unInfoStations,
-                                                 unInfoStations, unStatusStations )
+import           API.ResponseWrapper                     ( response_data )
+import           API.Types                               ( StationInformationResponse, StationStatusResponse,
+                                                           _unInfoStations, unInfoStations, unStatusStations )
 
 import           AppEnv
 
 import           Control.Lens
 
-import           Data.Aeson                    ( FromJSON, eitherDecode )
-import qualified Data.ByteString.Lazy          as BL
-import           Data.Functor                  ( void )
-import           Data.Int                      ( Int32 )
+import           Data.Aeson                              ( FromJSON, eitherDecode )
+import qualified Data.ByteString.Lazy                    as BL
+import           Data.Functor                            ( void )
+import           Data.Int                                ( Int32 )
 import           Data.Time
 
 import           Database.Beam
 import           Database.Beam.Postgres
 import           Database.BikeShare
 import           Database.BikeShare.Operations
+import           Database.BikeShare.StatusVariationQuery
 import           Database.BikeShare.Utils
 
 import           Fmt
 
 import           Test.Tasty.HUnit
 
-import           UnliftIO                      ( try )
+import           UnliftIO                                ( try )
 
 setupTestDatabase :: IO Connection
 setupTestDatabase = connectTestDatabase >>= dropTables >>= migrateDatabase
