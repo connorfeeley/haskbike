@@ -17,18 +17,19 @@ module TestChargings
      , unit_querySystemStatus
      ) where
 
-import           API.Types                       ()
-import qualified API.Types                       as AT
+import           API.Types                               ()
+import qualified API.Types                               as AT
 import           API.Utils
 
 import           AppEnv
 
-import           Data.Functor                    ( void )
+import           Data.Functor                            ( void )
 import           Data.Time
 
 import           Database.BikeShare.ImportExport
 import           Database.BikeShare.Operations
-import           Database.BikeShare.Types        ( StationStatus )
+import           Database.BikeShare.StatusVariationQuery
+import           Database.BikeShare.Types                ( StationStatus )
 import           Database.BikeShare.Utils
 
 import           Test.Tasty.HUnit

@@ -23,10 +23,10 @@ import           Control.Lens
 import           Control.Monad.Except
 import           Control.Monad.Reader
 
-import           Data.Default.Class                     ( def )
-import           Data.List                              ( sortOn )
-import           Data.Maybe                             ( fromMaybe, listToMaybe )
-import qualified Data.Text                              as T
+import           Data.Default.Class                      ( def )
+import           Data.List                               ( sortOn )
+import           Data.Maybe                              ( fromMaybe, listToMaybe )
+import qualified Data.Text                               as T
 import           Data.Time
 import           Data.Time.Extras
 
@@ -34,6 +34,7 @@ import           Database.Beam
 import           Database.BikeShare
 import           Database.BikeShare.Expressions
 import           Database.BikeShare.Operations
+import           Database.BikeShare.StatusVariationQuery
 
 import           Fmt
 
@@ -57,7 +58,7 @@ import           TextShow
 
 import           TimeInterval
 
-import           UnliftIO                               ( concurrently )
+import           UnliftIO                                ( concurrently )
 
 
 data API mode where
