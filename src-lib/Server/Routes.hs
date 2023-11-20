@@ -98,7 +98,8 @@ data StaticAPI mode where
 
 statusHandler :: DataAPI (AsServerT ServerAppM)
 statusHandler =  DataAPI { dataForStation       = stationStatusData
-                         , integralForStation   = stationIntegralData
+                         , integralsForStation  = stationIntegralData
+                         , factorsForStation    = stationFactorData
                          }
 
 staticHandler :: StaticAPI (AsServerT ServerAppM)
@@ -122,6 +123,14 @@ stationIntegralData :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> Server
 stationIntegralData stationId startTime endTime = do
   logInfo $ format "Creating integral JSON payload for {station ID: {}, start time: {}, end time: {}} " stationId startTime endTime
   dataSource <- generateJsonDataSourceIntegral  stationId startTime endTime
+  logDebug "Created integral JSON payload"
+  pure dataSource
+
+
+stationFactorData :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM [StatusFactor]
+stationFactorData stationId startTime endTime = do
+  logInfo $ format "Creating integral JSON payload for {station ID: {}, start time: {}, end time: {}} " stationId startTime endTime
+  dataSource <- generateJsonDataSourceFactor  stationId startTime endTime
   logDebug "Created integral JSON payload"
   pure dataSource
 

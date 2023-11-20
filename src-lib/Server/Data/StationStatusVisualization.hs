@@ -4,6 +4,7 @@ module Server.Data.StationStatusVisualization
      ( StationStatusVisualization (..)
      , fromBeamStationStatusToVisJSON
      , generateJsonDataSource
+     , generateJsonDataSourceFactor
      , generateJsonDataSourceIntegral
      ) where
 
@@ -129,6 +130,7 @@ generateJsonDataSource Nothing startTime endTime = do
                                  , _statusVisAvailableEfitG5 = st ^. _8 & fromIntegral
                                  }
 
+
 generateJsonDataSourceIntegral :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM [StatusIntegral]
 generateJsonDataSourceIntegral stationId startTime endTime = do
   -- Accessing the inner environment by using the serverEnv accessor.
@@ -142,6 +144,26 @@ generateJsonDataSourceIntegral stationId startTime endTime = do
 
   liftIO $ runAppM appEnv $
     queryIntegratedStatus
+    (StatusVariationQuery (fromIntegral <$> stationId)
+      [ EarliestTime (localTimeToUTC tz (earliestTime  range))
+      , LatestTime (localTimeToUTC tz (latestTime range))
+      ]
+    )
+
+
+generateJsonDataSourceFactor :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM [StatusFactor]
+generateJsonDataSourceFactor stationId startTime endTime = do
+  -- Accessing the inner environment by using the serverEnv accessor.
+  appEnv <- getAppEnvFromServer
+  let tz = envTimeZone appEnv
+  -- AppM actions can be lifter into ServerAppM by using a combination of liftIO and runReaderT.
+  currentUtc <- liftIO getCurrentTime
+
+  let params = StatusDataParams tz currentUtc (TimePair startTime endTime)
+  let range = enforceTimeRangeBounds params
+
+  liftIO $ runAppM appEnv $
+    queryStatusFactors
     (StatusVariationQuery (fromIntegral <$> stationId)
       [ EarliestTime (localTimeToUTC tz (earliestTime  range))
       , LatestTime (localTimeToUTC tz (latestTime range))

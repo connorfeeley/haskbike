@@ -19,6 +19,8 @@ import           Database.BikeShare.StationInformation   ( unInformationStationI
 import           Database.BikeShare.StatusVariationQuery
 
 
+-- * Types and functions used to calculate availability integrals.
+
 data StatusIntegral where
   StatusIntegral :: { intStatusStationId       :: Integer
                     , intStatusVariation       :: StatusVariationQuery
@@ -73,6 +75,9 @@ queryIntegratedStatus variation = do
                            })
         ) integrals
 
+
+-- * Types and functions used to calculate availability factors.
+
 data StatusFactor where
   StatusFactor :: { statusFactorStationId       :: Integer
                   , statusFactorVariation       :: StatusVariationQuery
@@ -89,6 +94,21 @@ data StatusFactor where
                   , statusFactorEfitG5Available :: Double
                   } -> StatusFactor
   deriving (Generic, Show, Eq)
+
+instance ToJSON StatusFactor where
+  toJSON integral =
+    object [ "station_id"       .= statusFactorStationId integral
+           , "capacity"         .= statusFactorCapacity  integral
+
+           , "bikes_available_seconds"   .= statusFactorBikesAvailable  integral
+           , "bikes_disabled_seconds"    .= statusFactorBikesDisabled   integral
+           , "docks_available_seconds"   .= statusFactorDocksAvailable  integral
+           , "docks_disabled_seconds"    .= statusFactorDocksDisabled   integral
+
+           , "iconic_available_seconds"  .= statusFactorIconicAvailable integral
+           , "efit_available_seconds"    .= statusFactorEfitAvailable   integral
+           , "efit_g5_available_seconds" .= statusFactorEfitG5Available integral
+           ]
 
 integralToFactor :: StatusIntegral -> StatusFactor
 integralToFactor integral =

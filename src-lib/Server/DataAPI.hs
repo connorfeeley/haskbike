@@ -27,12 +27,19 @@ data DataAPI mode where
           :> QueryParam "start-time" LocalTime
           :> QueryParam "end-time" LocalTime
           :> Get '[JSON] [StationStatusVisualization]
-    , integralForStation :: mode :-
+    , integralsForStation :: mode :-
       "data" :>
         "station-status" :> "integral"
           :> QueryParam "station-id" Int
           :> QueryParam "start-time" LocalTime
           :> QueryParam "end-time" LocalTime
           :> Get '[JSON] [StatusIntegral]
+    , factorsForStation :: mode :-
+      "data" :>
+        "station-status" :> "factor"
+          :> QueryParam "station-id" Int
+          :> QueryParam "start-time" LocalTime
+          :> QueryParam "end-time" LocalTime
+          :> Get '[JSON] [StatusFactor]
     } -> DataAPI mode
   deriving stock Generic
