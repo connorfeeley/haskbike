@@ -5,6 +5,7 @@ module Database.BikeShare.Operations.Factors
      , StatusIntegral (..)
      , queryIntegratedStatus
      , queryStatusFactors
+     , sumStatusFactors
      ) where
 import           AppEnv
 
@@ -90,3 +91,11 @@ integralToFactor integral =
 
 queryStatusFactors :: StatusVariationQuery -> AppM [StatusFactor]
 queryStatusFactors variation = map integralToFactor <$> queryIntegratedStatus variation
+
+sumStatusFactors :: StatusFactor -> Double
+sumStatusFactors factors =
+    ( statusFactorBikesAvailable  factors
+    + statusFactorBikesDisabled   factors
+    + statusFactorDocksAvailable  factors
+    + statusFactorDocksDisabled   factors
+    )
