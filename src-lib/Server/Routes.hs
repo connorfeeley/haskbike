@@ -134,7 +134,7 @@ statusVisualizationPage stationId startTime endTime = do
   let variation = StatusVariationQuery (fromIntegral <$> stationId) [ EarliestTime (localTimeToUTC tz earliest)
                                                                     , LatestTime   (localTimeToUTC tz latest)
                                                                     ]
-  logDebug $ format "earliest={}, latest={}" earliest latest
+  logDebug $ format "Earliest={}, latest={}" earliest latest
 
   -- * Query the database for the number of bikes charged at this station, and number of bikes docked and undocked at this station.
   logDebug $ "Querying chargings and events for station " <> showt stationId
