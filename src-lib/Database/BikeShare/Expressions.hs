@@ -39,6 +39,7 @@ import           Database.Beam.Backend.SQL                ( BeamSqlBackend )
 import           Database.Beam.Backend.SQL.BeamExtensions ( BeamHasInsertOnConflict (anyConflict, onConflictDoNothing),
                                                             insertOnConflict )
 import           Database.Beam.Postgres
+import           Database.Beam.Postgres.Full
 import           Database.Beam.Postgres.Syntax
 import qualified Database.Beam.Query.Adhoc                as Adhoc
 import           Database.BikeShare
@@ -83,8 +84,14 @@ insertStationInformationExpr :: [AT.StationInformation] -> SqlInsert Postgres St
 insertStationInformationExpr stations =
   insertOnConflict (bikeshareDb ^. bikeshareStationInformation)
   (insertExpressions (map fromJSONToBeamStationInformation stations))
-  anyConflict
-  onConflictDoNothing
+  (conflictingFields primaryKey) (onConflictUpdateInstead (\i -> ( _infoName                    i
+                                                                 , _infoPhysicalConfiguration   i
+                                                                 , _infoCapacity                i
+                                                                 , _infoIsChargingStation       i
+                                                                 , _infoIsValetStation          i
+                                                                 , _infoIsVirtualStation        i
+                                                                 )
+                                                          ))
 
 disabledDocksExpr :: Q Postgres BikeshareDb s (QGenExpr QValueContext Postgres s Text.Text, QGenExpr QValueContext Postgres s Int32)
 disabledDocksExpr = do
