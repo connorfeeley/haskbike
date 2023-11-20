@@ -8,6 +8,7 @@ module Database.BikeShare.Expressions
      ( disabledDocksExpr
      , infoByIdExpr
      , insertStationInformationExpr
+     , integrateColumns
      , queryLatestStatusBetweenExpr
      , queryStationIdExpr
      , queryStationIdLikeExpr
@@ -41,6 +42,7 @@ import           Database.Beam.Postgres
 import           Database.Beam.Postgres.Syntax
 import qualified Database.Beam.Query.Adhoc                as Adhoc
 import           Database.BikeShare
+import           Database.BikeShare.StatusVariationQuery
 
 import           Formatting
 
@@ -196,3 +198,75 @@ querySystemStatusAtRangeExpr earliestTime latestTime interval = do
             uncurry (between_ (_statusLastReported latestStatuses)) intervals)
     pure (snd intervals, latestStatuses)
 
+
+-- * Integrals of fields.
+
+-- Run with:
+--   withPostgres $ runSelectReturningList $ selectWith $ integrateColumns (StatusVariationQuery (Just (7001)) [EarliestTime (UTCTime (fromGregorian 2023 11 18) (timeOfDayToTime midnight)), LatestTime (UTCTime (fromGregorian 2023 11 19) (timeOfDayToTime midnight))])
+-- | Query the number of charging events for a station (returning status record and tuples of (dDisabled, dEfit, dEfitG5, sumDisabled, sumEfit, sumEfitG5).
+integrateColumns :: be ~ Postgres
+                 => StatusVariationQuery
+                 -> (With
+                      be
+                      BikeshareDb
+                      (Q be BikeshareDb s
+                        ( PrimaryKey StationInformationT (QGenExpr QValueContext be s)
+                        , QGenExpr QValueContext be s Int32 -- ^ Station capacity
+                        , QGenExpr QValueContext be s Int32 -- ^ Total seconds
+                        , QGenExpr QValueContext be s Int32 -- ^ Integral of number of bikes available (sum of (time delta * bikes available)  over rows))
+                        , QGenExpr QValueContext be s Int32 -- ^ Integral of number of bikes disabled  (sum of (time delta * bikes disabled))  over rows)
+                        , QGenExpr QValueContext be s Int32 -- ^ Integral of number of docks available (sum of (time delta * docks available)) over rows)
+                        , QGenExpr QValueContext be s Int32 -- ^ Integral of number of docks disabled  (sum of (time delta * docks disabled)  over rows)
+                        )
+                      ))
+integrateColumns variation = do
+  -- Lag expression
+  lagged <- selecting $ do
+    let statusForStation = filter_ (filterFor_ variation)
+                                   (all_ (bikeshareDb ^. bikeshareStationStatus))
+      in withWindow_ (\row -> frame_ (partitionBy_ (_statusStationId row)) (orderPartitionBy_ (asc_ $ _statusLastReported row)) noBounds_)
+                     (\row w -> ( row
+                                , lagWithDefault_ (row ^. statusLastReported) (val_ (1 :: Integer)) (row ^. statusLastReported) `over_` w
+                                )
+                     ) statusForStation
+
+  -- Difference between row values and lagged values
+  withDeltas <- selecting $ do
+    -- as seconds:
+    let timeDelta column column' = cast_ (extract_ epoch_ column - extract_ epoch_ column') int
+    -- Calculate delta between current and previous availability.
+      in withWindow_ (\(row, _) -> frame_ (partitionBy_ (_statusStationId row)) noOrder_ noBounds_)
+         (\(row, pLastReported) _w ->
+             ( row                                                                                  -- _1
+             , as_ @Int32 (timeDelta (row ^. statusLastReported) pLastReported)                     -- _2
+             , row ^. statusNumBikesAvailable * timeDelta (row ^. statusLastReported) pLastReported -- _3
+             , row ^. statusNumBikesDisabled  * timeDelta (row ^. statusLastReported) pLastReported -- _4
+             , row ^. statusNumDocksAvailable * timeDelta (row ^. statusLastReported) pLastReported -- _5
+             , row ^. statusNumDocksDisabled  * timeDelta (row ^. statusLastReported) pLastReported -- _6
+             )
+         ) (reuse lagged)
+  chargings <- selecting $ reuse withDeltas
+
+  pure $ do
+    chargingsSum <-
+      aggregate_ (\(status, dLastReported, secondsBikesAvailable, secondsBikesDisabled, secondsDocksAvailable, secondsDocksDisabled) ->
+                     ( group_ (_statusStationId status)          -- _1
+                     , fromMaybe_ 0 (sum_ dLastReported        ) -- _2
+                     , fromMaybe_ 0 (sum_ secondsBikesAvailable) -- _3
+                     , fromMaybe_ 0 (sum_ secondsBikesDisabled ) -- _4
+                     , fromMaybe_ 0 (sum_ secondsDocksAvailable) -- _5
+                     , fromMaybe_ 0 (sum_ secondsDocksDisabled ) -- _6
+                     ))
+                 (reuse chargings)
+
+    info <- all_ (bikeshareDb ^. bikeshareStationInformation)
+    guard_ ((chargingsSum ^. _1) `references_` info)
+
+    pure ( chargingsSum ^. _1
+         , info ^. infoCapacity
+         , chargingsSum ^. _2
+         , chargingsSum ^. _3
+         , chargingsSum ^. _4
+         , chargingsSum ^. _5
+         , chargingsSum ^. _6
+         )
