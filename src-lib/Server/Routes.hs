@@ -65,6 +65,8 @@ import           TimeInterval
 
 import           UnliftIO                                 ( concurrently )
 
+import           Version                                  ( getCabalVersion, getGitVersion )
+
 
 data API mode where
   API :: { version           :: mode :- "version" :> Get '[JSON] Version
@@ -80,7 +82,7 @@ type Version = ((String, String), (String, String)) -- This will do for the sake
 type BikeShareExplorerAPI = NamedRoutes API
 
 versionHandler :: ServerAppM Version
-versionHandler = pure (("version", "0.0.1"), ("git-version", "0.0.1"))
+versionHandler = pure (("version", getCabalVersion), ("git-version", getGitVersion))
 
 server ::  API (AsServerT ServerAppM)
 server = API { version = versionHandler

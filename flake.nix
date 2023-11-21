@@ -42,7 +42,7 @@
                     };
                   in
                   {
-                    postPatch = o.postPatch or "" + "cp ${versionFile} src-exe/Version.hs";
+                    postPatch = o.postPatch or "" + "cp ${versionFile} src-lib/Version.hs";
                     doCheck = false;
                     postInstall = o.postInstall or "" + ''
                       mkdir -p $out/share/haskbike/www/static

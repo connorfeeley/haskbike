@@ -172,15 +172,13 @@ executable haskbike
     main-is:          Main.hs
 
     -- Modules included in this executable, other than Main.
-    other-modules:    Version
-                    , Paths_haskbike
+    -- other-modules:
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
 
     -- Other library packages from which modules are imported.
     build-depends:    haskbike
-                    , githash
 
     -- Directories containing source files.
     hs-source-dirs:   src-exe
@@ -199,6 +197,7 @@ library
 
     -- Modules exported by the library.
     exposed-modules:  BikeShareAPI
+                    , Version
                     , AppEnv
                     , API.ResponseWrapper
                     , API.Client
@@ -254,6 +253,8 @@ library
                     , Database.BikeShare.StationInformation
                     , Database.BikeShare.StationStatus
                     , Database.BikeShare.Diagnostics
+                    , Paths_haskbike
+
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
@@ -267,6 +268,7 @@ library
                     , unordered-containers
                     , aeson-pretty
                     , data-default-class
+                    , githash
 
     -- Directories containing source files.
     hs-source-dirs:   src-lib
