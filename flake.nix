@@ -11,6 +11,8 @@
     treefmt-nix.url = "github:numtide/treefmt-nix";
   };
   outputs = inputs@{ self, nixpkgs, flake-parts, ... }:
+    let rev = self.rev or self.dirtyRev or "dirty";
+    in
     flake-parts.lib.mkFlake { inherit inputs; } ({ ... }: {
       debug = true;
       systems = nixpkgs.lib.systems.flakeExposed;
@@ -38,7 +40,7 @@
                   let
                     versionFile = pkgs.substituteAll {
                       src = ./nix/VersionPure.hs;
-                      inherit (super.haskbike) version;
+                      inherit rev;
                     };
                   in
                   {

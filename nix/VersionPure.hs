@@ -14,4 +14,4 @@ getCabalVersion :: String
 getCabalVersion = showVersion version
 
 getGitVersion :: String
-getGitVersion = "@version@"
+getGitVersion = "@rev@"
