@@ -62,6 +62,7 @@ selectionProps _selName filterFn label dataUrl =
         --           ]
         . toolTip
         where
+          _transparent, lemon, lightBlue, skyBlue, green, salmon, black :: String
           _transparent = "rgb(0,0,0,0)" -- transparent
           lemon        = "#fffacd"
           lightBlue    = "#009ACD"

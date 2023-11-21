@@ -5,27 +5,10 @@ module Server.Classes
      , menuHeading
      ) where
 
-import           Data.Aeson
 import           Data.Text
-import           Data.Time
-import           Data.Time.Extras
-
-import           Database.BikeShare.StationInformation
-
-import           Fmt
-
-import qualified Graphics.Vega.VegaLite                as VL
-import           Graphics.Vega.VegaLite.Extra
 
 import           Lucid
-import           Lucid.Base                            ( makeAttribute )
-import           Lucid.Servant
 
-import           Servant
-
-import           Server.Page.Utils
-
-import           TextShow
 
 -- | Can be converted to HTML.
 class ToHtmlComponents a where
