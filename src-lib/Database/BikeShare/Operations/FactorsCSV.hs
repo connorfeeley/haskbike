@@ -205,9 +205,9 @@ instance ToNamedRecord PerformanceDataCSV where
     , "Iconic Available Factor"              .= statusFactorIconicAvailable   factor
     , "E-Fit Available Factor"               .= statusFactorEfitAvailable     factor
     , "E-Fit G5 Available Factor"            .= statusFactorEfitG5Available   factor
-    , "Iconic Normalized Available Factor"   .= statusFactorIconicAvailable   factor
-    , "E-Fit Normalized Available Factor"    .= statusFactorEfitAvailable     factor
-    , "E-Fit G5 Normalized Available Factor" .= statusFactorEfitG5Available   factor
+    , "Iconic Normalized Available Factor"   .= statusFactorNormalizedIconicAvailable   factor
+    , "E-Fit Normalized Available Factor"    .= statusFactorNormalizedEfitAvailable     factor
+    , "E-Fit G5 Normalized Available Factor" .= statusFactorNormalizedEfitG5Available   factor
     ]
     where
       integral = performanceIntegrals performanceData
