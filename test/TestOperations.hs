@@ -75,6 +75,7 @@ unit_queryStatusFactors = do
                      , statusFactorVariation       = variation
                      , statusFactorCharging        = True
                      , statusFactorCapacity        = 23
+                     , statusFactorTotalSeconds    = 42805
                      , statusFactorBikesAvailable  = 0.3011919574612881
                      , statusFactorBikesDisabled   = 0.5042300015743792
                      , statusFactorDocksAvailable  = 0.19457804096433268
