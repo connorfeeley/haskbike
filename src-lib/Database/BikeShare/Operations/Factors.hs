@@ -1,8 +1,11 @@
 -- | Types and functions used to calculate availability factors.
 
 module Database.BikeShare.Operations.Factors
-     ( StatusFactor (..)
+     ( PerformanceData (..)
+     , StatusFactor (..)
      , StatusIntegral (..)
+     , integralToFactor
+     , integralToPerformanceData
      , queryIntegratedStatus
      , queryStatusFactors
      , sumBikeStatusFactors
@@ -172,3 +175,12 @@ sumBikeStatusFactors :: StatusFactor -> Double
 sumBikeStatusFactors factors = statusFactorNormalizedIconicAvailable factors
                              + statusFactorNormalizedEfitAvailable   factors
                              + statusFactorNormalizedEfitG5Available factors
+
+-- | Combination of status integrals and factors.
+data PerformanceData where
+  PerformanceData :: { performanceIntegrals :: StatusIntegral, performanceFactors :: StatusFactor }
+                 -> PerformanceData
+  deriving (Generic, Show, Eq)
+
+integralToPerformanceData :: StatusIntegral -> PerformanceData
+integralToPerformanceData integral = PerformanceData integral (integralToFactor integral)

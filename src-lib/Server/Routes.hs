@@ -141,7 +141,7 @@ stationFactorData stationId startTime endTime = do
 
 performanceCsvHandler :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM (Headers '[Header "Content-Disposition" Text] ByteString)
 performanceCsvHandler stationId startTime endTime = do
-  logInfo $ format "Creating factor JSON payload for {station ID: {}, start time: {}, end time: {}} " stationId startTime endTime
+  logInfo $ format "Creating performance data CSV payload for {station ID: {}, start time: {}, end time: {}} " stationId startTime endTime
 
   appEnv <- getAppEnvFromServer
   let tz = envTimeZone appEnv
@@ -149,21 +149,22 @@ performanceCsvHandler stationId startTime endTime = do
 
   let params = StatusDataParams tz currentUtc (TimePair startTime endTime)
   let range = enforceTimeRangeBounds params
+  let variation = StatusVariationQuery (fromIntegral <$> stationId)
+        [ EarliestTime (localTimeToUTC tz (earliestTime range))
+        , LatestTime   (localTimeToUTC tz (latestTime range))
+        ]
 
-  factors <- liftIO $ runAppM appEnv $
-    queryStatusFactors
-    (StatusVariationQuery (fromIntegral <$> stationId)
-      [ EarliestTime (localTimeToUTC tz (earliestTime range))
-      , LatestTime   (localTimeToUTC tz (latestTime range))
-      ]
-    )
-  logDebug "Created factor JSON payload"
+  integrals <- liftIO $ runAppM appEnv $ queryIntegratedStatus variation
 
-  let fileContent = (encodeDefaultOrderedByName . map StatusFactorCSV) factors
+  logDebug "Created performance data CSV payload"
+
+  let fileContent = encodeIntegrals integrals
 
   let stationIdString :: String = maybe "system" (format "station-{}") stationId
   let filename :: String = format "{}-performance-{}-{}.csv" stationIdString (earliestTime range) (latestTime range)
   pure $ addHeader (format "attachment; filename=\"{}\"" (replaceSpaces filename)) (fileContent :: ByteString)
+  where
+    encodeIntegrals = encodeDefaultOrderedByName . map (PerformanceDataCSV . integralToPerformanceData)
 
 replaceSpaces :: String -> String
 replaceSpaces [] = []
