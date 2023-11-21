@@ -148,10 +148,16 @@ integralToFactor integral =
   where
     totalSeconds = fromInteger (intStatusTotalSeconds integral)
     capacity     = fromInteger (intStatusCapacity     integral)
-    factor field = fromInteger (field   integral) / totalSeconds / capacity
+    factor field = boundFloat (fromInteger (field   integral) / totalSeconds / capacity)
     availableFactorSum = factor intStatusSecIconicAvailable
                        + factor intStatusSecEfitAvailable
                        + factor intStatusSecEfitG5Available
+
+boundFloat :: RealFloat a => a -> a
+boundFloat x
+  | isInfinite x = 1.0
+  | isNaN x = 0.0
+  | otherwise = x
 
 queryStatusFactors :: StatusVariationQuery -> AppM [StatusFactor]
 queryStatusFactors variation = map integralToFactor <$> queryIntegratedStatus variation
