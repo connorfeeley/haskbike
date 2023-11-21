@@ -21,7 +21,7 @@ import           AppEnv
 import           Colog                ( WithLog, logException )
 
 import           Control.Monad.Catch
-import           Control.Monad.Reader ( MonadIO, MonadReader (..), ask )
+import           Control.Monad.Reader ( MonadReader (..), ask )
 
 import           Data.Aeson           ( Object )
 

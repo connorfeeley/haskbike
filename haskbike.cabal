@@ -98,6 +98,7 @@ common common-depends
                     , time
                     , boxes
                     , exceptions
+                    , cassava
 
 -- Dependencies needed by targets exercising the API client.
 common api-client-depends
@@ -242,6 +243,7 @@ library
                     , Database.BikeShare.Operations
                     , Database.BikeShare.Operations.Dockings
                     , Database.BikeShare.Operations.Factors
+                    , Database.BikeShare.Operations.FactorsCSV
                     , Database.BikeShare.Expressions
                     , Visualization.StationOccupancy
                     , Graphics.Vega.VegaLite.Extra

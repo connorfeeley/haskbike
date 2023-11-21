@@ -7,6 +7,8 @@ module Server.DataAPI
      ( DataAPI (..)
      ) where
 
+import           Data.ByteString.Lazy                   ( ByteString )
+import           Data.Text                              ( Text )
 import           Data.Time
 
 import           Database.BikeShare.Operations.Factors
@@ -41,5 +43,12 @@ data DataAPI mode where
           :> QueryParam "start-time" LocalTime
           :> QueryParam "end-time" LocalTime
           :> Get '[JSON] [StatusFactor]
+    , performanceCsv :: mode :-
+      "data" :>
+        "system-status" :> "performance" :> "csv"
+          :> QueryParam "station-id" Int
+          :> QueryParam "start-time" LocalTime
+          :> QueryParam "end-time" LocalTime
+          :> Get '[OctetStream] (Headers '[Header "Content-Disposition" Text] ByteString)
     } -> DataAPI mode
   deriving stock Generic

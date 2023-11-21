@@ -1,8 +1,11 @@
 -- | Types and functions used to calculate availability factors.
 
 module Database.BikeShare.Operations.Factors
-     ( StatusFactor (..)
+     ( PerformanceData (..)
+     , StatusFactor (..)
      , StatusIntegral (..)
+     , integralToFactor
+     , integralToPerformanceData
      , queryIntegratedStatus
      , queryStatusFactors
      , sumBikeStatusFactors
@@ -89,6 +92,7 @@ data StatusFactor where
 
                   , statusFactorCharging                  :: Bool
                   , statusFactorCapacity                  :: Integer
+                  , statusFactorTotalSeconds              :: Integer
 
                   , statusFactorBikesAvailable            :: Double
                   , statusFactorBikesDisabled             :: Double
@@ -106,31 +110,33 @@ data StatusFactor where
   deriving (Generic, Show, Eq)
 
 instance ToJSON StatusFactor where
-  toJSON integral =
-    object [ "station_id"               .= statusFactorStationId integral
-           , "charging"                 .= statusFactorCharging  integral
-           , "capacity"                 .= statusFactorCapacity  integral
+  toJSON factor =
+    object [ "station_id"               .= statusFactorStationId    factor
+           , "charging"                 .= statusFactorCharging     factor
+           , "capacity"                 .= statusFactorCapacity     factor
+           , "total_seconds"            .= statusFactorTotalSeconds factor
 
-           , "bikes_available_factor"   .= statusFactorBikesAvailable  integral
-           , "bikes_disabled_factor"    .= statusFactorBikesDisabled   integral
-           , "docks_available_factor"   .= statusFactorDocksAvailable  integral
-           , "docks_disabled_factor"    .= statusFactorDocksDisabled   integral
+           , "bikes_available_factor"   .= statusFactorBikesAvailable  factor
+           , "bikes_disabled_factor"    .= statusFactorBikesDisabled   factor
+           , "docks_available_factor"   .= statusFactorDocksAvailable  factor
+           , "docks_disabled_factor"    .= statusFactorDocksDisabled   factor
 
-           , "iconic_available_factor"  .= statusFactorIconicAvailable integral
-           , "efit_available_factor"    .= statusFactorEfitAvailable   integral
-           , "efit_g5_available_factor" .= statusFactorEfitG5Available integral
+           , "iconic_available_factor"  .= statusFactorIconicAvailable factor
+           , "efit_available_factor"    .= statusFactorEfitAvailable   factor
+           , "efit_g5_available_factor" .= statusFactorEfitG5Available factor
 
-           , "iconic_available_factor_normalized"  .= statusFactorIconicAvailable integral
-           , "efit_available_factor_normalized"    .= statusFactorEfitAvailable   integral
-           , "efit_g5_available_factor_normalized" .= statusFactorEfitG5Available integral
+           , "iconic_available_factor_normalized"  .= statusFactorIconicAvailable factor
+           , "efit_available_factor_normalized"    .= statusFactorEfitAvailable   factor
+           , "efit_g5_available_factor_normalized" .= statusFactorEfitG5Available factor
            ]
 
 integralToFactor :: StatusIntegral -> StatusFactor
 integralToFactor integral =
-  StatusFactor { statusFactorVariation       = intStatusVariation integral
-               , statusFactorStationId       = intStatusStationId integral
-               , statusFactorCharging        = intStatusCharging integral
-               , statusFactorCapacity        = intStatusCapacity integral
+  StatusFactor { statusFactorVariation       = intStatusVariation    integral
+               , statusFactorStationId       = intStatusStationId    integral
+               , statusFactorCharging        = intStatusCharging     integral
+               , statusFactorCapacity        = intStatusCapacity     integral
+               , statusFactorTotalSeconds    = intStatusTotalSeconds integral
                , statusFactorBikesAvailable  = factor intStatusSecBikesAvailable
                , statusFactorBikesDisabled   = factor intStatusSecBikesDisabled
                , statusFactorDocksAvailable  = factor intStatusSecDocksAvailable
@@ -145,10 +151,16 @@ integralToFactor integral =
   where
     totalSeconds = fromInteger (intStatusTotalSeconds integral)
     capacity     = fromInteger (intStatusCapacity     integral)
-    factor field = fromInteger (field   integral) / totalSeconds / capacity
+    factor field = boundFloat (fromInteger (field   integral) / totalSeconds / capacity)
     availableFactorSum = factor intStatusSecIconicAvailable
                        + factor intStatusSecEfitAvailable
                        + factor intStatusSecEfitG5Available
+
+boundFloat :: RealFloat a => a -> a
+boundFloat x
+  | isInfinite x = 1.0
+  | isNaN x = 0.0
+  | otherwise = x
 
 queryStatusFactors :: StatusVariationQuery -> AppM [StatusFactor]
 queryStatusFactors variation = map integralToFactor <$> queryIntegratedStatus variation
@@ -163,3 +175,12 @@ sumBikeStatusFactors :: StatusFactor -> Double
 sumBikeStatusFactors factors = statusFactorNormalizedIconicAvailable factors
                              + statusFactorNormalizedEfitAvailable   factors
                              + statusFactorNormalizedEfitG5Available factors
+
+-- | Combination of status integrals and factors.
+data PerformanceData where
+  PerformanceData :: { performanceIntegrals :: StatusIntegral, performanceFactors :: StatusFactor }
+                 -> PerformanceData
+  deriving (Generic, Show, Eq)
+
+integralToPerformanceData :: StatusIntegral -> PerformanceData
+integralToPerformanceData integral = PerformanceData integral (integralToFactor integral)
