@@ -24,7 +24,6 @@ import           Data.Time
 
 import           Database.BikeShare.Operations
 import           Database.BikeShare.StatusVariationQuery
-import           Database.BikeShare.Types                ( StationStatus )
 import           Database.BikeShare.Utils
 
 import           Test.Tasty.HUnit

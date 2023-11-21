@@ -1,7 +1,8 @@
 -- | Types and functions used to calculate availability factors.
 
 module Database.BikeShare.Operations.FactorsCSV
-     ( StatusIntegralCSV (..)
+     ( StatusFactorCSV (..)
+     , StatusIntegralCSV (..)
      ) where
 
 import           Data.Csv                              ( DefaultOrdered (..), ToField (..), ToNamedRecord (..),

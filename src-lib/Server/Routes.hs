@@ -23,10 +23,13 @@ import           Control.Lens
 import           Control.Monad.Except
 import           Control.Monad.Reader
 
-import           Data.Default.Class                      ( def )
-import           Data.List                               ( sortOn )
-import           Data.Maybe                              ( fromMaybe, listToMaybe )
-import qualified Data.Text                               as T
+import           Data.ByteString.Lazy                     ( ByteString )
+import           Data.Csv                                 ( encodeDefaultOrderedByName )
+import           Data.Default.Class                       ( def )
+import           Data.List                                ( sortOn )
+import           Data.Maybe                               ( fromMaybe, listToMaybe )
+import           Data.Text                                ( Text )
+import qualified Data.Text                                as T
 import           Data.Time
 import           Data.Time.Extras
 
@@ -35,6 +38,7 @@ import           Database.BikeShare
 import           Database.BikeShare.Expressions
 import           Database.BikeShare.Operations
 import           Database.BikeShare.Operations.Factors
+import           Database.BikeShare.Operations.FactorsCSV
 import           Database.BikeShare.StatusVariationQuery
 
 import           Fmt
@@ -59,7 +63,7 @@ import           TextShow
 
 import           TimeInterval
 
-import           UnliftIO                                ( concurrently )
+import           UnliftIO                                 ( concurrently )
 
 
 data API mode where
@@ -100,6 +104,7 @@ statusHandler :: DataAPI (AsServerT ServerAppM)
 statusHandler =  DataAPI { dataForStation       = stationStatusData
                          , integralsForStation  = stationIntegralData
                          , factorsForStation    = stationFactorData
+                         , performanceCsv       = performanceCsvHandler
                          }
 
 staticHandler :: StaticAPI (AsServerT ServerAppM)
@@ -133,6 +138,38 @@ stationFactorData stationId startTime endTime = do
   dataSource <- generateJsonDataSourceFactor  stationId startTime endTime
   logDebug "Created factor JSON payload"
   pure dataSource
+
+performanceCsvHandler :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM (Headers '[Header "Content-Disposition" Text] ByteString)
+performanceCsvHandler stationId startTime endTime = do
+  logInfo $ format "Creating factor JSON payload for {station ID: {}, start time: {}, end time: {}} " stationId startTime endTime
+
+  appEnv <- getAppEnvFromServer
+  let tz = envTimeZone appEnv
+  currentUtc <- liftIO getCurrentTime
+
+  let params = StatusDataParams tz currentUtc (TimePair startTime endTime)
+  let range = enforceTimeRangeBounds params
+
+  factors <- liftIO $ runAppM appEnv $
+    queryStatusFactors
+    (StatusVariationQuery (fromIntegral <$> stationId)
+      [ EarliestTime (localTimeToUTC tz (earliestTime range))
+      , LatestTime   (localTimeToUTC tz (latestTime range))
+      ]
+    )
+  logDebug "Created factor JSON payload"
+
+  let fileContent = (encodeDefaultOrderedByName . map StatusFactorCSV) factors
+
+  let stationIdString :: String = maybe "system" (format "station-{}") stationId
+  let filename :: String = format "{}-performance-{}-{}.csv" stationIdString (earliestTime range) (latestTime range)
+  pure $ addHeader (format "attachment; filename=\"{}\"" (replaceSpaces filename)) (fileContent :: ByteString)
+
+replaceSpaces :: String -> String
+replaceSpaces [] = []
+replaceSpaces (x:xs)
+    | x == ' ' = "-" ++ replaceSpaces xs
+    | otherwise = x : replaceSpaces xs
 
 
 -- | Create common values between system and station status visualization page record.
