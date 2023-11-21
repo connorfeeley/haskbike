@@ -11,12 +11,13 @@ module Server.Page.SystemStatusVisualization
 
 
 import           Data.Default.Class
+import           Data.Int                        ( Int32 )
 import           Data.Maybe                      ( catMaybes )
 import qualified Data.Text                       as T
 import           Data.Time
 import           Data.Time.Extras
 
-import           Database.BikeShare              ( StationStatus )
+import           Database.BikeShare              ( StationInformation, StationStatus )
 import           Database.BikeShare.Operations
 
 import           Fmt
@@ -81,7 +82,7 @@ data SystemStatusVisualizationPage where
                                    , _systemStatusVisPageCurrentUtc    :: UTCTime
                                    , _systemStatusVisPageInfo          :: SystemStatusVisualizationInfo
                                    , _systemStatusVisPageDockingEvents :: [DockingEventsCount]
-                                   , _systemStatusVisPageChargings     :: [(StationStatus, [ChargingEvent])]
+                                   , _systemStatusVisPageChargings     :: [(StationInformation, Int32, Int32, Int32)]
                                    , _systemStatusVisPageDataLink      :: Link
                                    , _systemStatusVisPageStaticLink    :: Link
                                    } -> SystemStatusVisualizationPage

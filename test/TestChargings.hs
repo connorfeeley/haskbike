@@ -42,7 +42,7 @@ unit_queryChargings = do
   initDBWithAllTestData
 
   chargings <- runWithAppM dbnameTest (queryChargingEventsCount variation)
-  assertEqual "Expected number of chargings for entire system" 2 (sumAllCharging chargings)
+  assertEqual "Expected number of chargings for entire system" (-1, 0, 1) (sumTuples chargings)
   where
     -- Query for all stations, for all data in the test dataset.
     variation = StatusVariationQuery Nothing
@@ -50,13 +50,17 @@ unit_queryChargings = do
       , LatestTime   (UTCTime (read "2024-01-01") (timeOfDayToTime midnight))
       ]
 
+sumTuples :: Num a => [(b, a, a, a)] -> (a, a, a)
+sumTuples = foldr (\(_, a1, b1, c1) (a2, b2, c2) -> (a1 + a2, b1 + b2, c1 + c2)) (0, 0, 0)
+
 -- | HUnit test to query all charging events (using exported database dump).
 unit_queryChargings' :: IO ()
 unit_queryChargings' = do
   setupTestDatabase
   initDBWithExportedData
 
-  assertChargings 135 41 94 (runWithAppM dbnameTest $ queryChargingEventsCount variation)
+  chargings <- runWithAppM dbnameTest $ queryChargingEventsCount variation
+  assertEqual "Expected number of charging for entire system" (-110, 29, 81) (sumTuples chargings)
   where
     -- Query for all stations, for all data in the test dataset.
     variation = StatusVariationQuery Nothing
@@ -78,24 +82,26 @@ unit_queryChargingsManual = do
   -- Check charging events.
   void $ do
     -- First E-Fit charged.
-    assertChargings 1 1 0 (between 0 5)
+    assertEqualBetweenMinute (-1, 1, 0) 0 5
 
-    -- Second two bikes (E-Fit and E-Fit G5) charged.
-    assertChargings 3 2 1 (between 0 8)
+    -- -- Second two bikes (E-Fit and E-Fit G5) charged.
+    assertEqualBetweenMinute (-3, 2, 1) 0 8
 
-    -- Genuinely broken bike is docked.
-    assertChargings 3 2 1 (between 0 9)
+    -- -- Genuinely broken bike is docked.
+    assertEqualBetweenMinute (-3, 2, 1) 0 9
 
-    assertChargings 3 2 1 (between 0 10)
+    assertEqualBetweenMinute (-3, 2, 1) 0 10
 
-    -- Dock a dead E-Fit G5, dock a charged E-Fit, undock the charged E-Fit, charge the initally docked E-Fit G5.
-    assertChargings 4 2 2 (between 0 14)
+    -- -- Dock a dead E-Fit G5, dock a charged E-Fit, undock the charged E-Fit, charge the initally docked E-Fit G5.
+    assertEqualBetweenMinute (-4, 2, 2) 0 14
 
     -- Dock an Iconic.
-    assertChargings 4 2 2 (between 0 15)
+    assertEqualBetweenMinute (-4, 2, 2) 0 15
   where
     -- | Get charging events between two timestamps (with varying minute values).
-    between startMinute endMinute = runWithAppM dbnameTest $ queryChargingEventsCount (variation startMinute endMinute)
+    assertEqualBetweenMinute expected startMinute endMinute = do
+      chargings <- runWithAppM dbnameTest $ queryChargingEventsCount (variation startMinute endMinute)
+      assertEqual "Expected number of chargings for entire system" expected (sumTuples chargings)
 
     -- Query charging events between two minutes, for all stations.
     variation startMinute endMinute = StatusVariationQuery Nothing

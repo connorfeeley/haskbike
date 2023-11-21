@@ -18,17 +18,20 @@ module Server.Page.StatusVisualization
      , vegaChart
      ) where
 
-import           Data.Maybe                     ( fromMaybe )
-import qualified Data.Text                      as T
+import           Control.Lens
+
+import           Data.Int                              ( Int32 )
+import           Data.Maybe                            ( fromMaybe )
+import qualified Data.Text                             as T
 import           Data.Time
 import           Data.Time.Extras
 
-import           Database.BikeShare             ( StationStatus )
 import           Database.BikeShare.Operations
+import           Database.BikeShare.StationInformation ( StationInformation )
 
 import           GHC.Generics
 
-import qualified Graphics.Vega.VegaLite         as VL
+import qualified Graphics.Vega.VegaLite                as VL
 
 import           Lucid
 
@@ -42,7 +45,7 @@ data DockingEventsHeader a where
   DockingEventsHeader :: { unEvents :: [DockingEventsCount] } -> DockingEventsHeader a
 
 data ChargingEventsHeader where
-  ChargingEventsHeader :: { unChargingEvents :: [(StationStatus, [ChargingEvent])] } -> ChargingEventsHeader
+  ChargingEventsHeader :: { unChargingEvents :: [(StationInformation, Int32, Int32, Int32)] } -> ChargingEventsHeader
 
 instance ToHtml (DockingEventsHeader 'Docking) where
   toHtmlRaw = toHtml
@@ -81,10 +84,13 @@ instance ToHtml ChargingEventsHeader where
       div_ [class_ "tooltip"] $ do
         label_ [for_ "charging-count"] (h3_ "Bikes Charged")
         div_ [class_ "tooltip-bottom"] $ do -- Tooltip content
-          p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "E-Fit: "    <> span_ [class_ "pure-u-1-2"] (showth (sumEfitCharging   params'))
-          p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "E-Fit G5: " <> span_ [class_ "pure-u-1-2"] (showth (sumEfitG5Charging params'))
-      div_ [id_ "charging-count"] (showth (sumAllCharging params')))
-    where params' = unChargingEvents params
+          p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "E-Fit: "    <> span_ [class_ "pure-u-1-2"] (showth (params' ^. _2))
+          p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "E-Fit G5: " <> span_ [class_ "pure-u-1-2"] (showth (params' ^. _3))
+      div_ [id_ "charging-count"] (showth (params' ^. _1)))
+    where params' = sumTuples (unChargingEvents params)
+
+sumTuples :: Num a => [(b, a, a, a)] -> (a, a, a)
+sumTuples = foldr (\(_, a1, b1, c1) (a2, b2, c2) -> (a1 + a2, b1 + b2, c1 + c2)) (0, 0, 0)
 
 -- This helper creates an input field with the provided 'id' and 'type' attributes.
 makeInputField :: Monad m => HtmlT m () -> T.Text -> T.Text -> T.Text -> HtmlT m ()

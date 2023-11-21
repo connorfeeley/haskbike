@@ -31,7 +31,6 @@ module Database.BikeShare.Operations.Dockings
      , eventsVariation
      , iconicEvents
      , queryChargingEventsCount
-     , queryChargingEventsCountExpr
      , queryDockingEventsCount
      , sumAllCharging
      , sumChargings
@@ -188,31 +187,10 @@ queryDockingEventsCountExpr variation =
 
 ---------------------------------
 
--- | Query the number of charging events for a station (returning status record and charging event records).
-queryChargingEventsCount :: StatusVariationQuery -> AppM [(StationStatus, [ChargingEvent])]
-queryChargingEventsCount variation =  do
-  counts <- queryChargingEventsCountExpr variation
-  pure $ map (\( status
-               , _dBikesDisabled
-               , dEFit
-               , dEFitG5
-               , _sumDisabled
-               , _sumEfit
-               , _sumEfitG5
-               )
-              -> (status, filter notZero
-                   [ ChargingEvent { _chargedBikeType = EFit,   _chargedBikeNumber = fromIntegral dEFit   }
-                   , ChargingEvent { _chargedBikeType = EFitG5, _chargedBikeNumber = fromIntegral dEFitG5 }
-                   ]
-                 )
-             ) counts
-  where
-    notZero c = _chargedBikeNumber c /= 0
-
 -- | Query the number of charging events for a station (returning status record and tuples of (dDisabled, dEfit, dEfitG5, sumDisabled, sumEfit, sumEfitG5).
-queryChargingEventsCountExpr :: StatusVariationQuery -> AppM [(StationStatus, Int32, Int32, Int32, Int32, Int32, Int32)]
-queryChargingEventsCountExpr variation =
-  withPostgres $ runSelectReturningList $ selectWith $ do
+queryChargingEventsCount :: StatusVariationQuery -> AppM [(StationInformation, Int32, Int32, Int32)]
+queryChargingEventsCount variation = withPostgres $ runSelectReturningList $ selectWith $ do
+  stationInfo <- selecting $ all_ (bikeshareDb ^. bikeshareStationInformation)
   -- Lag expression
   cte <- selecting $ do
     let statusForStation = filter_ (filterFor_ variation)
@@ -225,23 +203,15 @@ queryChargingEventsCountExpr variation =
                                 ))
                      statusForStation
 
-  -- Difference between row values and lagged values
-  withDeltas <- selecting $ do
-    -- Calculate delta between current and previous availability.
-    withWindow_ (\(row, _, _, _) -> frame_ (partitionBy_ (_statusStationId row)) noOrder_ noBounds_)
-                (\(row, pBikesDisabled, pEFit, pEFitG5) _w -> ( row                                                 -- _1
-                                                              , row ^. statusNumBikesDisabled      - pBikesDisabled -- _2
-                                                              , row ^. vehicleTypesAvailableEfit   - pEFit          -- _3
-                                                              , row ^. vehicleTypesAvailableEfitG5 - pEFitG5        -- _4
-                                                              ))
-                (reuse cte)
-  chargings <- selecting $ reuse withDeltas
-
   pure $ do
-    chargings' <- reuse chargings
+    stationInfo' <- reuse stationInfo
     chargingsSum <-
-      aggregate_ (\(status, dBikesDisabled, dEFit, dEFitG5) ->
-                     ( group_ (_statusStationId status)
+      aggregate_ (\(row, pBikesDisabled, pEFit, pEFitG5) ->
+                    let dBikesDisabled = row ^. statusNumBikesDisabled - pBikesDisabled
+                        dEFit          = row ^. vehicleTypesAvailableEfit   - pEFit
+                        dEFitG5        = row ^. vehicleTypesAvailableEfitG5 - pEFitG5
+                    in
+                     ( group_ (_statusStationId row)
                      -- Sum of all instances where an e-bike was disabled, then enabled.
                      , fromMaybe_ 0 $ sum_ dBikesDisabled  `filterWhere_` (dBikesDisabled  <. 0 &&. (dEFit >. 0 ||. dEFitG5 >. 0))
                      -- Sum of all instances where an E-Fit bike was disabled, then enabled.
@@ -249,19 +219,13 @@ queryChargingEventsCountExpr variation =
                      -- Sum of all instances where an E-Fit G5 bike was disabled, then enabled.
                      , fromMaybe_ 0 $ sum_ dEFitG5 `filterWhere_`         (dBikesDisabled  <. 0 &&. dEFitG5 >. 0)
                      ))
-                  (reuse chargings)
+                  (reuse cte)
 
-    stationInfo <- all_ (bikeshareDb ^. bikeshareStationInformation)
-    guard_ ((chargings'   ^. _1 & _statusStationId) `references_` stationInfo &&.
-            (chargingsSum ^. _1)                    `references_` stationInfo &&.
-            (chargings'   ^. _2) <. 0 &&.
-            (((chargings' ^. _3) >. 0) ||. ((chargings' ^. _4) >. 0))
+    guard_ ( _infoIsChargingStation stationInfo' ==. val_ True &&.
+            (chargingsSum ^. _1)                    `references_` stationInfo'
            )
 
-    pure ( chargings' ^. _1    -- row
-         , chargings' ^. _2    -- dBikesDisabled
-         , chargings' ^. _3    -- dEfit
-         , chargings' ^. _4    -- dEfitG5
+    pure ( stationInfo'
          , chargingsSum ^. _2 -- sum of charging events over queried range (negative; reflects change in disabled bikes)
          , chargingsSum ^. _3 -- sum of E-Fit charging events over queried range (positive; reflects change in available e-fit)
          , chargingsSum ^. _4 -- sum of E-Fit G5 charging events over queried range (positive; reflects change in available e-fit g5)

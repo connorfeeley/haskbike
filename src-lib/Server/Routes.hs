@@ -26,6 +26,7 @@ import           Control.Monad.Reader
 import           Data.ByteString.Lazy                     ( ByteString )
 import           Data.Csv                                 ( encodeDefaultOrderedByName )
 import           Data.Default.Class                       ( def )
+import           Data.Int                                 ( Int32 )
 import           Data.List                                ( sortOn )
 import           Data.Maybe                               ( fromMaybe, listToMaybe )
 import           Data.Text                                ( Text )
@@ -84,7 +85,7 @@ type BikeShareExplorerAPI = NamedRoutes API
 versionHandler :: ServerAppM Version
 versionHandler = pure (("version", getCabalVersion), ("git-version", getGitVersion))
 
-server ::  API (AsServerT ServerAppM)
+server :: API (AsServerT ServerAppM)
 server = API { version = versionHandler
              , home = homePageHandler
              , stationData = statusHandler
@@ -177,7 +178,7 @@ replaceSpaces (x:xs)
 
 -- | Create common values between system and station status visualization page record.
 statusVisualizationPage :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime
-                        -> ServerAppM (TimePair (Maybe LocalTime), TimeZone, UTCTime, [DockingEventsCount], [(StationStatus, [ChargingEvent])])
+                        -> ServerAppM (TimePair (Maybe LocalTime), TimeZone, UTCTime, [DockingEventsCount], [(StationInformation, Int32, Int32, Int32)])
 statusVisualizationPage stationId startTime endTime = do
   -- Accessing the inner environment by using the serverEnv accessor.
   appEnv <- asks serverAppEnv
@@ -199,14 +200,14 @@ statusVisualizationPage stationId startTime endTime = do
 
   -- * Query the database for the number of bikes charged at this station, and number of bikes docked and undocked at this station.
   logDebug $ "Querying chargings and events for station " <> showt stationId
-  (chargingEvents, events) <- concurrently
+  (chargings, events) <- concurrently
       (liftIO $ runAppM appEnv $ queryChargingEventsCount variation)
       (liftIO $ runAppM appEnv $ queryDockingEventsCount variation)
 
   logDebug $ "Dockings (all): "   <> showt (sumEvents Docking   (allBikeEvents events))
   logDebug $ "Undockings (all): " <> showt (sumEvents Undocking (allBikeEvents events))
 
-  pure (TimePair startTime endTime, tz, currentUtc, events, chargingEvents)
+  pure (TimePair startTime endTime, tz, currentUtc, events, chargings)
 
 
 -- | Create the station status visualization page record.

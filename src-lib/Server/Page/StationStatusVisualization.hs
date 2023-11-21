@@ -8,12 +8,12 @@ module Server.Page.StationStatusVisualization
      ) where
 
 
+import           Data.Int                              ( Int32 )
 import           Data.Maybe                            ( catMaybes )
 import qualified Data.Text                             as T
 import           Data.Time
 import           Data.Time.Extras
 
-import           Database.BikeShare                    ( StationStatus )
 import           Database.BikeShare.Operations
 import           Database.BikeShare.StationInformation
 
@@ -41,7 +41,7 @@ data StationStatusVisualizationPage where
                                     , _statusVisPageTimeZone      :: TimeZone
                                     , _statusVisPageCurrentUtc    :: UTCTime
                                     , _statusVisPageDockingEvents :: [DockingEventsCount]
-                                    , _statusVisPageChargings     :: [(StationStatus, [ChargingEvent])]
+                                    , _statusVisPageChargings     :: [(StationInformation, Int32, Int32, Int32)]
                                     , _statusVisPageDataLink      :: Link
                                     , _statusVisPageStaticLink    :: Link
                                     } -> StationStatusVisualizationPage
