@@ -23,10 +23,10 @@ import           Control.Lens
 import           Control.Monad.Except
 import           Control.Monad.Reader
 
-import           Data.Default.Class                     ( def )
-import           Data.List                              ( sortOn )
-import           Data.Maybe                             ( fromMaybe, listToMaybe )
-import qualified Data.Text                              as T
+import           Data.Default.Class                      ( def )
+import           Data.List                               ( sortOn )
+import           Data.Maybe                              ( fromMaybe, listToMaybe )
+import qualified Data.Text                               as T
 import           Data.Time
 import           Data.Time.Extras
 
@@ -34,6 +34,8 @@ import           Database.Beam
 import           Database.BikeShare
 import           Database.BikeShare.Expressions
 import           Database.BikeShare.Operations
+import           Database.BikeShare.Operations.Factors
+import           Database.BikeShare.StatusVariationQuery
 
 import           Fmt
 
@@ -57,7 +59,7 @@ import           TextShow
 
 import           TimeInterval
 
-import           UnliftIO                               ( concurrently )
+import           UnliftIO                                ( concurrently )
 
 
 data API mode where
@@ -95,7 +97,10 @@ data StaticAPI mode where
 -- * Handlers.
 
 statusHandler :: DataAPI (AsServerT ServerAppM)
-statusHandler =  DataAPI { dataForStation = stationStatusData }
+statusHandler =  DataAPI { dataForStation       = stationStatusData
+                         , integralsForStation  = stationIntegralData
+                         , factorsForStation    = stationFactorData
+                         }
 
 staticHandler :: StaticAPI (AsServerT ServerAppM)
 staticHandler =  StaticAPI $ serveDirectoryWebApp "static-files"
@@ -111,6 +116,22 @@ stationStatusData stationId startTime endTime = do
   logInfo $ format "Creating JSON payload for {station ID: {}, start time: {}, end time: {}} " stationId startTime endTime
   dataSource <- generateJsonDataSource stationId startTime endTime
   logDebug "Created JSON payload"
+  pure dataSource
+
+
+stationIntegralData :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM [StatusIntegral]
+stationIntegralData stationId startTime endTime = do
+  logInfo $ format "Creating integral JSON payload for {station ID: {}, start time: {}, end time: {}} " stationId startTime endTime
+  dataSource <- generateJsonDataSourceIntegral  stationId startTime endTime
+  logDebug "Created integral JSON payload"
+  pure dataSource
+
+
+stationFactorData :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM [StatusFactor]
+stationFactorData stationId startTime endTime = do
+  logInfo $ format "Creating factor JSON payload for {station ID: {}, start time: {}, end time: {}} " stationId startTime endTime
+  dataSource <- generateJsonDataSourceFactor  stationId startTime endTime
+  logDebug "Created factor JSON payload"
   pure dataSource
 
 
@@ -134,7 +155,7 @@ statusVisualizationPage stationId startTime endTime = do
   let variation = StatusVariationQuery (fromIntegral <$> stationId) [ EarliestTime (localTimeToUTC tz earliest)
                                                                     , LatestTime   (localTimeToUTC tz latest)
                                                                     ]
-  logDebug $ format "earliest={}, latest={}" earliest latest
+  logDebug $ format "Earliest={}, latest={}" earliest latest
 
   -- * Query the database for the number of bikes charged at this station, and number of bikes docked and undocked at this station.
   logDebug $ "Querying chargings and events for station " <> showt stationId

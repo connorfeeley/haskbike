@@ -8,6 +8,7 @@ module Database.BikeShare.Expressions
      ( disabledDocksExpr
      , infoByIdExpr
      , insertStationInformationExpr
+     , integrateColumns
      , queryLatestStatusBetweenExpr
      , queryStationIdExpr
      , queryStationIdLikeExpr
@@ -38,9 +39,11 @@ import           Database.Beam.Backend.SQL                ( BeamSqlBackend )
 import           Database.Beam.Backend.SQL.BeamExtensions ( BeamHasInsertOnConflict (anyConflict, onConflictDoNothing),
                                                             insertOnConflict )
 import           Database.Beam.Postgres
+import           Database.Beam.Postgres.Full
 import           Database.Beam.Postgres.Syntax
 import qualified Database.Beam.Query.Adhoc                as Adhoc
 import           Database.BikeShare
+import           Database.BikeShare.StatusVariationQuery
 
 import           Formatting
 
@@ -81,8 +84,14 @@ insertStationInformationExpr :: [AT.StationInformation] -> SqlInsert Postgres St
 insertStationInformationExpr stations =
   insertOnConflict (bikeshareDb ^. bikeshareStationInformation)
   (insertExpressions (map fromJSONToBeamStationInformation stations))
-  anyConflict
-  onConflictDoNothing
+  (conflictingFields primaryKey) (onConflictUpdateInstead (\i -> ( _infoName                    i
+                                                                 , _infoPhysicalConfiguration   i
+                                                                 , _infoCapacity                i
+                                                                 , _infoIsChargingStation       i
+                                                                 , _infoIsValetStation          i
+                                                                 , _infoIsVirtualStation        i
+                                                                 )
+                                                          ))
 
 disabledDocksExpr :: Q Postgres BikeshareDb s (QGenExpr QValueContext Postgres s Text.Text, QGenExpr QValueContext Postgres s Int32)
 disabledDocksExpr = do
@@ -196,3 +205,98 @@ querySystemStatusAtRangeExpr earliestTime latestTime interval = do
             uncurry (between_ (_statusLastReported latestStatuses)) intervals)
     pure (snd intervals, latestStatuses)
 
+
+-- * Integrals of fields.
+
+-- Run with:
+--   withPostgres $ runSelectReturningList $ selectWith $ integrateColumns (StatusVariationQuery (Just (7001)) [EarliestTime (UTCTime (fromGregorian 2023 11 18) (timeOfDayToTime midnight)), LatestTime (UTCTime (fromGregorian 2023 11 19) (timeOfDayToTime midnight))])
+-- | Query the number of charging events for a station (returning status record and tuples of (dDisabled, dEfit, dEfitG5, sumDisabled, sumEfit, sumEfitG5).
+integrateColumns :: be ~ Postgres
+                 => StatusVariationQuery
+                 -> With
+                      be
+                      BikeshareDb
+                      (Q be BikeshareDb s
+                        ( PrimaryKey StationInformationT (QGenExpr QValueContext be s)
+                        , QGenExpr QValueContext be s Bool    -- ^ Charging station
+                        , QGenExpr QValueContext be s Int32   -- ^ Station capacity
+                        , QGenExpr QValueContext be s Int32   -- ^ Total seconds
+                        , ( QGenExpr QValueContext be s Int32 -- ^ Integral of number of bikes available (sum of (time delta * bikes available) over rows)
+                          , QGenExpr QValueContext be s Int32 -- ^ Integral of number of bikes disabled  (sum of (time delta * bikes disabled)  over rows)
+                          , QGenExpr QValueContext be s Int32 -- ^ Integral of number of docks available (sum of (time delta * docks available) over rows)
+                          , QGenExpr QValueContext be s Int32 -- ^ Integral of number of docks disabled  (sum of (time delta * docks disabled)  over rows)
+                        )
+                        , ( QGenExpr QValueContext be s Int32 -- ^ Integral of number of iconic   bikes available (sum of (time delta * iconic   available) over rows)
+                          , QGenExpr QValueContext be s Int32 -- ^ Integral of number of e-fit    bikes disabled  (sum of (time delta * e-fit    available) over rows)
+                          , QGenExpr QValueContext be s Int32 -- ^ Integral of number of e-fit g5 bikes disabled  (sum of (time delta * e-fit g5 available) over rows)
+                          )
+                        )
+                      )
+integrateColumns variation = do
+  -- Lag expression
+  lagged <- selecting $ do
+    let statusForStation = filter_ (filterFor_ variation)
+                                   (all_ (bikeshareDb ^. bikeshareStationStatus))
+      in withWindow_ (\row -> frame_ (partitionBy_ (_statusStationId row)) (orderPartitionBy_ (asc_ $ _statusLastReported row)) noBounds_)
+                     (\row w -> ( row
+                                , lagWithDefault_ (row ^. statusLastReported) (val_ (1 :: Integer)) (row ^. statusLastReported) `over_` w
+                                )
+                     ) statusForStation
+
+  -- Difference between row values and lagged values
+  withDeltas <- selecting $ do
+    -- as seconds:
+    let timeDelta column column' = cast_ (extract_ epoch_ column - extract_ epoch_ column') int
+    -- Calculate delta between current and previous availability.
+      in withWindow_ (\(row, _) -> frame_ (partitionBy_ (_statusStationId row)) noOrder_ noBounds_)
+         (\(row, pLastReported) _w ->
+             ( row                                                                                  -- _1
+             , as_ @Int32 (timeDelta (row ^. statusLastReported) pLastReported)                     -- _2
+             , ( row ^. statusNumBikesAvailable * timeDelta (row ^. statusLastReported) pLastReported
+               , row ^. statusNumBikesDisabled  * timeDelta (row ^. statusLastReported) pLastReported
+               , row ^. statusNumDocksAvailable * timeDelta (row ^. statusLastReported) pLastReported
+               , row ^. statusNumDocksDisabled  * timeDelta (row ^. statusLastReported) pLastReported
+               )
+             , ( row ^. vehicleTypesAvailableIconic  * timeDelta (row ^. statusLastReported) pLastReported
+               , row ^. vehicleTypesAvailableEfit    * timeDelta (row ^. statusLastReported) pLastReported
+               , row ^. vehicleTypesAvailableEfitG5  * timeDelta (row ^. statusLastReported) pLastReported
+               )
+             )
+         ) (reuse lagged)
+  chargings <- selecting $ reuse withDeltas
+
+  pure $ do
+    chargingsSum <-
+      aggregate_ (\( status
+                   , dLastReported
+                   , ( secondsBikesAvailable
+                     , secondsBikesDisabled
+                     , secondsDocksAvailable
+                     , secondsDocksDisabled)
+                   , ( secondsIconicAvailable
+                     , secondsEfitAvailable
+                     , secondsEfitG5Available)
+                   ) -> ( group_       (_statusStationId status)
+                        , fromMaybe_ 0 (sum_ dLastReported)
+                        , ( fromMaybe_ 0 (sum_ secondsBikesAvailable)
+                          , fromMaybe_ 0 (sum_ secondsBikesDisabled)
+                          , fromMaybe_ 0 (sum_ secondsDocksAvailable)
+                          , fromMaybe_ 0 (sum_ secondsDocksDisabled)
+                          )
+                        , ( fromMaybe_ 0 (sum_ secondsIconicAvailable)
+                          , fromMaybe_ 0 (sum_ secondsEfitAvailable)
+                          , fromMaybe_ 0 (sum_ secondsEfitG5Available)
+                          )
+                        )
+                 ) (reuse chargings)
+
+    info <- all_ (bikeshareDb ^. bikeshareStationInformation)
+    guard_ ((chargingsSum ^. _1) `references_` info)
+
+    pure ( chargingsSum ^. _1            -- Station ID
+         , info ^. infoIsChargingStation -- Is charging station
+         , info ^. infoCapacity          -- Station capacity
+         , chargingsSum ^. _2            -- Total seconds
+         , chargingsSum ^. _3            -- Integrals of (bikes available, bikes disabled, docks available, docks disabled)
+         , chargingsSum ^. _4            -- Integrals of (iconic available, efit available, efit g5 available)
+         )

@@ -1,7 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes       #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE OverloadedStrings         #-}
-{-# LANGUAGE PartialTypeSignatures     #-}
 {-# LANGUAGE Rank2Types                #-}
 {-# LANGUAGE TemplateHaskell           #-}
 
@@ -17,8 +16,6 @@ module Database.BikeShare.Operations.Dockings
      , ChargingEvent (..)
      , DockingEventsCount (..)
      , EventsCountResult (..)
-     , StatusThreshold (..)
-     , StatusVariationQuery (..)
        -- Lenses
      , allBikeEvents
      , efitEvents
@@ -43,52 +40,17 @@ module Database.BikeShare.Operations.Dockings
      , sumEvents
      ) where
 
-import           API.Types              ( TorontoVehicleType (..) )
+import           API.Types                               ( TorontoVehicleType (..) )
 
 import           AppEnv
 
-import           Control.Lens           hiding ( reuse, (<.) )
+import           Control.Lens                            hiding ( reuse, (<.) )
 
-import           Data.Int               ( Int32 )
-import           Data.Time
+import           Data.Int                                ( Int32 )
 
 import           Database.Beam
-import           Database.Beam.Postgres
 import           Database.BikeShare
-
-
--- | Data type representing a query for station status dockings or undockings.
-data StatusVariationQuery where
-  StatusVariationQuery :: { _status_query_station_id    :: Maybe Int32
-                          , _status_query_thresholds    :: [StatusThreshold]
-                          } -> StatusVariationQuery
-  deriving (Generic, Show, Eq)
-
-
--- | Varient representing the type of threshold to apply to the query.
-data StatusThreshold where
-  EarliestTime  :: UTCTime   -> StatusThreshold
-  LatestTime    :: UTCTime   -> StatusThreshold
-  deriving (Show, Eq)
-
-
--- | Convert a 'StatusQuery' to a fragment of a filter expression.
-thresholdCondition :: StatusThreshold -> StationStatusT (QExpr Postgres s) -> QExpr Postgres s Bool
-thresholdCondition (EarliestTime threshold) status = status ^. statusLastReported >=. val_ threshold
-thresholdCondition (LatestTime threshold) status   = status ^. statusLastReported <=. val_ threshold
-
-
--- | Construct a filter expression corresponding to the station ID.
-stationIdCondition :: Maybe Int32 -> StationStatusT (QExpr Postgres s) -> QExpr Postgres s Bool
-stationIdCondition (Just stationId) status = _statusStationId status ==. val_ (StationInformationId stationId)
-stationIdCondition Nothing _               = val_ True
-
-
--- | Construct a filter expression for a 'StatusQuery'.
-filterFor_ :: StatusVariationQuery -> StationStatusT (QExpr Postgres s) -> QExpr Postgres s Bool
-filterFor_ (StatusVariationQuery stationId thresholds) status =
-  let thresholdConditions = map (`thresholdCondition` status) thresholds
-  in foldr (&&.) (stationIdCondition stationId status) thresholdConditions
+import           Database.BikeShare.StatusVariationQuery
 
 
 -- | Data type representing the type of statistic to query.
@@ -267,11 +229,11 @@ queryChargingEventsCountExpr variation =
   withDeltas <- selecting $ do
     -- Calculate delta between current and previous availability.
     withWindow_ (\(row, _, _, _) -> frame_ (partitionBy_ (_statusStationId row)) noOrder_ noBounds_)
-                (\(row, pBikesDisabled, pEFit, pEFitG5) _w -> ( row                                                  -- _1
-                                                               , row ^. statusNumBikesDisabled      - pBikesDisabled -- _2
-                                                               , row ^. vehicleTypesAvailableEfit   - pEFit          -- _3
-                                                               , row ^. vehicleTypesAvailableEfitG5 - pEFitG5        -- _4
-                                                               ))
+                (\(row, pBikesDisabled, pEFit, pEFitG5) _w -> ( row                                                 -- _1
+                                                              , row ^. statusNumBikesDisabled      - pBikesDisabled -- _2
+                                                              , row ^. vehicleTypesAvailableEfit   - pEFit          -- _3
+                                                              , row ^. vehicleTypesAvailableEfitG5 - pEFitG5        -- _4
+                                                              ))
                 (reuse cte)
   chargings <- selecting $ reuse withDeltas
 
@@ -315,65 +277,3 @@ sumChargings :: (ChargingEvent -> Bool) -> [[ChargingEvent]] -> Int
 sumChargings cond chargings = sumBikes (filter cond (concat chargings))
   where
     sumBikes = sum . map _chargedBikeNumber
-
-
--- * Disabled-bike-seconds.
-
--- -- | Query the number of disabled-bike-seconds.
--- queryDisabledBikeSeconds :: StatusVariationQuery -> AppM [(StationStatus, (Int, Int))]
--- queryDisabledBikeSeconds variation =  do
---   counts <- queryDisabledBikeSecondsExpr variation
---   pure $ map (\( status
---                , dLastReported
---                , bikesDisabled
---                )
---               -> (status, (0, 0) )
---              ) counts
---   where
---     notZero c = _chargedBikeNumber c /= 0
-
--- -- | Query the number of disabled-bike-seconds.
--- queryDisabledBikeSecondsExpr :: StatusVariationQuery -> AppM [(StationStatus, Int32, UTCTime)]
--- queryDisabledBikeSecondsExpr variation =
---   withPostgres $ runSelectReturningList $ selectWith $ do
---   -- Lag expression
---   cte <- selecting $ do
---     let statusForStation = filter_ (filterFor_ variation)
---                                    (all_ (bikeshareDb ^. bikeshareStationStatus))
---       in withWindow_ (\row -> frame_ (partitionBy_ (_statusStationId row)) (orderPartitionBy_ (asc_ $ _statusLastReported row)) noBounds_)
---                      (\row w -> ( row
---                                 , lagWithDefault_ (row ^. statusNumBikesDisabled) (val_ 1) (row ^. statusNumBikesDisabled) `over_` w
---                                 , lagWithDefault_ (row ^. statusLastReported  ) (row ^. statusLastReported) (row ^. statusLastReported) `over_` w
---                                 ))
---                      statusForStation
-
---   -- Difference between row values and lagged values
---   withDeltas <- selecting $ do
---     -- Calculate delta between current and previous availability.
---     withWindow_ (\(row, _, _) -> frame_ (partitionBy_ (_statusStationId row)) noOrder_ noBounds_)
---                 (\(row, pBikesDisabled, pLastReported) _w -> ( row            -- _1
---                                                              , pBikesDisabled -- _2
---                                                              , pLastReported  -- _3
---                                                              ))
---                 (reuse cte)
---   deltas <- selecting $ reuse withDeltas
-
---   pure $ do
---     deltas' <- reuse deltas
---     -- disabled <-
---     --   aggregate_ (\(status, dBikesDisabled, dLastReported) ->
---     --                  ( group_ (_statusStationId status)
---     --                  , dBikesDisabled
---     --                  , dLastReported
---     --                  ))
---     --               (reuse deltas)
-
---     stationInfo <- all_ (bikeshareDb ^. bikeshareStationInformation)
---     guard_ ((deltas'   ^. _1 & _statusStationId) `references_` stationInfo)
-
---     pure ( deltas' ^. _1    -- row
---          , deltas' ^. _2    -- dBikesDisabled
---          , deltas' ^. _3     -- dLastReported
---          )
--- -- diffUTCTime_ :: QGenExpr ctxt PgExpressionSyntax s UTCTime -> QGenExpr ctxt PgExpressionSyntax s NominalDiffTime -> QGenExpr ctxt PgExpressionSyntax s UTCTime
--- -- diffUTCTime_ = customExpr_ (\tm offs -> "(" <> tm <> " - INTERVAL '" <> offs <> " SECONDS')")

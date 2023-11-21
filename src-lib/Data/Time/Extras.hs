@@ -17,6 +17,7 @@ module Data.Time.Extras
      , posixToLocal
      , posixToUtc
      , posixToZonedTime
+     , utcFromGregorian
      , utcToPosix
      , zonedTimeToPosix
      ) where
@@ -32,6 +33,8 @@ data TimePair a where
               } -> TimePair a
   deriving (Show, Eq, Ord)
 
+utcFromGregorian :: Year -> MonthOfYear -> DayOfMonth -> UTCTime
+utcFromGregorian year month day = UTCTime (fromGregorian year month day) (timeOfDayToTime midnight)
 
 -- | Subtract an hour from a UTCTime.
 hourBefore :: UTCTime -> UTCTime
