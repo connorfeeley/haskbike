@@ -129,9 +129,9 @@ stationIntegralData stationId startTime endTime = do
 
 stationFactorData :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM [StatusFactor]
 stationFactorData stationId startTime endTime = do
-  logInfo $ format "Creating integral JSON payload for {station ID: {}, start time: {}, end time: {}} " stationId startTime endTime
+  logInfo $ format "Creating factor JSON payload for {station ID: {}, start time: {}, end time: {}} " stationId startTime endTime
   dataSource <- generateJsonDataSourceFactor  stationId startTime endTime
-  logDebug "Created integral JSON payload"
+  logDebug "Created factor JSON payload"
   pure dataSource
 
 

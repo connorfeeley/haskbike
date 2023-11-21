@@ -45,6 +45,7 @@ unit_queryFieldIntegrals = do
   let expected7001 =
         StatusIntegral { intStatusStationId          = 7001
                        , intStatusVariation          = variation
+                       , intStatusCharging           = True
                        , intStatusCapacity           = 23
                        , intStatusTotalSeconds       = 42805
                        , intStatusSecBikesAvailable  = 296528
@@ -72,6 +73,7 @@ unit_queryStatusFactors = do
   let expected7001 =
         StatusFactor { statusFactorStationId       = 7001
                      , statusFactorVariation       = variation
+                     , statusFactorCharging        = True
                      , statusFactorCapacity        = 23
                      , statusFactorBikesAvailable  = 0.3011919574612881
                      , statusFactorBikesDisabled   = 0.5042300015743792
@@ -80,6 +82,9 @@ unit_queryStatusFactors = do
                      , statusFactorIconicAvailable = 6.334184852440035e-2
                      , statusFactorEfitAvailable   = 5.560504410801258e-2
                      , statusFactorEfitG5Available = 0.18224506482887512
+                     , statusFactorNormalizedIconicAvailable = 0.2103039173366428
+                     , statusFactorNormalizedEfitAvailable   = 0.18461662979549995
+                     , statusFactorNormalizedEfitG5Available = 0.6050794528678574
                      }
 
   integrals <- runWithAppM dbnameTest $ queryStatusFactors variation
@@ -87,3 +92,5 @@ unit_queryStatusFactors = do
   assertEqual "Expected status factors" [expected7001] integrals
 
   assertEqual "Expected sum of status factors equals 1.0" 1.0 (sumStatusFactors expected7001)
+
+  assertEqual "Expected sum of normalized bike status factors equals 1.0" 1.0 (sumBikeStatusFactors expected7001)

@@ -213,11 +213,12 @@ querySystemStatusAtRangeExpr earliestTime latestTime interval = do
 -- | Query the number of charging events for a station (returning status record and tuples of (dDisabled, dEfit, dEfitG5, sumDisabled, sumEfit, sumEfitG5).
 integrateColumns :: be ~ Postgres
                  => StatusVariationQuery
-                 -> (With
+                 -> With
                       be
                       BikeshareDb
                       (Q be BikeshareDb s
                         ( PrimaryKey StationInformationT (QGenExpr QValueContext be s)
+                        , QGenExpr QValueContext be s Bool    -- ^ Charging station
                         , QGenExpr QValueContext be s Int32   -- ^ Station capacity
                         , QGenExpr QValueContext be s Int32   -- ^ Total seconds
                         , ( QGenExpr QValueContext be s Int32 -- ^ Integral of number of bikes available (sum of (time delta * bikes available) over rows)
@@ -230,7 +231,7 @@ integrateColumns :: be ~ Postgres
                           , QGenExpr QValueContext be s Int32 -- ^ Integral of number of e-fit g5 bikes disabled  (sum of (time delta * e-fit g5 available) over rows)
                           )
                         )
-                      ))
+                      )
 integrateColumns variation = do
   -- Lag expression
   lagged <- selecting $ do
@@ -292,9 +293,10 @@ integrateColumns variation = do
     info <- all_ (bikeshareDb ^. bikeshareStationInformation)
     guard_ ((chargingsSum ^. _1) `references_` info)
 
-    pure ( chargingsSum ^. _1 -- Station ID
-         , info ^. infoCapacity -- Station capacity
-         , chargingsSum ^. _2 -- Total seconds
-         , chargingsSum ^. _3 -- Integrals of (bikes available, bikes disabled, docks available, docks disabled)
-         , chargingsSum ^. _4 -- Integrals of (iconic available, efit available, efit g5 available)
+    pure ( chargingsSum ^. _1            -- Station ID
+         , info ^. infoIsChargingStation -- Is charging station
+         , info ^. infoCapacity          -- Station capacity
+         , chargingsSum ^. _2            -- Total seconds
+         , chargingsSum ^. _3            -- Integrals of (bikes available, bikes disabled, docks available, docks disabled)
+         , chargingsSum ^. _4            -- Integrals of (iconic available, efit available, efit g5 available)
          )
