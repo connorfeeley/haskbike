@@ -130,6 +130,7 @@
                   pgformatter
                   nixos-rebuild
                   pgtop
+                  pg_activity
                   ;
                 inherit (pkgs.nodePackages)
                   prettier
