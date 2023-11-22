@@ -171,7 +171,7 @@ querySystemStatusAtRangeExpr :: UTCTime -> UTCTime -> Integer -> With Postgres B
                      QGenExpr QValueContext Postgres s Int32))
 querySystemStatusAtRangeExpr earliestTime latestTime interval = do
   timeIntervals <- selecting $
-    values_$ map (\t -> (mkTime (addUTCTime (-60 * fromIntegral interval) t), mkTime t)) $
+    values_ $ map (\t -> (mkTime (addUTCTime (-60 * fromIntegral interval) t), mkTime t)) $
     generateTimeRange earliestTime latestTime (fromIntegral interval)
 
   pure $ aggregate_ (\(i, s) -> ( group_ i
