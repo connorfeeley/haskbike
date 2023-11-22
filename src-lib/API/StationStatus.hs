@@ -46,15 +46,17 @@ import           GHC.Generics         ( Generic )
 
 -- | Enumeration representing a BikeShare station status string.
 data StationStatusString where
-  InService :: StationStatusString
-  Planned   :: StationStatusString
-  EndOfLife :: StationStatusString
+  InService   :: StationStatusString
+  Maintenance :: StationStatusString
+  Planned     :: StationStatusString
+  EndOfLife   :: StationStatusString
   deriving (Eq, Generic, Ord)
 
 instance Show StationStatusString where
-  show InService = "IN_SERVICE"
-  show Planned   = "PLANNED"
-  show EndOfLife = "END_OF_LIFE"
+  show InService   = "IN_SERVICE"
+  show Maintenance = "MAINTENANCE"
+  show Planned     = "PLANNED"
+  show EndOfLife   = "END_OF_LIFE"
 
 instance Read StationStatusString where
   readsPrec _ = fromRight [] . parseOnly parser . Text.pack
@@ -67,13 +69,15 @@ instance Read StationStatusString where
       ]
 
 instance ToJSON StationStatusString where
-  toJSON InService = String (Text.pack "IN_SERVICE")
-  toJSON Planned   = String (Text.pack "PLANNED")
-  toJSON EndOfLife = String (Text.pack "END_OF_LIFE")
+  toJSON InService   = String (Text.pack "IN_SERVICE")
+  toJSON Maintenance = String (Text.pack "MAINTENANCE")
+  toJSON Planned     = String (Text.pack "PLANNED")
+  toJSON EndOfLife   = String (Text.pack "END_OF_LIFE")
 
 instance FromJSON StationStatusString where
   parseJSON = withText "StationStatusString" $ \t -> case t of
      "IN_SERVICE"  -> return InService
+     "MAINTENANCE" -> return Maintenance
      "PLANNED"     -> return Planned
      "END_OF_LIFE" -> return EndOfLife
      _             -> fail ("Invalid StationStatusString: " ++ show t)
