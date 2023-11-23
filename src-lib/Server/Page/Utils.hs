@@ -1,7 +1,8 @@
 -- |
 
 module Server.Page.Utils
-     ( makeFavicons
+     ( hx_
+     , makeFavicons
      , makeHeadElements
      , mkData_
      , showth
@@ -60,3 +61,7 @@ showth :: (Monad m, TextShow a)
        => a -- ^ The (TextShow-able) value to be converted to HTML.
        -> HtmlT m ()
 showth = toHtml . showt
+
+-- | Helper function to create an HTMX attribute.
+hx_ :: Text -> Text -> Attribute
+hx_ attr = makeAttribute ("hx-" <> attr)
