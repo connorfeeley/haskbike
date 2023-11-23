@@ -48,6 +48,7 @@ import           Servant
 import           Servant.HTML.Lucid
 import           Servant.Server.Generic
 
+import           Server.ComponentsAPI
 import           Server.Data.StationStatusVisualization
 import           Server.DataAPI
 import           Server.Page.IndexPage
@@ -74,6 +75,7 @@ data API mode where
          , home              :: mode :- Get '[HTML] (PureSideMenu IndexPage)
          , stationData       :: mode :- NamedRoutes DataAPI
          , visualizationPage :: mode :- NamedRoutes VisualizationAPI
+         , componentsPage    :: mode :- NamedRoutes ComponentsAPI
          , static            :: mode :- NamedRoutes StaticAPI
          } -> API mode
   deriving stock Generic
@@ -90,9 +92,9 @@ server = API { version = versionHandler
              , home = homePageHandler
              , stationData = statusHandler
              , visualizationPage = visualizationHandler
+             , componentsPage = componentsHandler
              , static = staticHandler
              }
-
 -- * Serve static files.
 
 data StaticAPI mode where
@@ -109,6 +111,12 @@ statusHandler =  DataAPI { dataForStation       = stationStatusData
                          , factorsForStation    = stationFactorData
                          , performanceCsv       = performanceCsvHandler
                          }
+
+componentsHandler :: ComponentsAPI (AsServerT ServerAppM)
+componentsHandler = ComponentsAPI { dockingsForStation   = dockingsPage
+                                  , undockingsForStation = undockingsPage
+                                  }
+
 
 staticHandler :: StaticAPI (AsServerT ServerAppM)
 staticHandler =  StaticAPI $ serveDirectoryWebApp "static-files"
@@ -314,3 +322,13 @@ homePageHandler = do
 
 -- apiProxy :: Proxy (ToServantApi API)
 -- apiProxy = genericApi (Proxy :: Proxy API)
+
+
+dockingsPage :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM (DockingEventsHeader 'Docking)
+dockingsPage stationId startTime endTime = pure $ DockingEventsHeader ([] :: [DockingEventsCount])
+
+undockingsPage :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM (DockingEventsHeader 'Undocking)
+undockingsPage stationId startTime endTime = pure $ DockingEventsHeader ([] :: [DockingEventsCount])
+
+chargingsPage :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM ChargingEventsHeader
+chargingsPage stationId startTime endTime = pure $ ChargingEventsHeader ([] :: [(StationInformation, Int32, Int32, Int32)])

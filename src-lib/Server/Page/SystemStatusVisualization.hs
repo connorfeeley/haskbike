@@ -105,8 +105,8 @@ instance ToHtml SystemStatusVisualizationPage where
       br_ []
       div_ [class_ "pure-g", style_ "text-align: center"] $ do
         let headers = catMaybes [ Just (toHtml (_systemStatusVisPageInfo params))
-                                , Just (toHtml (eventsHeader :: DockingEventsHeader 'Undocking))
-                                , Just (toHtml (eventsHeader :: DockingEventsHeader 'Docking))
+                                -- , Just (toHtml (eventsHeader :: DockingEventsHeader 'Undocking))
+                                -- , Just (toHtml (eventsHeader :: DockingEventsHeader 'Docking))
                                 , Just (toHtml (ChargingEventsHeader (_systemStatusVisPageChargings params)))
                                 ]
         mconcat $ map (`with` [class_ ("pure-u-md-1-" <> showt (length headers))]) headers
@@ -127,8 +127,8 @@ instance ToHtml SystemStatusVisualizationPage where
                    (prettyTime (earliestTime times'))
                    (prettyTime (latestTime   times'))
 
-      eventsHeader :: DockingEventsHeader a
-      eventsHeader = DockingEventsHeader (_systemStatusVisPageDockingEvents params)
+      -- eventsHeader :: DockingEventsHeader a
+      -- eventsHeader = DockingEventsHeader (_systemStatusVisPageDockingEvents params)
 
       times' = times (_systemStatusVisPageTimeZone params) (_systemStatusVisPageCurrentUtc params) (_systemStatusVisPageTimeRange params)
       earliest = earliestTime times'
