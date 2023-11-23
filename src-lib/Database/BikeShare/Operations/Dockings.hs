@@ -8,6 +8,7 @@
 -- Sometimes it is straight up impossible to write the types down because of ambiguous types.
 {-# OPTIONS_GHC -fno-warn-partial-type-signatures -fno-warn-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-type-defaults #-}
+{-# LANGUAGE PartialTypeSignatures     #-}
 
 -- | This module contains operations to query the number of dockings and undockings for a station.
 
@@ -214,9 +215,9 @@ queryChargingEventsCount variation = withPostgres $ runSelectReturningList $ sel
                      -- Sum of all instances where an e-bike was disabled, then enabled.
                      , fromMaybe_ 0 $ sum_ dBikesDisabled  `filterWhere_` (dBikesDisabled  <. 0 &&. (dEFit >. 0 ||. dEFitG5 >. 0))
                      -- Sum of all instances where an E-Fit bike was disabled, then enabled.
-                     , fromMaybe_ 0 $ sum_ dEFit   `filterWhere_`         (dBikesDisabled  <. 0 &&. dEFit >. 0)
+                     , fromMaybe_ 0 $ sum_ dEFit           `filterWhere_` (dBikesDisabled  <. 0 &&. dEFit >. 0)
                      -- Sum of all instances where an E-Fit G5 bike was disabled, then enabled.
-                     , fromMaybe_ 0 $ sum_ dEFitG5 `filterWhere_`         (dBikesDisabled  <. 0 &&. dEFitG5 >. 0)
+                     , fromMaybe_ 0 $ sum_ dEFitG5         `filterWhere_` (dBikesDisabled  <. 0 &&. dEFitG5 >. 0)
                      ))
                   (reuse cte)
 
@@ -240,3 +241,50 @@ sumChargings :: (ChargingEvent -> Bool) -> [[ChargingEvent]] -> Int
 sumChargings cond chargings = sumBikes (filter cond (concat chargings))
   where
     sumBikes = sum . map _chargedBikeNumber
+
+
+-- | Query the number of dockings and undockings for a station (returning tuples of each count for each bike type).
+queryDockingEventsCountExprTesting :: StatusVariationQuery -> AppM [(PrimaryKey StationInformationT Identity, (Int32, Int32), (Int32, Int32), (Int32, Int32))]
+queryDockingEventsCountExprTesting variation = withPostgres $ runSelectReturningList $ selectWith $ do
+  cte <- selecting $ do
+    let statusForStation = filter_ (filterFor_ variation)
+                                   (all_ (bikeshareDb ^. bikeshareStationStatus))
+      in withWindow_ (\row -> frame_ (partitionBy_ (_statusStationId row)) noOrder_ noBounds_)
+                     (\row w -> ( row
+                                -- , lagWithDefault_ (row ^. vehicleTypesAvailableBoost ) (val_ 1) (row ^. vehicleTypesAvailableBoost ) `over_` w
+                                , lagWithDefault_ (row ^. vehicleTypesAvailableIconic) (val_ 1) (row ^. vehicleTypesAvailableIconic) `over_` w
+                                , lagWithDefault_ (row ^. vehicleTypesAvailableEfit  ) (val_ 1) (row ^. vehicleTypesAvailableEfit  ) `over_` w
+                                , lagWithDefault_ (row ^. vehicleTypesAvailableEfitG5) (val_ 1) (row ^. vehicleTypesAvailableEfitG5) `over_` w
+                                ))
+                     statusForStation
+  pure $ do
+    -- Join the station information with the dockings and undockings.
+    events' <-
+      aggregate_ (\(row, pIconic, pEFit, pEFitG5) ->
+                    let
+                        dIconic = row ^. vehicleTypesAvailableIconic - pIconic
+                        dEFit   = row ^. vehicleTypesAvailableEfit   - pEFit
+                        dEFitG5 = row ^. vehicleTypesAvailableEfitG5 - pEFitG5
+                    in
+                     ( group_ (_statusStationId row)
+                     -- Undockings
+                     , ( fromMaybe_ 0 $ sum_ dIconic `filterWhere_` (dIconic  <. 0)
+                       , fromMaybe_ 0 $ sum_ dEFit   `filterWhere_` (dEFit    <. 0)
+                       , fromMaybe_ 0 $ sum_ dEFitG5 `filterWhere_` (dEFitG5  <. 0)
+                       )
+                     -- Dockings
+                     , ( fromMaybe_ 0 $ sum_ dIconic `filterWhere_` (dIconic  >. 0)
+                       , fromMaybe_ 0 $ sum_ dEFit   `filterWhere_` (dEFit    >. 0)
+                       , fromMaybe_ 0 $ sum_ dEFitG5 `filterWhere_` (dEFitG5  >. 0)
+                       )
+                     ))
+      (reuse cte)
+
+    -- Return tuples of station information and the dockings and undockings.
+    pure ( events' ^. _1
+         -- , (events' ^. _2 . _1, events' ^. _3 . _1) -- Boost
+         --      Undockings   |     Dockings
+         , (events' ^. _2 . _1, events' ^. _3 . _1) -- Iconic
+         , (events' ^. _2 . _2, events' ^. _3 . _2) -- E-Fit
+         , (events' ^. _2 . _3, events' ^. _3 . _3) -- E-Fit G5
+         )

@@ -94,7 +94,7 @@
 
           devShell =
             let
-              postgres = pkgs.postgresql_15.withPackages (ps: with ps; [ postgis ]);
+              postgres = pkgs.postgresql_15.withPackages (ps: with ps; [ pg_partman postgis timescaledb ]);
             in
             {
               # Enabled by default
@@ -131,6 +131,9 @@
                   nixos-rebuild
                   pgtop
                   pg_activity
+
+                  timescaledb-tune
+                  timescaledb-parallel-copy
                   ;
                 inherit (pkgs.nodePackages)
                   prettier
