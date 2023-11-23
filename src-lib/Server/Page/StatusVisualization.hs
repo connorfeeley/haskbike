@@ -86,7 +86,7 @@ instance ToHtml ChargingEventsHeader where
         div_ [class_ "tooltip-bottom"] $ do -- Tooltip content
           p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "E-Fit: "    <> span_ [class_ "pure-u-1-2"] (showth (params' ^. _2))
           p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "E-Fit G5: " <> span_ [class_ "pure-u-1-2"] (showth (params' ^. _3))
-      div_ [id_ "charging-count"] (showth (params' ^. _1)))
+      div_ [id_ "charging-count"] (showth (abs (params' ^. _1))))
     where params' = sumTuples (unChargingEvents params)
 
 sumTuples :: Num a => [(b, a, a, a)] -> (a, a, a)
