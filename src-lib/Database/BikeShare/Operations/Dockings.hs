@@ -114,14 +114,14 @@ sumEvents Undocking = abs . sum . map _eventsCountUndockings
 queryDockingEventsCount :: StatusVariationQuery -> AppM [DockingEventsCount]
 queryDockingEventsCount variation =  do
   counts <- queryDockingEventsCountExpr variation
+
   pure $ map (\( station
-               , (boostUndockingsCount,  boostDockingsCount)
                , (iconicUndockingsCount, iconicDockingsCount)
                , (efitUndockingsCount,   efitDockingsCount)
                , (efitG5UndockingsCount, efitG5DockingsCount)
                )
               -> DockingEventsCount station variation
-                 (EventsCountResult Boost  (fromIntegral  boostUndockingsCount) (fromIntegral  boostDockingsCount))
+                 (EventsCountResult Boost  0 0) -- No boost bikes in Toronto.
                  (EventsCountResult Iconic (fromIntegral iconicUndockingsCount) (fromIntegral iconicDockingsCount))
                  (EventsCountResult EFit   (fromIntegral   efitUndockingsCount) (fromIntegral   efitDockingsCount))
                  (EventsCountResult EFitG5 (fromIntegral efitG5UndockingsCount) (fromIntegral efitG5DockingsCount))
@@ -129,59 +129,51 @@ queryDockingEventsCount variation =  do
 
 
 -- | Query the number of dockings and undockings for a station (returning tuples of each count for each bike type).
-queryDockingEventsCountExpr :: StatusVariationQuery -> AppM [(StationInformation, (Int32, Int32), (Int32, Int32), (Int32, Int32), (Int32, Int32))]
+queryDockingEventsCountExpr :: StatusVariationQuery -> AppM [(StationInformation, (Int32, Int32), (Int32, Int32), (Int32, Int32))]
 queryDockingEventsCountExpr variation = withPostgres $ runSelectReturningList $ selectWith $ do
-  stationInfo <- selecting $ all_ (bikeshareDb ^. bikeshareStationInformation)
   cte <- selecting $ do
     let statusForStation = filter_ (filterFor_ variation)
                                    (all_ (bikeshareDb ^. bikeshareStationStatus))
-      in withWindow_ (\row -> frame_ (partitionBy_ (_statusStationId row)) (orderPartitionBy_ (asc_ $ _statusLastReported row)) noBounds_)
+      in withWindow_ (\row -> frame_ (partitionBy_ (_statusStationId row)) noOrder_ noBounds_)
                      (\row w -> ( row
-                                , lagWithDefault_ (row ^. vehicleTypesAvailableBoost ) (val_ 1) (row ^. vehicleTypesAvailableBoost ) `over_` w
                                 , lagWithDefault_ (row ^. vehicleTypesAvailableIconic) (val_ 1) (row ^. vehicleTypesAvailableIconic) `over_` w
                                 , lagWithDefault_ (row ^. vehicleTypesAvailableEfit  ) (val_ 1) (row ^. vehicleTypesAvailableEfit  ) `over_` w
                                 , lagWithDefault_ (row ^. vehicleTypesAvailableEfitG5) (val_ 1) (row ^. vehicleTypesAvailableEfitG5) `over_` w
                                 ))
                      statusForStation
   pure $ do
-    stationInfo' <- reuse stationInfo
-
     -- Join the station information with the dockings and undockings.
     events' <-
-      aggregate_ (\(row, pBoost, pIconic, pEFit, pEFitG5) ->
+      aggregate_ (\(row, pIconic, pEFit, pEFitG5) ->
                     let
-                        dBoost  = row ^. vehicleTypesAvailableBoost  - pBoost
                         dIconic = row ^. vehicleTypesAvailableIconic - pIconic
                         dEFit   = row ^. vehicleTypesAvailableEfit   - pEFit
                         dEFitG5 = row ^. vehicleTypesAvailableEfitG5 - pEFitG5
                     in
                      ( group_ (_statusStationId row)
                      -- Undockings
-                     , ( fromMaybe_ 0 $ sum_ dBoost  `filterWhere_` (dBoost  <. 0)
-                       , fromMaybe_ 0 $ sum_ dIconic `filterWhere_` (dIconic <. 0)
-                       , fromMaybe_ 0 $ sum_ dEFit   `filterWhere_` (dEFit   <. 0)
-                       , fromMaybe_ 0 $ sum_ dEFitG5 `filterWhere_` (dEFitG5 <. 0)
+                     , ( fromMaybe_ 0 $ sum_ dIconic `filterWhere_` (dIconic  <. 0)
+                       , fromMaybe_ 0 $ sum_ dEFit   `filterWhere_` (dEFit    <. 0)
+                       , fromMaybe_ 0 $ sum_ dEFitG5 `filterWhere_` (dEFitG5  <. 0)
                        )
                      -- Dockings
-                     , ( fromMaybe_ 0 $ sum_ dBoost  `filterWhere_` (dBoost  >. 0)
-                       , fromMaybe_ 0 $ sum_ dIconic `filterWhere_` (dIconic >. 0)
-                       , fromMaybe_ 0 $ sum_ dEFit   `filterWhere_` (dEFit   >. 0)
-                       , fromMaybe_ 0 $ sum_ dEFitG5 `filterWhere_` (dEFitG5 >. 0)
+                     , ( fromMaybe_ 0 $ sum_ dIconic `filterWhere_` (dIconic  >. 0)
+                       , fromMaybe_ 0 $ sum_ dEFit   `filterWhere_` (dEFit    >. 0)
+                       , fromMaybe_ 0 $ sum_ dEFitG5 `filterWhere_` (dEFitG5  >. 0)
                        )
                      ))
       (reuse cte)
 
-    -- NOTE: Required, otherwise result is massive.
-    guard_ ( (events'   ^. _1) `references_` stationInfo'
-           )
+    info <- all_ (bikeshareDb ^. bikeshareStationInformation)
+    guard_' ((events' ^. _1) `references_'` info)
 
     -- Return tuples of station information and the dockings and undockings.
-    pure ( stationInfo'
+    pure ( info
+         -- , (events' ^. _2 . _1, events' ^. _3 . _1) -- Boost
          --      Undockings   |     Dockings
-         , (events' ^. _2 . _1, events' ^. _3 . _1) -- Boost
-         , (events' ^. _2 . _2, events' ^. _3 . _2) -- Iconic
-         , (events' ^. _2 . _3, events' ^. _3 . _3) -- E-Fit
-         , (events' ^. _2 . _4, events' ^. _3 . _4) -- E-Fit G5
+         , (events' ^. _2 . _1, events' ^. _3 . _1) -- Iconic
+         , (events' ^. _2 . _2, events' ^. _3 . _2) -- E-Fit
+         , (events' ^. _2 . _3, events' ^. _3 . _3) -- E-Fit G5
          )
 
 
@@ -243,48 +235,3 @@ sumChargings cond chargings = sumBikes (filter cond (concat chargings))
     sumBikes = sum . map _chargedBikeNumber
 
 
--- | Query the number of dockings and undockings for a station (returning tuples of each count for each bike type).
-queryDockingEventsCountExprTesting :: StatusVariationQuery -> AppM [(PrimaryKey StationInformationT Identity, (Int32, Int32), (Int32, Int32), (Int32, Int32))]
-queryDockingEventsCountExprTesting variation = withPostgres $ runSelectReturningList $ selectWith $ do
-  cte <- selecting $ do
-    let statusForStation = filter_ (filterFor_ variation)
-                                   (all_ (bikeshareDb ^. bikeshareStationStatus))
-      in withWindow_ (\row -> frame_ (partitionBy_ (_statusStationId row)) noOrder_ noBounds_)
-                     (\row w -> ( row
-                                -- , lagWithDefault_ (row ^. vehicleTypesAvailableBoost ) (val_ 1) (row ^. vehicleTypesAvailableBoost ) `over_` w
-                                , lagWithDefault_ (row ^. vehicleTypesAvailableIconic) (val_ 1) (row ^. vehicleTypesAvailableIconic) `over_` w
-                                , lagWithDefault_ (row ^. vehicleTypesAvailableEfit  ) (val_ 1) (row ^. vehicleTypesAvailableEfit  ) `over_` w
-                                , lagWithDefault_ (row ^. vehicleTypesAvailableEfitG5) (val_ 1) (row ^. vehicleTypesAvailableEfitG5) `over_` w
-                                ))
-                     statusForStation
-  pure $ do
-    -- Join the station information with the dockings and undockings.
-    events' <-
-      aggregate_ (\(row, pIconic, pEFit, pEFitG5) ->
-                    let
-                        dIconic = row ^. vehicleTypesAvailableIconic - pIconic
-                        dEFit   = row ^. vehicleTypesAvailableEfit   - pEFit
-                        dEFitG5 = row ^. vehicleTypesAvailableEfitG5 - pEFitG5
-                    in
-                     ( group_ (_statusStationId row)
-                     -- Undockings
-                     , ( fromMaybe_ 0 $ sum_ dIconic `filterWhere_` (dIconic  <. 0)
-                       , fromMaybe_ 0 $ sum_ dEFit   `filterWhere_` (dEFit    <. 0)
-                       , fromMaybe_ 0 $ sum_ dEFitG5 `filterWhere_` (dEFitG5  <. 0)
-                       )
-                     -- Dockings
-                     , ( fromMaybe_ 0 $ sum_ dIconic `filterWhere_` (dIconic  >. 0)
-                       , fromMaybe_ 0 $ sum_ dEFit   `filterWhere_` (dEFit    >. 0)
-                       , fromMaybe_ 0 $ sum_ dEFitG5 `filterWhere_` (dEFitG5  >. 0)
-                       )
-                     ))
-      (reuse cte)
-
-    -- Return tuples of station information and the dockings and undockings.
-    pure ( events' ^. _1
-         -- , (events' ^. _2 . _1, events' ^. _3 . _1) -- Boost
-         --      Undockings   |     Dockings
-         , (events' ^. _2 . _1, events' ^. _3 . _1) -- Iconic
-         , (events' ^. _2 . _2, events' ^. _3 . _2) -- E-Fit
-         , (events' ^. _2 . _3, events' ^. _3 . _3) -- E-Fit G5
-         )
