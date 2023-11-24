@@ -105,7 +105,7 @@ startTimeInput  = makeInputField "Start Time"        "datetime-local" "start-tim
 endTimeInput    = makeInputField "End Time"          "datetime-local" "end-time"   . formatTimeHtml
 
 submitInput :: Monad m => HtmlT m ()
-submitInput    = makeInputField (i_ "Or hit Enter")  "submit"         "submit-form" "Submit"
+submitInput    = makeInputField (i_ "Or hit Enter")  "submit"         "" "Submit"
 
 prettyTime :: LocalTime -> String
 prettyTime = formatTime defaultTimeLocale "%A, %b %e, %T"
