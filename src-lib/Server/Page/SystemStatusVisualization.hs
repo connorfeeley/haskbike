@@ -101,8 +101,8 @@ instance ToHtml SystemStatusVisualizationPage where
       br_ []
       div_ [class_ "pure-g", style_ "text-align: center"] $ do
         let headers = [ toHtml (_systemStatusVisPageInfo params)
-                      , hxSpinner_ (fieldLink dockingEventsHeader  Nothing (earliestTime $ _systemStatusVisPageTimeRange params) (latestTime $ _systemStatusVisPageTimeRange params))
-                      , hxSpinner_ (fieldLink chargingEventsHeader Nothing (earliestTime $ _systemStatusVisPageTimeRange params) (latestTime $ _systemStatusVisPageTimeRange params))
+                      , hxSpinner_ staticLink (fieldLink dockingEventsHeader  Nothing (earliestTime $ _systemStatusVisPageTimeRange params) (latestTime $ _systemStatusVisPageTimeRange params))
+                      , hxSpinner_ staticLink (fieldLink chargingEventsHeader Nothing (earliestTime $ _systemStatusVisPageTimeRange params) (latestTime $ _systemStatusVisPageTimeRange params))
                       ]
         mconcat $ map (`with` [class_ ("pure-u-md-1-" <> showt (length headers))]) headers
 
@@ -117,6 +117,8 @@ instance ToHtml SystemStatusVisualizationPage where
       with div_ [class_ "graph"] (toHtmlRaw (toHtmlWithUrls vegaSourceUrlsLocal (vegaEmbedCfg ShowActions) (vegaChart (map T.pack . drop 2) (_systemStatusVisPageDataLink params))))
 
     where
+      staticLink = _systemStatusVisPageStaticLink params
+
       dateHeader :: T.Text
       dateHeader = format "{} ➜ {}"
                    (prettyTime (earliestTime times'))

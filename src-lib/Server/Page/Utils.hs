@@ -16,7 +16,7 @@ import qualified Data.Text  as T
 import           Lucid
 import           Lucid.Base ( makeAttribute )
 
-import           Servant    ( Link, linkURI )
+import           Servant    ( Link, ToHttpApiData (toUrlPiece), linkURI )
 
 import           TextShow
 
@@ -74,8 +74,8 @@ hx_ :: Text -> Text -> Attribute
 hx_ attr = makeAttribute ("hx-" <> attr)
 
 
-hxSpinner_ :: Monad m => Text -> Link -> HtmlT m ()
+hxSpinner_ :: Monad m => Link -> Link -> HtmlT m ()
 hxSpinner_ staticPath link = div_ [ hx_ "trigger" "load"
                        , hx_ "get" ("/" <> (T.pack . show . linkURI) link)
                        ]
-                  (img_ [class_ "htmx-indicator htmx-spinner", src_ (staticPath <> "/images/svg-loaders/circles.svg"), alt_ "Loading..."])
+                  (img_ [class_ "htmx-indicator htmx-spinner", src_ ("/" <> toUrlPiece staticPath <> "/images/svg-loaders/circles.svg"), alt_ "Loading..."])
