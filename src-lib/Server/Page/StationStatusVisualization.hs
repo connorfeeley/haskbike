@@ -26,6 +26,7 @@ import           Lucid
 import           Servant
 
 import           Server.Classes
+import           Server.ComponentsAPI
 import           Server.Page.StatusVisualization
 import           Server.Page.Utils
 
@@ -33,17 +34,16 @@ import           TextShow
 
 import           Visualization.StationOccupancy
 
-
 data StationStatusVisualizationPage where
-  StationStatusVisualizationPage :: { _statusVisPageStationInfo   :: StationInformation
-                                    , _statusVisPageStationId     :: Int
-                                    , _statusVisPageTimeRange     :: TimePair (Maybe LocalTime)
-                                    , _statusVisPageTimeZone      :: TimeZone
-                                    , _statusVisPageCurrentUtc    :: UTCTime
-                                    , _statusVisPageDockingEvents :: [DockingEventsCount]
-                                    , _statusVisPageChargings     :: [(StationInformation, Int32, Int32, Int32)]
-                                    , _statusVisPageDataLink      :: Link
-                                    , _statusVisPageStaticLink    :: Link
+  StationStatusVisualizationPage :: { _statusVisPageStationInfo    :: StationInformation
+                                    , _statusVisPageStationId      :: Int
+                                    , _statusVisPageTimeRange      :: TimePair (Maybe LocalTime)
+                                    , _statusVisPageTimeZone       :: TimeZone
+                                    , _statusVisPageCurrentUtc     :: UTCTime
+                                    , _statusVisPageDockingEvents  :: [DockingEventsCount]
+                                    , _statusVisPageChargings      :: [(StationInformation, Int32, Int32, Int32)]
+                                    , _statusVisPageDataLink       :: Link
+                                    , _statusVisPageStaticLink     :: Link
                                     } -> StationStatusVisualizationPage
 
 instance ToHtmlComponents StationStatusVisualizationPage where
@@ -63,8 +63,7 @@ instance ToHtml StationStatusVisualizationPage where
       br_ []
       div_ [class_ "pure-g", style_ "text-align: center"] $ do
         let headers = catMaybes [ Just capacityHeader
-                                , Just (toHtml (eventsHeader :: DockingEventsHeader 'Undocking))
-                                , Just (toHtml (eventsHeader :: DockingEventsHeader 'Docking))
+                                , Just eventsHeader
                                 , Just chargingHeader
                                 , Just (toHtml (ChargingEventsHeader (_statusVisPageChargings params)))
                                 , valetHeader
@@ -88,8 +87,8 @@ instance ToHtml StationStatusVisualizationPage where
     where
       inf = _statusVisPageStationInfo params
 
-      eventsHeader :: DockingEventsHeader a
-      eventsHeader = DockingEventsHeader (_statusVisPageDockingEvents params)
+      eventsHeader :: Monad m => HtmlT m ()
+      eventsHeader = hxSpinner_ (fieldLink dockingEventsHeader (Just (_statusVisPageStationId params)) Nothing Nothing)
 
       pageTitle :: Int -> T.Text -> T.Text
       pageTitle = format "Station #{}: {}"

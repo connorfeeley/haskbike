@@ -231,15 +231,15 @@ stationStatusVisualizationPage (Just stationId) startTime endTime = do
     Just info' -> do
       logInfo $ "Matched station information: " <> info' ^. infoName
       logInfo $ "Static path: " <> toUrlPiece (fieldLink staticApi)
-      let visualizationPage = StationStatusVisualizationPage { _statusVisPageStationInfo   = info'
-                                                             , _statusVisPageStationId     = stationId
-                                                             , _statusVisPageTimeRange     = timePair
-                                                             , _statusVisPageTimeZone      = tz
-                                                             , _statusVisPageCurrentUtc    = currentUtc
-                                                             , _statusVisPageDockingEvents = events
-                                                             , _statusVisPageChargings     = chargingEvents
-                                                             , _statusVisPageDataLink      = fieldLink dataForStation (Just stationId) startTime endTime
-                                                             , _statusVisPageStaticLink    = fieldLink staticApi
+      let visualizationPage = StationStatusVisualizationPage { _statusVisPageStationInfo    = info'
+                                                             , _statusVisPageStationId      = stationId
+                                                             , _statusVisPageTimeRange      = timePair
+                                                             , _statusVisPageTimeZone       = tz
+                                                             , _statusVisPageCurrentUtc     = currentUtc
+                                                             , _statusVisPageDockingEvents  = events
+                                                             , _statusVisPageChargings      = chargingEvents
+                                                             , _statusVisPageDataLink       = fieldLink dataForStation (Just stationId) startTime endTime
+                                                             , _statusVisPageStaticLink     = fieldLink staticApi
                                                              }
       pure PureSideMenu { visPageParams = visualizationPage
                         , staticLink = fieldLink staticApi
@@ -343,7 +343,7 @@ dockingsHeader stationId startTime endTime = do
                                                                     , LatestTime   (localTimeToUTC tz latest)
                                                                     ]
   events <- liftIO $ runAppM appEnv $ queryDockingEventsCount variation
-  pure $ DockingHeader (DockingEventsHeader events) (DockingEventsHeader events)
+  pure $ DockingHeader events
 
 dockingsPage :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM (DockingEventsHeader 'Docking)
 dockingsPage stationId startTime endTime = do
