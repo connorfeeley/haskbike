@@ -47,3 +47,8 @@ License: BSD-3-Clause
 Files: static-files/js/htmx/*
 Copyright: 2020 Big Sky Software
 License: BSD-2-Clause
+
+### SVG Loaders
+Files: static-files/images/svg-loaders/*
+Copyright: 2014 Sam Herbert
+License: MIT

@@ -74,8 +74,8 @@ hx_ :: Text -> Text -> Attribute
 hx_ attr = makeAttribute ("hx-" <> attr)
 
 
-hxSpinner_ :: Monad m => Link -> HtmlT m ()
-hxSpinner_ link = div_ [ hx_ "trigger" "load"
+hxSpinner_ :: Monad m => Text -> Link -> HtmlT m ()
+hxSpinner_ staticPath link = div_ [ hx_ "trigger" "load"
                        , hx_ "get" ("/" <> (T.pack . show . linkURI) link)
                        ]
-                  (img_ [class_ "htmx-indicator htmx-spinner", src_ "http://samherbert.net/svg-loaders/svg-loaders/circles.svg"])
+                  (img_ [class_ "htmx-indicator htmx-spinner", src_ (staticPath <> "/images/svg-loaders/circles.svg"), alt_ "Loading..."])
