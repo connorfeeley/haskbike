@@ -11,14 +11,9 @@ module Server.Page.SystemStatusVisualization
 
 
 import           Data.Default.Class
-import           Data.Int                        ( Int32 )
-import           Data.Maybe                      ( catMaybes )
 import qualified Data.Text                       as T
 import           Data.Time
 import           Data.Time.Extras
-
-import           Database.BikeShare              ( StationInformation, StationStatus )
-import           Database.BikeShare.Operations
 
 import           Fmt
 
@@ -29,8 +24,10 @@ import           Lucid
 import           Servant
 
 import           Server.Classes
+import           Server.ComponentsAPI
 import           Server.Page.StatusVisualization
 import           Server.Page.Utils
+import           Server.StatusDataParams
 
 import           TextShow
 
@@ -81,8 +78,6 @@ data SystemStatusVisualizationPage where
                                    , _systemStatusVisPageTimeZone      :: TimeZone
                                    , _systemStatusVisPageCurrentUtc    :: UTCTime
                                    , _systemStatusVisPageInfo          :: SystemStatusVisualizationInfo
-                                   , _systemStatusVisPageDockingEvents :: [DockingEventsCount]
-                                   , _systemStatusVisPageChargings     :: [(StationInformation, Int32, Int32, Int32)]
                                    , _systemStatusVisPageDataLink      :: Link
                                    , _systemStatusVisPageStaticLink    :: Link
                                    } -> SystemStatusVisualizationPage
@@ -104,11 +99,10 @@ instance ToHtml SystemStatusVisualizationPage where
       h2_ [style_ "text-align: center"] "System Information & Statistics"
       br_ []
       div_ [class_ "pure-g", style_ "text-align: center"] $ do
-        let headers = catMaybes [ Just (toHtml (_systemStatusVisPageInfo params))
-                                -- , Just (toHtml (eventsHeader :: DockingEventsHeader 'Undocking))
-                                -- , Just (toHtml (eventsHeader :: DockingEventsHeader 'Docking))
-                                , Just (toHtml (ChargingEventsHeader (_systemStatusVisPageChargings params)))
-                                ]
+        let headers = [ toHtml (_systemStatusVisPageInfo params)
+                      , hxSpinner_ (fieldLink dockingEventsHeader  Nothing (earliestTime $ _systemStatusVisPageTimeRange params) (latestTime $ _systemStatusVisPageTimeRange params))
+                      , hxSpinner_ (fieldLink chargingEventsHeader Nothing (earliestTime $ _systemStatusVisPageTimeRange params) (latestTime $ _systemStatusVisPageTimeRange params))
+                      ]
         mconcat $ map (`with` [class_ ("pure-u-md-1-" <> showt (length headers))]) headers
 
       -- Selection form
@@ -130,7 +124,11 @@ instance ToHtml SystemStatusVisualizationPage where
       -- eventsHeader :: DockingEventsHeader a
       -- eventsHeader = DockingEventsHeader (_systemStatusVisPageDockingEvents params)
 
-      times' = times (_systemStatusVisPageTimeZone params) (_systemStatusVisPageCurrentUtc params) (_systemStatusVisPageTimeRange params)
+      -- times' = times (_systemStatusVisPageTimeZone params) (_systemStatusVisPageCurrentUtc params) (_systemStatusVisPageTimeRange params)
+      times' = enforceTimeRangeBounds (StatusDataParams (tz $ _systemStatusVisPageTimeRange params)
+                                                        (currentUtcTime $ _systemStatusVisPageTimeRange params)
+                                                        (_systemStatusVisPageTimeRange params)
+                                      )
       earliest = earliestTime times'
       latest   = latestTime   times'
 

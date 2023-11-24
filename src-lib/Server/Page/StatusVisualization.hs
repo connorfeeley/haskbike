@@ -5,10 +5,8 @@ module Server.Page.StatusVisualization
      ( ChargingEventsHeader (..)
      , DockingEventsHeader (..)
      , DockingHeader (..)
-     , StatusDataParams (..)
      , boolToText
      , endTimeInput
-     , enforceTimeRangeBounds
      , formatTimeHtml
      , makeInputField
      , maybeHeader
@@ -22,15 +20,12 @@ module Server.Page.StatusVisualization
 import           Control.Lens
 
 import           Data.Int                              ( Int32 )
-import           Data.Maybe                            ( fromMaybe )
 import qualified Data.Text                             as T
 import           Data.Time
 import           Data.Time.Extras
 
 import           Database.BikeShare.Operations
 import           Database.BikeShare.StationInformation ( StationInformation )
-
-import           GHC.Generics
 
 import qualified Graphics.Vega.VegaLite                as VL
 
@@ -39,6 +34,7 @@ import           Lucid
 import           Servant
 
 import           Server.Page.Utils
+import           Server.StatusDataParams
 
 import           Visualization.StationOccupancy
 
@@ -155,23 +151,3 @@ maybeHeader cond expr =
 
 times :: TimeZone -> UTCTime -> TimePair (Maybe LocalTime) -> TimePair LocalTime
 times tz currentUtc range  = enforceTimeRangeBounds (StatusDataParams tz currentUtc range)
-
-data StatusDataParams a where
-  StatusDataParams :: { visTimeZone :: TimeZone
-                      , visCurrentUtc :: UTCTime
-                      , visTimeRange :: TimePair a
-                      } -> StatusDataParams a
-  deriving (Show, Generic, Eq, Ord)
-
-enforceTimeRangeBounds :: StatusDataParams (Maybe LocalTime) -> TimePair LocalTime
-enforceTimeRangeBounds params = TimePair start end
-  where
-    tz = visTimeZone params
-    currentUtc = visCurrentUtc params
-    yesterday = addUTCTime (-24 * 3600) currentUtc
-    earliest = earliestTime (visTimeRange params)
-    latest   = latestTime   (visTimeRange params)
-
-    -- Default to 24 hours ago -> now.
-    start = fromMaybe (utcToLocalTime tz yesterday)  earliest
-    end   = fromMaybe (utcToLocalTime tz currentUtc) latest

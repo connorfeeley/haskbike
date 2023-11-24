@@ -30,6 +30,8 @@ import           Data.Time.Clock.POSIX
 data TimePair a where
   TimePair :: { earliestTime   :: a
               , latestTime     :: a
+              , tz             :: TimeZone
+              , currentUtcTime :: UTCTime
               } -> TimePair a
   deriving (Show, Eq, Ord)
 

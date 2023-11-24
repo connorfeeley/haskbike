@@ -29,6 +29,14 @@ data ComponentsAPI mode where
             :> QueryParam "start-time" LocalTime
             :> QueryParam "end-time" LocalTime
             :> Get '[HTML] DockingHeader
+    , chargingEventsHeader :: mode :-
+      "components" :>
+        "station-status"
+          :> "charging-events"
+            :> QueryParam "station-id" Int
+            :> QueryParam "start-time" LocalTime
+            :> QueryParam "end-time" LocalTime
+            :> Get '[HTML] ChargingEventsHeader
     , dockingsForStation :: mode :-
       "components" :>
         "station-status"

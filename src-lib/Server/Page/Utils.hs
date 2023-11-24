@@ -16,7 +16,7 @@ import qualified Data.Text   as T
 import           Lucid
 import           Lucid.Base  ( makeAttribute )
 
-import           Servant     ( HasLink (..), URI (..), linkURI )
+import           Servant     ( URI (..), linkURI )
 import           Servant.API ( Link )
 
 import           TextShow

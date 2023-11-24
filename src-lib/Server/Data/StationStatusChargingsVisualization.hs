@@ -2,8 +2,6 @@
 
 module Server.Data.StationStatusChargingsVisualization
      ( StationStatusVisualization (..)
-     , StatusDataParams (..)
-     , enforceTimeRangeBounds
      , fromBeamStationStatusToVisJSON
      , generateJsonDataSource
      ) where
@@ -14,7 +12,6 @@ import           Control.Lens                     hiding ( (.=) )
 import           Control.Monad.Except
 
 import           Data.Aeson
-import           Data.Maybe
 import           Data.Time
 import           Data.Time.Extras
 
@@ -22,6 +19,8 @@ import           Database.BikeShare.Operations
 import           Database.BikeShare.StationStatus
 
 import           GHC.Generics
+
+import           Server.StatusDataParams
 
 import           ServerEnv
 
@@ -80,27 +79,7 @@ generateJsonDataSource stationId startTime endTime = do
   -- AppM actions can be lifted into ServerAppM by using a combination of liftIO and runReaderT.
   currentUtc <- liftIO getCurrentTime
 
-  let params = StatusDataParams tz currentUtc (TimePair startTime endTime)
+  let params = StatusDataParams tz currentUtc (TimePair startTime endTime tz currentUtc)
   let range = enforceTimeRangeBounds params
   result <- liftIO $ runAppM appEnv $ queryStationStatusBetween stationId (localTimeToUTC tz (earliestTime  range)) (localTimeToUTC tz (latestTime range))
   pure $ map fromBeamStationStatusToVisJSON result
-
-data StatusDataParams a where
-  StatusDataParams :: { visTimeZone :: TimeZone
-                      , visCurrentUtc :: UTCTime
-                      , visTimeRange :: TimePair a
-                      } -> StatusDataParams a
-  deriving (Show, Generic, Eq, Ord)
-
-enforceTimeRangeBounds :: StatusDataParams (Maybe LocalTime) -> TimePair LocalTime
-enforceTimeRangeBounds params = TimePair start end
-  where
-    tz = visTimeZone params
-    currentUtc = visCurrentUtc params
-    yesterday = addUTCTime (-24 * 3600) currentUtc
-    earliest = earliestTime (visTimeRange params)
-    latest   = latestTime   (visTimeRange params)
-
-    -- Default to 24 hours ago -> now.
-    start = fromMaybe (utcToLocalTime tz yesterday)  earliest
-    end   = fromMaybe (utcToLocalTime tz currentUtc) latest
