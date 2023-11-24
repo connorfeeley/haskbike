@@ -1,6 +1,3 @@
-{-# LANGUAGE DataKinds #-}
--- |
-
 module Server.Page.StatusVisualization
      ( ChargingHeader (..)
      , DockingHeader (..)
