@@ -59,8 +59,8 @@ instance ToHtml StationStatusVisualizationPage where
       br_ []
       div_ [class_ "pure-g", style_ "text-align: center"] $ do
         let headers = catMaybes [ Just capacityHeader
-                                , Just $ hxSpinner_ (fieldLink dockingEventsHeader  Nothing (earliestTime $ _statusVisPageTimeRange params) (latestTime $ _statusVisPageTimeRange params))
-                                , Just $ hxSpinner_ (fieldLink chargingEventsHeader Nothing (earliestTime $ _statusVisPageTimeRange params) (latestTime $ _statusVisPageTimeRange params))
+                                , Just $ hxSpinner_ (fieldLink dockingEventsHeader  (Just $ _statusVisPageStationId params) (earliestTime $ _statusVisPageTimeRange params) (latestTime $ _statusVisPageTimeRange params))
+                                , Just $ hxSpinner_ (fieldLink chargingEventsHeader (Just $ _statusVisPageStationId params) (earliestTime $ _statusVisPageTimeRange params) (latestTime $ _statusVisPageTimeRange params))
                                 , valetHeader
                                 , virtualHeader
                                 ]
