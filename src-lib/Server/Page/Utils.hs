@@ -1,7 +1,9 @@
 -- |
 
 module Server.Page.Utils
-     ( makeFavicons
+     ( hxSpinner_
+     , hx_
+     , makeFavicons
      , makeHeadElements
      , mkData_
      , showth
@@ -9,9 +11,12 @@ module Server.Page.Utils
      ) where
 
 import           Data.Text
+import qualified Data.Text  as T
 
 import           Lucid
 import           Lucid.Base ( makeAttribute )
+
+import           Servant    ( Link, linkURI )
 
 import           TextShow
 
@@ -44,6 +49,9 @@ makeHeadElements staticPath = do
   -- link_ [rel_ "stylesheet", href_ "https://cdn.jsdelivr.net/npm/purecss@3.0.0/build/pure-min.css", integrity_ "sha384-X38yfunGUhNzHpBaEBsWLO+A0HDYOQi8ufWDkZ0k9e0eXz/tH3II7uKZ9msv++Ls", crossorigin_ "anonymous"]
   stylesheet_ (staticPath <> "/css/pure/pure-grids-responsive-min@3.0.0.css")
 
+  -- HTMX
+  script_ [src_ (staticPath <> "/js/htmx/htmx.min.js"), integrity_ "sha384-QFjmbokDn2DjBjq+fM+8LUIVrAgqcNW2s0PjAxHETgRn9l4fvX31ZxDxvwQnyMOX", crossorigin_ "anonymous"] ("" :: Text)
+
   -- Project stylesheet
   stylesheet_ (staticPath <> "/css/haskbike.css")
   stylesheet_ (staticPath <> "/css/tooltips.css")
@@ -60,3 +68,14 @@ showth :: (Monad m, TextShow a)
        => a -- ^ The (TextShow-able) value to be converted to HTML.
        -> HtmlT m ()
 showth = toHtml . showt
+
+-- | Helper function to create an HTMX attribute.
+hx_ :: Text -> Text -> Attribute
+hx_ attr = makeAttribute ("hx-" <> attr)
+
+
+hxSpinner_ :: Monad m => Link -> HtmlT m ()
+hxSpinner_ link = div_ [ hx_ "trigger" "load"
+                       , hx_ "get" ("/" <> (T.pack . show . linkURI) link)
+                       ]
+                  (img_ [class_ "htmx-indicator htmx-spinner", src_ "http://samherbert.net/svg-loaders/svg-loaders/circles.svg"])

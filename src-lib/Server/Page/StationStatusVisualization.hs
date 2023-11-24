@@ -8,13 +8,11 @@ module Server.Page.StationStatusVisualization
      ) where
 
 
-import           Data.Int                              ( Int32 )
 import           Data.Maybe                            ( catMaybes )
 import qualified Data.Text                             as T
 import           Data.Time
 import           Data.Time.Extras
 
-import           Database.BikeShare.Operations
 import           Database.BikeShare.StationInformation
 
 import           Fmt
@@ -26,6 +24,7 @@ import           Lucid
 import           Servant
 
 import           Server.Classes
+import           Server.ComponentsAPI
 import           Server.Page.StatusVisualization
 import           Server.Page.Utils
 
@@ -33,17 +32,14 @@ import           TextShow
 
 import           Visualization.StationOccupancy
 
-
 data StationStatusVisualizationPage where
-  StationStatusVisualizationPage :: { _statusVisPageStationInfo   :: StationInformation
-                                    , _statusVisPageStationId     :: Int
-                                    , _statusVisPageTimeRange     :: TimePair (Maybe LocalTime)
-                                    , _statusVisPageTimeZone      :: TimeZone
-                                    , _statusVisPageCurrentUtc    :: UTCTime
-                                    , _statusVisPageDockingEvents :: [DockingEventsCount]
-                                    , _statusVisPageChargings     :: [(StationInformation, Int32, Int32, Int32)]
-                                    , _statusVisPageDataLink      :: Link
-                                    , _statusVisPageStaticLink    :: Link
+  StationStatusVisualizationPage :: { _statusVisPageStationInfo    :: StationInformation
+                                    , _statusVisPageStationId      :: Int
+                                    , _statusVisPageTimeRange      :: TimePair (Maybe LocalTime)
+                                    , _statusVisPageTimeZone       :: TimeZone
+                                    , _statusVisPageCurrentUtc     :: UTCTime
+                                    , _statusVisPageDataLink       :: Link
+                                    , _statusVisPageStaticLink     :: Link
                                     } -> StationStatusVisualizationPage
 
 instance ToHtmlComponents StationStatusVisualizationPage where
@@ -63,10 +59,8 @@ instance ToHtml StationStatusVisualizationPage where
       br_ []
       div_ [class_ "pure-g", style_ "text-align: center"] $ do
         let headers = catMaybes [ Just capacityHeader
-                                , Just (toHtml (eventsHeader :: DockingEventsHeader 'Undocking))
-                                , Just (toHtml (eventsHeader :: DockingEventsHeader 'Docking))
-                                , Just chargingHeader
-                                , Just (toHtml (ChargingEventsHeader (_statusVisPageChargings params)))
+                                , Just $ hxSpinner_ (fieldLink dockingEventsHeader  (Just $ _statusVisPageStationId params) (earliestTime $ _statusVisPageTimeRange params) (latestTime $ _statusVisPageTimeRange params))
+                                , Just $ hxSpinner_ (fieldLink chargingEventsHeader (Just $ _statusVisPageStationId params) (earliestTime $ _statusVisPageTimeRange params) (latestTime $ _statusVisPageTimeRange params))
                                 , valetHeader
                                 , virtualHeader
                                 ]
@@ -88,9 +82,6 @@ instance ToHtml StationStatusVisualizationPage where
     where
       inf = _statusVisPageStationInfo params
 
-      eventsHeader :: DockingEventsHeader a
-      eventsHeader = DockingEventsHeader (_statusVisPageDockingEvents params)
-
       pageTitle :: Int -> T.Text -> T.Text
       pageTitle = format "Station #{}: {}"
 
@@ -103,11 +94,6 @@ instance ToHtml StationStatusVisualizationPage where
       capacityHeader = div_ $ do
         label_ [for_ "capacity"] (h3_ "Capacity")
         div_ [id_ "capacity"] (showth (_infoCapacity inf) <> " docks")
-
-      chargingHeader :: Monad m => HtmlT m ()
-      chargingHeader = div_ $ do
-        label_ [for_ "charging"] (h3_ "Charging Station")
-        div_ [id_ "charging"] (toHtml (boolToText (_infoIsChargingStation inf)))
 
       virtualHeader :: Monad m => Maybe (HtmlT m ())
       virtualHeader = maybeHeader (_infoIsVirtualStation inf) $

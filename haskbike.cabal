@@ -209,6 +209,8 @@ library
                     , Server.Routes
                     , Server.DataAPI
                     , Server.VisualizationAPI
+                    , Server.ComponentsAPI
+                    , Server.StatusDataParams
                     , Server.Page.StationStatusVisualization
                     , Server.Page.SystemStatusVisualization
                     , Server.Page.StatusVisualization
@@ -219,7 +221,6 @@ library
                     , Server.PureCSS
                     , Server.Classes
                     , Server.Data.StationStatusVisualization
-                    , Server.Data.StationStatusChargingsVisualization
                     , CLI.Utils
                     , CLI.Poll
                     , CLI.Query

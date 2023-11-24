@@ -28,7 +28,7 @@ import           Database.BikeShare.StatusVariationQuery
 
 import           Fmt                                     ( format )
 
-import           Server.Page.StatusVisualization
+import           Server.StatusDataParams
 
 import           ServerEnv
 
@@ -89,7 +89,7 @@ generateJsonDataSource (Just stationId) startTime endTime = do
   -- AppM actions can be lifter into ServerAppM by using a combination of liftIO and runReaderT.
   currentUtc <- liftIO getCurrentTime
 
-  let params = StatusDataParams tz currentUtc (TimePair startTime endTime)
+  let params = StatusDataParams tz currentUtc (TimePair startTime endTime tz currentUtc)
   let range = enforceTimeRangeBounds params
   result <- liftIO $ runAppM appEnv $ withPostgres $
     runSelectReturningList $ select $ limit_ 10000 $
@@ -105,7 +105,7 @@ generateJsonDataSource Nothing startTime endTime = do
   -- AppM actions can be lifter into ServerAppM by using a combination of liftIO and runReaderT.
   currentUtc <- liftIO getCurrentTime
 
-  let params = StatusDataParams tz currentUtc (TimePair startTime endTime)
+  let params = StatusDataParams tz currentUtc (TimePair startTime endTime tz currentUtc)
   let rangeBounded = enforceTimeRangeBounds params
   let start = localTimeToUTC tz (earliestTime rangeBounded)
   let end = localTimeToUTC tz (latestTime rangeBounded)
@@ -139,7 +139,7 @@ generateJsonDataSourceIntegral stationId startTime endTime = do
   -- AppM actions can be lifter into ServerAppM by using a combination of liftIO and runReaderT.
   currentUtc <- liftIO getCurrentTime
 
-  let params = StatusDataParams tz currentUtc (TimePair startTime endTime)
+  let params = StatusDataParams tz currentUtc (TimePair startTime endTime tz currentUtc)
   let range = enforceTimeRangeBounds params
 
   liftIO $ runAppM appEnv $
@@ -159,7 +159,7 @@ generateJsonDataSourceFactor stationId startTime endTime = do
   -- AppM actions can be lifter into ServerAppM by using a combination of liftIO and runReaderT.
   currentUtc <- liftIO getCurrentTime
 
-  let params = StatusDataParams tz currentUtc (TimePair startTime endTime)
+  let params = StatusDataParams tz currentUtc (TimePair startTime endTime tz currentUtc)
   let range = enforceTimeRangeBounds params
 
   liftIO $ runAppM appEnv $

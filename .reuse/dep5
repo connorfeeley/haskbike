@@ -42,3 +42,8 @@ License: BSD-3-Clause
 Files: static-files/js/vega/*
 Copyright: 2015 University of Washington Interactive Data Lab
 License: BSD-3-Clause
+
+### HTMX
+Files: static-files/js/htmx/*
+Copyright: 2020 Big Sky Software
+License: BSD-2-Clause

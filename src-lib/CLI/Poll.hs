@@ -18,6 +18,7 @@ import           Colog                         ( WithLog, log, logException, pat
 
 import           Control.Concurrent            ( threadDelay )
 import           Control.Concurrent.STM
+import           Control.Exception             ( throw )
 import           Control.Lens
 import           Control.Monad                 ( void, when )
 import           Control.Monad.Cont            ( forever )
@@ -81,7 +82,7 @@ statusRequester :: (WithLog env Message m, MonadIO m, MonadUnliftIO m, MonadRead
                 -> m ()
 statusRequester queue intervalSecsVar lastUpdated = void $ do
   runQueryM stationStatus >>= \case
-    Left err -> logException err
+    Left err -> logException err >> throw err
     Right result -> do
       -- Handle TTL upfront, so that we don't sleep when called
       -- for the first time from 'pollClient' (TTL = 0).
@@ -170,7 +171,7 @@ informationRequester :: (WithLog env Message m, MonadIO m, MonadUnliftIO m, Mona
                      -> m ()
 informationRequester queue intervalSecsVar lastUpdated = void $ do
   runQueryM stationInformation >>= \case
-    Left err -> logException err
+    Left err -> logException err >> throw err
     Right result -> do
       -- Handle TTL upfront, so that we don't sleep when called
       -- for the first time from 'pollClient' (TTL = 0).
