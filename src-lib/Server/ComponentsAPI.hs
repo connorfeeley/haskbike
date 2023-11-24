@@ -21,7 +21,15 @@ import           Server.Page.StatusVisualization
 -- HTMX API
 data ComponentsAPI mode where
   ComponentsAPI ::
-    { dockingsForStation :: mode :-
+    { dockingEventsHeader :: mode :-
+      "components" :>
+        "station-status"
+          :> "docking-events"
+            :> QueryParam "station-id" Int
+            :> QueryParam "start-time" LocalTime
+            :> QueryParam "end-time" LocalTime
+            :> Get '[HTML] DockingHeader
+    , dockingsForStation :: mode :-
       "components" :>
         "station-status"
           :> "dockings"

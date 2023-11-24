@@ -4,6 +4,7 @@
 module Server.Page.StatusVisualization
      ( ChargingEventsHeader (..)
      , DockingEventsHeader (..)
+     , DockingHeader (..)
      , StatusDataParams (..)
      , boolToText
      , endTimeInput
@@ -40,6 +41,16 @@ import           Servant
 import           Server.Page.Utils
 
 import           Visualization.StationOccupancy
+
+data DockingHeader where
+  DockingHeader :: { dockingHeader   :: DockingEventsHeader 'Docking
+                   , unDockingHeader :: DockingEventsHeader 'Undocking
+                   } -> DockingHeader
+instance ToHtml DockingHeader where
+  toHtmlRaw = toHtml
+  toHtml params = do
+    div_ [] (toHtml (dockingHeader params))
+    div_ [] (toHtml (unDockingHeader params))
 
 data DockingEventsHeader a where
   DockingEventsHeader :: { unEvents :: [DockingEventsCount] } -> DockingEventsHeader a
