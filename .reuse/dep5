@@ -9,12 +9,12 @@ Copyright: 2023 Connor Feeley <git@cfeeley.org>
 License: BSD-3-Clause
 
 ### Documentation
-Files: README.org CHANGELOG.md docs/*
+Files: README.org README.md CHANGELOG.md docs/*
 Copyright: 2023 Connor Feeley <git@cfeeley.org>
 License: BSD-3-Clause
 
 ### Other files
-Files: .dir-locals.el .envrc .gitignore .builds/check.yml weeder.dhall .env.template
+Files: .dir-locals.el .envrc .gitignore .builds/check.yml weeder.dhall .env.template justfile
 Copyright: 2023 Connor Feeley <git@cfeeley.org>
 License: BSD-3-Clause
 
