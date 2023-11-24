@@ -111,8 +111,6 @@ statusHandler =  DataAPI { dataForStation       = stationStatusData
 componentsHandler :: ComponentsAPI (AsServerT ServerAppM)
 componentsHandler = ComponentsAPI { dockingEventsHeader  = dockingsHeader
                                   , chargingEventsHeader = chargingsHeader
-                                  , dockingsForStation   = dockingsPage
-                                  , undockingsForStation = undockingsPage
                                   }
 
 
@@ -304,31 +302,7 @@ dockingsHeader stationId startTime endTime = do
   events <- liftIO $ runAppM appEnv $ queryDockingEventsCount variation
   pure $ DockingHeader events
 
-dockingsPage :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM (DockingEventsHeader 'Docking)
-dockingsPage stationId startTime endTime = do
-  -- Accessing the inner environment by using the serverEnv accessor.
-  appEnv <- asks serverAppEnv
-  let tz = envTimeZone appEnv
-  -- AppM actions can be lifted into ServerAppM by using a combination of liftIO and runReaderT.
-  currentUtc <- liftIO getCurrentTime
-
-  logInfo $ format "Rendering page for {station ID: {}, start time: {}, end time: {}} " stationId startTime endTime
-
-  -- TODO: awkward having to compute time bounds here and in 'StationStatusVisualization'
-  let times' = enforceTimeRangeBounds (StatusDataParams tz currentUtc (TimePair startTime endTime tz currentUtc))
-  let earliest = earliestTime times'
-  let latest = latestTime times'
-
-  let variation = StatusVariationQuery (fromIntegral <$> stationId) [ EarliestTime (localTimeToUTC tz earliest)
-                                                                    , LatestTime   (localTimeToUTC tz latest)
-                                                                    ]
-  events <- liftIO $ runAppM appEnv $ queryDockingEventsCount variation
-  pure $ DockingEventsHeader events
-
-undockingsPage :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM (DockingEventsHeader 'Undocking)
-undockingsPage _stationId _startTime _endTime = pure $ DockingEventsHeader ([] :: [DockingEventsCount])
-
-chargingsHeader :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM ChargingEventsHeader
+chargingsHeader :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM ChargingHeader
 chargingsHeader stationId startTime endTime = do
   -- Accessing the inner environment by using the serverEnv accessor.
   appEnv <- asks serverAppEnv
@@ -347,4 +321,4 @@ chargingsHeader stationId startTime endTime = do
                                                                     ]
   chargings <- liftIO $ runAppM appEnv $ queryChargingEventsCount variation
 
-  pure $ ChargingEventsHeader chargings
+  pure $ ChargingHeader chargings

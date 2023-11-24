@@ -2,8 +2,7 @@
 -- |
 
 module Server.Page.StatusVisualization
-     ( ChargingEventsHeader (..)
-     , DockingEventsHeader (..)
+     ( ChargingHeader (..)
      , DockingHeader (..)
      , boolToText
      , endTimeInput
@@ -67,43 +66,10 @@ instance ToHtml DockingHeader where
         div_ [id_ "undockings"] (showth (sumEvents Undocking (allBikeEvents events')))
       ) (dockingEvents params)
 
-data DockingEventsHeader a where
-  DockingEventsHeader :: { unEvents :: [DockingEventsCount] } -> DockingEventsHeader a
+data ChargingHeader where
+  ChargingHeader :: { unChargingEvents :: [(StationInformation, Int32, Int32, Int32)] } -> ChargingHeader
 
-data ChargingEventsHeader where
-  ChargingEventsHeader :: { unChargingEvents :: [(StationInformation, Int32, Int32, Int32)] } -> ChargingEventsHeader
-
-instance ToHtml (DockingEventsHeader 'Docking) where
-  toHtmlRaw = toHtml
-  toHtml params =
-    (\events' -> div_ $ do
-        div_ [class_ "tooltip"] $ do
-          label_ [ for_ "dockings"
-                 , class_ "tooltip"
-                 ] (h3_ "Dockings")
-          div_ [class_ "tooltip-bottom"] $ do -- Tooltip content
-            p_ [class_ "pure-g"] (b_ [class_ "pure-u-1-2"] "Iconic: "   <> span_ [class_ "pure-u-1-2"] (showth (sumEvents Docking (iconicEvents events'))))
-            p_ [class_ "pure-g"] (b_ [class_ "pure-u-1-2"] "E-Fit: "    <> span_ [class_ "pure-u-1-2"] (showth (sumEvents Docking (efitEvents   events'))))
-            p_ [class_ "pure-g"] (b_ [class_ "pure-u-1-2"] "E-Fit G5: " <> span_ [class_ "pure-u-1-2"] (showth (sumEvents Docking (efitG5Events events'))))
-          div_ [id_ "dockings"] (showth (sumEvents Docking (allBikeEvents events')))
-        ) (unEvents params)
-
-instance ToHtml (DockingEventsHeader 'Undocking) where
-  toHtmlRaw = toHtml
-  toHtml params =
-    (\events' -> div_ $ do
-        div_ [class_ "tooltip"] $ do
-          label_ [ for_ "undockings"
-                 , class_ "tooltip"
-                 ] (h3_ "Undockings")
-          div_ [class_ "tooltip-bottom"] $ do -- Tooltip content
-            p_ [class_ "pure-g"] (b_ [class_ "pure-u-1-2"] "Iconic: "   <> span_ [class_ "pure-u-1-2"] (showth (sumEvents Undocking (iconicEvents events'))))
-            p_ [class_ "pure-g"] (b_ [class_ "pure-u-1-2"] "E-Fit: "    <> span_ [class_ "pure-u-1-2"] (showth (sumEvents Undocking (efitEvents   events'))))
-            p_ [class_ "pure-g"] (b_ [class_ "pure-u-1-2"] "E-Fit G5: " <> span_ [class_ "pure-u-1-2"] (showth (sumEvents Undocking (efitG5Events events'))))
-        div_ [id_ "undockings"] (showth (sumEvents Undocking (allBikeEvents events')))
-    ) (unEvents params)
-
-instance ToHtml ChargingEventsHeader where
+instance ToHtml ChargingHeader where
   toHtmlRaw = toHtml
   toHtml params =
     div_ (do

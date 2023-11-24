@@ -44,6 +44,7 @@ data SystemStatusVisualizationInfo where
                                    , sysStatVisInfNumEfitG5     :: Int
                                    } -> SystemStatusVisualizationInfo
   deriving (Show, Eq)
+
 instance Default SystemStatusVisualizationInfo where
   def = SystemStatusVisualizationInfo
     { sysStatVisInfNumStations   = 0
@@ -121,10 +122,6 @@ instance ToHtml SystemStatusVisualizationPage where
                    (prettyTime (earliestTime times'))
                    (prettyTime (latestTime   times'))
 
-      -- eventsHeader :: DockingEventsHeader a
-      -- eventsHeader = DockingEventsHeader (_systemStatusVisPageDockingEvents params)
-
-      -- times' = times (_systemStatusVisPageTimeZone params) (_systemStatusVisPageCurrentUtc params) (_systemStatusVisPageTimeRange params)
       times' = enforceTimeRangeBounds (StatusDataParams (tz $ _systemStatusVisPageTimeRange params)
                                                         (currentUtcTime $ _systemStatusVisPageTimeRange params)
                                                         (_systemStatusVisPageTimeRange params)

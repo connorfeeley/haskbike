@@ -9,8 +9,6 @@ module Server.ComponentsAPI
 
 import           Data.Time
 
-import           Database.BikeShare.Operations   ( AvailabilityCountVariation (..) )
-
 import           GHC.Generics                    ( Generic )
 
 import           Servant
@@ -36,22 +34,6 @@ data ComponentsAPI mode where
             :> QueryParam "station-id" Int
             :> QueryParam "start-time" LocalTime
             :> QueryParam "end-time" LocalTime
-            :> Get '[HTML] ChargingEventsHeader
-    , dockingsForStation :: mode :-
-      "components" :>
-        "station-status"
-          :> "dockings"
-            :> QueryParam "station-id" Int
-            :> QueryParam "start-time" LocalTime
-            :> QueryParam "end-time" LocalTime
-            :> Get '[HTML] (DockingEventsHeader 'Docking)
-    , undockingsForStation :: mode :-
-      "components" :>
-        "station-status"
-          :> "undockings"
-            :> QueryParam "station-id" Int
-            :> QueryParam "start-time" LocalTime
-            :> QueryParam "end-time" LocalTime
-            :> Get '[HTML] (DockingEventsHeader 'Undocking)
+            :> Get '[HTML] ChargingHeader
     } -> ComponentsAPI mode
   deriving stock Generic
