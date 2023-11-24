@@ -86,17 +86,3 @@ manualSimpleStatus =
   , \t -> mkStatusSimple t 0 0 1 0 -- (13) Mystery bike charged up and became an E-Fit G5.
   , \t -> mkStatusSimple t 1 0 1 0 -- (14) Dock an Iconic.
   ]
-
--- * Utilities.
-
--- | Assert that the number of charging events is as expected.
-assertChargings :: Int -> Int -> Int -> IO [(StationStatus, [ChargingEvent])] -> IO ()
-assertChargings expectedAll expectedEfit expectedEfitG5 cond = do
-  assertChargings' expectedAll    sumAllCharging    cond
-  assertChargings' expectedEfit   sumEfitCharging   cond
-  assertChargings' expectedEfitG5 sumEfitG5Charging cond
-
--- | Assert that the given charging event condition holds for the expected number of charging events.
-assertChargings' :: (Eq p, Show p) => p -> (a -> p) -> IO a -> IO ()
-assertChargings' chargings sumType cond =
-  cond >>= assertEqual "Expected number of chargings" chargings . sumType

@@ -11,6 +11,7 @@ import           Data.ByteString.Lazy                   ( ByteString )
 import           Data.Text                              ( Text )
 import           Data.Time
 
+import           Database.BikeShare.Operations.Dockings
 import           Database.BikeShare.Operations.Factors
 
 import           GHC.Generics                           ( Generic )
@@ -50,5 +51,19 @@ data DataAPI mode where
           :> QueryParam "start-time" LocalTime
           :> QueryParam "end-time" LocalTime
           :> Get '[OctetStream] (Headers '[Header "Content-Disposition" Text] ByteString)
+    , dockingEventsData :: mode :-
+      "data" :>
+        "events" :> "docking"
+          :> QueryParam "station-id" Int
+          :> QueryParam "start-time" LocalTime
+          :> QueryParam "end-time" LocalTime
+          :> Get '[JSON] [DockingEventsCount]
+    , chargingEventsData :: mode :-
+      "data" :>
+        "events" :> "charging"
+          :> QueryParam "station-id" Int
+          :> QueryParam "start-time" LocalTime
+          :> QueryParam "end-time" LocalTime
+          :> Get '[JSON] [ChargingEvent]
     } -> DataAPI mode
   deriving stock Generic

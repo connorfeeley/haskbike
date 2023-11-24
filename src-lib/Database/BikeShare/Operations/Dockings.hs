@@ -44,8 +44,9 @@ import           API.Types                               ( TorontoVehicleType (.
 
 import           AppEnv
 
-import           Control.Lens                            hiding ( reuse, (<.) )
+import           Control.Lens                            hiding ( reuse, (.=), (<.) )
 
+import           Data.Aeson
 import           Data.Int                                ( Int32 )
 
 import           Database.Beam
@@ -71,6 +72,19 @@ data DockingEventsCount where
                         } -> DockingEventsCount
   deriving (Generic, Show, Eq)
 
+instance ToJSON DockingEventsCount where
+  toJSON events =
+    object [ "station-id" .= _infoStationId (_eventsStation events)
+           , "dockings"   .= object [ "iconic"  .= abs (_eventsCountDockings (_eventsIconicCount events))
+                                    , "efit"    .= abs (_eventsCountDockings (_eventsEfitCount   events))
+                                    , "efit-g5" .= abs (_eventsCountDockings (_eventsEfitG5Count events))
+                                    ]
+           , "undockings" .= object [ "iconic"  .= abs (_eventsCountUndockings (_eventsIconicCount events))
+                                    , "efit"    .= abs (_eventsCountUndockings (_eventsEfitCount   events))
+                                    , "efit-g5" .= abs (_eventsCountUndockings (_eventsEfitG5Count events))
+                                    ]
+           ]
+
 -- | Wrapper for a station and its undocking and docking counts.
 data ChargingEvent where
   ChargingEvent :: { _chargedBikeType     :: TorontoVehicleType
@@ -78,6 +92,11 @@ data ChargingEvent where
                    } -> ChargingEvent
   deriving (Generic, Show, Eq)
 
+instance ToJSON ChargingEvent where
+  toJSON event =
+    object [ "bike-type" .= _chargedBikeType event
+           , "count"     .= _chargedBikeNumber event
+           ]
 
 -- | Wrapper for the undocking and docking counts for a bike type.
 data EventsCountResult =
@@ -233,5 +252,3 @@ sumChargings :: (ChargingEvent -> Bool) -> [[ChargingEvent]] -> Int
 sumChargings cond chargings = sumBikes (filter cond (concat chargings))
   where
     sumBikes = sum . map _chargedBikeNumber
-
-

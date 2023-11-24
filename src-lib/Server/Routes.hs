@@ -15,6 +15,8 @@ module Server.Routes
      , server
      ) where
 
+import           API.StationStatus                        ( TorontoVehicleType (..) )
+
 import           AppEnv
 
 import           Colog
@@ -65,10 +67,10 @@ import           TimeInterval
 
 import           Version                                  ( getCabalVersion, getGitVersion )
 
-
 data API mode where
   API :: { version           :: mode :- "version" :> Get '[JSON] Version
-         , home              :: mode :- Get '[HTML] (PureSideMenu IndexPage)
+         , home
+         :: mode :- Get '[HTML] (PureSideMenu IndexPage)
          , stationData       :: mode :- NamedRoutes DataAPI
          , visualizationPage :: mode :- NamedRoutes VisualizationAPI
          , componentsPage    :: mode :- NamedRoutes ComponentsAPI
@@ -106,6 +108,8 @@ statusHandler =  DataAPI { dataForStation       = stationStatusData
                          , integralsForStation  = stationIntegralData
                          , factorsForStation    = stationFactorData
                          , performanceCsv       = performanceCsvHandler
+                         , dockingEventsData    = handleDockingEventsData
+                         , chargingEventsData   = handleChargingEventsData
                          }
 
 componentsHandler :: ComponentsAPI (AsServerT ServerAppM)
@@ -322,3 +326,47 @@ chargingsHeader stationId startTime endTime = do
   chargings <- liftIO $ runAppM appEnv $ queryChargingEventsCount variation
 
   pure $ ChargingHeader chargings
+
+handleDockingEventsData :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM [DockingEventsCount]
+handleDockingEventsData stationId startTime endTime = do
+  -- Accessing the inner environment by using the serverEnv accessor.
+  appEnv <- asks serverAppEnv
+  let tz = envTimeZone appEnv
+  -- AppM actions can be lifted into ServerAppM by using a combination of liftIO and runReaderT.
+  currentUtc <- liftIO getCurrentTime
+
+  -- TODO: awkward having to compute time bounds here and in 'StationStatusVisualization'
+  let times' = enforceTimeRangeBounds (StatusDataParams tz currentUtc (TimePair startTime endTime tz currentUtc))
+  let (earliest, latest) = (earliestTime times', latestTime times')
+
+  logInfo $ format "Rendering page for {station ID: {}, start time: {}, end time: {}} " stationId earliest latest
+
+  let variation = StatusVariationQuery (fromIntegral <$> stationId) [ EarliestTime (localTimeToUTC tz earliest)
+                                                                    , LatestTime   (localTimeToUTC tz latest)
+                                                                    ]
+  liftIO $ runAppM appEnv $ queryDockingEventsCount variation
+
+handleChargingEventsData :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM [ChargingEvent]
+handleChargingEventsData stationId startTime endTime = do
+  -- Accessing the inner environment by using the serverEnv accessor.
+  appEnv <- asks serverAppEnv
+  let tz = envTimeZone appEnv
+  -- AppM actions can be lifted into ServerAppM by using a combination of liftIO and runReaderT.
+  currentUtc <- liftIO getCurrentTime
+
+  -- TODO: awkward having to compute time bounds here and in 'StationStatusVisualization'
+  let times' = enforceTimeRangeBounds (StatusDataParams tz currentUtc (TimePair startTime endTime tz currentUtc))
+  let (earliest, latest) = (earliestTime times', latestTime times')
+
+  logInfo $ format "Rendering page for {station ID: {}, start time: {}, end time: {}} " stationId earliest latest
+
+  let variation = StatusVariationQuery (fromIntegral <$> stationId) [ EarliestTime (localTimeToUTC tz earliest)
+                                                                    , LatestTime   (localTimeToUTC tz latest)
+                                                                    ]
+  events <- liftIO $ runAppM appEnv $ queryChargingEventsCount variation
+  let result = map (\(_info, _totalCount, efitCount, efitG5Count) ->
+                      [ ChargingEvent EFit (fromIntegral efitCount)
+                      , ChargingEvent EFitG5 (fromIntegral efitG5Count)
+                      ])
+               events
+  pure $ concat result
