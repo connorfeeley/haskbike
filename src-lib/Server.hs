@@ -46,7 +46,10 @@ serveVisualization = do
   let _appEnv = serverAppEnv env
   -- The 'serverAppEnv' function gives access to the underlying 'AppM' environment
 
-  liftIO $ run (serverPort env) (app env)
+  let warpSettings = defaultSettings
+  let portSettings = setPort (serverPort env) warpSettings
+  let timeoutSettings = setTimeout (5*60) portSettings
+  liftIO $ runSettings timeoutSettings (app env)
   -- 'run' is a function from Network.Wai.Handler.Warp that runs the application we have built on a specific port.
   -- 'liftIO' elevates the IO action to run inside the ServerAppM monad.
   -- Note that 'app env' is passed as an argument to 'run'. It tells 'run' to use the application built from ServerEnv using 'app'.
