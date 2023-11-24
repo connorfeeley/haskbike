@@ -21,16 +21,16 @@ data ComponentsAPI mode where
   ComponentsAPI ::
     { dockingEventsHeader :: mode :-
       "components" :>
-        "station-status"
-          :> "docking-events"
+        "events"
+          :> "docking"
             :> QueryParam "station-id" Int
             :> QueryParam "start-time" LocalTime
             :> QueryParam "end-time" LocalTime
             :> Get '[HTML] DockingHeader
     , chargingEventsHeader :: mode :-
       "components" :>
-        "station-status"
-          :> "charging-events"
+        "events"
+          :> "charging"
             :> QueryParam "station-id" Int
             :> QueryParam "start-time" LocalTime
             :> QueryParam "end-time" LocalTime
