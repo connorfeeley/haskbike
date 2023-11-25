@@ -41,7 +41,7 @@ selectionProps _selName filterFn label dataUrl =
     -- Setup encoding common to both 'area' and 'point' marks
     areaEncoding =
       encoding
-        . position X [ PTitle "Time",  PName "Last Reported", PmType Temporal,     PTimeUnit (TU YearMonthDateHoursMinutesSeconds), PAxis [AxLabelAngle (-90)]]
+        . position X [ PTitle "Time",  PName "Last Reported", PmType Temporal,     PTimeUnit (TU MonthDateHoursMinutes), PAxis [AxLabelAngle (-90)]]
         . position Y [ PTitle "Count", PName "Count",         PmType Quantitative, PStack StZero ]
         . color [ MName "Type"
                 , MmType Nominal -- Data are also categories, but ones which have some natural order.
