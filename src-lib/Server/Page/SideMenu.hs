@@ -4,6 +4,7 @@
 module Server.Page.SideMenu where
 
 import           Lucid
+import           Lucid.Base        ( makeAttribute )
 
 import           Servant           ( Link, toUrlPiece )
 
@@ -25,7 +26,7 @@ instance (ToHtml a, ToHtmlComponents a) => ToHtml (PureSideMenu a) where
       stylesheet_ ("/" <> toUrlPiece (staticLink params) <> "/css/pure/side-menu.css")
       script_ [src_ ("/" <> toUrlPiece (staticLink params) <> "/js/pure/ui.js"), async_ mempty] ""
     div_ [id_ "layout"] $ do
-      a_ [href_ "#menu", id_ "menuLink", class_ "menu-link"] $
+      a_ [href_ "#menu", id_ "menuLink", class_ "menu-link", makeAttribute "aria-label" "Toggle sidebar"] $
         span_ mempty
       div_ [id_ "menu"] $ do
         div_ [class_ "pure-menu"] $ do
