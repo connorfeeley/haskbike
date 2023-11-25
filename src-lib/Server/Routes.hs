@@ -23,7 +23,6 @@ import           Colog
 
 import           Control.Lens
 import           Control.Monad.Except
-import           Control.Monad.Reader
 
 import           Data.ByteString.Lazy                     ( ByteString )
 import           Data.Csv                                 ( encodeDefaultOrderedByName )
@@ -56,7 +55,6 @@ import           Server.Page.IndexPage
 import           Server.Page.SideMenu
 import           Server.Page.StationList
 import           Server.Page.StationStatusVisualization
-import           Server.Page.StatusVisualization
 import           Server.Page.SystemStatusVisualization
 import           Server.StatusDataParams
 import           Server.VisualizationAPI
@@ -69,8 +67,7 @@ import           Version                                  ( getCabalVersion, get
 
 data API mode where
   API :: { version           :: mode :- "version" :> Get '[JSON] Version
-         , home
-         :: mode :- Get '[HTML] (PureSideMenu IndexPage)
+         , home              :: mode :- Get '[HTML] (PureSideMenu IndexPage)
          , stationData       :: mode :- NamedRoutes DataAPI
          , visualizationPage :: mode :- NamedRoutes VisualizationAPI
          , componentsPage    :: mode :- NamedRoutes ComponentsAPI
@@ -86,12 +83,12 @@ versionHandler :: ServerAppM Version
 versionHandler = pure (("version", getCabalVersion), ("git-version", getGitVersion))
 
 server :: API (AsServerT ServerAppM)
-server = API { version = versionHandler
-             , home = homePageHandler
-             , stationData = statusHandler
+server = API { version           = versionHandler
+             , home              = homePageHandler
+             , stationData       = statusHandler
              , visualizationPage = visualizationHandler
-             , componentsPage = componentsHandler
-             , static = staticHandler
+             , componentsPage    = componentsHandler
+             , static            = staticHandler
              }
 -- * Serve static files.
 
@@ -112,20 +109,15 @@ statusHandler =  DataAPI { dataForStation       = stationStatusData
                          , chargingEventsData   = handleChargingEventsData
                          }
 
-componentsHandler :: ComponentsAPI (AsServerT ServerAppM)
-componentsHandler = ComponentsAPI { dockingEventsHeader  = dockingsHeader
-                                  , chargingEventsHeader = chargingsHeader
-                                  }
-
-
 staticHandler :: StaticAPI (AsServerT ServerAppM)
 staticHandler =  StaticAPI $ serveDirectoryWebApp "static-files"
 
 visualizationHandler :: VisualizationAPI (AsServerT ServerAppM)
-visualizationHandler = VisualizationAPI { pageForStation = stationStatusVisualizationPage
-                                        , systemStatus = systemStatusVisualizationPage
-                                        , stationList = stationListPage
-                                        }
+visualizationHandler = VisualizationAPI
+  { pageForStation = stationStatusVisualizationPage
+  , systemStatus   = systemStatusVisualizationPage
+  , stationList    = stationListPage
+  }
 
 stationStatusData :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM [StationStatusVisualization]
 stationStatusData stationId startTime endTime = do
@@ -285,47 +277,6 @@ homePageHandler = do
 
 -- apiProxy :: Proxy (ToServantApi API)
 -- apiProxy = genericApi (Proxy :: Proxy API)
-
-dockingsHeader :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM DockingHeader
-dockingsHeader stationId startTime endTime = do
-  -- Accessing the inner environment by using the serverEnv accessor.
-  appEnv <- asks serverAppEnv
-  let tz = envTimeZone appEnv
-  -- AppM actions can be lifted into ServerAppM by using a combination of liftIO and runReaderT.
-  currentUtc <- liftIO getCurrentTime
-
-  -- TODO: awkward having to compute time bounds here and in 'StationStatusVisualization'
-  let times' = enforceTimeRangeBounds (StatusDataParams tz currentUtc (TimePair startTime endTime tz currentUtc))
-  let (earliest, latest) = (earliestTime times', latestTime times')
-
-  logInfo $ format "Rendering page for {station ID: {}, start time: {}, end time: {}} " stationId earliest latest
-
-  let variation = StatusVariationQuery (fromIntegral <$> stationId) [ EarliestTime (localTimeToUTC tz earliest)
-                                                                    , LatestTime   (localTimeToUTC tz latest)
-                                                                    ]
-  events <- liftIO $ runAppM appEnv $ queryDockingEventsCount variation
-  pure $ DockingHeader events
-
-chargingsHeader :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM ChargingHeader
-chargingsHeader stationId startTime endTime = do
-  -- Accessing the inner environment by using the serverEnv accessor.
-  appEnv <- asks serverAppEnv
-  let tz = envTimeZone appEnv
-  -- AppM actions can be lifted into ServerAppM by using a combination of liftIO and runReaderT.
-  currentUtc <- liftIO getCurrentTime
-
-  -- TODO: awkward having to compute time bounds here and in 'StationStatusVisualization'
-  let times' = enforceTimeRangeBounds (StatusDataParams tz currentUtc (TimePair startTime endTime tz currentUtc))
-  let (earliest, latest) = (earliestTime times', latestTime times')
-
-  logInfo $ format "Rendering page for {station ID: {}, start time: {}, end time: {}} " stationId earliest latest
-
-  let variation = StatusVariationQuery (fromIntegral <$> stationId) [ EarliestTime (localTimeToUTC tz earliest)
-                                                                    , LatestTime   (localTimeToUTC tz latest)
-                                                                    ]
-  chargings <- liftIO $ runAppM appEnv $ queryChargingEventsCount variation
-
-  pure $ ChargingHeader chargings
 
 handleDockingEventsData :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM [DockingEventsCount]
 handleDockingEventsData stationId startTime endTime = do

@@ -8,6 +8,7 @@ module AppEnv
      , Env (..)
      , Message
      , WithAppMEnv
+     , asks
      , mainEnv
      , runAppM
      , runQueryWithManager

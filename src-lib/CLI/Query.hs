@@ -17,7 +17,7 @@ import           Colog
 
 import           Control.Lens
 import           Control.Monad.Catch
-import           Control.Monad.Reader          ( asks, when )
+import           Control.Monad.Reader          ( when )
 
 import qualified Data.List                     as List
 import           Data.Maybe                    ( fromMaybe )

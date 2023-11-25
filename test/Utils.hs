@@ -17,10 +17,6 @@ import           API.Utils
 import           Data.Time
 
 import           Database.BikeShare.ImportExport
-import           Database.BikeShare.Operations
-import           Database.BikeShare.Types
-
-import           Test.Tasty.HUnit
 
 
 -- * Test setup.

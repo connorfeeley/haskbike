@@ -8,7 +8,8 @@
 -- |
 
 module ServerEnv
-     ( ServerAppM (..)
+     ( module AppEnv
+     , ServerAppM (..)
      , ServerEnv (..)
      , adaptLogAction
      , getAppEnvFromServer
