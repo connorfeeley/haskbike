@@ -68,13 +68,11 @@ This is helpful in maintaining a clean separation of variables specific to both 
 -- | ServerEnv data type that holds server-specific environment including App environment and the server port
 -- The m parameter is the type variable which means 'ServerEnv' can hold environment of any Monad 'm'.
 data ServerEnv m where
-  ServerEnv :: { serverAppEnv       :: !(Env AppM)
-               -- The environment specific for the application
-               , serverPort         :: !Int
-               -- Port number on which the server is running
-               , serverLogAction    :: !(LogAction m Message)
-               -- Maximum number of intervals to query for
-               , serverMaxIntervals :: Pico
+  ServerEnv :: { serverAppEnv         :: !(Env AppM)            -- ^ The environment specific for the application
+               , serverPort           :: !Int                   -- ^ Port number on which the server is running
+               , serverTimeoutSeconds :: !Int                   -- ^ Timeout in seconds for the server.
+               , serverLogAction      :: !(LogAction m Message) -- ^ Maximum number of intervals to query for
+               , serverMaxIntervals   :: Pico
                } -> ServerEnv m
 
 -- Implement logging for the application environment.
@@ -142,10 +140,11 @@ runWithServerAppM dbname action = do
   currentTimeZone <- getCurrentTimeZone
   clientManager <- liftIO $ newManager tlsManagerSettings
   let env = mainEnv Info False True currentTimeZone conn clientManager
-  let serverEnv = ServerEnv { serverAppEnv    = env
-                            , serverPort      = 8081
-                            , serverLogAction = simpleMessageAction
-                            , serverMaxIntervals = 20
+  let serverEnv = ServerEnv { serverAppEnv         = env
+                            , serverPort           = 8081
+                            , serverTimeoutSeconds = 5 * 60
+                            , serverLogAction      = simpleMessageAction
+                            , serverMaxIntervals   = 20
                             }
   liftIO $ runServerAppM serverEnv action
 
@@ -157,10 +156,11 @@ runWithServerAppMSuppressLog dbname action = do
   currentTimeZone <- getCurrentTimeZone
   clientManager <- liftIO $ newManager tlsManagerSettings
   let env = mainEnv Info False True currentTimeZone conn clientManager
-  let serverEnv = ServerEnv { serverAppEnv       = env
-                            , serverPort         = 8081
-                            , serverLogAction    = mempty
-                            , serverMaxIntervals = 20
+  let serverEnv = ServerEnv { serverAppEnv         = env
+                            , serverPort           = 8081
+                            , serverTimeoutSeconds = 5 * 60
+                            , serverLogAction      = mempty
+                            , serverMaxIntervals   = 20
                             }
   liftIO $ runServerAppM serverEnv action
 
@@ -172,10 +172,11 @@ runWithServerAppMDebug dbname action = do
   currentTimeZone <- getCurrentTimeZone
   clientManager <- liftIO $ newManager tlsManagerSettings
   let env = mainEnv Debug True True currentTimeZone conn clientManager
-  let serverEnv = ServerEnv { serverAppEnv    = env
-                            , serverPort      = 8081
-                            , serverLogAction = simpleMessageAction
-                            , serverMaxIntervals = 20
+  let serverEnv = ServerEnv { serverAppEnv         = env
+                            , serverPort           = 8081
+                            , serverTimeoutSeconds = 5 * 60
+                            , serverLogAction      = simpleMessageAction
+                            , serverMaxIntervals   = 20
                             }
   liftIO $ runServerAppM serverEnv action
 

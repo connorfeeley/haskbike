@@ -129,7 +129,7 @@ insertStationStatus apiStatus
           logException e >>
           throwM e >>
           pure []
-        Right inserted       -> pure inserted
+        Right inserted -> pure inserted
 
 {- |
 Query the statuses for a station between two times.

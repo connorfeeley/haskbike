@@ -13,6 +13,8 @@ module Server
 import           Control.Monad.Except
 import           Control.Monad.Reader
 
+import           Data.Function            ( (&) )
+
 import           Network.Wai.Handler.Warp as Warp
 
 import           Prelude                  ()
@@ -41,15 +43,13 @@ app s =
 serveVisualization :: ServerAppM ()
 serveVisualization = do
   env <- ask
-  -- 'ask' is from Control.Monad.Reader class. It fetches ServerEnv.
 
   let _appEnv = serverAppEnv env
-  -- The 'serverAppEnv' function gives access to the underlying 'AppM' environment
 
-  let warpSettings = defaultSettings
-  let portSettings = setPort (serverPort env) warpSettings
-  let timeoutSettings = setTimeout (5*60) portSettings
-  liftIO $ runSettings timeoutSettings (app env)
-  -- 'run' is a function from Network.Wai.Handler.Warp that runs the application we have built on a specific port.
-  -- 'liftIO' elevates the IO action to run inside the ServerAppM monad.
-  -- Note that 'app env' is passed as an argument to 'run'. It tells 'run' to use the application built from ServerEnv using 'app'.
+  -- Run Warp/Wai server using specific settings.
+  liftIO $ runSettings (serverSettings env) (app env)
+
+serverSettings :: ServerEnv ServerAppM -> Settings
+serverSettings env = defaultSettings
+               & setPort (serverPort env)
+               & setTimeout (serverTimeoutSeconds env)
