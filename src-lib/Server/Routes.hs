@@ -51,6 +51,7 @@ import           Servant.Server.Generic
 import           Server.ComponentsAPI
 import           Server.Data.StationStatusVisualization
 import           Server.DataAPI
+import           Server.DebugAPI
 import           Server.Page.IndexPage
 import           Server.Page.SideMenu
 import           Server.Page.StationList
@@ -63,10 +64,8 @@ import           ServerEnv
 
 import           TimeInterval
 
-import           Version                                  ( getCabalVersion, getGitVersion )
-
 data API mode where
-  API :: { version           :: mode :- "version" :> Get '[JSON] Version
+  API :: { debug             :: mode :- NamedRoutes DebugAPI
          , home              :: mode :- Get '[HTML] (PureSideMenu IndexPage)
          , stationData       :: mode :- NamedRoutes DataAPI
          , visualizationPage :: mode :- NamedRoutes VisualizationAPI
@@ -75,15 +74,10 @@ data API mode where
          } -> API mode
   deriving stock Generic
 
-type Version = ((String, String), (String, String)) -- This will do for the sake of example.
-
 type BikeShareExplorerAPI = NamedRoutes API
 
-versionHandler :: ServerAppM Version
-versionHandler = pure (("version", getCabalVersion), ("git-version", getGitVersion))
-
 server :: API (AsServerT ServerAppM)
-server = API { version           = versionHandler
+server = API { debug             = debugApiHandler
              , home              = homePageHandler
              , stationData       = statusHandler
              , visualizationPage = visualizationHandler

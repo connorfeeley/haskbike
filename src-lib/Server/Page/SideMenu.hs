@@ -33,12 +33,9 @@ instance (ToHtml a, ToHtmlComponents a) => ToHtml (PureSideMenu a) where
           toMenuHeading (visPageParams params)
           ul_ [class_ "pure-menu-list"] $ do
             navLink "/" "Home"
-            -- navLink "/visualization" "Visualization"
             navLink "/visualization/station-list" "Station List"
             navLink "/visualization/system-status" "System Status"
             navLink "/data/system-status/performance/csv" "Performance Data (CSV)"
-            -- navLink "/#about" "About"
-            -- navLink "/#contact" "Contact"
       div_ [id_ "main"] $ do
         -- Render parameterized type
         toHtml (visPageParams params)
