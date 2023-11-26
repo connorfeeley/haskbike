@@ -53,7 +53,8 @@ sleepDatabaseHandler seconds = do
   env <- ask -- Get the ServerEnv within ServerAppM context
 
   logInfo $ format "Sleeping database for {} seconds" seconds
-
+  -- throwString "This will print last as an error message"
+  --   `finally` logInfo "This will print second"
   let conn = envDBConnection (serverAppEnv env)
   _ :: [Only ()] <- liftIO $ query_ conn $ fromString ("SELECT pg_sleep(" ++ show seconds ++ ")")
   pure ()

@@ -14,7 +14,6 @@ import           Colog
 
 import           Control.Lens                            hiding ( (.=) )
 import           Control.Monad.Except
-import           Control.Monad.Reader                    ( ask )
 
 import           Data.Aeson
 import           Data.Time

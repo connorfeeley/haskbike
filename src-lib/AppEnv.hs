@@ -25,7 +25,8 @@ module AppEnv
 import           API.Client
 
 import           Colog                    ( HasLog (..), LogAction (..), Message, Msg (msgSeverity), Severity (..),
-                                            filterBySeverity, richMessageAction, simpleMessageAction )
+                                            filterBySeverity, logError, logException, richMessageAction,
+                                            simpleMessageAction )
 
 import           Control.Monad.Catch
 import           Control.Monad.Except
@@ -33,7 +34,7 @@ import           Control.Monad.Reader     ( MonadReader, ReaderT (..), ask, asks
 
 import           Data.Time                ( TimeZone, getCurrentTimeZone )
 
-import           Database.Beam.Postgres   ( Connection, Pg, connect, runBeamPostgres, runBeamPostgresDebug )
+import           Database.Beam.Postgres   ( Connection, Pg, SqlError, connect, runBeamPostgres, runBeamPostgresDebug )
 import           Database.BikeShare.Utils ( mkDbConnectInfo )
 
 import           GHC.Stack                ( HasCallStack )
@@ -45,6 +46,8 @@ import           Prelude                  hiding ( log )
 
 import           Servant                  ( ServerError )
 import           Servant.Client
+
+import           System.Exit              ( exitFailure )
 
 import           UnliftIO                 ( MonadUnliftIO )
 
@@ -87,11 +90,17 @@ withConn = asks envDBConnection >>= liftIO . pure
 -- | Run a Beam operation using database connection from the environment.
 withPostgres :: (WithAppMEnv (Env env) Message m) => Pg a -> m a
 withPostgres action = do
-  conn <- withConn
   logDatabase <- asks envLogDatabase
-  liftIO $
-    if logDatabase then runBeamPostgresDebug putStrLn conn action
-    else runBeamPostgres conn action
+  conn <- withConn
+  let dbFunction = if logDatabase
+        then runBeamPostgresDebug putStrLn
+        else runBeamPostgres
+  res <- try $ liftIO (dbFunction conn action)
+  case res of
+    Left (e :: SqlError) ->
+      logException e >>
+      liftIO exitFailure
+    Right result -> pure result
 
 -- | Fetch client manager from the environment.
 withManager :: (WithAppMEnv (Env env) Message m) => m Manager
