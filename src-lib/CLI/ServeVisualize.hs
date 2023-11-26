@@ -9,17 +9,15 @@ import           CLI.Options
 
 import           Colog
 
-import           Control.Monad.Reader ( ask )
-
 import           Fmt
 
-import           Prelude              hiding ( log )
+import           Prelude     hiding ( log )
 
 import           Server
 
 import           ServerEnv
 
-import           UnliftIO             ( liftIO )
+import           UnliftIO    ( liftIO )
 
 
 -- | Dispatch CLI arguments to the visualization server.

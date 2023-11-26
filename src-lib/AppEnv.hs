@@ -8,6 +8,7 @@ module AppEnv
      , Env (..)
      , Message
      , WithAppMEnv
+     , ask
      , asks
      , mainEnv
      , runAppM
@@ -28,7 +29,7 @@ import           Colog                    ( HasLog (..), LogAction (..), Message
 
 import           Control.Monad.Catch
 import           Control.Monad.Except
-import           Control.Monad.Reader     ( MonadReader, ReaderT (..), asks )
+import           Control.Monad.Reader     ( MonadReader, ReaderT (..), ask, asks )
 
 import           Data.Time                ( TimeZone, getCurrentTimeZone )
 
