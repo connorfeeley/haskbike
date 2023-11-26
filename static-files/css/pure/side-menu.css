@@ -246,3 +246,15 @@ Hides the menu at `48em`, but modify this based on your app's needs.
     left: 200px;
   }
 }
+
+/* Add a footer at the bottom of the sidebar */
+#menu-footer {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  background: #333; /* Giving the footer a different background to stand out, adjust as needed */
+  color: white;
+  text-align: center;
+  padding: 1em 0; /* Add some padding for aesthetic spacing */
+  border-top: 1px solid #444; /* A slight border for visual separation can be adjusted as needed */
+}

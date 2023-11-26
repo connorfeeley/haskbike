@@ -2,6 +2,7 @@
 
 module Version
      ( getCabalVersion
+     , getGitHash
      , getGitVersion
      , version
      ) where
@@ -15,3 +16,6 @@ getCabalVersion = showVersion version
 
 getGitVersion :: String
 getGitVersion = "@rev@"
+
+getGitHash :: String
+getGitHash = "@rev@"

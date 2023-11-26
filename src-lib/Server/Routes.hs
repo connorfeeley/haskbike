@@ -64,6 +64,8 @@ import           ServerEnv
 
 import           TimeInterval
 
+import           Version
+
 data API mode where
   API :: { debug             :: mode :- NamedRoutes DebugAPI
          , home              :: mode :- Get '[HTML] (PureSideMenu IndexPage)
@@ -192,7 +194,8 @@ stationStatusVisualizationPage (Just stationId) startTime endTime = do
                                                              , _statusVisPageStaticLink     = fieldLink staticApi
                                                              }
       pure PureSideMenu { visPageParams = visualizationPage
-                        , staticLink = fieldLink staticApi
+                        , staticLink    = fieldLink staticApi
+                        , versionText   = getGitHash
                         }
     _ ->  throwError err404 { errBody = "Unknown station ID." }
 stationStatusVisualizationPage Nothing _ _ =
@@ -232,7 +235,8 @@ systemStatusVisualizationPage startTime endTime = do
                                                         , _systemStatusVisPageStaticLink    = fieldLink staticApi
                                                         }
   pure PureSideMenu { visPageParams = visualizationPage
-                    , staticLink = fieldLink staticApi
+                    , staticLink    = fieldLink staticApi
+                    , versionText   = getGitHash
                     }
 
 stationListPage :: Maybe T.Text -> ServerAppM (PureSideMenu StationList)
@@ -254,7 +258,8 @@ stationListPage selection = do
                          , _visualizationPageLink  = fieldLink pageForStation
                          }
   pure PureSideMenu { visPageParams = page
-                    , staticLink = fieldLink staticApi
+                    , staticLink    = fieldLink staticApi
+                    , versionText   = getGitHash
                     }
 
 homePageHandler :: ServerAppM (PureSideMenu IndexPage)
@@ -263,7 +268,8 @@ homePageHandler = do
   let page = IndexPage { _indexStaticLink = fieldLink staticApi
                          }
   pure PureSideMenu { visPageParams = page
-                    , staticLink = fieldLink staticApi
+                    , staticLink    = fieldLink staticApi
+                    , versionText   = getGitHash
                     }
 
 -- routesLinks :: API (AsLink Link)

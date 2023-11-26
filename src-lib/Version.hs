@@ -4,6 +4,7 @@
 
 module Version
      ( getCabalVersion
+     , getGitHash
      , getGitVersion
      , version
      ) where
@@ -28,3 +29,6 @@ getGitVersion = format "{} {} ({})" tag (if dirty then ("(dirty)" :: String) els
     tag   = giTag        gi
     date  = giCommitDate gi
     dirty = giDirty      gi
+
+getGitHash :: String
+getGitHash = giHash gi

@@ -3,6 +3,8 @@
 
 module Server.Page.SideMenu where
 
+import qualified Data.Text         as T
+
 import           Lucid
 import           Lucid.Base        ( makeAttribute )
 
@@ -15,7 +17,8 @@ import           Server.PureCSS
 data PureSideMenu a where
   PureSideMenu :: (ToHtml a, ToHtmlComponents a) =>
     { visPageParams :: a
-    , staticLink :: Link
+    , staticLink    :: Link
+    , versionText   :: String
     } -> PureSideMenu a
 
 instance (ToHtml a, ToHtmlComponents a) => ToHtml (PureSideMenu a) where
@@ -36,6 +39,14 @@ instance (ToHtml a, ToHtmlComponents a) => ToHtml (PureSideMenu a) where
             navLink "/visualization/station-list" "Station List"
             navLink "/visualization/system-status" "System Status"
             navLink "/data/system-status/performance/csv" "Performance Data (CSV)"
+        div_ [id_ "menu-footer"] ("Version: " <> versionLink (versionText params))
       div_ [id_ "main"] $ do
         -- Render parameterized type
         toHtml (visPageParams params)
+
+versionLink :: Monad m => String -> HtmlT m ()
+versionLink version = a_ [href_ (urlForVersion version)] (toHtml shortVersion)
+  where
+    shortVersion = T.pack (take 7 version)
+    baseUrl = "https://github.com/connorfeeley/haskbike/tree/"
+    urlForVersion object = baseUrl <> T.pack object
