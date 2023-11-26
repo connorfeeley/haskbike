@@ -265,8 +265,8 @@ stationListPage selection = do
 homePageHandler :: ServerAppM (PureSideMenu IndexPage)
 homePageHandler = do
   _appEnv <- asks serverAppEnv
-  let page = IndexPage { _indexStaticLink = fieldLink staticApi
-                         }
+  let page = IndexPage { _stationStatusLink = fieldLink pageForStation
+                       }
   pure PureSideMenu { visPageParams = page
                     , staticLink    = fieldLink staticApi
                     , versionText   = getGitHash

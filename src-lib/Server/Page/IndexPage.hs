@@ -7,7 +7,10 @@ module Server.Page.IndexPage
      ( IndexPage (..)
      ) where
 
+import           Data.Time
+
 import           Lucid
+import           Lucid.Servant  ( linkHref_ )
 
 import           Prelude        hiding ( null )
 
@@ -18,11 +21,12 @@ import           Server.PureCSS
 
 
 data IndexPage where
-  IndexPage :: { _indexStaticLink :: Link } -> IndexPage
+  IndexPage :: { _stationStatusLink :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> Link }
+            -> IndexPage
 
 instance ToHtml IndexPage where
   toHtmlRaw = toHtml
-  toHtml _params = do
+  toHtml params = do
     -- script_ [src_ ("/" <> toUrlPiece (_staticLink params) <> "/js/station-list.js"), async_ mempty] ""
     div_ [class_ "header"] $ do
       h1_ [] (toHtml "Home")
@@ -42,7 +46,7 @@ instance ToHtml IndexPage where
           li_ [style_ "margin-left: 40px;"] "- the number of disabled docks at each station"
         br_ []
         div_ [] $ do
-          p_ $ "This project was borne out of my frustration for why " <> a_ [href_ "/visualization/station-status?station-id=7001"] "Wellesley Station" <> " has had a complement of at least 9 - often more - disabled e-bikes ever since the station was converted to a charging station a few months ago."
+          p_ $ "This project was borne out of my frustration for why " <> a_ [linkHref_ "/" (_stationStatusLink params (Just 7001) Nothing Nothing)] "Wellesley Station" <> " has had a complement of at least 9 - often more - disabled e-bikes ever since the station was converted to a charging station a few months ago."
           p_ [style_ "font-style: italic; margin-left: 40px"] "Click the link to see the last 24 hours of data for Wellesley Station."
         br_ []
         p_ [style_ "font-style: italic"] "This is a work-in-progress."
