@@ -20,7 +20,7 @@ import           Version
 
 data DebugAPI mode where
   DebugAPI ::
-    { debugVersion :: mode :-
+    { serverVersion :: mode :-
       "version"
         :> Get '[JSON] Version
     } -> DebugAPI mode
@@ -28,7 +28,7 @@ data DebugAPI mode where
 
 debugApiHandler :: DebugAPI (AsServerT ServerAppM)
 debugApiHandler =
-  DebugAPI { debugVersion = versionHandler
+  DebugAPI { serverVersion = versionHandler
            }
 
 type Version = ((String, String), (String, String))
