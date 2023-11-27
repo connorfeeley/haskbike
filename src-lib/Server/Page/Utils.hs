@@ -74,8 +74,9 @@ hx_ :: Text -> Text -> Attribute
 hx_ attr = makeAttribute ("hx-" <> attr)
 
 
+-- FIXME: manually prefixing with '/components' defeats the whole point of safe links.
 hxSpinner_ :: Monad m => Link -> Link -> HtmlT m ()
 hxSpinner_ staticPath link = div_ [ hx_ "trigger" "load"
-                       , hx_ "get" ("/" <> (T.pack . show . linkURI) link)
-                       ]
-                  (img_ [class_ "htmx-indicator htmx-spinner", src_ ("/" <> toUrlPiece staticPath <> "/images/svg-loaders/circles.svg"), alt_ "Loading..."])
+                                  , hx_ "get" ("/components/" <> (T.pack . show . linkURI) link)
+                                  ]
+                             (img_ [class_ "htmx-indicator htmx-spinner", src_ ("/" <> toUrlPiece staticPath <> "/images/svg-loaders/circles.svg"), alt_ "Loading..."])
