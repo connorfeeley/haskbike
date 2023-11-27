@@ -212,6 +212,7 @@ library
                     , Server.ComponentsAPI
                     , Server.DebugAPI
                     , Server.StatusDataParams
+                    , Server.Page.PerformanceCSV
                     , Server.Page.StationStatusVisualization
                     , Server.Page.SystemStatusVisualization
                     , Server.Page.StatusVisualization

@@ -110,9 +110,9 @@ instance ToHtml SystemStatusVisualizationPage where
       form_ [class_ "pure-form pure-form-stacked", style_ "text-align: center"] $ fieldset_ $ do
         legend_ $ h3_ "Query Parameters"
         div_ [class_ "pure-g"] $ do -- Grid layout for form
-          div_ [class_ "pure-u-1 pure-u-md-1-4"] (startTimeInput earliest)
-          div_ [class_ "pure-u-1 pure-u-md-1-4"] (endTimeInput latest)
-          div_ [class_ "pure-u-1 pure-u-md-1-4"] submitInput
+          div_ [class_ "pure-u-1 pure-u-md-1-3"] (startTimeInput earliest)
+          div_ [class_ "pure-u-1 pure-u-md-1-3"] (endTimeInput latest)
+          div_ [class_ "pure-u-1 pure-u-md-1-3"] submitInput
 
       with div_ [class_ "graph"] (toHtmlRaw (toHtmlWithUrls vegaSourceUrlsLocal (vegaEmbedCfg ShowActions) (vegaChart (map T.pack . drop 2) (_systemStatusVisPageDataLink params))))
 

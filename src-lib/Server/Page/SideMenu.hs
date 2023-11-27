@@ -38,7 +38,7 @@ instance (ToHtml a, ToHtmlComponents a) => ToHtml (PureSideMenu a) where
             navLink "/" "Home"
             navLink "/visualization/station-list" "Station List"
             navLink "/visualization/system-status" "System Status"
-            navLink "/data/system-status/performance/csv" "Performance Data (CSV)"
+            navLink "/visualization/system-status/performance/csv" "Performance Data (CSV)"
         div_ [id_ "menu-footer"] ("Version: " <> versionLink (versionText params))
       div_ [id_ "main"] $ do
         -- Render parameterized type

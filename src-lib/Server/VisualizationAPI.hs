@@ -15,6 +15,7 @@ import           GHC.Generics                           ( Generic )
 import           Servant
 import           Servant.HTML.Lucid
 
+import           Server.Page.PerformanceCSV
 import           Server.Page.SideMenu
 import           Server.Page.StationList
 import           Server.Page.StationStatusVisualization
@@ -37,5 +38,13 @@ data VisualizationAPI mode where
         "visualization" :>
           "station-list"
           :> QueryParam "station-type" Text :> Get '[HTML] (PureSideMenu StationList)
+    , performanceCsvPage :: mode :-
+        "visualization" :>
+          "system-status" :>
+          "performance" :>
+          "csv"
+          :> QueryParam "start-time" LocalTime
+          :> QueryParam "end-time" LocalTime
+          :> Get '[HTML] (PureSideMenu PerformanceCSV)
     } -> VisualizationAPI mode
   deriving stock Generic

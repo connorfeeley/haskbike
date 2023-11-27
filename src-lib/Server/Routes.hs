@@ -44,15 +44,19 @@ import           Database.BikeShare.StatusVariationQuery
 
 import           Fmt
 
+import           Lucid                                    ( ToHtml )
+
 import           Servant
 import           Servant.HTML.Lucid
 import           Servant.Server.Generic
 
+import           Server.Classes                           ( ToHtmlComponents )
 import           Server.ComponentsAPI
 import           Server.Data.StationStatusVisualization
 import           Server.DataAPI
 import           Server.DebugAPI
 import           Server.Page.IndexPage
+import           Server.Page.PerformanceCSV
 import           Server.Page.SideMenu
 import           Server.Page.StationList
 import           Server.Page.StationStatusVisualization
@@ -110,9 +114,10 @@ staticHandler =  StaticAPI $ serveDirectoryWebApp "static-files"
 
 visualizationHandler :: VisualizationAPI (AsServerT ServerAppM)
 visualizationHandler = VisualizationAPI
-  { pageForStation = stationStatusVisualizationPage
-  , systemStatus   = systemStatusVisualizationPage
-  , stationList    = stationListPage
+  { pageForStation     = stationStatusVisualizationPage
+  , systemStatus       = systemStatusVisualizationPage
+  , stationList        = stationListPage
+  , performanceCsvPage = performanceCsvPageHandler
   }
 
 stationStatusData :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM [StationStatusVisualization]
@@ -261,6 +266,29 @@ stationListPage selection = do
                     , staticLink    = fieldLink staticApi
                     , versionText   = getGitHash
                     }
+
+performanceCsvPageHandler :: Maybe LocalTime -> Maybe LocalTime -> ServerAppM (PureSideMenu PerformanceCSV)
+performanceCsvPageHandler startTime endTime = do
+  appEnv <- asks serverAppEnv
+  let tz = envTimeZone appEnv
+  -- AppM actions can be lifted into ServerAppM by using a combination of liftIO and runReaderT.
+  currentUtc <- liftIO getCurrentTime
+
+  logInfo $ format "Rendering performance CSV page"
+
+  pure $ sideMenu $ PerformanceCSV { performanceCsvPageTimeRange  = TimePair startTime endTime tz currentUtc
+                                   , performanceCsvPageTimeZone   = tz
+                                   , performanceCsvPageCurrentUtc = currentUtc
+                                   , performanceCsvPageDataLink   = fieldLink performanceCsv Nothing startTime endTime
+                                   , performanceCsvPageStaticLink = fieldLink staticApi
+                                   }
+
+-- | 'SideMenu' smart constructor.
+sideMenu :: (ToHtml a, ToHtmlComponents a) => a -> PureSideMenu a
+sideMenu page = PureSideMenu { visPageParams = page
+                             , staticLink    = fieldLink staticApi
+                             , versionText   = getGitHash
+                             }
 
 homePageHandler :: ServerAppM (PureSideMenu IndexPage)
 homePageHandler = do
