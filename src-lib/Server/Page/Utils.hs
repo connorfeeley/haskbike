@@ -37,8 +37,8 @@ makeFavicons staticPath = mapM (link_ . linkAttrs)
 
 
 -- | Create standard <head> elements.
-makeHeadElements :: Monad m => Text -> HtmlT m ()
-makeHeadElements staticPath = do
+makeHeadElements :: Monad m => Text -> Text -> HtmlT m ()
+makeHeadElements staticPath statsPath = do
   -- Favicons
   makeFavicons staticPath ([16, 32, 48, 96, 180, 300, 512] :: [Int])
 
@@ -57,7 +57,7 @@ makeHeadElements staticPath = do
   stylesheet_ (staticPath <> "/css/tooltips.css")
 
   -- TODO: get this from the server's environment.
-  script_ [mkData_ "goatcounter" "https://stats.bikes.cfeeley.org/count", async_ mempty, src_ "//stats.bikes.cfeeley.org/count.js"] ("" :: Text)
+  script_ [mkData_ "goatcounter" "https://stats.bikes.cfeeley.org/count", async_ mempty, src_ statsPath] ("" :: Text)
 
 
 -- | Make a "data-" attribute suffixed with the given 'Text'.
