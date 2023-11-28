@@ -3,14 +3,17 @@
 
 module TestDecoding where
 
-import           API.Types            ( StationInformationResponse, StationStatusResponse )
+import           API.Types
 
-import           Data.Aeson           ( FromJSON, eitherDecode )
-import qualified Data.ByteString      as B
-import           Data.ByteString.Lazy ( fromStrict )
-import qualified Data.ByteString.Lazy as BL
-import           Data.FileEmbed       ( embedDir )
-import qualified Data.Maybe           as Maybe
+import           Data.Aeson              ( FromJSON, eitherDecode )
+import           Data.Aeson.BetterErrors ( Parse, ParseError, ParseError', asIntegral, asString, displayError,
+                                           displayError', eachInArray, eachInObject, key, keyMay, keyOrDefault, nth,
+                                           nthMay, nthOrDefault, parse, toAesonParser, toAesonParser', withString )
+import qualified Data.ByteString         as B
+import           Data.ByteString.Lazy    ( fromStrict )
+import qualified Data.ByteString.Lazy    as BL
+import           Data.FileEmbed          ( embedDir )
+import qualified Data.Maybe              as Maybe
 
 import           Test.Tasty.HUnit
 
@@ -46,3 +49,6 @@ unit_stationInformation = buildTestCase (undefined :: StationInformationResponse
 
 unit_stationStatus :: IO ()
 unit_stationStatus = buildTestCase (undefined :: StationStatusResponse) "station_status.json"
+
+unit_systemInformation :: IO ()
+unit_systemInformation = buildTestCase (undefined :: SystemInformationResponse) "system_information.json"

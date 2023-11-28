@@ -51,6 +51,9 @@ unit_parseStationInformation = void $ runQueryWithEnv stationInformation
 unit_parseStationStatus      :: IO ()
 unit_parseStationStatus      = void $ runQueryWithEnv stationStatus
 
+unit_parseSystemInformation  :: IO ()
+unit_parseSystemInformation  = void $ runQueryWithEnv systemInformation
+
 unit_parseSystemRegions      :: IO ()
 unit_parseSystemRegions      = void $ runQueryWithEnv systemRegions
 
