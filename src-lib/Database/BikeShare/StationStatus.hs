@@ -91,9 +91,10 @@ deriving instance Show StationStatus
 
 -- | Inform Beam about the table.
 instance Table StationStatusT where
-  data PrimaryKey StationStatusT f = StationStatusId { _unStatusStationId    :: PrimaryKey StationInformationT f
-                                                     , _unStatusLastReported :: Columnar f UTCTime
-                                                     }
+  data PrimaryKey StationStatusT f =
+    StationStatusId { _unStatusStationId    :: PrimaryKey StationInformationT f
+                    , _unStatusLastReported :: Columnar f UTCTime
+                    }
     deriving (Generic, Beamable)
   primaryKey = StationStatusId <$> _statusStationId  <*> _statusLastReported
 
@@ -130,7 +131,7 @@ vehicleTypesAvailable = DataType pgTextType
 availableBoost   :: Lens' VehicleType Int32
 availableIconic  :: Lens' VehicleType Int32
 availableEfit    :: Lens' VehicleType Int32
-availableEfitG5 :: Lens' VehicleType Int32
+availableEfitG5  :: Lens' VehicleType Int32
 
 VehicleType (LensFor availableBoost)  _ _ _ = tableLenses
 VehicleType _ (LensFor availableIconic) _ _ = tableLenses

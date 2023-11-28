@@ -254,6 +254,7 @@ library
     other-modules:    API.StationInformation
                     , API.StationStatus
                     , API.SystemInformation
+                    , Database.BikeShare.SystemInformation
                     , Database.BikeShare.StationInformation
                     , Database.BikeShare.StationStatus
                     , Database.BikeShare.Diagnostics
