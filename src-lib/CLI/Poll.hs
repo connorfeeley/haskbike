@@ -85,7 +85,7 @@ handleTimeElapsed :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
                   -> TVar Int          -- ^ TVar holding last_updated between threads.
                   -> m (Maybe Int)     -- ^ Optional number of seconds extend TTL by, if last_updated went backwards.
 handleTimeElapsed logPrefix apiResult lastUpdatedVar = do
-  let currentTime' = apiResult ^. response_last_updated
+  let currentTime' = apiResult ^. respLastUpdated
   previousTime <- liftIO $ readTVarIO lastUpdatedVar
   let previousTime' = posixToLocal previousTime
   let timeElapsed = utcToPosix currentTime' - previousTime
@@ -109,7 +109,7 @@ handleTTL :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
           -> Maybe Int         -- ^ Optional number of seconds to extend TTL by.
           -> m ()
 handleTTL logPrefix apiResult ttlVar extendBy = do
-  let ttlSecs = apiResult ^. response_ttl
+  let ttlSecs = apiResult ^. respTtl
 
   when (isJust extendBy) $ log W $ format "({}) extending TTL by {}s" logPrefix (fromMaybe 0 extendBy)
   log I $ format "({}) TTL={}{}" logPrefix (showt ttlSecs) (maybe "" (("+" ++) . show) extendBy)
@@ -153,7 +153,7 @@ statusHandler :: TBQueue StationStatusResponse  -- ^ Queue of responses
 statusHandler queue = void $ do
   response <- liftIO $ atomically $ readTBQueue queue
 
-  let status = response ^. (response_data . unStatusStations)
+  let status = response ^. (respData . unStatusStations)
   log I $ format "(Status) Received {} status records from API." (length status)
 
   -- Insert the updated status.
@@ -208,7 +208,7 @@ informationHandler :: TBQueue StationInformationResponse  -- ^ Queue of response
 informationHandler queue = void $ do
   response <- liftIO $ atomically $ readTBQueue queue
 
-  let info = response ^. (response_data . unInfoStations)
+  let info = response ^. (respData . unInfoStations)
   log I $ format "(Info) Received {} info records from API." (length info)
 
   -- Insert the station information (updating existing records, if existing).

@@ -9,10 +9,10 @@
 
 module API.ResponseWrapper
      ( ResponseWrapper (..)
-     , response_data
-     , response_last_updated
-     , response_ttl
-     , response_version
+     , respData
+     , respLastUpdated
+     , respTtl
+     , respVer
      ) where
 
 import           Control.Lens     hiding ( (.=) )
@@ -26,27 +26,27 @@ import           GHC.Generics
 
 -- | A type representing a BikeShare response.
 data ResponseWrapper a where
-  ResponseWrapper :: { _response_last_updated :: UTCTime -- POSIX timestamp of the last time the data was updated.
-                     , _response_ttl          :: Int       -- Time to live of the data in seconds.
-                     , _response_version      :: String    -- GBFS version of the response.
-                     , _response_data         :: a         -- The data contained in the response.
+  ResponseWrapper :: { _respLastUpdated :: UTCTime   -- POSIX timestamp of the last time the data was updated.
+                     , _respTtl         :: Int       -- Time to live of the data in seconds.
+                     , _respVer         :: String    -- GBFS version of the response.
+                     , _respData        :: a         -- The data contained in the response.
                      } -> ResponseWrapper a
   deriving (Show, Generic)
 
 instance FromJSON a => FromJSON (ResponseWrapper a) where
   parseJSON = withObject "ResponseWrapper" $ \v -> do
-    _response_last_updated <- fmap posixToUtc (v .: "last_updated")
-    _response_ttl          <- v .: "ttl"
-    _response_version      <- v .: "version"
-    _response_data         <- v .: "data"
+    _respLastUpdated <- fmap posixToUtc (v .: "last_updated")
+    _respTtl         <- v .: "ttl"
+    _respVer         <- v .: "version"
+    _respData        <- v .: "data"
     return ResponseWrapper {..}
 
 instance ToJSON a => ToJSON (ResponseWrapper a) where
   toJSON ResponseWrapper {..} =
-    object [ "last_reported"    .= utcToPosix _response_last_updated
-           , "response_ttl"     .= _response_ttl
-           , "response_version" .= _response_version
-           , "response_data"    .= _response_data
+    object [ "last_updated" .= utcToPosix _respLastUpdated
+           , "ttl"          .= _respTtl
+           , "version"      .= _respVer
+           , "data"         .= _respData
            ]
 
 -- | Lenses
