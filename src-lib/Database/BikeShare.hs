@@ -18,6 +18,7 @@ module Database.BikeShare
      , bikeshareStationInformation
      , bikeshareStationStatus
      , bikeshareSystemInformation
+     , bikeshareSystemInformationCount
      ) where
 
 
@@ -28,10 +29,11 @@ import           Database.BikeShare.Types
 
 -- | Define the database; only containing one table for now.
 data BikeshareDb f where
-  BikeshareDb :: { _bikeshareStationInformation :: f (TableEntity StationInformationT)
-                 , _bikeshareStationStatus      :: f (TableEntity StationStatusT)
-                 , _bikeshareSystemInformation  :: f (TableEntity SystemInformationT)
-                 -- , _bikeshareDiagnostics        :: f (TableEntity DiagnosticsT)
+  BikeshareDb :: { _bikeshareStationInformation     :: f (TableEntity StationInformationT)
+                 , _bikeshareStationStatus          :: f (TableEntity StationStatusT)
+                 , _bikeshareSystemInformation      :: f (TableEntity SystemInformationT)
+                 , _bikeshareSystemInformationCount :: f (TableEntity SystemInformationCountT)
+                 -- , _bikeshareDiagnostics         :: f (TableEntity DiagnosticsT)
                  } -> BikeshareDb f
   deriving (Generic, Database be)
 
@@ -108,5 +110,6 @@ BikeshareDb
   (TableLens bikeshareStationInformation)
   (TableLens bikeshareStationStatus)
   (TableLens bikeshareSystemInformation)
+  (TableLens bikeshareSystemInformationCount)
   -- (TableLens bikeshareDiagnostics)
   = dbLenses

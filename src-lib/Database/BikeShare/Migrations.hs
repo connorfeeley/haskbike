@@ -78,6 +78,13 @@ initialSetup = BikeshareDb
         , _sysInfSysId                = field "system_id"                        (DataType pgTextType)
         , _sysInfTimeZone             = field "timezone"                         (DataType pgTextType)
         })
+  <*> (createTable "system_information_count" $ SystemInformationCount
+        { _sysInfCntKey             = SystemInformationKey (field "id"  int)
+                                                           (field "reported" (DataType (timestampType Nothing True)))
+        , _sysInfCntStationCount    = field "station_count"                  (DataType (timestampType Nothing True))
+        , _sysInfCntMechanicalCount = field "mechanical_count"               (DataType pgTextType)
+        , _sysInfCntEbikeCount      = field "ebike_count"                    (DataType pgTextType)
+        })
 
 initialSetupStep :: MigrationSteps Postgres
   ()
