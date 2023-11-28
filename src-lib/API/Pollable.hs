@@ -1,11 +1,19 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
 -- |
 
 module API.Pollable
      ( Pollable (..)
      ) where
+
 import           AppEnv
 
-class Pollable a b where
-  getDataFromResponse :: a -> b
-  logData :: a -> AppM ()
+import           UnliftIO
+
+
+class Pollable a where
+    pollData :: TBQueue a                  -- ^ Queue of responses
+             -> TVar Int                   -- ^ Interval between requests in seconds
+             -> TVar Int                   -- ^ Last updated time
+             -> AppM ()
+
+    handleData :: TBQueue a               -- ^ Queue of responses
+               -> AppM ()

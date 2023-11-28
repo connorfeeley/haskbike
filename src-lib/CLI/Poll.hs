@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
 -- | Poll the API for status updates, inserting results in database as needed.
 module CLI.Poll
      ( dispatchPoll
@@ -6,6 +7,7 @@ module CLI.Poll
 
 import           API.Client
 import           API.ClientLifted
+import           API.Pollable
 import           API.ResponseWrapper
 import           API.Types                     ( StationInformationResponse, StationStatusResponse, unInfoStations,
                                                  unStatusStations )
@@ -51,7 +53,7 @@ dispatchPoll _options = pollClient
 
 pollClient :: AppM ()
 pollClient = do
-  (statusTtl, statusLastUpdated, statusQueueResp, infoTtl, infoLastUpdated, infoQueueResp) <- liftIO $
+  (statusTtl, statusLastUpdated, statusQueueResp :: TBQueue StationStatusResponse, infoTtl, infoLastUpdated, infoQueueResp) <- liftIO $
     (,,,,,) <$> newTVarIO 0 <*> newTVarIO 0 <*> newTBQueueIO 4 <*> newTVarIO 0 <*> newTVarIO 0 <*> newTBQueueIO 4
 
   log I "Fetching station information from API once."
@@ -62,67 +64,19 @@ pollClient = do
   log I "Polling API for information and status updates."
   void $
     concurrently_
-      (spawnInfo infoQueueResp infoTtl infoLastUpdated)
-      (spawnStatus statusQueueResp statusTtl statusLastUpdated)
+      (spawnPoll infoQueueResp   infoTtl   infoLastUpdated)
+      (spawnPoll statusQueueResp statusTtl statusLastUpdated)
   log I "Done."
   where
-    spawnInfo   infoQueueResp ttl lastUpdated = concurrently_
-                  (forever $ informationRequester infoQueueResp ttl lastUpdated)
-                  (forever $ informationHandler infoQueueResp)
-    spawnStatus queueStatusResp ttl lastUpdated = concurrently_
-                  (forever $ statusRequester queueStatusResp ttl  lastUpdated)
-                  (forever $ statusHandler queueStatusResp)
+    spawnPoll :: (Pollable a) => TBQueue a -> TVar Int -> TVar Int -> AppM ()
+    spawnPoll queueResp ttl lastUpdated = concurrently_
+                    (forever $ pollData   queueResp ttl lastUpdated)
+                    (forever $ handleData queueResp)
 
 
--- | Thread action to request station information from API.
-statusRequester :: (WithLog env Message m, MonadIO m, MonadUnliftIO m, MonadReader (Env m) m)
-                => TBQueue StationStatusResponse -- ^ Queue of responses.
-                -> TVar Int                      -- ^ Interval between requests in seconds.
-                -> TVar Int                      -- ^ Last updated time.
-                -> m ()
-statusRequester queue intervalSecsVar lastUpdated = void $ do
-  runQueryM stationStatus >>= \case
-    Left err -> logException err >> throw err
-    Right result -> do
-      -- Handle TTL upfront, so that we don't sleep when called
-      -- for the first time from 'pollClient' (TTL = 0).
-      intervalSecs <- liftIO $ readTVarIO intervalSecsVar
-      log D $ format "(Status) Sleeping for {} seconds." intervalSecs
-      liftIO $ threadDelay (intervalSecs * 1000000)
-
-      elapsedResult <- handleTimeElapsed "Status" result lastUpdated
-      handleTTL "Status" result intervalSecsVar elapsedResult
-
-      -- If 'elapsedResult' is a 'Just', that indicates that last_updated went backwards.
-      -- In that case, we should NOT write the result to the queue, and instead extend the
-      -- time until our next poll by however long the time went backwards.
-      when (isNothing elapsedResult) (liftIO $ atomically $ writeTBQueue queue result)
 
 
--- | Thread action to handle API response for station status query.
-statusHandler :: TBQueue StationStatusResponse  -- ^ Queue of responses
-              -> AppM ()
-statusHandler queue = void $ do
-  response <- liftIO $ atomically $ readTBQueue queue
-
-  let status = response ^. (response_data . unStatusStations)
-  log I $ format "(Status) Received {} status records from API." (length status)
-
-  -- Insert the updated status.
-  insertedResult <- insertStationStatus status
-
-  -- Log each station ID updated.
-  mapM_ (log D . Text.pack . fmtLog . dataToTuple) insertedResult
-
-  -- Log number of inserted rows.
-  log I $ format "(Status) Inserted: {}" (length insertedResult)
-
-  where
-    dataToTuple s = ( s ^. statusStationId . unInformationStationId
-                    , s ^. statusLastReported
-                    )
-    fmtLog (sid, lr) = format "ID: {} {}" sid (pShowCompact lr)
-
+-- * TTL and timing handlers.
 
 -- | Handle last_updated field in response.
 handleTimeElapsed :: (WithLog env Message m, MonadIO m, MonadUnliftIO m)
@@ -162,6 +116,67 @@ handleTTL logPrefix apiResult ttlVar extendBy = do
 
   liftIO $ atomically $ writeTVar ttlVar (ttlSecs + fromMaybe 0 extendBy)
 
+
+-- * Station status handling.
+
+instance Pollable StationStatusResponse where
+    pollData   = statusRequester
+    handleData = statusHandler
+
+-- | Thread action to request station information from API.
+statusRequester :: (WithLog env Message m, MonadIO m, MonadUnliftIO m, MonadReader (Env m) m)
+                => TBQueue StationStatusResponse -- ^ Queue of responses.
+                -> TVar Int                      -- ^ Interval between requests in seconds.
+                -> TVar Int                      -- ^ Last updated time.
+                -> m ()
+statusRequester queue intervalSecsVar lastUpdated = void $ do
+  runQueryM stationStatus >>= \case
+    Left err -> logException err >> throw err
+    Right result -> do
+      -- Handle TTL upfront, so that we don't sleep when called
+      -- for the first time from 'pollClient' (TTL = 0).
+      intervalSecs <- liftIO $ readTVarIO intervalSecsVar
+      log D $ format "(Status) Sleeping for {} seconds." intervalSecs
+      liftIO $ threadDelay (intervalSecs * 1000000)
+
+      elapsedResult <- handleTimeElapsed "Status" result lastUpdated
+      handleTTL "Status" result intervalSecsVar elapsedResult
+
+      -- If 'elapsedResult' is a 'Just', that indicates that last_updated went backwards.
+      -- In that case, we should NOT write the result to the queue, and instead extend the
+      -- time until our next poll by however long the time went backwards.
+      when (isNothing elapsedResult) (liftIO $ atomically $ writeTBQueue queue result)
+
+-- | Thread action to handle API response for station status query.
+statusHandler :: TBQueue StationStatusResponse  -- ^ Queue of responses
+              -> AppM ()
+statusHandler queue = void $ do
+  response <- liftIO $ atomically $ readTBQueue queue
+
+  let status = response ^. (response_data . unStatusStations)
+  log I $ format "(Status) Received {} status records from API." (length status)
+
+  -- Insert the updated status.
+  insertedResult <- insertStationStatus status
+
+  -- Log each station ID updated.
+  mapM_ (log D . Text.pack . fmtLog . dataToTuple) insertedResult
+
+  -- Log number of inserted rows.
+  log I $ format "(Status) Inserted: {}" (length insertedResult)
+
+  where
+    dataToTuple s = ( s ^. statusStationId . unInformationStationId
+                    , s ^. statusLastReported
+                    )
+    fmtLog (sid, lr) = format "ID: {} {}" sid (pShowCompact lr)
+
+
+-- * Station information handling.
+
+instance Pollable StationInformationResponse where
+    pollData   = informationRequester
+    handleData = informationHandler
 
 -- | Thread action to request station information from API.
 informationRequester :: (WithLog env Message m, MonadIO m, MonadUnliftIO m, MonadReader (Env m) m)
