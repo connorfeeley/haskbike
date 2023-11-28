@@ -66,7 +66,7 @@ stationStatusM = liftClientM stationStatus
 systemRegionsM :: AppM Object
 systemRegionsM = liftClientM systemRegions
 
-systemInformationM :: AppM Object
+systemInformationM :: AppM SystemInformationResponse
 systemInformationM = liftClientM systemInformation
 
 systemPricingPlansM :: AppM Object

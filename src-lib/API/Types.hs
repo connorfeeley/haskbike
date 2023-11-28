@@ -4,8 +4,10 @@ module API.Types
      ( module API.ResponseWrapper
      , module API.StationInformation
      , module API.StationStatus
+     , module API.SystemInformation
      ) where
 
 import           API.ResponseWrapper
 import           API.StationInformation
 import           API.StationStatus
+import           API.SystemInformation

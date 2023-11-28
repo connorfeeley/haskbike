@@ -19,7 +19,7 @@ module API.Client
      , versions
      ) where
 
-import           API.Types               ( StationInformationResponse, StationStatusResponse )
+import           API.Types
 
 import           BikeShareAPI
 
@@ -46,7 +46,7 @@ vehicleTypes        :: ClientM Object
 stationInformation  :: ClientM StationInformationResponse
 stationStatus       :: ClientM StationStatusResponse
 systemRegions       :: ClientM Object
-systemInformation   :: ClientM Object
+systemInformation   :: ClientM SystemInformationResponse
 systemPricingPlans  :: ClientM Object
 ( versions
   :<|> vehicleTypes
