@@ -17,6 +17,7 @@ module Database.BikeShare
        -- , bikeshareDiagnostics
      , bikeshareStationInformation
      , bikeshareStationStatus
+     , bikeshareSystemInformation
      ) where
 
 
@@ -29,6 +30,7 @@ import           Database.BikeShare.Types
 data BikeshareDb f where
   BikeshareDb :: { _bikeshareStationInformation :: f (TableEntity StationInformationT)
                  , _bikeshareStationStatus      :: f (TableEntity StationStatusT)
+                 , _bikeshareSystemInformation  :: f (TableEntity SystemInformationT)
                  -- , _bikeshareDiagnostics        :: f (TableEntity DiagnosticsT)
                  } -> BikeshareDb f
   deriving (Generic, Database be)
@@ -77,6 +79,20 @@ bikeshareDb = defaultDbSettings `withDbModification`
       , _statusVehicleDocksAvailable = "vehicle_docks_available"
       , _statusVehicleTypesAvailable = vehicleTypeFields "vehicle_types_available"
       }
+  , _bikeshareSystemInformation =
+    setEntityName "system_information" <> modifyTableFields tableModification
+      { _sysInfKey                   = sysInfKeyFields "sys_inf"
+      , _sysInfBuildHash             = "build_hash"
+      , _sysInfBuildLabel            = "build_label"
+      , _sysInfBuildNumber           = "build_number"
+      , _sysInfBuildVersion          = "build_version"
+      , _sysInfLanguage              = "language"
+      , _sysInfMobileHeadVersion     = "mobile_head_version"
+      , _sysInfMobileMinSuppVersion  = "mobile_minimum_supported_version"
+      , _sysInfName                  = "name"
+      , _sysInfSysId                 = "system_id"
+      , _sysInfTimeZone              = "timezone"
+      }
   -- , _bikeshareDiagnostics =
   --   setEntityName "diagnostics" <> modifyTableFields tableModification
   --     { _diagnosticId   = "id"
@@ -91,5 +107,6 @@ bikeshareDb = defaultDbSettings `withDbModification`
 BikeshareDb
   (TableLens bikeshareStationInformation)
   (TableLens bikeshareStationStatus)
+  (TableLens bikeshareSystemInformation)
   -- (TableLens bikeshareDiagnostics)
   = dbLenses

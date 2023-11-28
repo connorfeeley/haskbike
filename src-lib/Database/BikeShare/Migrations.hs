@@ -10,6 +10,7 @@ import           Database.Beam.Migrate
 import           Database.Beam.Migrate.Simple
 import           Database.Beam.Postgres
 import qualified Database.Beam.Postgres.Migrate as PG
+import           Database.Beam.Postgres.Syntax  ( pgTextType )
 import           Database.BikeShare
 
 
@@ -62,6 +63,20 @@ initialSetup = BikeshareDb
                                                      (field "vehicle_types_available_iconic"  int)
                                                      (field "vehicle_types_available_efit"    int)
                                                      (field "vehicle_types_available_efit_g5" int)
+        })
+  <*> (createTable "system_information" $ SystemInformation
+        { _sysInfKey                  = SystemInformationKey (field "id"  int)
+                                                             (field "reported"   (DataType (timestampType Nothing True)))
+        , _sysInfBuildHash            = field "build_hash"                       (DataType (timestampType Nothing True))
+        , _sysInfBuildLabel           = field "build_label"                      (DataType pgTextType)
+        , _sysInfBuildNumber          = field "build_number"                     (DataType pgTextType)
+        , _sysInfBuildVersion         = field "build_version"                    (DataType pgTextType)
+        , _sysInfLanguage             = field "language"                         (DataType pgTextType)
+        , _sysInfMobileHeadVersion    = field "mobile_head_version"              int notNull
+        , _sysInfMobileMinSuppVersion = field "mobile_minimum_supported_version" int notNull
+        , _sysInfName                 = field "name"                             (DataType pgTextType)
+        , _sysInfSysId                = field "system_id"                        (DataType pgTextType)
+        , _sysInfTimeZone             = field "timezone"                         (DataType pgTextType)
         })
 
 initialSetupStep :: MigrationSteps Postgres

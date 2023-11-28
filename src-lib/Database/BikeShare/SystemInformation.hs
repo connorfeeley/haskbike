@@ -7,7 +7,12 @@
 {-# LANGUAGE UndecidableInstances      #-}
 
 module Database.BikeShare.SystemInformation
-     ( SystemInformationCountT (..)
+     ( PrimaryKey (..)
+     , SystemInformation
+     , SystemInformationCount
+     , SystemInformationCountId
+     , SystemInformationCountT (..)
+     , SystemInformationId
      , SystemInformationKey
      , SystemInformationKeyMixin (..)
      , SystemInformationT (..)
@@ -59,27 +64,27 @@ SystemInformationKey _ (LensFor sysInfKeyReported) = tableLenses
 
 -- | Declare a (Beam) table for the less variable 'SystemInformation' fields.
 data SystemInformationT f where
-  SystemInformationT :: { _sysInfKey                  :: SystemInformationKeyMixin f
-                        , _sysInfBuildHash            :: Columnar f T.Text
-                        , _sysInfBuildLabel           :: Columnar f T.Text
-                        , _sysInfBuildNumber          :: Columnar f T.Text
-                        , _sysInfBuildVersion         :: Columnar f T.Text
-                        , _sysInfLanguage             :: Columnar f T.Text
-                        , _sysInfMobileHeadVersion    :: Columnar f Int32
-                        , _sysInfMobileMinSuppVersion :: Columnar f Int32
-                        , _sysInfName                 :: Columnar f T.Text
-                        , _sysInfSysId                :: Columnar f T.Text
-                        , _sysInfTimeZone             :: Columnar f T.Text
-                        } -> SystemInformationT f
+  SystemInformation :: { _sysInfKey                  :: SystemInformationKeyMixin f
+                       , _sysInfBuildHash            :: Columnar f T.Text
+                       , _sysInfBuildLabel           :: Columnar f T.Text
+                       , _sysInfBuildNumber          :: Columnar f T.Text
+                       , _sysInfBuildVersion         :: Columnar f T.Text
+                       , _sysInfLanguage             :: Columnar f T.Text
+                       , _sysInfMobileHeadVersion    :: Columnar f Int32
+                       , _sysInfMobileMinSuppVersion :: Columnar f Int32
+                       , _sysInfName                 :: Columnar f T.Text
+                       , _sysInfSysId                :: Columnar f T.Text
+                       , _sysInfTimeZone             :: Columnar f T.Text
+                       } -> SystemInformationT f
   deriving (Generic, Beamable)
 
 -- | Declare a (Beam) table for the variable 'SystemInformation' fields.
 data SystemInformationCountT f where
-  SystemInformationCountT :: { _sysInfCntKey             :: SystemInformationKeyMixin f
-                             , _sysInfCntStationCount    :: Columnar f Int32
-                             , _sysInfCntMechanicalCount :: Columnar f Int32
-                             , _sysInfCntEbikeCount      :: Columnar f Int32
-                             } -> SystemInformationCountT f
+  SystemInformationCount :: { _sysInfCntKey             :: SystemInformationKeyMixin f
+                            , _sysInfCntStationCount    :: Columnar f Int32
+                            , _sysInfCntMechanicalCount :: Columnar f Int32
+                            , _sysInfCntEbikeCount      :: Columnar f Int32
+                            } -> SystemInformationCountT f
   deriving (Generic, Beamable)
 
 -- * Synonym for the table types.
