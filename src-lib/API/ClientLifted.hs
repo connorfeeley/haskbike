@@ -13,6 +13,7 @@ module API.ClientLifted
      , versionsM
      ) where
 
+import           API.BikeShare
 import           API.Client
 import           API.Types
 

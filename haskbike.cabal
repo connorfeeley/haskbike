@@ -235,6 +235,7 @@ library
                     , API.Types
                     , API.Utils
                     , API.Pollable
+                    , API.BikeShare
                     , Data.Time.Extras
                     , Formatting
                     , Database.BikeShare.Types
@@ -243,6 +244,7 @@ library
                     , Database.BikeShare.Migrations
                     , Database.BikeShare.StatusVariationQuery
                     , Database.BikeShare.Utils
+                    , Database.BikeShare.Connection
                     , Database.BikeShare.Operations
                     , Database.BikeShare.Operations.Dockings
                     , Database.BikeShare.Operations.Factors

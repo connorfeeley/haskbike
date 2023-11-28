@@ -28,7 +28,10 @@ module API.StationStatus
      , unStatusStations
      ) where
 
+import           API.Pollable
 import           API.ResponseWrapper
+
+import           Colog                ( logInfo )
 
 import           Control.Lens         hiding ( (.=) )
 
@@ -41,6 +44,8 @@ import           Data.Functor         ( ($>) )
 import qualified Data.Text            as Text
 import           Data.Time
 import           Data.Time.Extras
+
+import           Fmt                  ( format )
 
 import           GHC.Generics         ( Generic )
 
@@ -219,6 +224,10 @@ instance FromJSON StationStatusResponseData where
 
 -- | Type synonym for the wrapped station information response.
 type StationStatusResponse = ResponseWrapper StationStatusResponseData
+
+instance Pollable StationStatusResponseData [StationStatus] where
+  getDataFromResponse = _unStatusStations
+  logData             = logInfo . format "(Info) Received {} info records from API." . length . _unStatusStations
 
 -- | Lenses
 makeLenses ''StationStatus

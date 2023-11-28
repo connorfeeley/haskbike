@@ -12,7 +12,6 @@ module AppEnv
      , asks
      , mainEnv
      , runAppM
-     , runQueryWithManager
      , runWithAppM
      , runWithAppMDebug
      , runWithAppMSuppressLog
@@ -22,34 +21,35 @@ module AppEnv
      , withPostgres
      ) where
 
-import           API.Client
+import           API.BikeShare
 
-import           Colog                    ( HasLog (..), LogAction (..), Message, Msg (msgSeverity), Severity (..),
-                                            filterBySeverity, logError, logException, richMessageAction,
-                                            simpleMessageAction )
+import           Colog                         ( HasLog (..), LogAction (..), Message, Msg (msgSeverity), Severity (..),
+                                                 filterBySeverity, logException, richMessageAction,
+                                                 simpleMessageAction )
 
 import           Control.Monad.Catch
 import           Control.Monad.Except
-import           Control.Monad.Reader     ( MonadReader, ReaderT (..), ask, asks )
+import           Control.Monad.Reader          ( MonadReader, ReaderT (..), ask, asks )
 
-import           Data.Time                ( TimeZone, getCurrentTimeZone )
+import           Data.Time                     ( TimeZone, getCurrentTimeZone )
 
-import           Database.Beam.Postgres   ( Connection, Pg, SqlError, connect, runBeamPostgres, runBeamPostgresDebug )
-import           Database.BikeShare.Utils ( mkDbConnectInfo )
+import           Database.Beam.Postgres        ( Connection, Pg, SqlError, connect, runBeamPostgres,
+                                                 runBeamPostgresDebug )
+import           Database.BikeShare.Connection ( mkDbConnectInfo )
 
-import           GHC.Stack                ( HasCallStack )
+import           GHC.Stack                     ( HasCallStack )
 
-import           Network.HTTP.Client      ( Manager, newManager )
-import           Network.HTTP.Client.TLS  ( tlsManagerSettings )
+import           Network.HTTP.Client           ( Manager, newManager )
+import           Network.HTTP.Client.TLS       ( tlsManagerSettings )
 
-import           Prelude                  hiding ( log )
+import           Prelude                       hiding ( log )
 
-import           Servant                  ( ServerError )
+import           Servant                       ( ServerError )
 import           Servant.Client
 
-import           System.Exit              ( exitFailure )
+import           System.Exit                   ( exitFailure )
 
-import           UnliftIO                 ( MonadUnliftIO )
+import           UnliftIO                      ( MonadUnliftIO )
 
 -- Application environment
 data Env m where
@@ -105,12 +105,6 @@ withPostgres action = do
 -- | Fetch client manager from the environment.
 withManager :: (WithAppMEnv (Env env) Message m) => m Manager
 withManager = asks envClientManager >>= liftIO . pure
-
--- | Run API query using client manager from environment monad.
-runQueryWithManager :: WithAppMEnv (Env env) Message m => ClientM a -> m (Either ClientError a)
-runQueryWithManager query = do
-  clientManager <- withManager
-  liftIO $ runQuery clientManager query
 
 -- Implement logging for the application environment.
 instance HasLog (Env m) Message m where

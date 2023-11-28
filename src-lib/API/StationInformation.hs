@@ -16,7 +16,10 @@ module API.StationInformation
      , unInfoStations
      ) where
 
+import           API.Pollable
 import           API.ResponseWrapper
+
+import           Colog
 
 import           Control.Lens         hiding ( (.=) )
 
@@ -27,6 +30,8 @@ import           Data.Functor         ( ($>) )
 import           Data.Maybe           ( fromMaybe )
 import           Data.Text            ( pack )
 import qualified Data.Text            as Text
+
+import           Fmt                  ( format )
 
 import           GHC.Generics
 
@@ -217,6 +222,10 @@ instance FromJSON StationInformationResponseData where
 
 -- | Type synonym for the wrapped station information response.
 type StationInformationResponse = ResponseWrapper StationInformationResponseData
+
+instance Pollable StationInformationResponseData [StationInformation] where
+  getDataFromResponse = _unInfoStations
+  logData             = logInfo . format "(Info) Received {} info records from API." . length . _unInfoStations
 
 -- | Lenses
 makeLenses ''StationInformation

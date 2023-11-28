@@ -1,12 +1,11 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 -- |
 
 module API.Pollable
      ( Pollable (..)
      ) where
-import           API.ResponseWrapper
-
 import           AppEnv
 
-class Pollable a where
-  getDataFromResponse :: ResponseWrapper a -> a
+class Pollable a b where
+  getDataFromResponse :: a -> b
   logData :: a -> AppM ()
