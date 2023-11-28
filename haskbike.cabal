@@ -234,6 +234,7 @@ library
                     , CLI.Options
                     , API.Types
                     , API.Utils
+                    , API.Pollable
                     , Data.Time.Extras
                     , Formatting
                     , Database.BikeShare.Types
