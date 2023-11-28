@@ -13,6 +13,17 @@ import           Data.Time
 
 import           Database.Beam
 
+
+-- | Beam mixin for common system information fields.
+data SystemInformationKeyMixin f =
+  SystemInformationKey { _sysInfKeyId       :: Columnar f Int32
+                       , _sysInfKeyReported :: Columnar f UTCTime
+                       } deriving (Generic, Beamable)
+type SystemInformationKey = SystemInformationKeyMixin Identity
+deriving instance Show (SystemInformationKeyMixin Identity)
+deriving instance Eq (SystemInformationKeyMixin Identity)
+
+
 -- | Declare a (Beam) table for the less variable 'SystemInformation' fields.
 data SystemInformationT f where
   SystemInformationT :: { _sysInfId                   :: Columnar f Int32
