@@ -11,15 +11,23 @@ module Database.BikeShare.SystemInformation
      , SystemInformationKey
      , SystemInformationKeyMixin (..)
      , SystemInformationT (..)
+     , sysInfKeyFields
+     , sysInfoKey
+       -- Lenses
+     , sysInfKeyId
+     , sysInfKeyReported
      ) where
 
 import           Control.Lens
 
-import           Data.Int      ( Int32 )
-import qualified Data.Text     as T
+import           Data.Int                      ( Int32 )
+import           Data.String                   ( IsString (fromString) )
+import qualified Data.Text                     as T
 import           Data.Time
 
 import           Database.Beam
+import           Database.Beam.Postgres        ( Postgres )
+import           Database.Beam.Postgres.Syntax ( pgTextType )
 
 
 -- | Beam mixin for common system information fields.
@@ -31,6 +39,15 @@ data SystemInformationKeyMixin f where
 type SystemInformationKey = SystemInformationKeyMixin Identity
 deriving instance Show (SystemInformationKeyMixin Identity)
 deriving instance Eq (SystemInformationKeyMixin Identity)
+
+sysInfKeyFields :: (IsString (Columnar f Int32), IsString (Columnar f UTCTime)) => String -> SystemInformationKeyMixin f
+sysInfKeyFields b =
+  SystemInformationKey (fromString (b <> "_boost"))
+                       (fromString (b <> "_iconic"))
+
+sysInfoKey :: DataType Postgres SystemInformationKey
+sysInfoKey = DataType pgTextType
+
 
 -- | SystemInformationKey Lenses
 sysInfKeyId       :: Lens' SystemInformationKey Int32
