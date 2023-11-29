@@ -134,10 +134,6 @@ handleTTL logPrefix apiResult ttlVar extendBy = do
 -- * Station status handling.
 
 instance Pollable StationStatusResponse where
-    pollData   = requester
-    handleData = handler
-
-instance Requestable StationStatusResponse where
   request = runQueryM stationStatus
 
   -- | Thread action to request station information from API.
@@ -185,10 +181,6 @@ instance Requestable StationStatusResponse where
 -- * Station information handling.
 
 instance Pollable StationInformationResponse where
-    pollData   = requester
-    handleData = handler
-
-instance Requestable StationInformationResponse where
   request = runQueryM stationInformation
 
   -- | Thread action to request station information from API.
@@ -232,10 +224,6 @@ instance Requestable StationInformationResponse where
 -- * System information handling.
 
 instance Pollable SystemInformationResponse where
-    pollData   = requester
-    handleData = handler
-
-instance Requestable SystemInformationResponse where
   request = runQueryM systemInformation
 
   -- | Thread action to request station information from API.

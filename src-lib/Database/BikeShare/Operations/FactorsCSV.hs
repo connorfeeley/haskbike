@@ -6,7 +6,7 @@ module Database.BikeShare.Operations.FactorsCSV
      , StatusIntegralCSV (..)
      ) where
 
-import           Data.Csv                              ( DefaultOrdered (..), Header, ToField (..), ToNamedRecord (..),
+import           Data.Csv                              ( DefaultOrdered (..), ToField (..), ToNamedRecord (..),
                                                          ToRecord (..), header, namedRecord, record, (.=) )
 
 import           Database.Beam

@@ -48,9 +48,8 @@ import           Prelude                       hiding ( log )
 import           Servant                       ( ServerError )
 import           Servant.Client
 
-import           System.Exit                   ( exitFailure )
-
 import           UnliftIO                      ( MonadUnliftIO )
+
 
 -- Application environment
 data Env m where
