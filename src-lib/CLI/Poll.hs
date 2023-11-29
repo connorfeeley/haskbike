@@ -5,18 +5,19 @@ module CLI.Poll
      , pollClient
      ) where
 
+
 import           API.Client
 import           API.ClientLifted
 import           API.Pollable
 import           API.ResponseWrapper
-import           API.Types                     ( StationInformationResponse, StationStatusResponse, unInfoStations,
-                                                 unStatusStations )
+import           API.Types                     ( StationInformationResponse, StationStatusResponse,
+                                                 SystemInformationResponse, unInfoStations, unStatusStations )
 
 import           AppEnv
 
 import           CLI.Options                   ( PollOptions (..) )
 
-import           Colog                         ( log, logException, pattern D, pattern I, pattern W )
+import           Colog                         ( log, logException, logInfo, pattern D, pattern I, pattern W )
 
 import           Control.Concurrent            ( threadDelay )
 import           Control.Concurrent.STM
@@ -40,8 +41,7 @@ import           Prelude                       hiding ( log )
 
 import           TextShow                      ( showt )
 
-import           UnliftIO                      ( liftIO )
-import           UnliftIO.Async                ( concurrently_ )
+import           UnliftIO                      ( async, liftIO, waitAnyCancel, waitBoth )
 
 
 -- | Dispatch CLI arguments to the poller.
@@ -52,20 +52,45 @@ dispatchPoll _options = pollClient
 
 pollClient :: AppM ()
 pollClient = do
-  ( statusTtl, statusLastUpdated, statusQueueResp :: TBQueue StationStatusResponse, infoTtl, infoLastUpdated, infoQueueResp :: TBQueue StationInformationResponse) <- liftIO $
-    (,,,,,) <$> newTVarIO 0 <*> newTVarIO 0 <*> newTBQueueIO 4 <*> newTVarIO 0 <*> newTVarIO 0 <*> newTBQueueIO 4
+    -- Initialize TVars and TBQueues for station information and station status.
+    (statusTtl, statusLastUpdated, statusQueueResp :: TBQueue StationStatusResponse,
+     infoTtl, infoLastUpdated, infoQueueResp :: TBQueue StationInformationResponse,
+     sysInfoTtl, sysInfoLastUpdated, sysInfoQueueResp :: TBQueue SystemInformationResponse) <- liftIO $
+        (,,,,,,,,) <$> newTVarIO 0 <*> newTVarIO 0 <*> newTBQueueIO 4
+                   <*> newTVarIO 0 <*> newTVarIO 0 <*> newTBQueueIO 4
+                   <*> newTVarIO 0 <*> newTVarIO 0 <*> newTBQueueIO 4
 
-  log I "Fetching station information from API once."
-  concurrently_
-    (requester infoQueueResp infoTtl infoLastUpdated)
-    (handler   infoQueueResp)
+    logInfo "Fetching station information from API once."
+    -- Threads to fetch and handle station information from API once.
+    infoPollOnce   <- async (requester infoQueueResp infoTtl infoLastUpdated)
+    infoHandleOnce <- async (handler   infoQueueResp)
+    -- Wait for both threads to finish.
+    waitBoth infoPollOnce infoHandleOnce
 
-  log I "Polling API for information and status updates."
-  void $
-    concurrently_
-      (forever $ requester infoQueueResp   infoTtl   infoLastUpdated)
-      (forever $ requester statusQueueResp statusTtl statusLastUpdated)
-  log I "Done."
+
+    logInfo "Initializing polling and handling threads."
+    -- Create async actions for both requester and handler threads.
+    let createPollingThread queue ttlVar lastUpdatedVar = (async . forever) (requester queue ttlVar lastUpdatedVar)
+    let createHandlingThread queue = async . forever $ handler queue
+
+    -- The polling threads.
+    infoPollingThread    <- createPollingThread infoQueueResp    infoTtl    infoLastUpdated
+    statusPollingThread  <- createPollingThread statusQueueResp  statusTtl  statusLastUpdated
+    sysInfoPollingThread <- createPollingThread sysInfoQueueResp sysInfoTtl sysInfoLastUpdated
+
+    -- The handling threads for station information and station status.
+    infoHandlingThread    <- createHandlingThread infoQueueResp
+    statusHandlingThread  <- createHandlingThread statusQueueResp
+    sysInfoHandlingThread <- createHandlingThread sysInfoQueueResp
+
+    -- Start concurrent operations and wait until any one of them finishes (which should not happen).
+    -- If any thread finishes, we cancel the others as there is an implied dependency between them.
+    _ <- waitAnyCancel [ infoPollingThread,  statusPollingThread,  sysInfoPollingThread
+                       , infoHandlingThread, statusHandlingThread, sysInfoHandlingThread
+                       ]
+
+    logInfo "Polling and handling threads running. Press Ctrl+C to terminate."
+    return ()
 
 -- * TTL and timing handlers.
 
@@ -203,3 +228,44 @@ instance Requestable StationInformationResponse where
 
     where
       fmtLog inserted = format "ID: {}" (pShowCompact inserted)
+
+-- * System information handling.
+
+instance Pollable SystemInformationResponse where
+    pollData   = requester
+    handleData = handler
+
+instance Requestable SystemInformationResponse where
+  request = runQueryM systemInformation
+
+  -- | Thread action to request station information from API.
+  requester queue intervalSecsVar lastUpdated = void $ do
+    request >>= \case
+      Left err -> logException err >> throw err
+      Right result -> do
+        -- Handle TTL upfront, so that we don't sleep when called
+        -- for the first time from 'pollClient' (TTL = 0).
+        intervalSecs <- liftIO $ readTVarIO intervalSecsVar
+        log D $ format "(Sys Info) Sleeping for {} seconds." intervalSecs
+        liftIO $ threadDelay (intervalSecs * 1000000)
+
+        elapsedResult <- handleTimeElapsed "Sys Info" result lastUpdated
+        handleTTL "Sys Info" result intervalSecsVar elapsedResult
+
+        -- If 'elapsedResult' is a 'Just', that indicates that last_updated went backwards.
+        -- In that case, we should NOT write the result to the queue, and instead extend the
+        -- time until our next poll by however long the time went backwards.
+        when (isNothing elapsedResult) (liftIO $ atomically $ writeTBQueue queue result)
+
+  -- | Thread action to handle API response for station information query.
+  handler queue = void $ do
+    response <- liftIO $ atomically $ readTBQueue queue
+
+    let (reported, info) = (response ^. respLastUpdated, response ^. respData)
+    log I "(Sys Info) Received system info from API."
+
+    -- Insert the station information (updating existing records, if existing).
+    (_insertedInfo, _insertedInfoCount) <- insertSystemInformation reported info
+
+    -- Log number of inserted rows.
+    logInfo "(Sys Info) Updated/inserted system information into database."
