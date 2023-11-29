@@ -29,8 +29,8 @@ module TestDatabase
      ) where
 
 import           API.ResponseWrapper
-import           API.Types                               ( StationInformationResponse, StationStatusResponse,
-                                                           SystemInformationResponse, unStatusStations )
+import           API.Types                               ( StationStatusResponse, SystemInformationResponse,
+                                                           unStatusStations )
 import qualified API.Types                               as AT
 
 import           AppEnv
@@ -78,10 +78,10 @@ getDecodedFile :: FromJSON a => FilePath -- ^ Path to the JSON file.
                              -> IO a     -- ^ Decoded value.
 getDecodedFile filePath = either (assertFailure . ("Error decoding JSON: " ++)) return =<< decodeFile filePath
 
--- | Helper function to decode a 'StationInformationResponse' from a JSON file.
-getDecodedFileInformation :: FromJSON StationInformationResponse
+-- | Helper function to decode 'StationInformation' from a JSON file.
+getDecodedFileInformation :: FromJSON (ResponseWrapper [AT.StationInformation])
                           => FilePath                       -- ^ Path to the JSON file.
-                          -> IO StationInformationResponse  -- ^ Decoded 'StationInformationReponse'.
+                          -> IO (ResponseWrapper [AT.StationInformation])  -- ^ Decoded 'StationInformationReponse'.
 getDecodedFileInformation = getDecodedFile
 
 -- | Helper function to decode a 'StationStatusResponse' from a JSON file.
@@ -92,8 +92,8 @@ getDecodedFileStatus = getDecodedFile
 
 -- | Helper function to decode a 'SystemInformationResponse' from a JSON file.
 getDecodedFileSystemInformation :: FromJSON SystemInformationResponse
-                     => FilePath                  -- ^ Path to the JSON file.
-                     -> IO SystemInformationResponse  -- ^ Decoded 'StationStatusReponse'.
+                                => FilePath                  -- ^ Path to the JSON file.
+                                -> IO SystemInformationResponse  -- ^ Decoded 'StationStatusReponse'.
 getDecodedFileSystemInformation = getDecodedFile
 
 

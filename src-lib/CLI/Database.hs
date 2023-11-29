@@ -83,7 +83,7 @@ handleInformation = do
 handleStationInformation :: AppM ()
 handleStationInformation = do
   log D "Requesting station information from API."
-  stationInfo <- runQueryM stationInformation :: AppM (Either ClientError StationInformationResponse)
+  stationInfo <- runQueryM stationInformation :: AppM (Either ClientError (ResponseWrapper [StationInformation]))
   log D "Requested station information from API."
 
   for_ (rightToMaybe stationInfo) $ \response -> do

@@ -9,8 +9,8 @@ import           API.Client
 import           API.ClientLifted
 import           API.Pollable
 import           API.ResponseWrapper
-import           API.Types                     ( StationInformationResponse, StationStatusResponse,
-                                                 SystemInformationResponse, unStatusStations )
+import           API.Types                     ( StationStatusResponse, SystemInformationResponse, unStatusStations )
+import qualified API.Types                     as AT
 
 import           AppEnv
 
@@ -53,7 +53,7 @@ pollClient :: AppM ()
 pollClient = do
     -- Initialize TVars and TBQueues for station information and station status.
     (statusTtl, statusLastUpdated, statusQueueResp :: TBQueue StationStatusResponse,
-     infoTtl, infoLastUpdated, infoQueueResp :: TBQueue StationInformationResponse,
+     infoTtl, infoLastUpdated, infoQueueResp :: TBQueue (ResponseWrapper [AT.StationInformation]),
      sysInfoTtl, sysInfoLastUpdated, sysInfoQueueResp :: TBQueue SystemInformationResponse) <- liftIO $
         (,,,,,,,,) <$> newTVarIO 0 <*> newTVarIO 0 <*> newTBQueueIO 4
                    <*> newTVarIO 0 <*> newTVarIO 0 <*> newTBQueueIO 4
@@ -179,7 +179,7 @@ instance Pollable StationStatusResponse where
 
 -- * Station information handling.
 
-instance Pollable StationInformationResponse where
+instance Pollable (ResponseWrapper [AT.StationInformation]) where
   request = runQueryM stationInformation
 
   -- | Thread action to request station information from API.

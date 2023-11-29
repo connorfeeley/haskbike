@@ -65,9 +65,9 @@ refreshStationData = do
 
 
 -- | Concurrently request station information and status.
-requestStationDataConcurrently :: AppM (Either ClientError StationInformationResponse, Either ClientError StationStatusResponse)
+requestStationDataConcurrently :: AppM (Either ClientError (ResponseWrapper [StationInformation]), Either ClientError StationStatusResponse)
 requestStationDataConcurrently = concurrently
-  (runQueryM stationInformation :: AppM (Either ClientError StationInformationResponse))
+  (runQueryM stationInformation :: AppM (Either ClientError (ResponseWrapper [StationInformation])))
   (runQueryM stationStatus      :: AppM (Either ClientError StationStatusResponse))
 
 

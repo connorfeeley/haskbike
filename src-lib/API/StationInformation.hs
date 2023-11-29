@@ -11,10 +11,7 @@ module API.StationInformation
      , RentalMethod (..)
      , RentalURIs (..)
      , StationInformation (..)
-     , StationInformationResponse
      ) where
-
-import           API.ResponseWrapper
 
 import           Control.Lens         hiding ( (.=) )
 
@@ -203,9 +200,6 @@ instance FromJSON StationInformation where
     <*> v .:  "_bluetooth_id"
     <*> v .:  "_ride_code_support"
     <*> v .:  "rental_uris"
-
--- | Type synonym for the wrapped station information response.
-type StationInformationResponse = ResponseWrapper [StationInformation]
 
 -- | Lenses
 makeLenses ''StationInformation

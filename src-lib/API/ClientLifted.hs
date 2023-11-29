@@ -58,7 +58,7 @@ versionsM = liftClientM versions
 vehicleTypesM :: AppM Object
 vehicleTypesM = liftClientM vehicleTypes
 
-stationInformationM :: AppM StationInformationResponse
+stationInformationM :: AppM (ResponseWrapper [StationInformation])
 stationInformationM = liftClientM stationInformation
 
 stationStatusM :: AppM StationStatusResponse
