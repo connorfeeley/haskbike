@@ -115,6 +115,7 @@ instance ToHtml SystemStatusVisualizationPage where
           div_ [class_ "pure-u-1 pure-u-md-1-3"] submitInput
 
       with div_ [class_ "graph"] (toHtmlRaw (toHtmlWithUrls vegaSourceUrlsLocal (vegaEmbedCfg ShowActions) (vegaChart (map T.pack . drop 2) (_systemStatusVisPageDataLink params))))
+      div_ $ i_ "Note: Iconic (mechanical) bikes are not displayed on the chart above since e-bike quantities are more interesting."
 
     where
       staticLink = _systemStatusVisPageStaticLink params

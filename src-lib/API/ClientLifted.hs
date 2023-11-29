@@ -13,6 +13,7 @@ module API.ClientLifted
      , versionsM
      ) where
 
+import           API.BikeShare
 import           API.Client
 import           API.Types
 
@@ -66,7 +67,7 @@ stationStatusM = liftClientM stationStatus
 systemRegionsM :: AppM Object
 systemRegionsM = liftClientM systemRegions
 
-systemInformationM :: AppM Object
+systemInformationM :: AppM SystemInformationResponse
 systemInformationM = liftClientM systemInformation
 
 systemPricingPlansM :: AppM Object

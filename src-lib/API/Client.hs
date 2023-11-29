@@ -4,12 +4,12 @@
 
 module API.Client
      ( bikeShareAPIClient
-     , bikeshareBaseUrl
      , handleResponse
      , mkClientManager
      , run
      , runQuery
      , runQueryWithEnv
+     , runQueryWithManager
      , stationInformation
      , stationStatus
      , systemInformation
@@ -19,11 +19,12 @@ module API.Client
      , versions
      ) where
 
-import           API.Types               ( StationInformationResponse, StationStatusResponse )
+import           API.BikeShare
+import           API.Types
+
+import           AppEnv
 
 import           BikeShareAPI
-
-import           Control.Exception       ( Exception (displayException) )
 
 import           Data.Aeson              ( Object )
 import           Data.Proxy
@@ -36,6 +37,8 @@ import           Servant.Client
 
 import           Text.Pretty.Simple      ( pPrintString )
 
+import           UnliftIO
+
 -- | The BikeShare API client.
 bikeShareAPIClient :: Proxy BikeShareAPI
 bikeShareAPIClient = Proxy
@@ -46,7 +49,7 @@ vehicleTypes        :: ClientM Object
 stationInformation  :: ClientM StationInformationResponse
 stationStatus       :: ClientM StationStatusResponse
 systemRegions       :: ClientM Object
-systemInformation   :: ClientM Object
+systemInformation   :: ClientM SystemInformationResponse
 systemPricingPlans  :: ClientM Object
 ( versions
   :<|> vehicleTypes
@@ -62,9 +65,6 @@ mkClientManager = newManager tlsManagerSettings
 
 runQuery :: Manager -> ClientM a -> IO (Either ClientError a)
 runQuery clientManager endpoint = runClientM endpoint (mkClientEnv clientManager bikeshareBaseUrl)
-
-bikeshareBaseUrl :: BaseUrl
-bikeshareBaseUrl = BaseUrl Https "toronto.publicbikesystem.net" 443 "customer/gbfs/v2"
 
 runQueryWithEnv :: ClientM a -> IO (Either ClientError a)
 runQueryWithEnv query = do
@@ -91,3 +91,9 @@ run = do
     runQuery clientManager systemRegions      >>= handleResponse "System Regions"
     runQuery clientManager systemInformation  >>= handleResponse "System Information"
     runQuery clientManager systemPricingPlans >>= handleResponse "System Pricing Plans"
+
+-- | Run API query using client manager from environment monad.
+runQueryWithManager :: WithAppMEnv (Env env) Message m => ClientM a -> m (Either ClientError a)
+runQueryWithManager query = do
+  clientManager <- withManager
+  liftIO $ runQuery clientManager query

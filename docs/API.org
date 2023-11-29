@@ -14,16 +14,8 @@ GET https://toronto.publicbikesystem.net/ube/gbfs/v1/
 #+RESULTS:
 [[file:json/1.1/gbfs.json]]
 
-**
-
-#+begin_src restclient :file json/1.1/station_information/7033.json :noheaders :results value file
-GET https://toronto.publicbikesystem.net/customer/ube/gbfs/v1/en/station_information/7033/nearby_stations
-#+end_src
-
-#+RESULTS:
-[[file:json/1.1/station_information/7033.json]]
-
-* GBFS 2.3 Entrypoint
+* GBFS 2.3
+** GBFS 2.3 Entrypoint
 
 #+begin_src restclient :file json/2.3/gbfs.json :noheaders :results value file
 GET https://tor.publicbikesystem.net/customer/gbfs/v2/gbfs.json
@@ -31,8 +23,7 @@ GET https://tor.publicbikesystem.net/customer/gbfs/v2/gbfs.json
 
 #+RESULTS:
 [[file:json/2.3/gbfs.json]]
-
-* GBFS Versions
+** GBFS Versions
 
 #+begin_src restclient :file json/2.3/gbfs_versions.json :noheaders :results value file
 GET https://tor.publicbikesystem.net/customer/gbfs/v2/gbfs_versions
@@ -41,7 +32,7 @@ GET https://tor.publicbikesystem.net/customer/gbfs/v2/gbfs_versions
 #+RESULTS:
 [[file:json/2.3/gbfs_versions.json]]
 
-* GBFS Vehicle Types
+** GBFS Vehicle Types
 
 #+begin_src restclient :file json/2.3/vehicle_types.json :noheaders :results value file
 GET https://tor.publicbikesystem.net/customer/gbfs/v2/en/vehicle_types
@@ -50,7 +41,7 @@ GET https://tor.publicbikesystem.net/customer/gbfs/v2/en/vehicle_types
 #+RESULTS:
 [[file:json/2.3/vehicle_types.json]]
 
-* GBFS Station Information
+** GBFS Station Information
 
 #+begin_src restclient :file json/2.3/station_information.json :noheaders :results value file
 GET https://tor.publicbikesystem.net/customer/gbfs/v2/en/station_information
@@ -59,7 +50,7 @@ GET https://tor.publicbikesystem.net/customer/gbfs/v2/en/station_information
 #+RESULTS:
 [[file:json/2.3/station_information.json]]
 
-* GBFS Station Status
+** GBFS Station Status
 
 #+begin_src restclient :file json/2.3/station_status.json :noheaders :results value file
 GET https://tor.publicbikesystem.net/customer/gbfs/v2/en/station_status
@@ -68,7 +59,7 @@ GET https://tor.publicbikesystem.net/customer/gbfs/v2/en/station_status
 #+RESULTS:
 [[file:json/2.3/station_status.json]]
 
-* GBFS System Regions
+** GBFS System Regions
 
 #+begin_src restclient :file json/2.3/system_regions.json :noheaders :results value file
 GET https://tor.publicbikesystem.net/customer/gbfs/v2/en/system_regions
@@ -77,7 +68,7 @@ GET https://tor.publicbikesystem.net/customer/gbfs/v2/en/system_regions
 #+RESULTS:
 [[file:json/2.3/system_regions.json]]
 
-* GBFS System Information
+** GBFS System Information
 
 #+begin_src restclient :file json/2.3/system_information.json :noheaders :results value file
 GET https://tor.publicbikesystem.net/customer/gbfs/v2/en/system_information
@@ -86,7 +77,7 @@ GET https://tor.publicbikesystem.net/customer/gbfs/v2/en/system_information
 #+RESULTS:
 [[file:json/2.3/system_information.json]]
 
-** Fields of interest:
+*** Fields of interest:
 
 #+begin_src json
 "_vehicle_count": {
@@ -97,7 +88,7 @@ GET https://tor.publicbikesystem.net/customer/gbfs/v2/en/system_information
 #+end_src
 
 
-* GBFS System Pricing Plans
+** GBFS System Pricing Plans
 
 #+begin_src restclient :file json/2.3/system_pricing_plans.json :noheaders :results value file
 GET https://toronto.publicbikesystem.net/customer/gbfs/v2/en/system_pricing_plans

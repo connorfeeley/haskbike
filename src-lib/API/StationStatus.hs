@@ -44,6 +44,7 @@ import           Data.Time.Extras
 
 import           GHC.Generics         ( Generic )
 
+
 -- | Enumeration representing a BikeShare station status string.
 data StationStatusString where
   InService   :: StationStatusString

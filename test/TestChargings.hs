@@ -144,7 +144,7 @@ unit_queryDockingsManual = do
       (expectedDockingAll, expectedDockingIconic, expectedDockingEfit, expectedDockingEfitG5)
       (expectedUndockingAll, expectedUndockingIconic, expectedUndockingEfit, expectedUndockingEfitG5)
       (startMinute, endMinute) = do
-      events <- runWithAppMDebug dbnameTest $ queryDockingEventsCount (variation startMinute endMinute)
+      events <- runWithAppM dbnameTest $ queryDockingEventsCount (variation startMinute endMinute)
 
       let minutesString = " at " ++ show startMinute ++ "-" ++ show endMinute
 

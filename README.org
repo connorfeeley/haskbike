@@ -19,7 +19,7 @@ Those of us who think the system is great, and who therefore use the system regu
 
 Depending on the time of day and how close you are to the core, your local station probably spends most of it's time (nearly) full or (nearly) empty[fn:2].
 
-E-Bikes - dramatically more common now than earlier even this year (which is great!) - seem to be disabled whenever you want to use one[fn:3].
+E-Bikes - though dramatically more common now than earlier than even just this year (which is great!) - seem to be disabled whenever you want to use one[fn:3].
 
 The limited number of charging stations doesn't help much: [[https://bikes.cfeeley.org/visualization/station-list?station-type=Charging][see list]].
 

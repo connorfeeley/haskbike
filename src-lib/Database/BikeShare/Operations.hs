@@ -17,6 +17,7 @@ module Database.BikeShare.Operations
      ( module Database.BikeShare.Operations.Dockings
      , insertStationInformation
      , insertStationStatus
+     , insertSystemInformation
      , printDisabledDocks
      , queryDisabledDocks
      , queryRowCount
@@ -244,14 +245,29 @@ querySystemStatusAtRange earliestTime latestTime intervalMins = do
   (pure . map statusFieldsToInt) statusAtTime
   where
     -- Convert fields from 'Int32' to 'Int'.
-    statusFieldsToInt =
-      (\statusAtTime -> (               statusAtTime ^. _1
-                        , fromIntegral (statusAtTime ^. _2)
-                        , fromIntegral (statusAtTime ^. _3)
-                        , fromIntegral (statusAtTime ^. _4)
-                        , fromIntegral (statusAtTime ^. _5)
-                        , fromIntegral (statusAtTime ^. _6)
-                        , fromIntegral (statusAtTime ^. _7)
-                        , fromIntegral (statusAtTime ^. _8)
-                        )
+    statusFieldsToInt statusAtTime =
+      ( statusAtTime ^. _1
+      , fromIntegral (statusAtTime ^. _2)
+      , fromIntegral (statusAtTime ^. _3)
+      , fromIntegral (statusAtTime ^. _4)
+      , fromIntegral (statusAtTime ^. _5)
+      , fromIntegral (statusAtTime ^. _6)
+      , fromIntegral (statusAtTime ^. _7)
+      , fromIntegral (statusAtTime ^. _8)
       )
+
+-- | Insert system information into the database.
+insertSystemInformation :: UTCTime
+                        -- ^ Time at which the system information was reported.
+                        -> AT.SystemInformation
+                        -- ^ List of 'SystemInformation' from the API response.
+                        -> AppM ([SystemInformation], [SystemInformationCount])
+                        -- ^ List of 'SystemInformation' that where inserted.
+insertSystemInformation reported inf = do
+  insertedInfo <- withPostgres $ runInsertReturningList $
+    insert (bikeshareDb ^. bikeshareSystemInformation)
+    (insertExpressions [fromJSONToBeamSystemInformation reported inf])
+  insertedInfoCount <- withPostgres $ runInsertReturningList $
+    insert (bikeshareDb ^. bikeshareSystemInformationCount)
+    (insertExpressions [fromJSONToBeamSystemInformationCount reported inf])
+  pure (insertedInfo, insertedInfoCount)

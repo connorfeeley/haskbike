@@ -7,7 +7,7 @@ module BikeShareAPI
      ( BikeShareAPI
      ) where
 
-import           API.Types   ( StationInformationResponse, StationStatusResponse )
+import           API.Types
 
 import           Data.Aeson  ( Object )
 
@@ -21,5 +21,5 @@ type BikeShareAPI =
   :<|> "en" :> "station_information"          :> Get '[JSON] StationInformationResponse
   :<|> "en" :> "station_status"               :> Get '[JSON] StationStatusResponse
   :<|> "en" :> "system_regions"               :> Get '[JSON] Object
-  :<|> "en" :> "system_information"           :> Get '[JSON] Object
+  :<|> "en" :> "system_information"           :> Get '[JSON] SystemInformationResponse
   :<|> "en" :> "system_pricing_plans"         :> Get '[JSON] Object

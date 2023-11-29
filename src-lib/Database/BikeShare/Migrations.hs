@@ -10,6 +10,7 @@ import           Database.Beam.Migrate
 import           Database.Beam.Migrate.Simple
 import           Database.Beam.Postgres
 import qualified Database.Beam.Postgres.Migrate as PG
+import           Database.Beam.Postgres.Syntax  ( pgTextType )
 import           Database.BikeShare
 
 
@@ -62,6 +63,27 @@ initialSetup = BikeshareDb
                                                      (field "vehicle_types_available_iconic"  int)
                                                      (field "vehicle_types_available_efit"    int)
                                                      (field "vehicle_types_available_efit_g5" int)
+        })
+  <*> (createTable "system_information" $ SystemInformation
+        { _sysInfKey                  = SystemInformationKey (field "id"         PG.serial notNull unique)
+                                                             (field "reported"   (DataType (timestampType Nothing True)))
+        , _sysInfBuildHash            = field "build_hash"                       (DataType pgTextType)
+        , _sysInfBuildLabel           = field "build_label"                      (DataType pgTextType)
+        , _sysInfBuildNumber          = field "build_number"                     (DataType pgTextType)
+        , _sysInfBuildVersion         = field "build_version"                    (DataType pgTextType)
+        , _sysInfLanguage             = field "language"                         (DataType pgTextType)
+        , _sysInfMobileHeadVersion    = field "mobile_head_version"              int notNull
+        , _sysInfMobileMinSuppVersion = field "mobile_minimum_supported_version" int notNull
+        , _sysInfName                 = field "name"                             (DataType pgTextType)
+        , _sysInfSysId                = field "system_id"                        (DataType pgTextType)
+        , _sysInfTimeZone             = field "timezone"                         (DataType pgTextType)
+        })
+  <*> (createTable "system_information_count" $ SystemInformationCount
+        { _sysInfCntKey             = SystemInformationKey (field "id"       PG.serial notNull unique)
+                                                           (field "reported" (DataType (timestampType Nothing True)))
+        , _sysInfCntStationCount    = field "station_count"                  int notNull
+        , _sysInfCntMechanicalCount = field "mechanical_count"               int notNull
+        , _sysInfCntEbikeCount      = field "ebike_count"                    int notNull
         })
 
 initialSetupStep :: MigrationSteps Postgres

@@ -17,6 +17,8 @@ module Database.BikeShare
        -- , bikeshareDiagnostics
      , bikeshareStationInformation
      , bikeshareStationStatus
+     , bikeshareSystemInformation
+     , bikeshareSystemInformationCount
      ) where
 
 
@@ -27,9 +29,11 @@ import           Database.BikeShare.Types
 
 -- | Define the database; only containing one table for now.
 data BikeshareDb f where
-  BikeshareDb :: { _bikeshareStationInformation :: f (TableEntity StationInformationT)
-                 , _bikeshareStationStatus      :: f (TableEntity StationStatusT)
-                 -- , _bikeshareDiagnostics        :: f (TableEntity DiagnosticsT)
+  BikeshareDb :: { _bikeshareStationInformation     :: f (TableEntity StationInformationT)
+                 , _bikeshareStationStatus          :: f (TableEntity StationStatusT)
+                 , _bikeshareSystemInformation      :: f (TableEntity SystemInformationT)
+                 , _bikeshareSystemInformationCount :: f (TableEntity SystemInformationCountT)
+                 -- , _bikeshareDiagnostics         :: f (TableEntity DiagnosticsT)
                  } -> BikeshareDb f
   deriving (Generic, Database be)
 
@@ -77,6 +81,27 @@ bikeshareDb = defaultDbSettings `withDbModification`
       , _statusVehicleDocksAvailable = "vehicle_docks_available"
       , _statusVehicleTypesAvailable = vehicleTypeFields "vehicle_types_available"
       }
+  , _bikeshareSystemInformation =
+    setEntityName "system_information" <> modifyTableFields tableModification
+      { _sysInfKey                   = sysInfKeyFields ""
+      , _sysInfBuildHash             = "build_hash"
+      , _sysInfBuildLabel            = "build_label"
+      , _sysInfBuildNumber           = "build_number"
+      , _sysInfBuildVersion          = "build_version"
+      , _sysInfLanguage              = "language"
+      , _sysInfMobileHeadVersion     = "mobile_head_version"
+      , _sysInfMobileMinSuppVersion  = "mobile_minimum_supported_version"
+      , _sysInfName                  = "name"
+      , _sysInfSysId                 = "system_id"
+      , _sysInfTimeZone              = "timezone"
+      }
+  , _bikeshareSystemInformationCount =
+    setEntityName "system_information_count" <> modifyTableFields tableModification
+      { _sysInfCntKey                = sysInfKeyFields ""
+      , _sysInfCntStationCount       = "station_count"
+      , _sysInfCntMechanicalCount    = "mechanical_count"
+      , _sysInfCntEbikeCount         = "ebike_count"
+      }
   -- , _bikeshareDiagnostics =
   --   setEntityName "diagnostics" <> modifyTableFields tableModification
   --     { _diagnosticId   = "id"
@@ -91,5 +116,7 @@ bikeshareDb = defaultDbSettings `withDbModification`
 BikeshareDb
   (TableLens bikeshareStationInformation)
   (TableLens bikeshareStationStatus)
+  (TableLens bikeshareSystemInformation)
+  (TableLens bikeshareSystemInformationCount)
   -- (TableLens bikeshareDiagnostics)
   = dbLenses

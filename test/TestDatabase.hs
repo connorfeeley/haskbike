@@ -10,7 +10,8 @@
 -- | Test the database.
 
 module TestDatabase
-     ( initDBWithAllTestData
+     ( getDecodedFileSystemInformation
+     , initDBWithAllTestData
      , setupTestDatabase
      , unit_insertNewerStatusRecords
      , unit_insertNewerStatusRecordsInsert
@@ -20,15 +21,18 @@ module TestDatabase
      , unit_insertStationInformationApi
      , unit_insertStationStatus
      , unit_insertStationStatusApi
+     , unit_insertSystemInformation
      , unit_queryDockingUndockingCount
      , unit_queryStationByIdAndName
      , unit_queryStationStatus
      , unit_queryStationStatusBetween
      ) where
 
-import           API.ResponseWrapper                     ( response_data )
+import           API.ResponseWrapper
 import           API.Types                               ( StationInformationResponse, StationStatusResponse,
-                                                           _unInfoStations, unInfoStations, unStatusStations )
+                                                           SystemInformationResponse, _unInfoStations, unInfoStations,
+                                                           unStatusStations )
+import qualified API.Types                               as AT
 
 import           AppEnv
 
@@ -87,18 +91,57 @@ getDecodedFileStatus :: FromJSON StationStatusResponse
                      -> IO StationStatusResponse  -- ^ Decoded 'StationStatusReponse'.
 getDecodedFileStatus = getDecodedFile
 
+-- | Helper function to decode a 'SystemInformationResponse' from a JSON file.
+getDecodedFileSystemInformation :: FromJSON SystemInformationResponse
+                     => FilePath                  -- ^ Path to the JSON file.
+                     -> IO SystemInformationResponse  -- ^ Decoded 'StationStatusReponse'.
+getDecodedFileSystemInformation = getDecodedFile
+
 
 -- | Initialize empty database from the test station information response and all 22 station status responses.
 initDBWithAllTestData :: IO ()
 initDBWithAllTestData = do
   info <- getDecodedFileInformation  "docs/json/2.3/station_information-1.json"
-  void $ runWithAppM dbnameTest $ insertStationInformation $ info   ^. response_data . unInfoStations
+  void $ runWithAppM dbnameTest $ insertStationInformation $ info   ^. respData . unInfoStations
 
   -- Insert test station status data 1-22.
   mapM_ (\i -> do
             statusResponse <- getDecodedFileStatus $ "docs/json/2.3/station_status-"+|i|+".json"
-            void $ runWithAppM dbnameTest $ insertStationStatus $ statusResponse ^. response_data . unStatusStations
+            void $ runWithAppM dbnameTest $ insertStationStatus $ statusResponse ^. respData . unStatusStations
         ) [(1 :: Int) .. (22 :: Int)]
+
+
+-- | HUnit test for inserting system information.
+unit_insertSystemInformation :: IO ()
+unit_insertSystemInformation = do
+  -- Connect to the database.
+  setupTestDatabase
+
+  status  <- getDecodedFileSystemInformation "test/json/system_information.json"
+  let (reported, info) = (status ^. respLastUpdated, status ^. respData)
+
+  -- Should fail because station information has not been inserted.
+  -- Catch exception with 'try'.
+  (insertedInfo, insertedInfoCount) <- runWithAppMSuppressLog dbnameTest $
+    insertSystemInformation reported info
+
+  assertEqual "Inserted system information" (1, 1) (length insertedInfo, length insertedInfoCount)
+  -- assertEqual "Inserted system information" expectedInfo (fromBeamSystemInformationToJSON (head insertedInfo) (head insertedInfoCount))
+  where
+    expectedInfo = AT.SystemInformation { AT._sysInfStationCount          = 704
+                                        , AT._sysInfVehicleCount          = AT.SystemInformationVehicleCount 0 0
+                                        , AT._sysInfBuildHash             = "2023-11-17"
+                                        , AT._sysInfBuildLabel            = "2023-11-17"
+                                        , AT._sysInfBuildNumber           = "267"
+                                        , AT._sysInfBuildVersion          = "2023.1"
+                                        , AT._sysInfLanguage              = "en"
+                                        , AT._sysInfMobileHeadVersion     = 2
+                                        , AT._sysInfMobileMinSuppVersion  = 1
+                                        , AT._sysInfName                  = "bike_share_toronto"
+                                        , AT._sysInfSysId                 = "bike_share_toronto"
+                                        , AT._sysInfTimeZone              = "America/Toronto"
+                                        }
+
 
 -- | HUnit test for inserting station information.
 unit_insertStationInformation :: IO ()
@@ -109,7 +152,7 @@ unit_insertStationInformation = do
   stationInformationResponse <- getDecodedFileInformation "test/json/station_information.json"
 
   -- Insert test data.
-  inserted_info <- runWithAppM dbnameTest $ insertStationInformation $ _unInfoStations $ stationInformationResponse ^. response_data
+  inserted_info <- runWithAppM dbnameTest $ insertStationInformation $ _unInfoStations $ stationInformationResponse ^. respData
 
   assertEqual "Inserted station information" 7 (length inserted_info)
 
@@ -124,8 +167,8 @@ unit_insertStationStatus = do
   status  <- getDecodedFileStatus      "test/json/station_status.json"
 
   -- Insert test data.
-  insertedInfo   <- runWithAppM dbnameTest $ insertStationInformation $ info   ^. response_data . unInfoStations
-  insertedStatus <- runWithAppM dbnameTest $ insertStationStatus $ status ^. response_data . unStatusStations
+  insertedInfo   <- runWithAppM dbnameTest $ insertStationInformation $ info   ^. respData . unInfoStations
+  insertedStatus <- runWithAppM dbnameTest $ insertStationStatus $ status ^. respData . unStatusStations
 
   assertEqual "Inserted station information" 704 (length insertedInfo)
   assertEqual "Inserted station status"        8 (length insertedStatus)
@@ -141,8 +184,8 @@ unit_queryStationStatus = do
   status  <- getDecodedFileStatus       "test/json/station_status.json"
 
   -- Insert test data.
-  insertedInfo   <- runWithAppM dbnameTest $ insertStationInformation $ info   ^. response_data . unInfoStations
-  insertedStatus <- runWithAppM dbnameTest $ insertStationStatus $ status ^. response_data . unStatusStations
+  insertedInfo   <- runWithAppM dbnameTest $ insertStationInformation $ info   ^. respData . unInfoStations
+  insertedStatus <- runWithAppM dbnameTest $ insertStationStatus $ status ^. respData . unStatusStations
 
   assertEqual "Inserted station information" 704 (length insertedInfo)
   assertEqual "Inserted station status"        8 (length insertedStatus)
@@ -161,7 +204,7 @@ unit_insertStationInformationApi = do
   info    <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
 
   -- Insert test data.
-  void $ runWithAppM dbnameTest $ insertStationInformation $ info ^. response_data . unInfoStations
+  void $ runWithAppM dbnameTest $ insertStationInformation $ info ^. respData . unInfoStations
 
 
 -- | HUnit test for inserting station status, with data from the actual API.
@@ -175,7 +218,7 @@ unit_insertStationStatusApi = do
   -- Should fail because station information has not been inserted.
   -- Catch exception with 'try'.
   insertedStatus <- runWithAppMSuppressLog dbnameTest $ try $
-    insertStationStatus $ status ^. response_data . unStatusStations
+    insertStationStatus $ status ^. respData . unStatusStations
 
   -- Exception was expected - only return error if inserted succeeded.
   -- If the insertion succeeded, then database schema does not enforce foreign key constraint correctly.
@@ -193,8 +236,8 @@ unit_insertStationApi = do
   status  <- getDecodedFileStatus      "docs/json/2.3/station_status-1.json"
 
   -- Insert test data.
-  inserted_info   <- runWithAppM dbnameTest $ insertStationInformation $ info   ^. response_data . unInfoStations
-  inserted_status <- runWithAppM dbnameTest $ insertStationStatus $ status ^. response_data . unStatusStations
+  inserted_info   <- runWithAppM dbnameTest $ insertStationInformation $ info   ^. respData . unInfoStations
+  inserted_status <- runWithAppM dbnameTest $ insertStationStatus $ status ^. respData . unStatusStations
 
   assertEqual "Inserted station information" 704 (length inserted_info)
   assertEqual "Inserted station status"      704 (length inserted_status)
@@ -233,11 +276,11 @@ doInsertNewerStatusRecords = do
   status_2  <- getDecodedFileStatus      "docs/json/2.3/station_status-2.json"
 
   -- Insert test data.
-  void $ runWithAppM dbnameTest $ insertStationInformation $ info     ^. response_data . unInfoStations
-  void $ runWithAppM dbnameTest $ insertStationStatus      $ status_1 ^. response_data . unStatusStations
+  void $ runWithAppM dbnameTest $ insertStationInformation $ info     ^. respData . unInfoStations
+  void $ runWithAppM dbnameTest $ insertStationStatus      $ status_1 ^. respData . unStatusStations
 
   -- Return maps of updated and same API statuses
-  runWithAppM dbnameTest $ insertStationStatus $ status_2 ^. response_data . unStatusStations
+  runWithAppM dbnameTest $ insertStationStatus $ status_2 ^. respData . unStatusStations
 
 
 -- | HUnit test to assert that changed station status are inserted.
@@ -264,11 +307,11 @@ doStatusInsertOnce = do
   status_2  <- getDecodedFileStatus      "docs/json/2.3/station_status-2.json"
 
   -- Insert test data.
-  void $ runWithAppM dbnameTest $ insertStationInformation $ info     ^. response_data . unInfoStations
-  void $ runWithAppM dbnameTest $ insertStationStatus      $ status_1 ^. response_data . unStatusStations
+  void $ runWithAppM dbnameTest $ insertStationInformation $ info     ^. respData . unInfoStations
+  void $ runWithAppM dbnameTest $ insertStationStatus      $ status_1 ^. respData . unStatusStations
 
   -- Insert second round of test data (some of which have reported since the first round was inserted).
-  runWithAppM dbnameTest $ insertStationStatus $ status_2 ^. response_data . unStatusStations
+  runWithAppM dbnameTest $ insertStationStatus $ status_2 ^. respData . unStatusStations
 
 
 -- | HUnit test to assert that reinserting rows is a no-op.
@@ -290,14 +333,14 @@ doStatusInsertTwice = do
   status_2  <- getDecodedFileStatus "docs/json/2.3/station_status-2.json"
 
   -- Insert first round of test data.
-  void $ runWithAppM dbnameTest $ insertStationInformation $ info     ^. response_data . unInfoStations
-  void $ runWithAppM dbnameTest $ insertStationStatus      $ status_1 ^. response_data . unStatusStations
+  void $ runWithAppM dbnameTest $ insertStationInformation $ info     ^. respData . unInfoStations
+  void $ runWithAppM dbnameTest $ insertStationStatus      $ status_1 ^. respData . unStatusStations
 
   -- Insert second round of test data (some of which have reported since the first round was inserted).
-  void $ runWithAppM dbnameTest $ insertStationStatus $ status_2 ^. response_data . unStatusStations
+  void $ runWithAppM dbnameTest $ insertStationStatus $ status_2 ^. respData . unStatusStations
 
   -- Insert second round of test data once again (nothing should have changed).
-  runWithAppM dbnameTest $ insertStationStatus $ status_2 ^. response_data . unStatusStations
+  runWithAppM dbnameTest $ insertStationStatus $ status_2 ^. respData . unStatusStations
 
 
 -- | HUnit test to validate that a station ID can be looked up by its name, and vice-versa.
@@ -305,7 +348,7 @@ unit_queryStationByIdAndName :: IO ()
 unit_queryStationByIdAndName = do
   setupTestDatabase
   info <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
-  void $ runWithAppM dbnameTest $ insertStationInformation $ info ^. response_data . unInfoStations
+  void $ runWithAppM dbnameTest $ insertStationInformation $ info ^. respData . unInfoStations
 
   assertEqual "Station ID for 'King St W / Joe Shuster Way'" (Just 7148)  =<< runWithAppM dbnameTest (queryStationId "King St W / Joe Shuster Way")
   assertEqual "Station ID for 'Wellesley Station Green P'" (Just 7001)    =<< runWithAppM dbnameTest (queryStationId "Wellesley Station Green P")

@@ -4,8 +4,10 @@ module Database.BikeShare.Types
      ( module Database.BikeShare.Diagnostics
      , module Database.BikeShare.StationInformation
      , module Database.BikeShare.StationStatus
+     , module Database.BikeShare.SystemInformation
      ) where
 
 import           Database.BikeShare.Diagnostics
 import           Database.BikeShare.StationInformation
 import           Database.BikeShare.StationStatus
+import           Database.BikeShare.SystemInformation
