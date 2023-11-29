@@ -48,7 +48,6 @@ exportDbTestDataInfo :: FilePath -> FilePath -> IO FilePath
 exportDbTestDataInfo outputDir filePrefix = do
   info <- runWithAppM "haskbike" $ do
     withPostgres $ runSelectReturningList $ select $ do
-      -- insertStationInformation $ info   ^. response_data . unInfoStations
       all_ (bikeshareDb ^. bikeshareStationInformation)
 
   -- Convert to API type.
@@ -72,7 +71,6 @@ exportDbTestDataStatus :: FilePath -> FilePath -> UTCTime -> UTCTime -> IO FileP
 exportDbTestDataStatus outputDir filePrefix startTime endTime = do
   status <- runWithAppM "haskbike" $ do
     withPostgres $ runSelectReturningList $ select $ do
-      -- insertStationInformation $ info   ^. response_data . unInfoStations
       status <- all_ (bikeshareDb ^. bikeshareStationStatus)
       guard_ ((status ^. statusLastReported) >=. val_ startTime &&.
               (status ^. statusLastReported) <=. val_ endTime)

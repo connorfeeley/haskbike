@@ -41,4 +41,4 @@ test-one PATTERN:
     cabal test --test-show-details=direct --test-options='--pattern /{{PATTERN}}/'
 
 poll:
-    cabal run haskbike -- poll --verbose
+    cabal run haskbike -- --plain poll

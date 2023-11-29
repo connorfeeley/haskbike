@@ -45,10 +45,10 @@ buildTestCase (_ :: a) file = testParse (undefined :: a) (Maybe.fromMaybe "" $ l
 -- | Test decoding of JSON files.
 
 unit_stationInformation :: IO ()
-unit_stationInformation = buildTestCase (undefined :: StationInformationResponse) "station_information.json"
+unit_stationInformation = buildTestCase (undefined :: ResponseWrapper [StationInformation]) "station_information.json"
 
 unit_stationStatus :: IO ()
-unit_stationStatus = buildTestCase (undefined :: StationStatusResponse) "station_status.json"
+unit_stationStatus = buildTestCase (undefined :: ResponseWrapper [StationStatus]) "station_status.json"
 
 unit_systemInformation :: IO ()
-unit_systemInformation = buildTestCase (undefined :: SystemInformationResponse) "system_information.json"
+unit_systemInformation = buildTestCase (undefined :: ResponseWrapper SystemInformation) "system_information.json"

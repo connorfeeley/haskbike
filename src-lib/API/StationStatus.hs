@@ -5,8 +5,6 @@
 
 module API.StationStatus
      ( StationStatus (..)
-     , StationStatusResponse
-     , StationStatusResponseData (..)
      , StationStatusString (..)
      , TorontoVehicleType (..)
      , VehicleDock (..)
@@ -25,10 +23,9 @@ module API.StationStatus
      , statusTraffic
      , statusVehicleDocksAvailable
      , statusVehicleTypesAvailable
-     , unStatusStations
      ) where
 
-import           API.ResponseWrapper
+import           API.Classes
 
 import           Control.Lens         hiding ( (.=) )
 
@@ -209,18 +206,11 @@ instance FromJSON TorontoVehicleType where
      "EFIT G5" -> return EFitG5
      _         -> fail ("Invalid TorontoVehicleType: " ++ show t)
 
--- | A wrapper type for the station information response.
-newtype StationStatusResponseData where
-  StationStatusResponseData :: { _unStatusStations :: [StationStatus] } -> StationStatusResponseData
-  deriving (Show, Generic)
 
-instance FromJSON StationStatusResponseData where
-  parseJSON = withObject "StationStatusResponseData" $ \v -> do
-    StationStatusResponseData <$> v .: "stations"
+instance HasDataField [StationStatus] where
+  -- For a list of SystemStatus, we expect to find them under the 'stations' key
+  getDataField obj = obj .: "stations"
 
--- | Type synonym for the wrapped station information response.
-type StationStatusResponse = ResponseWrapper StationStatusResponseData
 
 -- | Lenses
 makeLenses ''StationStatus
-makeLenses ''StationStatusResponseData

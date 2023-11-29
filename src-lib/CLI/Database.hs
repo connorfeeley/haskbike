@@ -83,11 +83,11 @@ handleInformation = do
 handleStationInformation :: AppM ()
 handleStationInformation = do
   log D "Requesting station information from API."
-  stationInfo <- runQueryM stationInformation :: AppM (Either ClientError StationInformationResponse)
+  stationInfo <- runQueryM stationInformation :: AppM (Either ClientError (ResponseWrapper [StationInformation]))
   log D "Requested station information from API."
 
   for_ (rightToMaybe stationInfo) $ \response -> do
-        let stations = response ^. respData . unInfoStations
+        let stations = response ^. respData
         log D "Inserting station information into database."
         insertStationInformation stations >>= report
         log D "Inserted station information into database."
@@ -107,11 +107,11 @@ handleStatus = do
 handleStationStatus :: AppM ()
 handleStationStatus = do
   log D "Requesting station status from API."
-  stationStatus' <- runQueryM stationStatus :: AppM (Either ClientError StationStatusResponse)
+  stationStatus' <- runQueryM stationStatus :: AppM (Either ClientError (ResponseWrapper [StationStatus]))
   log D "Requested station status from API."
 
   for_ (rightToMaybe stationStatus') $ \response -> do
-        let stations = response ^. respData . unStatusStations
+        let stations = response ^. respData
         log D "Inserting station status into database."
         insertStationStatus stations >>= report
         log D "Inserted station status into database."

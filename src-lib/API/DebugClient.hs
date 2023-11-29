@@ -19,7 +19,7 @@ module API.DebugClient
      , versions
      ) where
 
-import           API.Types                          ( StationInformationResponse, StationStatusResponse )
+import           API.Types
 
 import           BikeShareAPI
 
@@ -44,10 +44,10 @@ bikeShareAPIClient = Proxy
 -- | The BikeShare API client functions.
 versions            :: Free ClientF Object
 vehicleTypes        :: Free ClientF Object
-stationInformation  :: Free ClientF StationInformationResponse
-stationStatus       :: Free ClientF StationStatusResponse
+stationInformation  :: Free ClientF (ResponseWrapper [StationInformation])
+stationStatus       :: Free ClientF (ResponseWrapper [StationStatus])
 systemRegions       :: Free ClientF Object
-systemInformation   :: Free ClientF Object
+systemInformation   :: Free ClientF (ResponseWrapper SystemInformation)
 systemPricingPlans  :: Free ClientF Object
 ( versions
   :<|> vehicleTypes

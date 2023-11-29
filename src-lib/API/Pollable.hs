@@ -2,7 +2,6 @@
 
 module API.Pollable
      ( Pollable (..)
-     , Requestable (..)
      ) where
 
 import           AppEnv
@@ -13,20 +12,13 @@ import           UnliftIO
 
 
 class Pollable a where
-    pollData :: TBQueue a                  -- ^ Queue of responses
-             -> TVar Int                   -- ^ Interval between requests in seconds
-             -> TVar Int                   -- ^ Last updated time
-             -> AppM ()
+    request :: ClientM a
 
-    handleData :: TBQueue a               -- ^ Queue of responses
-               -> AppM ()
-
-class Requestable a where
-    request :: AppM (Either ClientError a)
-    requester :: Requestable a
+    requester :: Pollable a
               => TBQueue a -- ^ Queue of responses.
-              -> TVar Int                           -- ^ Interval between requests, in seconds.
-              -> TVar Int                           -- ^ Last updated time.
+              -> TVar Int  -- ^ Interval between requests, in seconds.
+              -> TVar Int  -- ^ Last updated time.
               -> AppM ()
+
     handler :: TBQueue a  -- ^ Queue of responses
             -> AppM ()

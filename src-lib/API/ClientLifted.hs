@@ -58,16 +58,16 @@ versionsM = liftClientM versions
 vehicleTypesM :: AppM Object
 vehicleTypesM = liftClientM vehicleTypes
 
-stationInformationM :: AppM StationInformationResponse
+stationInformationM :: AppM (ResponseWrapper [StationInformation])
 stationInformationM = liftClientM stationInformation
 
-stationStatusM :: AppM StationStatusResponse
+stationStatusM :: AppM (ResponseWrapper [StationStatus])
 stationStatusM = liftClientM stationStatus
 
 systemRegionsM :: AppM Object
 systemRegionsM = liftClientM systemRegions
 
-systemInformationM :: AppM SystemInformationResponse
+systemInformationM :: AppM (ResponseWrapper SystemInformation)
 systemInformationM = liftClientM systemInformation
 
 systemPricingPlansM :: AppM Object

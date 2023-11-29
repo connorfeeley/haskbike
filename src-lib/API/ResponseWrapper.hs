@@ -15,6 +15,8 @@ module API.ResponseWrapper
      , respVer
      ) where
 
+import           API.Classes
+
 import           Control.Lens     hiding ( (.=) )
 
 import           Data.Aeson
@@ -33,12 +35,12 @@ data ResponseWrapper a where
                      } -> ResponseWrapper a
   deriving (Show, Generic)
 
-instance FromJSON a => FromJSON (ResponseWrapper a) where
+instance (FromJSON a, HasDataField a) => FromJSON (ResponseWrapper a) where
   parseJSON = withObject "ResponseWrapper" $ \v -> do
     _respLastUpdated <- fmap posixToUtc (v .: "last_updated")
     _respTtl         <- v .: "ttl"
     _respVer         <- v .: "version"
-    _respData        <- v .: "data"
+    _respData        <- v .: "data" >>= getDataField
     return ResponseWrapper {..}
 
 instance ToJSON a => ToJSON (ResponseWrapper a) where

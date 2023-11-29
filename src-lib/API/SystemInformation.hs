@@ -4,14 +4,14 @@
 
 module API.SystemInformation where
 
-import           API.ResponseWrapper
+import           API.Classes
 
-import           Control.Lens        hiding ( (.=) )
+import           Control.Lens hiding ( (.=) )
 
-import           Data.Aeson          ( FromJSON (parseJSON), KeyValue ((.=)), ToJSON (toJSON), object, withObject,
-                                       (.:) )
+import           Data.Aeson   ( FromJSON (parseJSON), KeyValue ((.=)), ToJSON (toJSON), Value (Object), object,
+                                withObject, (.:) )
 
-import           GHC.Generics        ( Generic )
+import           GHC.Generics ( Generic )
 
 -- * Count of bikes by type.
 data SystemInformationVehicleCount where
@@ -21,16 +21,16 @@ data SystemInformationVehicleCount where
   deriving (Eq, Generic, Show)
 
 instance ToJSON SystemInformationVehicleCount where
-  toJSON (SystemInformationVehicleCount ebikeCount mechanicalCount) = object
-    [ "_ebike_count"      .= ebikeCount
-    , "_mechanical_count" .= mechanicalCount
+  toJSON (SystemInformationVehicleCount mechanicalCount ebikeCount) = object
+    [ "_mechanical_count" .= mechanicalCount
+    , "_ebike_count"      .= ebikeCount
     ]
 
 instance FromJSON SystemInformationVehicleCount where
   parseJSON = withObject "SystemInformationVehicleCount" $ \o -> do
-    ebikeCount      <- o .: "_ebike_count"
     mechanicalCount <- o .: "_mechanical_count"
-    return $ SystemInformationVehicleCount ebikeCount mechanicalCount
+    ebikeCount      <- o .: "_ebike_count"
+    return $ SystemInformationVehicleCount mechanicalCount ebikeCount
 
 -- * Toronto Bike Share System Information API response.
 
@@ -51,19 +51,19 @@ data SystemInformation where
   deriving (Eq, Generic, Show)
 
 instance ToJSON SystemInformation where
-  toJSON (SystemInformation stationCount vehicleCount buildHash buildLabel buildNumber buildVersion language mobileHeadVersion mobileMinSuppVersion name sysId timeZone) = object
-    [ "_station_count"                   .= stationCount
-    , "_vehicle_count"                   .= vehicleCount
-    , "build_hash"                       .= buildHash
-    , "build_label"                      .= buildLabel
-    , "build_number"                     .= buildNumber
-    , "build_version"                    .= buildVersion
-    , "language"                         .= language
-    , "mobile_head_version"              .= show mobileHeadVersion
-    , "mobile_minimum_supported_version" .= show mobileMinSuppVersion
-    , "name"                             .= name
-    , "system_id"                        .= sysId
-    , "timezone"                         .= timeZone
+  toJSON inf = object
+    [ "_station_count"                   .= _sysInfStationCount inf
+    , "_vehicle_count"                   .= _sysInfVehicleCount inf
+    , "build_hash"                       .= _sysInfBuildHash inf
+    , "build_label"                      .= _sysInfBuildLabel inf
+    , "build_number"                     .= _sysInfBuildNumber inf
+    , "build_version"                    .= _sysInfBuildVersion inf
+    , "language"                         .= _sysInfLanguage inf
+    , "mobile_head_version"              .= _sysInfMobileHeadVersion inf
+    , "mobile_minimum_supported_version" .= _sysInfMobileMinSuppVersion inf
+    , "name"                             .= _sysInfName inf
+    , "system_id"                        .= _sysInfSysId inf
+    , "timezone"                         .= _sysInfTimeZone inf
     ]
 
 instance FromJSON SystemInformation where
@@ -93,8 +93,9 @@ instance FromJSON SystemInformation where
                                sysId
                                timeZone
 
--- | Type synonym for the wrapped station information response.
-type SystemInformationResponse = ResponseWrapper SystemInformation
+instance HasDataField SystemInformation where
+  -- For SystemInformation, since it's directly under 'data', we pass the parser through
+  getDataField obj = parseJSON (Object obj)
 
 -- | Lenses
 makeLenses ''SystemInformation
