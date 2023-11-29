@@ -19,12 +19,17 @@ module Database.BikeShare.SystemInformation
      , sysInfKeyFields
      , sysInfoKey
        -- Lenses
+     , fromJSONToBeamSystemInformation
+     , fromJSONToBeamSystemInformationCount
      , sysInfKeyId
      , sysInfKeyReported
      ) where
 
+import qualified API.Types                     as AT
+
 import           Control.Lens
 
+import           Data.Coerce                   ( coerce )
 import           Data.Int                      ( Int32 )
 import           Data.String                   ( IsString (fromString) )
 import qualified Data.Text                     as T
@@ -116,3 +121,28 @@ instance Table SystemInformationCountT where
     SystemInformationCountId { _unSysInfCntKey :: SystemInformationKeyMixin f }
     deriving (Generic, Beamable)
   primaryKey = SystemInformationCountId <$> _sysInfCntKey
+
+
+-- | Convert from the JSON StationInformation to the Beam StationInformation type
+fromJSONToBeamSystemInformation :: UTCTime -> AT.SystemInformation -> SystemInformationT (QExpr Postgres s)
+fromJSONToBeamSystemInformation lastReported inf =
+  SystemInformation { _sysInfKey                  = SystemInformationKey default_ (val_ lastReported)
+                    , _sysInfBuildHash            = val_ $ T.pack (AT._sysInfBuildHash inf)
+                    , _sysInfBuildLabel           = val_ $ T.pack (AT._sysInfBuildLabel inf)
+                    , _sysInfBuildNumber          = val_ $ T.pack (AT._sysInfBuildNumber inf)
+                    , _sysInfBuildVersion         = val_ $ T.pack (AT._sysInfBuildVersion inf)
+                    , _sysInfLanguage             = val_ $ T.pack (AT._sysInfLanguage inf)
+                    , _sysInfMobileHeadVersion    = val_ $ fromIntegral $ AT._sysInfMobileHeadVersion inf
+                    , _sysInfMobileMinSuppVersion = val_ $ fromIntegral $ AT._sysInfMobileMinSuppVersion inf
+                    , _sysInfName                 = val_ $ T.pack (AT._sysInfName inf)
+                    , _sysInfSysId                = val_ $ T.pack (AT._sysInfSysId inf)
+                    , _sysInfTimeZone             = val_ $ T.pack (AT._sysInfTimeZone inf)
+                    }
+
+fromJSONToBeamSystemInformationCount :: UTCTime -> AT.SystemInformation -> SystemInformationCountT (QExpr Postgres s)
+fromJSONToBeamSystemInformationCount lastReported inf =
+  SystemInformationCount { _sysInfCntKey             = SystemInformationKey default_ (val_ lastReported)
+                         , _sysInfCntStationCount    = (val_ . fromIntegral . AT._sysInfStationCount) inf
+                         , _sysInfCntMechanicalCount = (val_ . fromIntegral . AT.sysInfMechanicalCount . AT._sysInfVehicleCount) inf
+                         , _sysInfCntEbikeCount      = (val_ . fromIntegral . AT.sysInfEbikeCount      . AT._sysInfVehicleCount) inf
+                         }

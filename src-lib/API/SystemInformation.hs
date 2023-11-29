@@ -15,8 +15,8 @@ import           GHC.Generics        ( Generic )
 
 -- * Count of bikes by type.
 data SystemInformationVehicleCount where
-  SystemInformationVehicleCount :: { sysInfEbikeCount      :: Int
-                                   , sysInfMechanicalCount :: Int
+  SystemInformationVehicleCount :: { sysInfMechanicalCount :: Int
+                                   , sysInfEbikeCount      :: Int
                                    } -> SystemInformationVehicleCount
   deriving (Eq, Generic, Show)
 
