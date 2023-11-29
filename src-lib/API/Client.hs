@@ -47,7 +47,7 @@ bikeShareAPIClient = Proxy
 versions            :: ClientM Object
 vehicleTypes        :: ClientM Object
 stationInformation  :: ClientM (ResponseWrapper [StationInformation])
-stationStatus       :: ClientM StationStatusResponse
+stationStatus       :: ClientM (ResponseWrapper [StationStatus])
 systemRegions       :: ClientM Object
 systemInformation   :: ClientM SystemInformationResponse
 systemPricingPlans  :: ClientM Object

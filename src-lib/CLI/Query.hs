@@ -60,15 +60,15 @@ refreshStationData = do
     (_, Left err) -> logException err >> throwM err
     (Right info, Right status) -> do
       insInfo   <- insertStationInformation (info   ^. respData)
-      insStatus <- insertStationStatus      (status ^. respData . unStatusStations)
+      insStatus <- insertStationStatus      (status ^. respData)
       log D $ format "Inserted {} information records and {} status records." (length insInfo) (length insStatus)
 
 
 -- | Concurrently request station information and status.
-requestStationDataConcurrently :: AppM (Either ClientError (ResponseWrapper [StationInformation]), Either ClientError StationStatusResponse)
+requestStationDataConcurrently :: AppM (Either ClientError (ResponseWrapper [StationInformation]), Either ClientError (ResponseWrapper [StationStatus]))
 requestStationDataConcurrently = concurrently
   (runQueryM stationInformation :: AppM (Either ClientError (ResponseWrapper [StationInformation])))
-  (runQueryM stationStatus      :: AppM (Either ClientError StationStatusResponse))
+  (runQueryM stationStatus      :: AppM (Either ClientError (ResponseWrapper [StationStatus])))
 
 
 -- | Query the database for the station with the given ID.

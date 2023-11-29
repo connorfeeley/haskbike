@@ -61,7 +61,7 @@ vehicleTypesM = liftClientM vehicleTypes
 stationInformationM :: AppM (ResponseWrapper [StationInformation])
 stationInformationM = liftClientM stationInformation
 
-stationStatusM :: AppM StationStatusResponse
+stationStatusM :: AppM (ResponseWrapper [StationStatus])
 stationStatusM = liftClientM stationStatus
 
 systemRegionsM :: AppM Object

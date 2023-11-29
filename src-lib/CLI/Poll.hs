@@ -9,7 +9,7 @@ import           API.Client
 import           API.ClientLifted
 import           API.Pollable
 import           API.ResponseWrapper
-import           API.Types                     ( StationStatusResponse, SystemInformationResponse, unStatusStations )
+import           API.Types                     ( SystemInformationResponse )
 import qualified API.Types                     as AT
 
 import           AppEnv
@@ -52,7 +52,7 @@ dispatchPoll _options = pollClient
 pollClient :: AppM ()
 pollClient = do
     -- Initialize TVars and TBQueues for station information and station status.
-    (statusTtl, statusLastUpdated, statusQueueResp :: TBQueue StationStatusResponse,
+    (statusTtl, statusLastUpdated, statusQueueResp :: TBQueue (ResponseWrapper [AT.StationStatus]),
      infoTtl, infoLastUpdated, infoQueueResp :: TBQueue (ResponseWrapper [AT.StationInformation]),
      sysInfoTtl, sysInfoLastUpdated, sysInfoQueueResp :: TBQueue SystemInformationResponse) <- liftIO $
         (,,,,,,,,) <$> newTVarIO 0 <*> newTVarIO 0 <*> newTBQueueIO 4
@@ -132,7 +132,7 @@ handleTTL logPrefix apiResult ttlVar extendBy = do
 
 -- * Station status handling.
 
-instance Pollable StationStatusResponse where
+instance Pollable (ResponseWrapper [AT.StationStatus]) where
   request = runQueryM stationStatus
 
   -- | Thread action to request station information from API.
@@ -158,7 +158,7 @@ instance Pollable StationStatusResponse where
   handler queue = void $ do
     response <- liftIO $ atomically $ readTBQueue queue
 
-    let status = response ^. (respData . unStatusStations)
+    let status = response ^. respData
     log I $ format "(Status) Received {} status records from API." (length status)
 
     -- Insert the updated status.

@@ -45,7 +45,7 @@ bikeShareAPIClient = Proxy
 versions            :: Free ClientF Object
 vehicleTypes        :: Free ClientF Object
 stationInformation  :: Free ClientF (ResponseWrapper [StationInformation])
-stationStatus       :: Free ClientF StationStatusResponse
+stationStatus       :: Free ClientF (ResponseWrapper [StationStatus])
 systemRegions       :: Free ClientF Object
 systemInformation   :: Free ClientF Object
 systemPricingPlans  :: Free ClientF Object
