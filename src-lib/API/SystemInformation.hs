@@ -94,9 +94,6 @@ instance FromJSON SystemInformation where
                                sysId
                                timeZone
 
--- | Type synonym for the wrapped station information response.
-type SystemInformationResponse = ResponseWrapper SystemInformation
-
 instance HasDataField SystemInformation where
   -- For SystemInformation, since it's directly under 'data', we pass the parser through
   getDataField obj = parseJSON (Object obj)

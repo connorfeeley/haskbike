@@ -29,7 +29,6 @@ module TestDatabase
      ) where
 
 import           API.ResponseWrapper
-import           API.Types                               ( SystemInformationResponse )
 import qualified API.Types                               as AT
 
 import           AppEnv
@@ -83,16 +82,16 @@ getDecodedFileInformation :: FromJSON (ResponseWrapper [AT.StationInformation])
                           -> IO (ResponseWrapper [AT.StationInformation]) -- ^ Decoded 'StationInformationReponse'.
 getDecodedFileInformation = getDecodedFile
 
--- | Helper function to decode a 'StationStatusResponse' from a JSON file.
+-- | Helper function to decode 'StationStatus' from a JSON file.
 getDecodedFileStatus :: FromJSON (ResponseWrapper [AT.StationStatus])
                      => FilePath                                -- ^ Path to the JSON file.
                      -> IO (ResponseWrapper [AT.StationStatus]) -- ^ Decoded 'StationStatusReponse'.
 getDecodedFileStatus = getDecodedFile
 
--- | Helper function to decode a 'SystemInformationResponse' from a JSON file.
-getDecodedFileSystemInformation :: FromJSON SystemInformationResponse
-                                => FilePath                     -- ^ Path to the JSON file.
-                                -> IO SystemInformationResponse -- ^ Decoded 'StationStatusReponse'.
+-- | Helper function to decode 'SystemInformation' from a JSON file.
+getDecodedFileSystemInformation :: FromJSON (ResponseWrapper AT.SystemInformation)
+                                => FilePath                                  -- ^ Path to the JSON file.
+                                -> IO (ResponseWrapper AT.SystemInformation) -- ^ Decoded 'StationStatusReponse'.
 getDecodedFileSystemInformation = getDecodedFile
 
 

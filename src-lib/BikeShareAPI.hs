@@ -21,5 +21,5 @@ type BikeShareAPI =
   :<|> "en" :> "station_information"          :> Get '[JSON] (ResponseWrapper [StationInformation])
   :<|> "en" :> "station_status"               :> Get '[JSON] (ResponseWrapper [StationStatus])
   :<|> "en" :> "system_regions"               :> Get '[JSON] Object
-  :<|> "en" :> "system_information"           :> Get '[JSON] SystemInformationResponse
+  :<|> "en" :> "system_information"           :> Get '[JSON] (ResponseWrapper SystemInformation)
   :<|> "en" :> "system_pricing_plans"         :> Get '[JSON] Object

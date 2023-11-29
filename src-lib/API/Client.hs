@@ -49,7 +49,7 @@ vehicleTypes        :: ClientM Object
 stationInformation  :: ClientM (ResponseWrapper [StationInformation])
 stationStatus       :: ClientM (ResponseWrapper [StationStatus])
 systemRegions       :: ClientM Object
-systemInformation   :: ClientM SystemInformationResponse
+systemInformation   :: ClientM (ResponseWrapper SystemInformation)
 systemPricingPlans  :: ClientM Object
 ( versions
   :<|> vehicleTypes
