@@ -226,6 +226,7 @@ library
                     , Server.Data.StationStatusVisualization
                     , CLI.Utils
                     , CLI.Poll
+                    , CLI.Poll.Utils
                     , CLI.Query
                     , CLI.Debug
                     , CLI.Events
