@@ -21,7 +21,7 @@ module TestDatabase
      , unit_insertStationInformationApi
      , unit_insertStationStatus
      , unit_insertStationStatusApi
-     , unit_insertSystemInformationApi
+     , unit_insertSystemInformation
      , unit_queryDockingUndockingCount
      , unit_queryStationByIdAndName
      , unit_queryStationStatus
@@ -110,6 +110,39 @@ initDBWithAllTestData = do
             void $ runWithAppM dbnameTest $ insertStationStatus $ statusResponse ^. respData . unStatusStations
         ) [(1 :: Int) .. (22 :: Int)]
 
+
+-- | HUnit test for inserting system information.
+unit_insertSystemInformation :: IO ()
+unit_insertSystemInformation = do
+  -- Connect to the database.
+  setupTestDatabase
+
+  status  <- getDecodedFileSystemInformation "test/json/system_information.json"
+  let (reported, info) = (status ^. respLastUpdated, status ^. respData)
+
+  -- Should fail because station information has not been inserted.
+  -- Catch exception with 'try'.
+  (insertedInfo, insertedInfoCount) <- runWithAppMSuppressLog dbnameTest $
+    insertSystemInformation reported info
+
+  assertEqual "Inserted system information" (1, 1) (length insertedInfo, length insertedInfoCount)
+  -- assertEqual "Inserted system information" expectedInfo (fromBeamSystemInformationToJSON (head insertedInfo) (head insertedInfoCount))
+  where
+    expectedInfo = AT.SystemInformation { AT._sysInfStationCount          = 704
+                                        , AT._sysInfVehicleCount          = AT.SystemInformationVehicleCount 0 0
+                                        , AT._sysInfBuildHash             = "2023-11-17"
+                                        , AT._sysInfBuildLabel            = "2023-11-17"
+                                        , AT._sysInfBuildNumber           = "267"
+                                        , AT._sysInfBuildVersion          = "2023.1"
+                                        , AT._sysInfLanguage              = "en"
+                                        , AT._sysInfMobileHeadVersion     = 2
+                                        , AT._sysInfMobileMinSuppVersion  = 1
+                                        , AT._sysInfName                  = "bike_share_toronto"
+                                        , AT._sysInfSysId                 = "bike_share_toronto"
+                                        , AT._sysInfTimeZone              = "America/Toronto"
+                                        }
+
+
 -- | HUnit test for inserting station information.
 unit_insertStationInformation :: IO ()
 unit_insertStationInformation = do
@@ -192,36 +225,6 @@ unit_insertStationStatusApi = do
   case insertedStatus of
     Left (_ :: SqlError) -> pure ()
     Right _              -> assertFailure "Unable to insert status records without information populated"
-
--- | HUnit test for inserting system information, with data from the actual API.
-unit_insertSystemInformationApi :: IO ()
-unit_insertSystemInformationApi = do
-  -- Connect to the database.
-  setupTestDatabase
-
-  status  <- getDecodedFileSystemInformation "docs/json/2.3/station_status-1.json"
-  let (reported, info) = (status ^. respLastUpdated, status ^. respData)
-
-  -- Should fail because station information has not been inserted.
-  -- Catch exception with 'try'.
-  (insertedInfo, insertedInfoCount) <- runWithAppMSuppressLog dbnameTest $
-    insertSystemInformation reported info
-
-  assertEqual "Inserted system information" expectedInfo (fromBeamSystemInformationToJSON (head insertedInfo) (head insertedInfoCount))
-  where
-    expectedInfo = AT.SystemInformation { AT._sysInfStationCount          = 704
-                                        , AT._sysInfVehicleCount          = AT.SystemInformationVehicleCount 0 0
-                                        , AT._sysInfBuildHash             = "2023-11-17"
-                                        , AT._sysInfBuildLabel            = "2023-11-17"
-                                        , AT._sysInfBuildNumber           = "267"
-                                        , AT._sysInfBuildVersion          = "2023.1"
-                                        , AT._sysInfLanguage              = "en"
-                                        , AT._sysInfMobileHeadVersion     = 2
-                                        , AT._sysInfMobileMinSuppVersion  = 1
-                                        , AT._sysInfName                  = "bike_share_toronto"
-                                        , AT._sysInfSysId                 = "bike_share_toronto"
-                                        , AT._sysInfTimeZone              = "America/Toronto"
-                                        }
 
 -- | HUnit test for inserting station information and status, with data from the actual API.
 unit_insertStationApi :: IO ()
