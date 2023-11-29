@@ -41,7 +41,7 @@ import           Servant.Client                ( ClientM )
 
 import           TextShow                      ( showt )
 
-import           UnliftIO                      ( async, liftIO, waitAnyCancel, waitBoth )
+import           UnliftIO                      ( Async, async, liftIO, waitAnyCancel, waitBoth )
 
 
 -- | Dispatch CLI arguments to the poller.
@@ -69,10 +69,6 @@ pollClient = do
 
 
     logInfo "Initializing polling and handling threads."
-    -- Create async actions for both requester and handler threads.
-    let createPollingThread queue ttlVar lastUpdatedVar = (async . forever) (requester queue ttlVar lastUpdatedVar)
-    let createHandlingThread queue = async . forever $ handler queue
-
     -- The polling threads.
     infoPollingThread    <- createPollingThread infoQueueResp    infoTtl    infoLastUpdated
     statusPollingThread  <- createPollingThread statusQueueResp  statusTtl  statusLastUpdated
@@ -91,6 +87,13 @@ pollClient = do
 
     logInfo "Polling and handling threads running. Press Ctrl+C to terminate."
     return ()
+
+-- Create async actions for both requester and handler threads.
+createPollingThread :: Pollable a => TBQueue a -> TVar Int -> TVar Int -> AppM (Async b)
+createPollingThread queue ttlVar lastUpdatedVar = (async . forever) (requester queue ttlVar lastUpdatedVar)
+
+createHandlingThread :: Pollable a => TBQueue a -> AppM (Async b)
+createHandlingThread queue = async . forever $ handler queue
 
 -- * TTL and timing handlers.
 
