@@ -256,8 +256,6 @@ library
     -- Modules included in this library but not exported.
     other-modules:    API.StationInformation
                     , API.StationStatus
-                    , API.Response.StationStatusResponse
-                    , API.Response.StationInformationResponse
                     , API.SystemInformation
                     , Database.BikeShare.SystemInformation
                     , Database.BikeShare.StationInformation
