@@ -20,11 +20,8 @@ module Database.BikeShare.Utils
 
 
 import           Control.Monad                 ( void )
-import           Control.Monad.Cont            ( when )
 
-import           Data.Maybe                    ( fromMaybe, isNothing )
 import           Data.String                   ( fromString )
-import           Data.Word                     ( Word16 )
 
 import           Database.Beam.Postgres
 import           Database.BikeShare.Connection
@@ -33,9 +30,7 @@ import           Database.PostgreSQL.Simple
 
 import           Formatting
 
-import           System.Environment            ( lookupEnv )
 
-import           Text.Read                     ( readMaybe )
 
 
 debug :: Bool

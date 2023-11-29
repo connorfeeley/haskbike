@@ -10,7 +10,8 @@
 -- | Test the database.
 
 module TestDatabase
-     ( initDBWithAllTestData
+     ( getDecodedFileSystemInformation
+     , initDBWithAllTestData
      , setupTestDatabase
      , unit_insertNewerStatusRecords
      , unit_insertNewerStatusRecordsInsert
@@ -20,6 +21,7 @@ module TestDatabase
      , unit_insertStationInformationApi
      , unit_insertStationStatus
      , unit_insertStationStatusApi
+     , unit_insertSystemInformationApi
      , unit_queryDockingUndockingCount
      , unit_queryStationByIdAndName
      , unit_queryStationStatus
@@ -28,7 +30,9 @@ module TestDatabase
 
 import           API.ResponseWrapper
 import           API.Types                               ( StationInformationResponse, StationStatusResponse,
-                                                           _unInfoStations, unInfoStations, unStatusStations )
+                                                           SystemInformationResponse, _unInfoStations, unInfoStations,
+                                                           unStatusStations )
+import qualified API.Types                               as AT
 
 import           AppEnv
 
@@ -86,6 +90,12 @@ getDecodedFileStatus :: FromJSON StationStatusResponse
                      => FilePath                  -- ^ Path to the JSON file.
                      -> IO StationStatusResponse  -- ^ Decoded 'StationStatusReponse'.
 getDecodedFileStatus = getDecodedFile
+
+-- | Helper function to decode a 'SystemInformationResponse' from a JSON file.
+getDecodedFileSystemInformation :: FromJSON SystemInformationResponse
+                     => FilePath                  -- ^ Path to the JSON file.
+                     -> IO SystemInformationResponse  -- ^ Decoded 'StationStatusReponse'.
+getDecodedFileSystemInformation = getDecodedFile
 
 
 -- | Initialize empty database from the test station information response and all 22 station status responses.
@@ -182,6 +192,36 @@ unit_insertStationStatusApi = do
   case insertedStatus of
     Left (_ :: SqlError) -> pure ()
     Right _              -> assertFailure "Unable to insert status records without information populated"
+
+-- | HUnit test for inserting system information, with data from the actual API.
+unit_insertSystemInformationApi :: IO ()
+unit_insertSystemInformationApi = do
+  -- Connect to the database.
+  setupTestDatabase
+
+  status  <- getDecodedFileSystemInformation "docs/json/2.3/station_status-1.json"
+  let (reported, info) = (status ^. respLastUpdated, status ^. respData)
+
+  -- Should fail because station information has not been inserted.
+  -- Catch exception with 'try'.
+  (insertedInfo, insertedInfoCount) <- runWithAppMSuppressLog dbnameTest $
+    insertSystemInformation reported info
+
+  assertEqual "Inserted system information" expectedInfo (fromBeamSystemInformationToJSON (head insertedInfo) (head insertedInfoCount))
+  where
+    expectedInfo = AT.SystemInformation { AT._sysInfStationCount          = 704
+                                        , AT._sysInfVehicleCount          = AT.SystemInformationVehicleCount 0 0
+                                        , AT._sysInfBuildHash             = "2023-11-17"
+                                        , AT._sysInfBuildLabel            = "2023-11-17"
+                                        , AT._sysInfBuildNumber           = "267"
+                                        , AT._sysInfBuildVersion          = "2023.1"
+                                        , AT._sysInfLanguage              = "en"
+                                        , AT._sysInfMobileHeadVersion     = 2
+                                        , AT._sysInfMobileMinSuppVersion  = 1
+                                        , AT._sysInfName                  = "bike_share_toronto"
+                                        , AT._sysInfSysId                 = "bike_share_toronto"
+                                        , AT._sysInfTimeZone              = "America/Toronto"
+                                        }
 
 -- | HUnit test for inserting station information and status, with data from the actual API.
 unit_insertStationApi :: IO ()

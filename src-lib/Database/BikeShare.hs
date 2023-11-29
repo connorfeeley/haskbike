@@ -83,7 +83,7 @@ bikeshareDb = defaultDbSettings `withDbModification`
       }
   , _bikeshareSystemInformation =
     setEntityName "system_information" <> modifyTableFields tableModification
-      { _sysInfKey                   = sysInfKeyFields "sys_inf"
+      { _sysInfKey                   = sysInfKeyFields ""
       , _sysInfBuildHash             = "build_hash"
       , _sysInfBuildLabel            = "build_label"
       , _sysInfBuildNumber           = "build_number"
@@ -94,6 +94,13 @@ bikeshareDb = defaultDbSettings `withDbModification`
       , _sysInfName                  = "name"
       , _sysInfSysId                 = "system_id"
       , _sysInfTimeZone              = "timezone"
+      }
+  , _bikeshareSystemInformationCount =
+    setEntityName "system_information_count" <> modifyTableFields tableModification
+      { _sysInfCntKey                = sysInfKeyFields ""
+      , _sysInfCntStationCount       = "station_count"
+      , _sysInfCntMechanicalCount    = "mechanical_count"
+      , _sysInfCntEbikeCount         = "ebike_count"
       }
   -- , _bikeshareDiagnostics =
   --   setEntityName "diagnostics" <> modifyTableFields tableModification

@@ -16,13 +16,13 @@ module Database.BikeShare.SystemInformation
      , SystemInformationKey
      , SystemInformationKeyMixin (..)
      , SystemInformationT (..)
-     , sysInfKeyFields
-     , sysInfoKey
-       -- Lenses
+     , fromBeamSystemInformationToJSON
      , fromJSONToBeamSystemInformation
      , fromJSONToBeamSystemInformationCount
+     , sysInfKeyFields
      , sysInfKeyId
      , sysInfKeyReported
+     , sysInfoKey
      ) where
 
 import qualified API.Types                     as AT
@@ -52,8 +52,8 @@ deriving instance Eq (SystemInformationKeyMixin Identity)
 
 sysInfKeyFields :: (IsString (Columnar f (SqlSerial Int32)), IsString (Columnar f UTCTime)) => String -> SystemInformationKeyMixin f
 sysInfKeyFields b =
-  SystemInformationKey (fromString (b <> "_boost"))
-                       (fromString (b <> "_iconic"))
+  SystemInformationKey (fromString (b <> "id"))
+                       (fromString (b <> "reported"))
 
 sysInfoKey :: DataType Postgres SystemInformationKey
 sysInfoKey = DataType pgTextType
@@ -123,7 +123,7 @@ instance Table SystemInformationCountT where
   primaryKey = SystemInformationCountId <$> _sysInfCntKey
 
 
--- | Convert from the JSON StationInformation to the Beam StationInformation type
+-- | Convert from the JSON SystemInformation to the Beam SystemInformation type
 fromJSONToBeamSystemInformation :: UTCTime -> AT.SystemInformation -> SystemInformationT (QExpr Postgres s)
 fromJSONToBeamSystemInformation lastReported inf =
   SystemInformation { _sysInfKey                  = SystemInformationKey default_ (val_ lastReported)
@@ -146,3 +146,20 @@ fromJSONToBeamSystemInformationCount lastReported inf =
                          , _sysInfCntMechanicalCount = (val_ . fromIntegral . AT.sysInfMechanicalCount . AT._sysInfVehicleCount) inf
                          , _sysInfCntEbikeCount      = (val_ . fromIntegral . AT.sysInfEbikeCount      . AT._sysInfVehicleCount) inf
                          }
+
+-- | Convert from the Beam SystemInformation type to the JSON SystemInformation
+fromBeamSystemInformationToJSON :: SystemInformation -> SystemInformationCount -> AT.SystemInformation
+fromBeamSystemInformationToJSON inf infCnt = AT.SystemInformation
+  { AT._sysInfStationCount         = fromIntegral $ _sysInfCntStationCount infCnt
+  , AT._sysInfVehicleCount         = AT.SystemInformationVehicleCount (fromIntegral $ _sysInfCntMechanicalCount infCnt) (fromIntegral $ _sysInfCntEbikeCount infCnt)
+  , AT._sysInfBuildHash            = T.unpack (_sysInfBuildHash    inf)
+  , AT._sysInfBuildLabel           = T.unpack (_sysInfBuildLabel   inf)
+  , AT._sysInfBuildNumber          = T.unpack (_sysInfBuildNumber  inf)
+  , AT._sysInfBuildVersion         = T.unpack (_sysInfBuildVersion inf)
+  , AT._sysInfLanguage             = T.unpack (_sysInfLanguage inf)
+  , AT._sysInfMobileHeadVersion    = fromIntegral $ _sysInfMobileHeadVersion    inf
+  , AT._sysInfMobileMinSuppVersion = fromIntegral $ _sysInfMobileMinSuppVersion inf
+  , AT._sysInfName                 = T.unpack (_sysInfName     inf)
+  , AT._sysInfSysId                = T.unpack (_sysInfSysId    inf)
+  , AT._sysInfTimeZone             = T.unpack (_sysInfTimeZone inf)
+  }
