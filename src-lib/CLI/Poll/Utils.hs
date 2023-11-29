@@ -57,7 +57,7 @@ handleTimeElapsed logPrefix apiResult lastUpdatedVar = do
   if timeElapsed >= 0
     then do -- Update last_updated variable.
       liftIO $ atomically $ writeTVar lastUpdatedVar (utcToPosix currentTime')
-      logWarning $ format "({}) last updated [{}]" logPrefix currentTime'
+      logInfo $ format "({}) last updated [{}]" logPrefix currentTime'
       pure Nothing
     else do
       logWarning $ format "({}) last updated went backwards: [{}] -> [{}] | ({})" logPrefix previousTime' currentTime' timeElapsed
