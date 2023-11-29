@@ -27,6 +27,7 @@ import           Colog                         ( HasLog (..), LogAction (..), Me
                                                  filterBySeverity, logException, richMessageAction,
                                                  simpleMessageAction )
 
+import           Control.Exception             ( throw )
 import           Control.Monad.Catch
 import           Control.Monad.Except
 import           Control.Monad.Reader          ( MonadReader, ReaderT (..), ask, asks )
@@ -99,7 +100,7 @@ withPostgres action = do
   case res of
     Left (e :: SqlError) ->
       logException e >>
-      liftIO exitFailure
+      throw e
     Right result -> pure result
 
 -- | Fetch client manager from the environment.
