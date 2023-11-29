@@ -5,14 +5,13 @@
 module API.SystemInformation where
 
 import           API.Classes
-import           API.ResponseWrapper
 
-import           Control.Lens        hiding ( (.=) )
+import           Control.Lens hiding ( (.=) )
 
-import           Data.Aeson          ( FromJSON (parseJSON), KeyValue ((.=)), ToJSON (toJSON), Value (Object), object,
-                                       withObject, (.:) )
+import           Data.Aeson   ( FromJSON (parseJSON), KeyValue ((.=)), ToJSON (toJSON), Value (Object), object,
+                                withObject, (.:) )
 
-import           GHC.Generics        ( Generic )
+import           GHC.Generics ( Generic )
 
 -- * Count of bikes by type.
 data SystemInformationVehicleCount where

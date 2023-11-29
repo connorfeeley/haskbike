@@ -51,7 +51,7 @@ stationStatus       :: ClientM (ResponseWrapper [StationStatus])
 systemRegions       :: ClientM Object
 systemInformation   :: ClientM (ResponseWrapper SystemInformation)
 systemPricingPlans  :: ClientM Object
-( versions
+(      versions
   :<|> vehicleTypes
   :<|> stationInformation
   :<|> stationStatus

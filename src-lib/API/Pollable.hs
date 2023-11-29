@@ -12,7 +12,7 @@ import           UnliftIO
 
 
 class Pollable a where
-    request :: AppM (Either ClientError a)
+    request :: ClientM a
 
     requester :: Pollable a
               => TBQueue a -- ^ Queue of responses.

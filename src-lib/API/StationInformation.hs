@@ -14,7 +14,6 @@ module API.StationInformation
      ) where
 
 import           API.Classes
-import           API.ResponseWrapper
 
 import           Control.Lens         hiding ( (.=) )
 

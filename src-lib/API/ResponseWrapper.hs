@@ -20,7 +20,6 @@ import           API.Classes
 import           Control.Lens     hiding ( (.=) )
 
 import           Data.Aeson
-import           Data.Aeson.Types ( Parser )
 import           Data.Time
 import           Data.Time.Extras
 

@@ -37,6 +37,8 @@ import           Formatting
 
 import           Prelude                       hiding ( log )
 
+import           Servant.Client                ( ClientM )
+
 import           TextShow                      ( showt )
 
 import           UnliftIO                      ( async, liftIO, waitAnyCancel, waitBoth )
@@ -51,8 +53,8 @@ dispatchPoll _options = pollClient
 pollClient :: AppM ()
 pollClient = do
     -- Initialize TVars and TBQueues for station information and station status.
-    (statusTtl, statusLastUpdated, statusQueueResp :: TBQueue (ResponseWrapper [AT.StationStatus]),
-     infoTtl, infoLastUpdated, infoQueueResp :: TBQueue (ResponseWrapper [AT.StationInformation]),
+    (statusTtl, statusLastUpdated, statusQueueResp    :: TBQueue (ResponseWrapper [AT.StationStatus]),
+     infoTtl, infoLastUpdated, infoQueueResp          :: TBQueue (ResponseWrapper [AT.StationInformation]),
      sysInfoTtl, sysInfoLastUpdated, sysInfoQueueResp :: TBQueue (ResponseWrapper AT.SystemInformation)) <- liftIO $
         (,,,,,,,,) <$> newTVarIO 0 <*> newTVarIO 0 <*> newTBQueueIO 4
                    <*> newTVarIO 0 <*> newTVarIO 0 <*> newTBQueueIO 4
@@ -115,7 +117,8 @@ handleTimeElapsed logPrefix apiResult lastUpdatedVar = do
 
 
 -- | Handle last_updated field in response.
-handleTTL :: Text.Text         -- ^ Log prefix
+handleTTL :: Pollable (ResponseWrapper a)
+          => Text.Text         -- ^ Log prefix
           -> ResponseWrapper a -- ^ TTL from API response.
           -> TVar Int          -- ^ TVar holding TTL.
           -> Maybe Int         -- ^ Optional number of seconds to extend TTL by.
@@ -128,32 +131,41 @@ handleTTL logPrefix apiResult ttlVar extendBy = do
 
   liftIO $ atomically $ writeTVar ttlVar (ttlSecs + fromMaybe 0 extendBy)
 
+requesterFn :: Pollable (ResponseWrapper a)
+            => Text.Text
+            -> ClientM (ResponseWrapper a)
+            -> TBQueue (ResponseWrapper a)
+            -> TVar Int
+            -> TVar Int
+            -> AppM ()
+requesterFn prefix query queue intervalSecsVar lastUpdated = void $ do
+  runQueryM query >>= \case
+    Left err -> logException err >> throw err
+    Right result -> do
+      -- Handle TTL upfront, so that we don't sleep when called
+      -- for the first time from 'pollClient' (TTL = 0).
+      intervalSecs <- liftIO $ readTVarIO intervalSecsVar
+      log D $ format "({}) Sleeping for {} seconds." prefix intervalSecs
+      liftIO $ threadDelay (intervalSecs * 1000000)
+
+      elapsedResult <- handleTimeElapsed prefix result lastUpdated
+      handleTTL prefix result intervalSecsVar elapsedResult
+
+      -- If 'elapsedResult' is a 'Just', that indicates that last_updated went backwards.
+      -- In that case, we should NOT write the result to the queue, and instead extend the
+      -- time until our next poll by however long the time went backwards.
+      when (isNothing elapsedResult) (liftIO $ atomically $ writeTBQueue queue result)
 
 -- * Station status handling.
 
 instance Pollable (ResponseWrapper [AT.StationStatus]) where
-  request = runQueryM stationStatus
+  -- | Endpoint (ClientM a)
+  request = stationStatus
 
   -- | Thread action to request station information from API.
-  requester queue intervalSecsVar lastUpdated = void $ do
-    runQueryM stationStatus >>= \case
-      Left err -> logException err >> throw err
-      Right result -> do
-        -- Handle TTL upfront, so that we don't sleep when called
-        -- for the first time from 'pollClient' (TTL = 0).
-        intervalSecs <- liftIO $ readTVarIO intervalSecsVar
-        log D $ format "(Status) Sleeping for {} seconds." intervalSecs
-        liftIO $ threadDelay (intervalSecs * 1000000)
+  requester = requesterFn "Stn Status" request
 
-        elapsedResult <- handleTimeElapsed "Status" result lastUpdated
-        handleTTL "Status" result intervalSecsVar elapsedResult
-
-        -- If 'elapsedResult' is a 'Just', that indicates that last_updated went backwards.
-        -- In that case, we should NOT write the result to the queue, and instead extend the
-        -- time until our next poll by however long the time went backwards.
-        when (isNothing elapsedResult) (liftIO $ atomically $ writeTBQueue queue result)
-
--- | Thread action to handle API response for station status query.
+  -- | Thread action to handle API response for station status query.
   handler queue = void $ do
     response <- liftIO $ atomically $ readTBQueue queue
 
@@ -179,26 +191,11 @@ instance Pollable (ResponseWrapper [AT.StationStatus]) where
 -- * Station information handling.
 
 instance Pollable (ResponseWrapper [AT.StationInformation]) where
-  request = runQueryM stationInformation
+  -- | Endpoint (ClientM a)
+  request = stationInformation
 
   -- | Thread action to request station information from API.
-  requester queue intervalSecsVar lastUpdated = void $ do
-    request >>= \case
-      Left err -> logException err >> throw err
-      Right result -> do
-        -- Handle TTL upfront, so that we don't sleep when called
-        -- for the first time from 'pollClient' (TTL = 0).
-        intervalSecs <- liftIO $ readTVarIO intervalSecsVar
-        log D $ format "(Info) Sleeping for {} seconds." intervalSecs
-        liftIO $ threadDelay (intervalSecs * 1000000)
-
-        elapsedResult <- handleTimeElapsed "Info" result lastUpdated
-        handleTTL "Info" result intervalSecsVar elapsedResult
-
-        -- If 'elapsedResult' is a 'Just', that indicates that last_updated went backwards.
-        -- In that case, we should NOT write the result to the queue, and instead extend the
-        -- time until our next poll by however long the time went backwards.
-        when (isNothing elapsedResult) (liftIO $ atomically $ writeTBQueue queue result)
+  requester = requesterFn "Stn Info" request
 
   -- | Thread action to handle API response for station information query.
   handler queue = void $ do
@@ -222,26 +219,11 @@ instance Pollable (ResponseWrapper [AT.StationInformation]) where
 -- * System information handling.
 
 instance Pollable (ResponseWrapper AT.SystemInformation) where
-  request = runQueryM systemInformation
+  -- | Endpoint (ClientM a)
+  request = systemInformation
 
   -- | Thread action to request station information from API.
-  requester queue intervalSecsVar lastUpdated = void $ do
-    request >>= \case
-      Left err -> logException err >> throw err
-      Right result -> do
-        -- Handle TTL upfront, so that we don't sleep when called
-        -- for the first time from 'pollClient' (TTL = 0).
-        intervalSecs <- liftIO $ readTVarIO intervalSecsVar
-        log D $ format "(Sys Info) Sleeping for {} seconds." intervalSecs
-        liftIO $ threadDelay (intervalSecs * 1000000)
-
-        elapsedResult <- handleTimeElapsed "Sys Info" result lastUpdated
-        handleTTL "Sys Info" result intervalSecsVar elapsedResult
-
-        -- If 'elapsedResult' is a 'Just', that indicates that last_updated went backwards.
-        -- In that case, we should NOT write the result to the queue, and instead extend the
-        -- time until our next poll by however long the time went backwards.
-        when (isNothing elapsedResult) (liftIO $ atomically $ writeTBQueue queue result)
+  requester = requesterFn "Sys Info" request
 
   -- | Thread action to handle API response for station information query.
   handler queue = void $ do
