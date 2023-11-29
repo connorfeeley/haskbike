@@ -87,7 +87,7 @@ handleStationInformation = do
   log D "Requested station information from API."
 
   for_ (rightToMaybe stationInfo) $ \response -> do
-        let stations = response ^. respData . unInfoStations
+        let stations = response ^. respData
         log D "Inserting station information into database."
         insertStationInformation stations >>= report
         log D "Inserted station information into database."

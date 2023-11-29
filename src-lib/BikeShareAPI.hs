@@ -18,7 +18,7 @@ import           Servant.API
 type BikeShareAPI =
   "gbfs_versions"                             :> Get '[JSON] Object
   :<|> "en" :> "vehicle_types"                :> Get '[JSON] Object
-  :<|> "en" :> "station_information"          :> Get '[JSON] StationInformationResponse
+  :<|> "en" :> "station_information"          :> Get '[JSON] (ResponseWrapper [StationInformation])
   :<|> "en" :> "station_status"               :> Get '[JSON] StationStatusResponse
   :<|> "en" :> "system_regions"               :> Get '[JSON] Object
   :<|> "en" :> "system_information"           :> Get '[JSON] SystemInformationResponse

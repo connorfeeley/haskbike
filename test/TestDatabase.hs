@@ -30,8 +30,7 @@ module TestDatabase
 
 import           API.ResponseWrapper
 import           API.Types                               ( StationInformationResponse, StationStatusResponse,
-                                                           SystemInformationResponse, _unInfoStations, unInfoStations,
-                                                           unStatusStations )
+                                                           SystemInformationResponse, unStatusStations )
 import qualified API.Types                               as AT
 
 import           AppEnv
@@ -102,7 +101,7 @@ getDecodedFileSystemInformation = getDecodedFile
 initDBWithAllTestData :: IO ()
 initDBWithAllTestData = do
   info <- getDecodedFileInformation  "docs/json/2.3/station_information-1.json"
-  void $ runWithAppM dbnameTest $ insertStationInformation $ info   ^. respData . unInfoStations
+  void $ runWithAppM dbnameTest $ insertStationInformation $ info   ^. respData
 
   -- Insert test station status data 1-22.
   mapM_ (\i -> do
@@ -153,7 +152,7 @@ unit_insertStationInformation = do
   stationInformationResponse <- getDecodedFileInformation "test/json/station_information.json"
 
   -- Insert test data.
-  inserted_info <- runWithAppM dbnameTest $ insertStationInformation $ _unInfoStations $ stationInformationResponse ^. respData
+  inserted_info <- runWithAppM dbnameTest $ insertStationInformation $ stationInformationResponse ^. respData
 
   assertEqual "Inserted station information" 7 (length inserted_info)
 
@@ -168,7 +167,7 @@ unit_insertStationStatus = do
   status  <- getDecodedFileStatus      "test/json/station_status.json"
 
   -- Insert test data.
-  insertedInfo   <- runWithAppM dbnameTest $ insertStationInformation $ info   ^. respData . unInfoStations
+  insertedInfo   <- runWithAppM dbnameTest $ insertStationInformation $ info   ^. respData
   insertedStatus <- runWithAppM dbnameTest $ insertStationStatus $ status ^. respData . unStatusStations
 
   assertEqual "Inserted station information" 704 (length insertedInfo)
@@ -185,7 +184,7 @@ unit_queryStationStatus = do
   status  <- getDecodedFileStatus       "test/json/station_status.json"
 
   -- Insert test data.
-  insertedInfo   <- runWithAppM dbnameTest $ insertStationInformation $ info   ^. respData . unInfoStations
+  insertedInfo   <- runWithAppM dbnameTest $ insertStationInformation $ info   ^. respData
   insertedStatus <- runWithAppM dbnameTest $ insertStationStatus $ status ^. respData . unStatusStations
 
   assertEqual "Inserted station information" 704 (length insertedInfo)
@@ -205,7 +204,7 @@ unit_insertStationInformationApi = do
   info    <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
 
   -- Insert test data.
-  void $ runWithAppM dbnameTest $ insertStationInformation $ info ^. respData . unInfoStations
+  void $ runWithAppM dbnameTest $ insertStationInformation $ info ^. respData
 
 
 -- | HUnit test for inserting station status, with data from the actual API.
@@ -237,7 +236,7 @@ unit_insertStationApi = do
   status  <- getDecodedFileStatus      "docs/json/2.3/station_status-1.json"
 
   -- Insert test data.
-  inserted_info   <- runWithAppM dbnameTest $ insertStationInformation $ info   ^. respData . unInfoStations
+  inserted_info   <- runWithAppM dbnameTest $ insertStationInformation $ info   ^. respData
   inserted_status <- runWithAppM dbnameTest $ insertStationStatus $ status ^. respData . unStatusStations
 
   assertEqual "Inserted station information" 704 (length inserted_info)
@@ -277,7 +276,7 @@ doInsertNewerStatusRecords = do
   status_2  <- getDecodedFileStatus      "docs/json/2.3/station_status-2.json"
 
   -- Insert test data.
-  void $ runWithAppM dbnameTest $ insertStationInformation $ info     ^. respData . unInfoStations
+  void $ runWithAppM dbnameTest $ insertStationInformation $ info     ^. respData
   void $ runWithAppM dbnameTest $ insertStationStatus      $ status_1 ^. respData . unStatusStations
 
   -- Return maps of updated and same API statuses
@@ -308,7 +307,7 @@ doStatusInsertOnce = do
   status_2  <- getDecodedFileStatus      "docs/json/2.3/station_status-2.json"
 
   -- Insert test data.
-  void $ runWithAppM dbnameTest $ insertStationInformation $ info     ^. respData . unInfoStations
+  void $ runWithAppM dbnameTest $ insertStationInformation $ info     ^. respData
   void $ runWithAppM dbnameTest $ insertStationStatus      $ status_1 ^. respData . unStatusStations
 
   -- Insert second round of test data (some of which have reported since the first round was inserted).
@@ -334,7 +333,7 @@ doStatusInsertTwice = do
   status_2  <- getDecodedFileStatus "docs/json/2.3/station_status-2.json"
 
   -- Insert first round of test data.
-  void $ runWithAppM dbnameTest $ insertStationInformation $ info     ^. respData . unInfoStations
+  void $ runWithAppM dbnameTest $ insertStationInformation $ info     ^. respData
   void $ runWithAppM dbnameTest $ insertStationStatus      $ status_1 ^. respData . unStatusStations
 
   -- Insert second round of test data (some of which have reported since the first round was inserted).
@@ -349,7 +348,7 @@ unit_queryStationByIdAndName :: IO ()
 unit_queryStationByIdAndName = do
   setupTestDatabase
   info <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
-  void $ runWithAppM dbnameTest $ insertStationInformation $ info ^. respData . unInfoStations
+  void $ runWithAppM dbnameTest $ insertStationInformation $ info ^. respData
 
   assertEqual "Station ID for 'King St W / Joe Shuster Way'" (Just 7148)  =<< runWithAppM dbnameTest (queryStationId "King St W / Joe Shuster Way")
   assertEqual "Station ID for 'Wellesley Station Green P'" (Just 7001)    =<< runWithAppM dbnameTest (queryStationId "Wellesley Station Green P")

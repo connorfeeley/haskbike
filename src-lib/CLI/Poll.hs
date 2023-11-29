@@ -1,4 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
 -- | Poll the API for status updates, inserting results in database as needed.
 module CLI.Poll
      ( dispatchPoll
@@ -11,7 +10,7 @@ import           API.ClientLifted
 import           API.Pollable
 import           API.ResponseWrapper
 import           API.Types                     ( StationInformationResponse, StationStatusResponse,
-                                                 SystemInformationResponse, unInfoStations, unStatusStations )
+                                                 SystemInformationResponse, unStatusStations )
 
 import           AppEnv
 
@@ -206,7 +205,7 @@ instance Pollable StationInformationResponse where
   handler queue = void $ do
     response <- liftIO $ atomically $ readTBQueue queue
 
-    let info = response ^. (respData . unInfoStations)
+    let info = response ^. respData
     log I $ format "(Info) Received {} info records from API." (length info)
 
     -- Insert the station information (updating existing records, if existing).
