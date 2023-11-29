@@ -33,3 +33,9 @@ sums:
     curl "https://tor.publicbikesystem.net/customer/gbfs/v2/en/station_status" | \
         jq --raw-output '.data.stations[] | [.vehicle_types_available[].count] | @tsv' | \
         awk '{j[1]="Boost"; j[2]="Iconic"; j[3]="E-Fit"; j[4]="E-Fit G5"; for (i=1; i<=NF; i++) sum[i]+=$i} END {for (i in sum) {print j[i] ": " sum[i]}}'
+
+test:
+    cabal test --test-show-details=direct
+
+test-one PATTERN:
+    cabal test --test-show-details=direct --test-options='--pattern /{{PATTERN}}/'
