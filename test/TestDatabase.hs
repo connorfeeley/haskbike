@@ -125,12 +125,13 @@ unit_insertSystemInformation = do
   (insertedInfo, insertedInfoCount) <- runWithAppMSuppressLog dbnameTest $
     insertSystemInformation reported info
 
-  assertEqual "Inserted system information" (1, 1) (length insertedInfo, length insertedInfoCount)
-  -- assertEqual "Inserted system information" expectedInfo (fromBeamSystemInformationToJSON (head insertedInfo) (head insertedInfoCount))
+  assertEqual "Inserted system information length" (1, 1) (length insertedInfo, length insertedInfoCount)
+
+  assertEqual "Inserted system information" expectedInfo (fromBeamSystemInformationToJSON (head insertedInfo) (head insertedInfoCount))
   where
-    expectedInfo = AT.SystemInformation { AT._sysInfStationCount          = 704
-                                        , AT._sysInfVehicleCount          = AT.SystemInformationVehicleCount 0 0
-                                        , AT._sysInfBuildHash             = "2023-11-17"
+    expectedInfo = AT.SystemInformation { AT._sysInfStationCount          = 756
+                                        , AT._sysInfVehicleCount          = AT.SystemInformationVehicleCount 8126 825
+                                        , AT._sysInfBuildHash             = "2a5b9d6"
                                         , AT._sysInfBuildLabel            = "2023-11-17"
                                         , AT._sysInfBuildNumber           = "267"
                                         , AT._sysInfBuildVersion          = "2023.1"
