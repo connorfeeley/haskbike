@@ -29,20 +29,20 @@ import qualified API.Types                     as AT
 
 import           Control.Lens
 
-import           Data.Coerce                   ( coerce )
 import           Data.Int                      ( Int32 )
 import           Data.String                   ( IsString (fromString) )
 import qualified Data.Text                     as T
 import           Data.Time
 
 import           Database.Beam
+import           Database.Beam.Backend         ( SqlSerial )
 import           Database.Beam.Postgres        ( Postgres )
 import           Database.Beam.Postgres.Syntax ( pgTextType )
 
 
 -- | Beam mixin for common system information fields.
 data SystemInformationKeyMixin f where
-  SystemInformationKey :: { _sysInfKeyId       :: Columnar f Int32,
+  SystemInformationKey :: { _sysInfKeyId       :: Columnar f (SqlSerial Int32),
                             _sysInfKeyReported :: Columnar f UTCTime
                           } -> SystemInformationKeyMixin f
   deriving (Generic, Beamable)
@@ -50,7 +50,7 @@ type SystemInformationKey = SystemInformationKeyMixin Identity
 deriving instance Show (SystemInformationKeyMixin Identity)
 deriving instance Eq (SystemInformationKeyMixin Identity)
 
-sysInfKeyFields :: (IsString (Columnar f Int32), IsString (Columnar f UTCTime)) => String -> SystemInformationKeyMixin f
+sysInfKeyFields :: (IsString (Columnar f (SqlSerial Int32)), IsString (Columnar f UTCTime)) => String -> SystemInformationKeyMixin f
 sysInfKeyFields b =
   SystemInformationKey (fromString (b <> "_boost"))
                        (fromString (b <> "_iconic"))
@@ -60,7 +60,7 @@ sysInfoKey = DataType pgTextType
 
 
 -- | SystemInformationKey Lenses
-sysInfKeyId       :: Lens' SystemInformationKey Int32
+sysInfKeyId       :: Lens' SystemInformationKey (SqlSerial Int32)
 sysInfKeyReported :: Lens' SystemInformationKey UTCTime
 
 SystemInformationKey (LensFor sysInfKeyId)  _      = tableLenses
@@ -127,15 +127,15 @@ instance Table SystemInformationCountT where
 fromJSONToBeamSystemInformation :: UTCTime -> AT.SystemInformation -> SystemInformationT (QExpr Postgres s)
 fromJSONToBeamSystemInformation lastReported inf =
   SystemInformation { _sysInfKey                  = SystemInformationKey default_ (val_ lastReported)
-                    , _sysInfBuildHash            = val_ $ T.pack (AT._sysInfBuildHash inf)
-                    , _sysInfBuildLabel           = val_ $ T.pack (AT._sysInfBuildLabel inf)
-                    , _sysInfBuildNumber          = val_ $ T.pack (AT._sysInfBuildNumber inf)
+                    , _sysInfBuildHash            = val_ $ T.pack (AT._sysInfBuildHash    inf)
+                    , _sysInfBuildLabel           = val_ $ T.pack (AT._sysInfBuildLabel   inf)
+                    , _sysInfBuildNumber          = val_ $ T.pack (AT._sysInfBuildNumber  inf)
                     , _sysInfBuildVersion         = val_ $ T.pack (AT._sysInfBuildVersion inf)
                     , _sysInfLanguage             = val_ $ T.pack (AT._sysInfLanguage inf)
-                    , _sysInfMobileHeadVersion    = val_ $ fromIntegral $ AT._sysInfMobileHeadVersion inf
+                    , _sysInfMobileHeadVersion    = val_ $ fromIntegral $ AT._sysInfMobileHeadVersion    inf
                     , _sysInfMobileMinSuppVersion = val_ $ fromIntegral $ AT._sysInfMobileMinSuppVersion inf
-                    , _sysInfName                 = val_ $ T.pack (AT._sysInfName inf)
-                    , _sysInfSysId                = val_ $ T.pack (AT._sysInfSysId inf)
+                    , _sysInfName                 = val_ $ T.pack (AT._sysInfName     inf)
+                    , _sysInfSysId                = val_ $ T.pack (AT._sysInfSysId    inf)
                     , _sysInfTimeZone             = val_ $ T.pack (AT._sysInfTimeZone inf)
                     }
 
