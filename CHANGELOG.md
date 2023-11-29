@@ -7,3 +7,7 @@
 ## 1.1.0 -- 2023-11-21
 
 * Added support for export of performance data as CSV.
+
+## 1.2.0 -- 2023-11-29
+
+* Added database support for system information.
