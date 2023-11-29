@@ -4,12 +4,13 @@
 
 module API.SystemInformation where
 
+import           API.Classes
 import           API.ResponseWrapper
 
 import           Control.Lens        hiding ( (.=) )
 
-import           Data.Aeson          ( FromJSON (parseJSON), KeyValue ((.=)), ToJSON (toJSON), object, withObject,
-                                       (.:) )
+import           Data.Aeson          ( FromJSON (parseJSON), KeyValue ((.=)), ToJSON (toJSON), Value (Object), object,
+                                       withObject, (.:) )
 
 import           GHC.Generics        ( Generic )
 
@@ -95,6 +96,10 @@ instance FromJSON SystemInformation where
 
 -- | Type synonym for the wrapped station information response.
 type SystemInformationResponse = ResponseWrapper SystemInformation
+
+instance HasDataField SystemInformation where
+  -- For SystemInformation, since it's directly under 'data', we pass the parser through
+  getDataField obj = parseJSON (Object obj)
 
 -- | Lenses
 makeLenses ''SystemInformation

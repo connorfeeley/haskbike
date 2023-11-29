@@ -201,6 +201,7 @@ library
                     , AppEnv
                     , API.ResponseWrapper
                     , API.Client
+                    , API.Classes
                     , API.ClientLifted
                     -- , API.DebugClient
                     , TimeInterval

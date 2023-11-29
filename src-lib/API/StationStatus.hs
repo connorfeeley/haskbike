@@ -25,6 +25,8 @@ module API.StationStatus
      , statusVehicleTypesAvailable
      ) where
 
+import           API.Classes
+
 import           Control.Lens         hiding ( (.=) )
 
 import           Data.Aeson           ( FromJSON (parseJSON), KeyValue ((.=)), ToJSON (toJSON), Value (String), object,
@@ -203,6 +205,12 @@ instance FromJSON TorontoVehicleType where
      "EFIT"    -> return EFit
      "EFIT G5" -> return EFitG5
      _         -> fail ("Invalid TorontoVehicleType: " ++ show t)
+
+
+instance HasDataField [StationStatus] where
+  -- For a list of SystemStatus, we expect to find them under the 'stations' key
+  getDataField obj = obj .: "stations"
+
 
 -- | Lenses
 makeLenses ''StationStatus

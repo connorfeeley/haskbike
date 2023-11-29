@@ -13,6 +13,9 @@ module API.StationInformation
      , StationInformation (..)
      ) where
 
+import           API.Classes
+import           API.ResponseWrapper
+
 import           Control.Lens         hiding ( (.=) )
 
 import           Data.Aeson
@@ -200,6 +203,10 @@ instance FromJSON StationInformation where
     <*> v .:  "_bluetooth_id"
     <*> v .:  "_ride_code_support"
     <*> v .:  "rental_uris"
+
+instance HasDataField [StationInformation] where
+  -- For a list of StationInformation, we expect to find them under the 'stations' key
+  getDataField obj = obj .: "stations"
 
 -- | Lenses
 makeLenses ''StationInformation
