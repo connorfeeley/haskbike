@@ -51,9 +51,9 @@ dispatchDatabase options = do
   case optCommand options of
     Poll _pollOptions
       | optEnableMigration options -> do
-          log D "Migrating database."
+          log I "Migrating database."
           withConn >>= liftIO . migrateDB
-          log D "Migrated database."
+          log I "Migrated database."
           withConn >>= liftIO . pure
       | otherwise -> withConn >>= liftIO . pure
     Reset resetOptions -> handleReset options resetOptions >>= liftIO . pure
@@ -68,8 +68,8 @@ handleReset options resetOptions = do
   if optResetOnly resetOptions
     then log W "Only resetting database..." >> withConn >>= liftIO . dropTables >> log W "Database reset; exiting." >> liftIO exitSuccess
     else log W "Resetting database..."      >> withConn >>= liftIO . dropTables >> log W "Database reset." >>
-         log W "Migrating database." >> withConn >>= liftIO . migrateDB >> log W "Migrations performed." >>
-         log I "Initializing database." >> handleInformation >> liftIO exitSuccess
+         log W "Migrating database."        >> withConn >>= liftIO . migrateDB >> log W "Migrations performed." >>
+         log I "Initializing database."     >> handleInformation >> liftIO exitSuccess
 
 -- | Helper for station information request.
 handleInformation :: AppM ()
