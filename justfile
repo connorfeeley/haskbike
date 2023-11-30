@@ -2,6 +2,8 @@
 # ^ A shebang isn't required, but allows a justfile to be executed
 #   like a script, with `./justfile test`, for example.
 
+set shell := ["bash", "-c"]
+
 export ENDPOINT := "http://localhost:8081"
 # export ENDPOINT := "https://bikes.cfeeley.org"
 
@@ -42,3 +44,19 @@ test-one PATTERN:
 
 poll:
     cabal run haskbike -- --plain poll
+
+export-rds-table TABLE:
+    source ./.env.awsrds.ADMIN
+    PGPASSWORD=$HASKBIKE_PASSWORD psql -h "$HASKBIKE_PGDBHOST" -p "$HASKBIKE_PGDBPORT" -U "$HASKBIKE_USERNAME" \
+        -d haskbike \
+        -c "SELECT * FROM public.{{TABLE}}" \
+        --csv -P csv_fieldsep="^" > "./scripts/database-dumps/{{TABLE}}-$(date '+%Y-%m-%d-%H-%M').csv"
+
+
+# Not working.
+# import-local-table TABLE CSVFILE:
+#     source ./.env.local
+
+#     PGPASSWORD=$HASKBIKE_PASSWORD psql -h "$HASKBIKE_PGDBHOST" -p "$HASKBIKE_PGDBPORT" -U "$HASKBIKE_USERNAME" \
+#         -d haskbike \
+#         -c "COPY {{TABLE}} FROM '{{CSVFILE}}' WITH (FORMAT csv, DELIMITER '^', HEADER false)"
