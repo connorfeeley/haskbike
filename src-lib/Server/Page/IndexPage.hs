@@ -49,7 +49,7 @@ instance ToHtml IndexPage where
           p_ $ "This project was borne out of my frustration for why " <> a_ [linkHref_ "/" (_stationStatusLink params (Just 7001) Nothing Nothing)] "Wellesley Station" <> " has had a complement of at least 9 - often more - disabled e-bikes ever since the station was converted to a charging station a few months ago."
           p_ [style_ "font-style: italic; margin-left: 40px"] "Click the link to see the last 24 hours of data for Wellesley Station."
         br_ []
-        p_ [style_ "font-style: italic"] "This is a work-in-progress."
+        p_ [style_ "font-style: italic"] ("This is a work-in-progress; see " <> a_ [href_ "https://cfeeley.org/city-stuff/freedom-of-information/"] "my blog" <> " for a series of articles on this.")
 
 
         contentSubhead "Source Code"
