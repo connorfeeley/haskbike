@@ -85,19 +85,19 @@ data SystemStatusVisualizationPage where
   deriving (Show)
 
 instance ToHtmlComponents SystemStatusVisualizationPage where
-  toMenuHeading _ = menuHeading "#visualization" "Available Bikes"
+  toMenuHeading _ = menuHeading "#visualization" "System Status"
 
 instance ToHtml SystemStatusVisualizationPage where
   toHtmlRaw = toHtml
   toHtml params = do
     -- Injected into 'SideMenu'
     div_ [class_ "header"] $ do
-      h1_ [] "System Information"
+      h1_ [] "System Status"
       h2_ [] (toHtml dateHeader)
     br_ []
     div_ [class_ "content"] $ do
       -- Informational headers
-      h2_ [style_ "text-align: center"] "System Information & Statistics"
+      h2_ [style_ "text-align: center"] "System Status & Statistics"
       br_ []
       div_ [class_ "pure-g", style_ "text-align: center"] $ do
         let headers = [ toHtml (_systemStatusVisPageInfo params)
