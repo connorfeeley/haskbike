@@ -29,7 +29,10 @@ synopsis:           Library and client API for Toronto Bike Share.
 -- description:
 
 -- URL for the project homepage or repository.
-homepage:           https://git.sr.ht/~cfeeley/haskbike
+homepage:           https://github.com/connorfeeley/haskbike
+
+-- The stability level of the package, e.g. alpha, experimental, provisional, stable.
+stability:          experimental
 
 -- The license under which the package is released.
 license:            BSD-3-Clause
@@ -239,7 +242,7 @@ library
                     , API.Pollable
                     , API.BikeShare
                     , Data.Time.Extras
-                    , Formatting
+                    , Text.Pretty.Simple.Extras
                     , Database.BikeShare.Types
                     , Database.BikeShare
                     , Database.BikeShare.ImportExport

@@ -56,7 +56,7 @@ import           Database.BikeShare.Expressions
 import           Database.BikeShare.Operations.Dockings
 import           Database.PostgreSQL.Simple               ( Only (..), query_ )
 
-import           Formatting
+import           Text.Pretty.Simple.Extras
 
 import           GHC.Exts                                 ( fromString )
 

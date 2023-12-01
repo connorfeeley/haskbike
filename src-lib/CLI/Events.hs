@@ -34,7 +34,7 @@ import           Database.BikeShare.StatusVariationQuery
 
 import           Fmt
 
-import           Formatting
+import           Text.Pretty.Simple.Extras
 
 import           Prelude                                 hiding ( log )
 

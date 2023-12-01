@@ -29,7 +29,7 @@ import           Database.BikeShare.Utils
 
 import           Fmt
 
-import           Formatting
+import           Text.Pretty.Simple.Extras
 
 import           Network.HTTP.Client      ( newManager )
 import           Network.HTTP.Client.TLS  ( tlsManagerSettings )
