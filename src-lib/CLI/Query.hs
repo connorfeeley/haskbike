@@ -27,7 +27,7 @@ import           Database.BikeShare.Operations
 
 import           Fmt
 
-import           Formatting
+import           Text.Pretty.Simple.Extras
 
 import           Prelude                       hiding ( log, unlines )
 

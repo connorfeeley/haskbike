@@ -30,7 +30,7 @@ import           Database.BikeShare.Migrations
 import           Database.BikeShare.Operations
 import           Database.BikeShare.Utils
 
-import           Formatting
+import           Text.Pretty.Simple.Extras
 
 import           Options.Applicative
 

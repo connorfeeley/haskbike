@@ -28,7 +28,7 @@ import           Database.BikeShare.StationStatus
 
 import           Fmt                                   ( format )
 
-import           Formatting                            ( pShowCompact )
+import           Text.Pretty.Simple.Extras                            ( pShowCompact )
 
 import           Prelude                               hiding ( log )
 

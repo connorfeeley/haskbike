@@ -28,7 +28,7 @@ import           Database.BikeShare.Connection
 import           Database.BikeShare.Migrations ( migrateDB )
 import           Database.PostgreSQL.Simple
 
-import           Formatting
+import           Text.Pretty.Simple.Extras
 
 
 

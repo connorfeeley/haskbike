@@ -45,7 +45,7 @@ import qualified Database.Beam.Query.Adhoc                as Adhoc
 import           Database.BikeShare
 import           Database.BikeShare.StatusVariationQuery
 
-import           Formatting
+import           Text.Pretty.Simple.Extras
 
 import           TimeInterval
 

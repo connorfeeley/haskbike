@@ -1,6 +1,6 @@
 -- | Formatting utilities.
 
-module Formatting
+module Text.Pretty.Simple.Extras
      ( compactOutputOptions
      , pPrint
      , pPrintCompact
