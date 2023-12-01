@@ -52,6 +52,9 @@ export-rds-table TABLE:
         -c "SELECT * FROM public.{{TABLE}}" \
         --csv -P csv_fieldsep="^" > "./scripts/database-dumps/{{TABLE}}-$(date '+%Y-%m-%d-%H-%M').csv"
 
+watch:
+    fd . --extension=nix --extension=hs | entr -a cabal build
+
 
 # Not working.
 # import-local-table TABLE CSVFILE:
