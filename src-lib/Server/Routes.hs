@@ -60,6 +60,7 @@ import           Server.Page.PerformanceCSV
 import           Server.Page.SideMenu
 import           Server.Page.StationList
 import           Server.Page.StationStatusVisualization
+import           Server.Page.SystemInfoVisualization
 import           Server.Page.SystemStatusVisualization
 import           Server.StatusDataParams
 import           Server.VisualizationAPI
@@ -117,6 +118,7 @@ visualizationHandler = VisualizationAPI
   { pageForStation     = stationStatusVisualizationPage
   , systemStatus       = systemStatusVisualizationPage
   , stationList        = stationListPage
+  , systemInfo         = systemInfoVisualizationPage
   , performanceCsvPage = performanceCsvPageHandler
   }
 
@@ -263,6 +265,43 @@ stationListPage selection = do
                          , _visualizationPageLink  = fieldLink pageForStation
                          }
   pure PureSideMenu { visPageParams = page
+                    , staticLink    = fieldLink staticApi
+                    , versionText   = getGitHash
+                    }
+
+-- | Create the system status visualization page record.
+systemInfoVisualizationPage :: Maybe LocalTime -> Maybe LocalTime -> ServerAppM (PureSideMenu SystemInfoVisualizationPage)
+systemInfoVisualizationPage startTime endTime = do
+  appEnv <- asks serverAppEnv
+  let tz = envTimeZone appEnv
+  currentUtc <- liftIO getCurrentTime
+
+  let latest    = maybe currentUtc (localTimeToUTC tz) endTime
+  let earliest  = hourBefore latest
+  let increment = minsPerHourlyInterval 4 -- 15 minutes
+
+  -- TODO: querySystemStatusAtTime should probably just return this type directly.
+  systemStatus <- liftIO $ runAppM appEnv $ querySystemStatusAtRange earliest latest increment
+  let systemStatusInfo st =
+        SystemInfoVisualizationInfo
+        { sysInfoVisInfNumStations   = 0
+        , sysInfoVisInfNumBikesAvail = st ^. _2 & fromIntegral
+        , sysInfoVisInfNumBikesDisab = st ^. _3 & fromIntegral
+        , sysInfoVisInfNumDocksAvail = st ^. _4 & fromIntegral
+        , sysInfoVisInfNumDocksDisab = st ^. _5 & fromIntegral
+        , sysInfoVisInfNumIconic     = st ^. _6 & fromIntegral
+        , sysInfoVisInfNumEfit       = st ^. _7 & fromIntegral
+        , sysInfoVisInfNumEfitG5     = st ^. _8 & fromIntegral
+        }
+
+  let visualizationPage = SystemInfoVisualizationPage { _sysInfoVisPageTimeRange     = TimePair startTime endTime tz currentUtc
+                                                      , _sysInfoVisPageTimeZone      = tz
+                                                      , _sysInfoVisPageCurrentUtc    = currentUtc
+                                                      , _sysInfoVisPageInfo          = (fromMaybe def . listToMaybe . reverse . map systemStatusInfo) systemStatus -- use the latest value
+                                                      , _sysInfoVisPageDataLink      = fieldLink dataForStation Nothing startTime endTime
+                                                      , _sysInfoVisPageStaticLink    = fieldLink staticApi
+                                                      }
+  pure PureSideMenu { visPageParams = visualizationPage
                     , staticLink    = fieldLink staticApi
                     , versionText   = getGitHash
                     }

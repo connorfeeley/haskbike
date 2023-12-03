@@ -219,6 +219,7 @@ library
                     , Server.Page.PerformanceCSV
                     , Server.Page.StationStatusVisualization
                     , Server.Page.SystemStatusVisualization
+                    , Server.Page.SystemInfoVisualization
                     , Server.Page.StatusVisualization
                     , Server.Page.SideMenu
                     , Server.Page.Utils
