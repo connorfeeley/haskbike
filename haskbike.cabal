@@ -228,6 +228,7 @@ library
                     , Server.PureCSS
                     , Server.Classes
                     , Server.Data.StationStatusVisualization
+                    , Server.Data.SystemInformationVisualization
                     , CLI.Utils
                     , CLI.Poll
                     , CLI.Poll.Utils
@@ -257,6 +258,7 @@ library
                     , Database.BikeShare.Operations.FactorsCSV
                     , Database.BikeShare.Expressions
                     , Visualization.StationOccupancy
+                    , Visualization.SystemInformation
                     , Graphics.Vega.VegaLite.Extra
 
     -- Modules included in this library but not exported.

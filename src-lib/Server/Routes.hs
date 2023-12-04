@@ -15,22 +15,22 @@ module Server.Routes
      , server
      ) where
 
-import           API.StationStatus                        ( TorontoVehicleType (..) )
+import           API.StationStatus                          ( TorontoVehicleType (..) )
 
 import           AppEnv
 
 import           Colog
 
-import           Control.Lens                             hiding ( reuse )
+import           Control.Lens                               hiding ( reuse )
 import           Control.Monad.Except
 
-import           Data.ByteString.Lazy                     ( ByteString )
-import           Data.Csv                                 ( encodeDefaultOrderedByName )
-import           Data.Default.Class                       ( def )
-import           Data.List                                ( sortOn )
-import           Data.Maybe                               ( fromMaybe, listToMaybe )
-import           Data.Text                                ( Text )
-import qualified Data.Text                                as T
+import           Data.ByteString.Lazy                       ( ByteString )
+import           Data.Csv                                   ( encodeDefaultOrderedByName )
+import           Data.Default.Class                         ( def )
+import           Data.List                                  ( sortOn )
+import           Data.Maybe                                 ( fromMaybe, listToMaybe )
+import           Data.Text                                  ( Text )
+import qualified Data.Text                                  as T
 import           Data.Time
 import           Data.Time.Extras
 
@@ -44,15 +44,16 @@ import           Database.BikeShare.StatusVariationQuery
 
 import           Fmt
 
-import           Lucid                                    ( ToHtml )
+import           Lucid                                      ( ToHtml )
 
 import           Servant
 import           Servant.HTML.Lucid
 import           Servant.Server.Generic
 
-import           Server.Classes                           ( ToHtmlComponents )
+import           Server.Classes                             ( ToHtmlComponents )
 import           Server.ComponentsAPI
 import           Server.Data.StationStatusVisualization
+import           Server.Data.SystemInformationVisualization
 import           Server.DataAPI
 import           Server.DebugAPI
 import           Server.Page.IndexPage
@@ -105,6 +106,7 @@ statusHandler :: DataAPI (AsServerT ServerAppM)
 statusHandler =  DataAPI { dataForStation       = stationStatusData
                          , integralsForStation  = stationIntegralData
                          , factorsForStation    = stationFactorData
+                         , systemInfoData       = systemInfoDataHandler
                          , performanceCsv       = performanceCsvHandler
                          , dockingEventsData    = handleDockingEventsData
                          , chargingEventsData   = handleChargingEventsData
@@ -142,6 +144,13 @@ stationFactorData :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAp
 stationFactorData stationId startTime endTime = do
   logInfo $ format "Creating factor JSON payload for {station ID: {}, start time: {}, end time: {}} " stationId startTime endTime
   dataSource <- generateJsonDataSourceFactor  stationId startTime endTime
+  logDebug "Created factor JSON payload"
+  pure dataSource
+
+systemInfoDataHandler :: Maybe LocalTime -> Maybe LocalTime -> ServerAppM [SystemInformationCountVisualization]
+systemInfoDataHandler startTime endTime = do
+  logInfo $ format "Creating system information JSON payload for {start time: {}, end time: {}} " startTime endTime
+  dataSource <- generateJsonDataSourceSysInfo startTime endTime
   logDebug "Created factor JSON payload"
   pure dataSource
 
@@ -277,31 +286,14 @@ systemInfoVisualizationPage startTime endTime = do
   let tz = envTimeZone appEnv
   currentUtc <- liftIO getCurrentTime
 
-  let latest    = maybe currentUtc (localTimeToUTC tz) endTime
-  let earliest  = hourBefore latest
-  let increment = minsPerHourlyInterval 4 -- 15 minutes
-
-  -- TODO: querySystemStatusAtTime should probably just return this type directly.
-  systemStatus <- liftIO $ runAppM appEnv $ querySystemStatusAtRange earliest latest increment
-  let systemStatusInfo st =
-        SystemInfoVisualizationInfo
-        { sysInfoVisInfNumStations   = 0
-        , sysInfoVisInfNumBikesAvail = st ^. _2 & fromIntegral
-        , sysInfoVisInfNumBikesDisab = st ^. _3 & fromIntegral
-        , sysInfoVisInfNumDocksAvail = st ^. _4 & fromIntegral
-        , sysInfoVisInfNumDocksDisab = st ^. _5 & fromIntegral
-        , sysInfoVisInfNumIconic     = st ^. _6 & fromIntegral
-        , sysInfoVisInfNumEfit       = st ^. _7 & fromIntegral
-        , sysInfoVisInfNumEfitG5     = st ^. _8 & fromIntegral
+  let visualizationPage = SystemInfoVisualizationPage
+        { _sysInfoVisPageTimeRange     = TimePair startTime endTime tz currentUtc
+        , _sysInfoVisPageTimeZone      = tz
+        , _sysInfoVisPageCurrentUtc    = currentUtc
+        , _sysInfoVisPageDataLink      = fieldLink systemInfoData startTime endTime
+        , _sysInfoVisPageStaticLink    = fieldLink staticApi
+        , _sysInfoVisPageSysStatusLink = fieldLink systemStatus Nothing Nothing
         }
-
-  let visualizationPage = SystemInfoVisualizationPage { _sysInfoVisPageTimeRange     = TimePair startTime endTime tz currentUtc
-                                                      , _sysInfoVisPageTimeZone      = tz
-                                                      , _sysInfoVisPageCurrentUtc    = currentUtc
-                                                      , _sysInfoVisPageInfo          = (fromMaybe def . listToMaybe . reverse . map systemStatusInfo) systemStatus -- use the latest value
-                                                      , _sysInfoVisPageDataLink      = fieldLink dataForStation Nothing startTime endTime
-                                                      , _sysInfoVisPageStaticLink    = fieldLink staticApi
-                                                      }
   pure PureSideMenu { visPageParams = visualizationPage
                     , staticLink    = fieldLink staticApi
                     , versionText   = getGitHash

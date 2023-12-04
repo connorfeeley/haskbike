@@ -5,8 +5,6 @@
 module Server.Page.SystemStatusVisualization
      ( SystemStatusVisualizationInfo (..)
      , SystemStatusVisualizationPage (..)
-     , vegaSourceUrlsCdn
-     , vegaSourceUrlsLocal
      ) where
 
 
@@ -30,8 +28,6 @@ import           Server.Page.Utils
 import           Server.StatusDataParams
 
 import           TextShow
-
-import           Visualization.StationOccupancy
 
 data SystemStatusVisualizationInfo where
   SystemStatusVisualizationInfo :: { sysStatVisInfNumStations   :: Int

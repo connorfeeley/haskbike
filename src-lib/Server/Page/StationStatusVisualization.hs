@@ -3,8 +3,6 @@
 
 module Server.Page.StationStatusVisualization
      ( StationStatusVisualizationPage (..)
-     , vegaSourceUrlsCdn
-     , vegaSourceUrlsLocal
      ) where
 
 
@@ -29,8 +27,6 @@ import           Server.Page.StatusVisualization
 import           Server.Page.Utils
 
 import           TextShow
-
-import           Visualization.StationOccupancy
 
 data StationStatusVisualizationPage where
   StationStatusVisualizationPage :: { _statusVisPageStationInfo    :: StationInformation

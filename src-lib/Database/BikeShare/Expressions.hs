@@ -14,6 +14,7 @@ module Database.BikeShare.Expressions
      , integrateColumns
      , queryLatestStatusBetweenExpr
      , queryLatestStatuses
+     , queryLatestSystemInfo
      , queryStationIdExpr
      , queryStationIdLikeExpr
      , queryStationStatusExpr
@@ -329,3 +330,16 @@ queryLatestStatuses = do
 
 daysAgo_ :: QGenExpr ctxt Postgres s Int32 -> QGenExpr ctxt Postgres s UTCTime
 daysAgo_ = customExpr_ (\offs -> "(NOW() - INTERVAL '" <> offs <> " DAYS')")
+
+-- | Get the latest status records for each station.
+queryLatestSystemInfo :: be ~ Postgres
+                      => With be BikeshareDb
+                      (Q be BikeshareDb s
+                       (SystemInformationCountT (QGenExpr QValueContext Postgres s)))
+queryLatestSystemInfo = do
+  sysInfoCte <- selecting $
+    pgNubBy_ (\cnt -> (_sysInfCntStationCount cnt, _sysInfCntMechanicalCount cnt, _sysInfCntEbikeCount cnt)) $
+    orderBy_ (asc_ . (_sysInfKeyReported . _sysInfCntKey))
+    (all_ (bikeshareDb ^. bikeshareSystemInformationCount))
+
+  pure $ reuse sysInfoCte

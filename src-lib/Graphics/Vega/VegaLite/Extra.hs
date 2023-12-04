@@ -3,18 +3,96 @@
 -- | This module defines the data types used to render the station status visualization page.
 
 module Graphics.Vega.VegaLite.Extra
-     ( VegaSourceURLs (..)
+     ( ShowVegaActions (..)
+     , VegaSourceURLs (..)
+     , makeProps
+     , printVegaLiteSchema
      , toHtmlWithUrls
+     , vegaEmbedCfg
      , vegaSourceUrlsCdn
      , vegaSourceUrlsLocal
+       -- Colours
+     , black
+     , commonColourRange
+     , green
+     , lemon
+     , lightBlue
+     , salmon
+     , skyBlue
+     , transparent
      ) where
 
 import           Data.Aeson
-import qualified Data.Aeson.Text        as A
-import qualified Data.Text.Lazy         as TL
+import           Data.Aeson.Encode.Pretty   ( encodePretty )
+import qualified Data.Aeson.Text            as A
+import qualified Data.ByteString.Lazy.Char8 as Char8
+import qualified Data.Text                  as T
+import qualified Data.Text.Lazy             as TL
 
-import qualified Graphics.Vega.VegaLite as VL
+import           Graphics.Vega.VegaLite     hiding ( Number )
+import qualified Graphics.Vega.VegaLite     as VL
 
+import           Prelude                    hiding ( filter, lookup, repeat )
+
+
+transparent, lemon, lightBlue, skyBlue, green, salmon, black :: String
+transparent = "rgb(0,0,0,0)" -- transparent
+lemon        = "#fffacd"
+lightBlue    = "#009ACD"
+skyBlue      = "#00688B"
+green        = "#1E4D2B"
+salmon       = "#FA8072"
+black        = "#000000"
+
+commonColourRange :: [T.Text]
+commonColourRange = map T.pack [ lemon       -- Available dock: lemon chiffron
+                               , green       -- Iconic: Cal Poly Pomona green
+                               , lightBlue   -- E-Fit: light blue
+                               , skyBlue     -- E-Fit G5: sky blue
+                               , salmon      -- Disabled bike: salmon
+                               , black       -- Disabled dock: black
+                               ]
+
+globalConfig :: [ConfigureSpec] -> PropertySpec
+globalConfig =
+  configure
+    . configuration (Axis [ DomainWidth 1 ])
+    . configuration (ViewStyle [ ViewStroke "transparent" ])
+    . configuration (SelectionStyle [(Single, [On "dblclick"])])
+    . configuration (BackgroundStyle "rgba(0, 0, 0, 0)")
+    . configuration (LegendStyle [LeOrient LOBottom])
+
+
+makeProps :: T.Text -> T.Text -> ([a] -> PropertySpec) -> [VLSpec] -> [PropertySpec]
+makeProps label dataUrl dataTransforms layers =
+  [ title label [ TOrient SBottom ]
+  , dataFromUrl dataUrl [ ]
+  , dataTransforms []
+  , layer layers
+  , widthOfContainer
+  , heightOfContainer
+  , autosize [ AFit, APadding, AResize ]
+  , globalConfig []
+  , resolve . resolution (RScale [(ChY, Independent)]) $ []
+  ]
+
+
+printVegaLiteSchema :: VegaLite -> IO ()
+printVegaLiteSchema schema = Char8.putStrLn (encodePretty (fromVL schema))
+
+data ShowVegaActions = ShowActions | HideActions
+
+-- | JSON configuration passed to Vega-Embed.
+vegaEmbedCfg :: ShowVegaActions -> Maybe Value
+vegaEmbedCfg showActions =
+  Just (toJSON (object [ ("logLevel", "4")
+                        , ("$schema", "/static/js/vega/schema/vega-lite/v4.json")
+                        , ("actions", actionToBool showActions)
+                        , ("scaleFactor", Number 10)
+                        ]))
+  where
+    actionToBool action = case action of ShowActions -> Bool True
+                                         HideActions -> Bool False
 -- | Data type holding the 3 required Javascript source files for Vega-Embed.
 data VegaSourceURLs where
   VegaSourceURLs :: { vegaUrl      :: TL.Text
