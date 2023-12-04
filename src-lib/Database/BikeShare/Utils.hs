@@ -31,8 +31,6 @@ import           Database.PostgreSQL.Simple
 import           Text.Pretty.Simple.Extras
 
 
-
-
 debug :: Bool
 debug = False
 

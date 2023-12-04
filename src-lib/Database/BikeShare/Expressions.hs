@@ -46,6 +46,7 @@ import           Database.Beam.Postgres
 import           Database.Beam.Postgres.Full
 import           Database.Beam.Postgres.Syntax
 import qualified Database.Beam.Query.Adhoc                as Adhoc
+import           Database.Beam.Query.CTE                  ( QAnyScope )
 import           Database.BikeShare
 import           Database.BikeShare.StatusVariationQuery
 
@@ -308,9 +309,8 @@ integrateColumns variation = do
 -- | Get the latest status records for each station.
 queryLatestStatuses :: be ~ Postgres
                     => With be BikeshareDb
-                    (Q be BikeshareDb s
-                     (StationStatusT (QGenExpr QValueContext be s)))
-                    -- (Q be BikeshareDb s (StationInformationT (QExpr be s), StationStatusT (QGenExpr QValueContext be s)))
+                    -- (Q be BikeshareDb s (StationStatusT (QGenExpr QValueContext be s)))
+                    (Q be BikeshareDb s (StationInformationT (QExpr be s), StationStatusT (QGenExpr QValueContext be s)))
 queryLatestStatuses = do
   infoCte <- selecting $ all_ (bikeshareDb ^. bikeshareStationInformation)
   statusCte <- selecting $
@@ -325,7 +325,7 @@ queryLatestStatuses = do
 
     guard_' (_statusStationId status `references_'` info)
 
-    pure status
+    pure (info, status)
 
 daysAgo_ :: QGenExpr ctxt Postgres s Int32 -> QGenExpr ctxt Postgres s UTCTime
 daysAgo_ = customExpr_ (\offs -> "(NOW() - INTERVAL '" <> offs <> " DAYS')")

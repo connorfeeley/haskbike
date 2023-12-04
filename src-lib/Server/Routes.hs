@@ -21,7 +21,7 @@ import           AppEnv
 
 import           Colog
 
-import           Control.Lens
+import           Control.Lens                             hiding ( reuse )
 import           Control.Monad.Except
 
 import           Data.ByteString.Lazy                     ( ByteString )
@@ -250,7 +250,8 @@ stationListPage :: Maybe T.Text -> ServerAppM (PureSideMenu StationList)
 stationListPage selection = do
   appEnv <- asks serverAppEnv
   logInfo $ format "Rendering station list"
-  info <- liftIO $ runAppM appEnv $ withPostgres $ runSelectReturningList $ select $ all_ (bikeshareDb ^. bikeshareStationInformation)
+
+  latest <- liftIO $ runAppM appEnv $ withPostgres $ runSelectReturningList $ selectWith queryLatestStatuses
 
   -- Convert 'station-type' query-param to 'StationRadioInputSelection' value.
   selectionVal <- case T.toLower <$> selection of
@@ -258,8 +259,8 @@ stationListPage selection = do
     Just "charging" -> logInfo "Filtering for charging stations" >> pure SelectionCharging
     Just "all"      -> logInfo "Filtering for all stations" >> pure SelectionAll
     _               -> logInfo "No filter applied" >> pure SelectionAll
-  let sortedInfo = sortOn _infoStationId info
-  let page = StationList { _stationList = sortedInfo
+  let sorted = sortOn (_infoStationId . fst) latest
+  let page = StationList { _stationList = sorted
                          , _staticLink = fieldLink staticApi
                          , _stationListSelection = selectionVal
                          , _visualizationPageLink  = fieldLink pageForStation
