@@ -199,14 +199,14 @@ instance ToHtml PerformanceData where
       div_ [class_ "tooltip"] $ do
         label_ [for_ "performance-data"] (h3_ "Performance")
         div_ [class_ "tooltip-bottom", style_ "min-width: 250px;"] $ do -- Tooltip content
-          p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "Bike available: " <> span_ [class_ "pure-u-1-2"] (elemIf strong_ (bikesAvailable < 0.2)  (factorOf bikesAvailable (Just 5)))
+          p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "Bike available: " <> span_ [class_ "pure-u-1-2"] (elemIf strong_ (bikesAvailable < 0.1)  (factorOf bikesAvailable (Just 5)))
           p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "Bike disabled:  " <> span_ [class_ "pure-u-1-2"] (elemIf strong_ (bikesDisabled  > 0.1)  (factorOf bikesDisabled  (Just 5)))
-          p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "Dock available: " <> span_ [class_ "pure-u-1-2"] (elemIf strong_ (docksAvailable < 0.2)  (factorOf docksAvailable (Just 5)))
+          p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "Dock available: " <> span_ [class_ "pure-u-1-2"] (elemIf strong_ (docksAvailable < 0.1)  (factorOf docksAvailable (Just 5)))
           p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "Dock disabled:  " <> span_ [class_ "pure-u-1-2"] (elemIf strong_ (docksDisabled  > 0.05) (factorOf docksDisabled  (Just 5)))
       div_ [id_ "performance-data"] $ do
-        p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "Bike available: " <> span_ [class_ "pure-u-1-2"] (elemIf strong_ (bikesAvailable < 0.2)  (factorOf bikesAvailable (Just 2)))
+        p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "Bike available: " <> span_ [class_ "pure-u-1-2"] (elemIf strong_ (bikesAvailable < 0.1)  (factorOf bikesAvailable (Just 2)))
         p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "Bike disabled:  " <> span_ [class_ "pure-u-1-2"] (elemIf strong_ (bikesDisabled  > 0.1)  (factorOf bikesDisabled  (Just 2)))
-        p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "Dock available: " <> span_ [class_ "pure-u-1-2"] (elemIf strong_ (docksAvailable < 0.2)  (factorOf docksAvailable (Just 2)))
+        p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "Dock available: " <> span_ [class_ "pure-u-1-2"] (elemIf strong_ (docksAvailable < 0.1)  (factorOf docksAvailable (Just 2)))
         p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "Dock disabled:  " <> span_ [class_ "pure-u-1-2"] (elemIf strong_ (docksDisabled  > 0.05) (factorOf docksDisabled  (Just 2)))
 
     where
