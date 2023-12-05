@@ -9,11 +9,14 @@ module Server.Page.StationList
      , StationRadioInputSelection (..)
      ) where
 
+import           Control.Lens
+
 import           Data.Maybe                            ( catMaybes, fromMaybe )
 import           Data.Text
 import           Data.Time
 
 import           Database.BikeShare.StationInformation
+import           Database.BikeShare.StationStatus
 
 import           Lucid
 
@@ -36,7 +39,7 @@ data StationRadioInputSelection where
   deriving stock (Eq, Show)
 
 data StationList where
-  StationList :: { _stationList :: [StationInformation]
+  StationList :: { _stationList :: [(StationInformation, StationStatus)]
                  , _staticLink :: Link
                  , _stationListSelection :: StationRadioInputSelection
                  , _visualizationPageLink :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> Link
@@ -62,14 +65,24 @@ toStationListTable params = do
       th_ [id_ "station-name-col"] "Name"
       th_ [id_ "station-type-col", style_ "text-align: center"] "Type"
       th_ [id_ "station-capacity-col", style_ "text-align: center"] "Capacity"
+      th_ [id_ "station-capacity-col", style_ "text-align: center"] "# Mechanical"
+      th_ [id_ "station-capacity-col", style_ "text-align: center"] "# E-Fit"
+      th_ [id_ "station-capacity-col", style_ "text-align: center"] "# E-Fit G5"
+      th_ [id_ "station-capacity-col", style_ "text-align: center"] "# Bikes Disabled"
+      th_ [id_ "station-capacity-col", style_ "text-align: center"] "# Docks Disabled"
       th_ [id_ "station-address-col"] "Address"
     tbody_ [] $ do
-      mapM_ (\station -> tr_ $ do
-              td_ [columnId_ "station-id-col"] (stationIdLink (_visualizationPageLink params) station)
-              td_ [columnId_ "station-name-col"] (toHtml (_infoName station))
-              td_ [columnId_ "station-type-col", style_ "text-align: center"] (stationTypeText station)
-              td_ [columnId_ "station-capacity-col", style_ "text-align: center"] (toHtml (showt (_infoCapacity station)))
-              td_ [columnId_ "station-address-col"] (toHtml (fromMaybe "" (_infoAddress station)))
+      mapM_ (\(info, status) -> tr_ $ do
+              td_ [columnId_ "station-id-col"] (stationIdLink (_visualizationPageLink params) info)
+              td_ [columnId_ "station-name-col"] (toHtml (_infoName info))
+              td_ [columnId_ "station-type-col", style_ "text-align: center"] (stationTypeText info)
+              td_ [columnId_ "station-capacity-col", style_ "text-align: center"] (toHtml (showt (_infoCapacity info)))
+              td_ [columnId_ "mechanical-available-col", style_ "text-align: center"] (toHtml (showt (status ^. vehicleTypesAvailableIconic)))
+              td_ [columnId_ "efit-available-col", style_ "text-align: center"] (toHtml (showt (status ^. vehicleTypesAvailableEfit)))
+              td_ [columnId_ "efit-g5-available-col", style_ "text-align: center"] (toHtml (showt (status ^. vehicleTypesAvailableEfitG5)))
+              td_ [columnId_ "bikes-disabled-col", style_ "text-align: center"] (toHtml (showt (status ^. statusNumBikesDisabled)))
+              td_ [columnId_ "docks-disabled-col", style_ "text-align: center"] (toHtml (showt (status ^. statusNumDocksDisabled)))
+              td_ [columnId_ "station-address-col"] (toHtml (fromMaybe "" (_infoAddress info)))
             ) (_stationList params)
 
 -- | Form use to select station information filter parameters.

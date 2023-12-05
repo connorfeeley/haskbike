@@ -7,18 +7,19 @@ module Server.DataAPI
      ( DataAPI (..)
      ) where
 
-import           Data.ByteString.Lazy                   ( ByteString )
-import           Data.Text                              ( Text )
+import           Data.ByteString.Lazy                       ( ByteString )
+import           Data.Text                                  ( Text )
 import           Data.Time
 
 import           Database.BikeShare.Operations.Dockings
 import           Database.BikeShare.Operations.Factors
 
-import           GHC.Generics                           ( Generic )
+import           GHC.Generics                               ( Generic )
 
 import           Servant
 
 import           Server.Data.StationStatusVisualization
+import           Server.Data.SystemInformationVisualization
 
 
 data DataAPI mode where
@@ -44,6 +45,12 @@ data DataAPI mode where
           :> QueryParam "start-time" LocalTime
           :> QueryParam "end-time" LocalTime
           :> Get '[JSON] [StatusFactor]
+    , systemInfoData :: mode :-
+      "data" :>
+        "system-information"
+          :> QueryParam "start-time" LocalTime
+          :> QueryParam "end-time" LocalTime
+          :> Get '[JSON] [SystemInformationCountVisualization]
     , performanceCsv :: mode :-
       "data" :>
         "system-status" :> "performance" :> "csv"

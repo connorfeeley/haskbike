@@ -19,6 +19,7 @@ import           Server.Page.PerformanceCSV
 import           Server.Page.SideMenu
 import           Server.Page.StationList
 import           Server.Page.StationStatusVisualization
+import           Server.Page.SystemInfoVisualization
 import           Server.Page.SystemStatusVisualization
 
 
@@ -38,6 +39,11 @@ data VisualizationAPI mode where
         "visualization" :>
           "station-list"
           :> QueryParam "station-type" Text :> Get '[HTML] (PureSideMenu StationList)
+    , systemInfo :: mode :-
+        "visualization" :>
+          "system-information"
+          :> QueryParam "start-time" LocalTime :> QueryParam "end-time" LocalTime
+          :> Get '[HTML] (PureSideMenu SystemInfoVisualizationPage)
     , performanceCsvPage :: mode :-
         "visualization" :>
           "system-status" :>

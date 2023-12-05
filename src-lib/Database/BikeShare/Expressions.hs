@@ -1,15 +1,20 @@
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-{-# OPTIONS_GHC -Wno-partial-type-signatures #-}
+{-# OPTIONS_GHC -Wno-type-defaults #-}
+
+{-# LANGUAGE PartialTypeSignatures #-}
 
 -- | This module contains expressions for querying the database.
 
 module Database.BikeShare.Expressions
-     ( disabledDocksExpr
+     ( daysAgo_
+     , disabledDocksExpr
      , infoByIdExpr
      , insertStationInformationExpr
      , integrateColumns
      , queryLatestStatusBetweenExpr
+     , queryLatestStatuses
+     , queryLatestSystemInfo
      , queryStationIdExpr
      , queryStationIdLikeExpr
      , queryStationStatusExpr
@@ -42,6 +47,7 @@ import           Database.Beam.Postgres
 import           Database.Beam.Postgres.Full
 import           Database.Beam.Postgres.Syntax
 import qualified Database.Beam.Query.Adhoc                as Adhoc
+import           Database.Beam.Query.CTE                  ( QAnyScope )
 import           Database.BikeShare
 import           Database.BikeShare.StatusVariationQuery
 
@@ -300,3 +306,40 @@ integrateColumns variation = do
          , chargingsSum ^. _3            -- Integrals of (bikes available, bikes disabled, docks available, docks disabled)
          , chargingsSum ^. _4            -- Integrals of (iconic available, efit available, efit g5 available)
          )
+
+-- | Get the latest status records for each station.
+queryLatestStatuses :: be ~ Postgres
+                    => With be BikeshareDb
+                    -- (Q be BikeshareDb s (StationStatusT (QGenExpr QValueContext be s)))
+                    (Q be BikeshareDb s (StationInformationT (QExpr be s), StationStatusT (QGenExpr QValueContext be s)))
+queryLatestStatuses = do
+  infoCte <- selecting $ all_ (bikeshareDb ^. bikeshareStationInformation)
+  statusCte <- selecting $
+    pgNubBy_ _statusStationId $
+    orderBy_ (asc_ . _statusLastReported) $
+    filter_ (\s -> s ^. statusLastReported >=. daysAgo_ 1)
+    (all_ (bikeshareDb ^. bikeshareStationStatus))
+
+  pure $ do
+    info <- reuse infoCte
+    status <- reuse statusCte
+
+    guard_' (_statusStationId status `references_'` info)
+
+    pure (info, status)
+
+daysAgo_ :: QGenExpr ctxt Postgres s Int32 -> QGenExpr ctxt Postgres s UTCTime
+daysAgo_ = customExpr_ (\offs -> "(NOW() - INTERVAL '" <> offs <> " DAYS')")
+
+-- | Get the latest status records for each station.
+queryLatestSystemInfo :: be ~ Postgres
+                      => With be BikeshareDb
+                      (Q be BikeshareDb s
+                       (SystemInformationCountT (QGenExpr QValueContext Postgres s)))
+queryLatestSystemInfo = do
+  sysInfoCte <- selecting $
+    pgNubBy_ (\cnt -> (_sysInfCntStationCount cnt, _sysInfCntMechanicalCount cnt, _sysInfCntEbikeCount cnt)) $
+    orderBy_ (asc_ . (_sysInfKeyReported . _sysInfCntKey))
+    (all_ (bikeshareDb ^. bikeshareSystemInformationCount))
+
+  pure $ reuse sysInfoCte

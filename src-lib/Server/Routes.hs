@@ -15,22 +15,22 @@ module Server.Routes
      , server
      ) where
 
-import           API.StationStatus                        ( TorontoVehicleType (..) )
+import           API.StationStatus                          ( TorontoVehicleType (..) )
 
 import           AppEnv
 
 import           Colog
 
-import           Control.Lens
+import           Control.Lens                               hiding ( reuse )
 import           Control.Monad.Except
 
-import           Data.ByteString.Lazy                     ( ByteString )
-import           Data.Csv                                 ( encodeDefaultOrderedByName )
-import           Data.Default.Class                       ( def )
-import           Data.List                                ( sortOn )
-import           Data.Maybe                               ( fromMaybe, listToMaybe )
-import           Data.Text                                ( Text )
-import qualified Data.Text                                as T
+import           Data.ByteString.Lazy                       ( ByteString )
+import           Data.Csv                                   ( encodeDefaultOrderedByName )
+import           Data.Default.Class                         ( def )
+import           Data.List                                  ( sortOn )
+import           Data.Maybe                                 ( fromMaybe, listToMaybe )
+import           Data.Text                                  ( Text )
+import qualified Data.Text                                  as T
 import           Data.Time
 import           Data.Time.Extras
 
@@ -44,15 +44,16 @@ import           Database.BikeShare.StatusVariationQuery
 
 import           Fmt
 
-import           Lucid                                    ( ToHtml )
+import           Lucid                                      ( ToHtml )
 
 import           Servant
 import           Servant.HTML.Lucid
 import           Servant.Server.Generic
 
-import           Server.Classes                           ( ToHtmlComponents )
+import           Server.Classes                             ( ToHtmlComponents )
 import           Server.ComponentsAPI
 import           Server.Data.StationStatusVisualization
+import           Server.Data.SystemInformationVisualization
 import           Server.DataAPI
 import           Server.DebugAPI
 import           Server.Page.IndexPage
@@ -60,6 +61,7 @@ import           Server.Page.PerformanceCSV
 import           Server.Page.SideMenu
 import           Server.Page.StationList
 import           Server.Page.StationStatusVisualization
+import           Server.Page.SystemInfoVisualization
 import           Server.Page.SystemStatusVisualization
 import           Server.StatusDataParams
 import           Server.VisualizationAPI
@@ -104,6 +106,7 @@ statusHandler :: DataAPI (AsServerT ServerAppM)
 statusHandler =  DataAPI { dataForStation       = stationStatusData
                          , integralsForStation  = stationIntegralData
                          , factorsForStation    = stationFactorData
+                         , systemInfoData       = systemInfoDataHandler
                          , performanceCsv       = performanceCsvHandler
                          , dockingEventsData    = handleDockingEventsData
                          , chargingEventsData   = handleChargingEventsData
@@ -117,6 +120,7 @@ visualizationHandler = VisualizationAPI
   { pageForStation     = stationStatusVisualizationPage
   , systemStatus       = systemStatusVisualizationPage
   , stationList        = stationListPage
+  , systemInfo         = systemInfoVisualizationPage
   , performanceCsvPage = performanceCsvPageHandler
   }
 
@@ -140,6 +144,13 @@ stationFactorData :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAp
 stationFactorData stationId startTime endTime = do
   logInfo $ format "Creating factor JSON payload for {station ID: {}, start time: {}, end time: {}} " stationId startTime endTime
   dataSource <- generateJsonDataSourceFactor  stationId startTime endTime
+  logDebug "Created factor JSON payload"
+  pure dataSource
+
+systemInfoDataHandler :: Maybe LocalTime -> Maybe LocalTime -> ServerAppM [SystemInformationCountVisualization]
+systemInfoDataHandler startTime endTime = do
+  logInfo $ format "Creating system information JSON payload for {start time: {}, end time: {}} " startTime endTime
+  dataSource <- generateJsonDataSourceSysInfo startTime endTime
   logDebug "Created factor JSON payload"
   pure dataSource
 
@@ -248,7 +259,8 @@ stationListPage :: Maybe T.Text -> ServerAppM (PureSideMenu StationList)
 stationListPage selection = do
   appEnv <- asks serverAppEnv
   logInfo $ format "Rendering station list"
-  info <- liftIO $ runAppM appEnv $ withPostgres $ runSelectReturningList $ select $ all_ (bikeshareDb ^. bikeshareStationInformation)
+
+  latest <- liftIO $ runAppM appEnv $ withPostgres $ runSelectReturningList $ selectWith queryLatestStatuses
 
   -- Convert 'station-type' query-param to 'StationRadioInputSelection' value.
   selectionVal <- case T.toLower <$> selection of
@@ -256,13 +268,33 @@ stationListPage selection = do
     Just "charging" -> logInfo "Filtering for charging stations" >> pure SelectionCharging
     Just "all"      -> logInfo "Filtering for all stations" >> pure SelectionAll
     _               -> logInfo "No filter applied" >> pure SelectionAll
-  let sortedInfo = sortOn _infoStationId info
-  let page = StationList { _stationList = sortedInfo
+  let sorted = sortOn (_infoStationId . fst) latest
+  let page = StationList { _stationList = sorted
                          , _staticLink = fieldLink staticApi
                          , _stationListSelection = selectionVal
                          , _visualizationPageLink  = fieldLink pageForStation
                          }
   pure PureSideMenu { visPageParams = page
+                    , staticLink    = fieldLink staticApi
+                    , versionText   = getGitHash
+                    }
+
+-- | Create the system status visualization page record.
+systemInfoVisualizationPage :: Maybe LocalTime -> Maybe LocalTime -> ServerAppM (PureSideMenu SystemInfoVisualizationPage)
+systemInfoVisualizationPage startTime endTime = do
+  appEnv <- asks serverAppEnv
+  let tz = envTimeZone appEnv
+  currentUtc <- liftIO getCurrentTime
+
+  let visualizationPage = SystemInfoVisualizationPage
+        { _sysInfoVisPageTimeRange     = TimePair startTime endTime tz currentUtc
+        , _sysInfoVisPageTimeZone      = tz
+        , _sysInfoVisPageCurrentUtc    = currentUtc
+        , _sysInfoVisPageDataLink      = fieldLink systemInfoData startTime endTime
+        , _sysInfoVisPageStaticLink    = fieldLink staticApi
+        , _sysInfoVisPageSysStatusLink = fieldLink systemStatus Nothing Nothing
+        }
+  pure PureSideMenu { visPageParams = visualizationPage
                     , staticLink    = fieldLink staticApi
                     , versionText   = getGitHash
                     }

@@ -135,9 +135,8 @@
                   timescaledb-tune
                   timescaledb-parallel-copy
                   ;
-                inherit (pkgs.nodePackages)
-                  prettier
-                  ;
+                inherit (pkgs.llvmPackages) bintools;
+                inherit (pkgs.nodePackages) prettier;
                 # PostgreSQL with extensions
                 inherit postgres;
 
