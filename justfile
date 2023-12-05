@@ -59,8 +59,13 @@ export-local-table TABLE:
         --csv -P csv_fieldsep="^" > "./scripts/database-dumps/{{TABLE}}-$(date '+%Y-%m-%d-%H-%M').csv"
 
 watch:
-    fd . --extension=nix --extension=hs | entr -a cabal build
+    fd . --extension=nix --extension=hs | entr -a just build-clang
 
+build-clang:
+    cabal --with-gcc=clang --with-ld=clang --ghc-options=-fllvm build
+
+build:
+    cabal build
 
 # Not working.
 # import-local-table TABLE CSVFILE:
