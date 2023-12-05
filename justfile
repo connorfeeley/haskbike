@@ -4,6 +4,8 @@
 
 set shell := ["bash", "-c"]
 
+export CABAL := "cabal --with-gcc=clang --with-ld=clang --ghc-options=-fllvm"
+
 export ENDPOINT := "http://localhost:8081"
 # export ENDPOINT := "https://bikes.cfeeley.org"
 
@@ -37,13 +39,13 @@ sums:
         awk '{j[1]="Boost"; j[2]="Iconic"; j[3]="E-Fit"; j[4]="E-Fit G5"; for (i=1; i<=NF; i++) sum[i]+=$i} END {for (i in sum) {print j[i] ": " sum[i]}}'
 
 test:
-    cabal test --test-show-details=direct
+    {{CABAL}} test --test-show-details=direct
 
 test-one PATTERN:
-    cabal test --test-show-details=direct --test-options='--pattern /{{PATTERN}}/'
+    {{CABAL}} test --test-show-details=direct --test-options='--pattern /{{PATTERN}}/'
 
 poll:
-    cabal run haskbike -- --plain poll
+    {{CABAL}} run haskbike -- --plain poll -v --log-database
 
 export-rds-table TABLE:
     source ./.env.awsrds.ADMIN
@@ -62,10 +64,10 @@ watch:
     fd . --extension=nix --extension=hs | entr -a just build-clang
 
 build-clang:
-    cabal --with-gcc=clang --with-ld=clang --ghc-options=-fllvm build
+    {{CABAL}} --with-gcc=clang --with-ld=clang --ghc-options=-fllvm build
 
 build:
-    cabal build
+    {{CABAL}} build
 
 # Not working.
 # import-local-table TABLE CSVFILE:
