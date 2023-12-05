@@ -15,6 +15,7 @@ import           Data.Time
 import           Data.Time.Extras
 
 import           Database.BikeShare.Operations.Dockings
+import           Database.BikeShare.Operations.Factors
 import           Database.BikeShare.StatusVariationQuery ( StatusThreshold (..), StatusVariationQuery (..) )
 
 import           Fmt
@@ -60,6 +61,13 @@ data EventsComponentAPI mode where
           :> QueryParam "start-time" LocalTime
           :> QueryParam "end-time" LocalTime
           :> Get '[HTML] ChargingHeader
+    , performanceHeader :: mode :-
+      "station-status"
+        :> "performance"
+          :> QueryParam "station-id" Int
+          :> QueryParam "start-time" LocalTime
+          :> QueryParam "end-time" LocalTime
+          :> Get '[HTML] PerformanceData
     } -> EventsComponentAPI mode
   deriving stock Generic
 
@@ -67,6 +75,7 @@ eventsComponentHandler :: EventsComponentAPI (AsServerT ServerAppM)
 eventsComponentHandler = EventsComponentAPI
   { dockingEventsHeader  = dockingsHeader
   , chargingEventsHeader = chargingsHeader
+  , performanceHeader    = performanceHeaderHandler
   }
 
 dockingsHeader :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM DockingHeader
@@ -109,3 +118,23 @@ chargingsHeader stationId startTime endTime = do
   chargings <- liftIO $ runAppM appEnv $ queryChargingEventsCount variation
 
   pure $ ChargingHeader chargings
+
+performanceHeaderHandler :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM PerformanceData
+performanceHeaderHandler stationId startTime endTime = do
+  appEnv <- getAppEnvFromServer
+  let tz = envTimeZone appEnv
+  currentUtc <- liftIO getCurrentTime
+
+  let params = StatusDataParams tz currentUtc (TimePair startTime endTime tz currentUtc)
+  let range = enforceTimeRangeBounds params
+
+  perf <- liftIO $ runAppM appEnv $
+    queryIntegratedStatus
+    (StatusVariationQuery (fromIntegral <$> stationId)
+      [ EarliestTime (localTimeToUTC tz (earliestTime  range))
+      , LatestTime (localTimeToUTC tz (latestTime range))
+      ]
+    )
+
+  pure $
+    (head . map integralToPerformanceData) perf

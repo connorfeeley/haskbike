@@ -57,6 +57,7 @@ instance ToHtml StationStatusVisualizationPage where
         let headers = catMaybes [ Just capacityHeader
                                 , Just $ hxSpinner_ staticLink (fieldLink dockingEventsHeader  (Just $ _statusVisPageStationId params) (earliestTime $ _statusVisPageTimeRange params) (latestTime $ _statusVisPageTimeRange params))
                                 , Just $ hxSpinner_ staticLink (fieldLink chargingEventsHeader (Just $ _statusVisPageStationId params) (earliestTime $ _statusVisPageTimeRange params) (latestTime $ _statusVisPageTimeRange params))
+                                , Just $ hxSpinner_ staticLink (fieldLink performanceHeader    (Just $ _statusVisPageStationId params) (earliestTime $ _statusVisPageTimeRange params) (latestTime $ _statusVisPageTimeRange params))
                                 , valetHeader
                                 , virtualHeader
                                 ]
