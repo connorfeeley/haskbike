@@ -118,15 +118,14 @@ bikeshareDb = defaultDbSettings `withDbModification`
   --     }
   }
 
--- bikeshareStationInformation :: Lens' (BikeshareDb f) (f (TableEntity StationInformationT))
--- bikeshareStationStatus      :: Lens' (BikeshareDb f) (f (TableEntity StationStatusT))
-
 -- Lenses
-BikeshareDb
-  (TableLens bikeshareStationInformation)
-  (TableLens bikeshareStationStatus)
-  (TableLens bikeshareSystemInformation)
-  (TableLens bikeshareSystemInformationCount)
-  (TableLens bikeshareQueryLog)
-  -- (TableLens bikeshareDiagnostics)
-  = dbLenses
+bikeshareStationInformation     :: Lens' (BikeshareDb f) (f (TableEntity StationInformationT))
+bikeshareStationStatus          :: Lens' (BikeshareDb f) (f (TableEntity StationStatusT))
+bikeshareSystemInformation      :: Lens' (BikeshareDb f) (f (TableEntity SystemInformationT))
+bikeshareSystemInformationCount :: Lens' (BikeshareDb f) (f (TableEntity SystemInformationCountT))
+bikeshareQueryLog               :: Lens' (BikeshareDb f) (f (TableEntity QueryLogT))
+BikeshareDb (TableLens bikeshareStationInformation) _ _ _ _     = dbLenses
+BikeshareDb _ (TableLens bikeshareStationStatus) _ _ _          = dbLenses
+BikeshareDb _ _ (TableLens bikeshareSystemInformation) _ _      = dbLenses
+BikeshareDb _ _ _ (TableLens bikeshareSystemInformationCount) _ = dbLenses
+BikeshareDb _ _ _ _ (TableLens bikeshareQueryLog)               = dbLenses
