@@ -17,18 +17,19 @@ module Database.BikeShare.QueryLogs
      , queryLogId
      , queryLogSuccess
      , queryLogTime
+     , toBeamQueryLog
      ) where
 
 import           Control.Lens
 
-import qualified Data.Aeson                         as Aeson
+import           Data.Aeson
 import           Data.Int
 import qualified Data.Text                          as T
 import           Data.Time
 
 import           Database.Beam
 import           Database.Beam.Backend              ( SqlSerial )
-import           Database.Beam.Postgres             ( PgJSONB )
+import           Database.Beam.Postgres             ( PgJSONB (PgJSONB), Postgres )
 import           Database.BikeShare.EndpointQueried
 
 -- * Beam table definition.
@@ -40,9 +41,15 @@ data QueryResult where
   QueryFailure :: UTCTime
                -> EndpointQueried
                -> T.Text
-               -> Aeson.Value
+               -> Value
                -> QueryResult
   deriving (Show, Eq)
+
+toBeamQueryLog :: QueryResult -> QueryLogT (QExpr Postgres s)
+toBeamQueryLog (QuerySuccess t ep)                  =
+  QueryLog default_ (val_ t) (val_ ep) (val_ True)  (val_ Nothing) (val_ Nothing)
+toBeamQueryLog (QueryFailure t ep err_msg json_err) =
+  QueryLog default_ (val_ t) (val_ ep) (val_ False) ((val_ . Just) err_msg) ((val_ . Just . PgJSONB . toJSON) json_err)
 
 data QueryLogT f where
   QueryLog :: { _queryLogId       :: C f (SqlSerial Int32)
@@ -50,7 +57,7 @@ data QueryLogT f where
               , _queryLogEndpoint :: C f EndpointQueried
               , _queryLogSuccess  :: C f Bool
               , _queryLogErrMsg   :: C f (Maybe T.Text)
-              , _queryLogErrJson  :: C f (Maybe (PgJSONB Aeson.Value))
+              , _queryLogErrJson  :: C f (Maybe (PgJSONB Value))
               } -> QueryLogT f
   deriving (Generic, Beamable)
 
@@ -72,7 +79,7 @@ queryLogTime     :: Lens' (QueryLogT f) (C f UTCTime)
 queryLogEndpoint :: Lens' (QueryLogT f) (C f EndpointQueried)
 queryLogSuccess  :: Lens' (QueryLogT f) (C f Bool)
 queryLogErrMsg   :: Lens' (QueryLogT f) (C f (Maybe T.Text))
-queryLogErrJson  :: Lens' (QueryLogT f) (C f (Maybe (PgJSONB Aeson.Value)))
+queryLogErrJson  :: Lens' (QueryLogT f) (C f (Maybe (PgJSONB Value)))
 QueryLog (LensFor queryLogId)       _ _ _ _ _ = tableLenses
 QueryLog _ (LensFor queryLogTime)     _ _ _ _ = tableLenses
 QueryLog _ _ (LensFor queryLogEndpoint) _ _ _ = tableLenses
