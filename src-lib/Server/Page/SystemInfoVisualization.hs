@@ -18,12 +18,6 @@ import           Lucid
 import           Servant
 
 import           Server.Classes
-import           Server.ComponentsAPI
-import           Server.Page.StatusVisualization
-import           Server.Page.Utils
-import           Server.StatusDataParams
-
-import           TextShow
 
 import           Visualization.SystemInformation
 
