@@ -27,7 +27,7 @@ import           Data.Time
 
 import           Database.Beam
 import           Database.Beam.Backend              ( SqlSerial )
-import           Database.Beam.Postgres             ( PgJSON )
+import           Database.Beam.Postgres             ( PgJSONB )
 import           Database.BikeShare.EndpointQueried
 
 data QueryLogT f where
@@ -36,7 +36,7 @@ data QueryLogT f where
               , _queryLogEndpoint :: C f EndpointQueried
               , _queryLogSuccess  :: C f Bool
               , _queryLogErrMsg   :: C f (Maybe T.Text)
-              , _queryLogErrJson  :: C f (Maybe (PgJSON Value))
+              , _queryLogErrJson  :: C f (Maybe (PgJSONB Value))
               } -> QueryLogT f
   deriving (Generic, Beamable)
 
@@ -58,7 +58,7 @@ queryLogTime     :: Lens' (QueryLogT f) (C f UTCTime)
 queryLogEndpoint :: Lens' (QueryLogT f) (C f EndpointQueried)
 queryLogSuccess  :: Lens' (QueryLogT f) (C f Bool)
 queryLogErrMsg   :: Lens' (QueryLogT f) (C f (Maybe T.Text))
-queryLogErrJson  :: Lens' (QueryLogT f) (C f (Maybe (PgJSON Value)))
+queryLogErrJson  :: Lens' (QueryLogT f) (C f (Maybe (PgJSONB Value)))
 QueryLog (LensFor queryLogId)       _ _ _ _ _ = tableLenses
 QueryLog _ (LensFor queryLogTime)     _ _ _ _ = tableLenses
 QueryLog _ _ (LensFor queryLogEndpoint) _ _ _ = tableLenses

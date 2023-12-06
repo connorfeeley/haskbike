@@ -91,6 +91,7 @@ initialSetup = BikeshareDb
         , _queryLogEndpoint = field "endpoint"   (DataType pgTextType) notNull
         , _queryLogSuccess  = field "success"    boolean notNull
         , _queryLogErrMsg   = field "error_msg"  (DataType pgTextType)
+        , _queryLogErrJson  = field "error_json" (maybeType jsonb)
         })
 
 initialSetupStep :: MigrationSteps Postgres

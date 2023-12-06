@@ -108,8 +108,9 @@ bikeshareDb = defaultDbSettings `withDbModification`
       { _queryLogId       = "id"
       , _queryLogTime     = "time"
       , _queryLogEndpoint = "endpoint"
-      , _queryLogSuccess  = "endpoint"
-      , _queryLogErrMsg   = "endpoint"
+      , _queryLogSuccess  = "success"
+      , _queryLogErrMsg   = "error_msg"
+      , _queryLogErrJson  = "error_json"
       }
   -- , _bikeshareDiagnostics =
   --   setEntityName "diagnostics" <> modifyTableFields tableModification
