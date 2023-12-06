@@ -269,6 +269,7 @@ library
                     , Database.BikeShare.StationInformation
                     , Database.BikeShare.StationStatus
                     , Database.BikeShare.QueryLogs
+                    , Database.BikeShare.EndpointQueried
                     , Database.BikeShare.Diagnostics
                     , Paths_haskbike
 

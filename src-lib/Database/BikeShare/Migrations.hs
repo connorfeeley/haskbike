@@ -2,16 +2,18 @@
 
 module Database.BikeShare.Migrations where
 
-import           Data.String                    ( fromString )
+import           Data.String                        ( fromString )
 
 import           Database.Beam
-import           Database.Beam.Backend          ( timestampType )
+import           Database.Beam.Backend              ( timestampType )
 import           Database.Beam.Migrate
 import           Database.Beam.Migrate.Simple
 import           Database.Beam.Postgres
-import qualified Database.Beam.Postgres.Migrate as PG
-import           Database.Beam.Postgres.Syntax  ( pgTextType )
+import           Database.Beam.Postgres.CustomTypes ( beamTypeForCustomPg )
+import qualified Database.Beam.Postgres.Migrate     as PG
+import           Database.Beam.Postgres.Syntax      ( pgTextType )
 import           Database.BikeShare
+import           Database.BikeShare.QueryLogs
 
 
 referenceInformationTable :: BeamMigrateSqlBackend be => Constraint be
@@ -84,6 +86,11 @@ initialSetup = BikeshareDb
         , _sysInfCntStationCount    = field "station_count"                  int notNull
         , _sysInfCntMechanicalCount = field "mechanical_count"               int notNull
         , _sysInfCntEbikeCount      = field "ebike_count"                    int notNull
+        })
+  <*> (createTable "queries" $ QueryLog
+        { _queryLogId       = field "id"         PG.serial notNull unique
+        , _queryLogTime     = field "time"       (DataType (timestampType Nothing True))
+        , _queryLogEndpoint = field "endpoint"   (DataType pgTextType) notNull
         })
 
 initialSetupStep :: MigrationSteps Postgres

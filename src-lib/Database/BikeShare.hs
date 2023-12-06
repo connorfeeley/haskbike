@@ -15,24 +15,23 @@ module Database.BikeShare
      , module Database.BikeShare.Types
      , bikeshareDb
        -- , bikeshareDiagnostics
+     , bikeshareQueryLog
      , bikeshareStationInformation
      , bikeshareStationStatus
      , bikeshareSystemInformation
      , bikeshareSystemInformationCount
      ) where
 
-
-
 import           Database.Beam
 import           Database.BikeShare.Types
 
 
--- | Define the database; only containing one table for now.
 data BikeshareDb f where
   BikeshareDb :: { _bikeshareStationInformation     :: f (TableEntity StationInformationT)
                  , _bikeshareStationStatus          :: f (TableEntity StationStatusT)
                  , _bikeshareSystemInformation      :: f (TableEntity SystemInformationT)
                  , _bikeshareSystemInformationCount :: f (TableEntity SystemInformationCountT)
+                 , _bikeshareQueryLog               :: f (TableEntity QueryLogT)
                  -- , _bikeshareDiagnostics         :: f (TableEntity DiagnosticsT)
                  } -> BikeshareDb f
   deriving (Generic, Database be)
@@ -102,6 +101,12 @@ bikeshareDb = defaultDbSettings `withDbModification`
       , _sysInfCntMechanicalCount    = "mechanical_count"
       , _sysInfCntEbikeCount         = "ebike_count"
       }
+  , _bikeshareQueryLog =
+    setEntityName "queries" <> modifyTableFields tableModification
+      { _queryLogId       = "id"
+      , _queryLogTime     = "time"
+      , _queryLogEndpoint = "endpoint"
+      }
   -- , _bikeshareDiagnostics =
   --   setEntityName "diagnostics" <> modifyTableFields tableModification
   --     { _diagnosticId   = "id"
@@ -118,5 +123,6 @@ BikeshareDb
   (TableLens bikeshareStationStatus)
   (TableLens bikeshareSystemInformation)
   (TableLens bikeshareSystemInformationCount)
+  (TableLens bikeshareQueryLog)
   -- (TableLens bikeshareDiagnostics)
   = dbLenses

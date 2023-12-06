@@ -21,13 +21,9 @@ import           Data.Int
 import           Data.Time
 
 import           Database.Beam
-import           Database.Beam.Backend ( SqlSerial )
+import           Database.Beam.Backend              ( SqlSerial )
+import           Database.BikeShare.EndpointQueried
 
-
-data EndpointQueried = StationInformation
-                     | StationStatus
-                     | SystemInformation
-                     deriving (Generic, Show, Eq)
 
 data QueryLogT f where
   QueryLog :: { _queryLogId       :: Columnar f (SqlSerial Int32)
@@ -49,9 +45,9 @@ instance Table QueryLogT where
     deriving (Generic, Beamable)
   primaryKey = QueryLogId . _queryLogId
 
-queryLogId :: Lens' (QueryLogT f) (C f (SqlSerial Int32))
-queryLogTime :: Lens' (QueryLogT f) (C f UTCTime)
+queryLogId       :: Lens' (QueryLogT f) (C f (SqlSerial Int32))
+queryLogTime     :: Lens' (QueryLogT f) (C f UTCTime)
 queryLogEndpoint :: Lens' (QueryLogT f) (C f EndpointQueried)
-QueryLog (LensFor queryLogId) _ _ = tableLenses
-QueryLog _ (LensFor queryLogTime) _ = tableLenses
+QueryLog (LensFor queryLogId)       _ _ = tableLenses
+QueryLog _ (LensFor queryLogTime)     _ = tableLenses
 QueryLog _ _ (LensFor queryLogEndpoint) = tableLenses
