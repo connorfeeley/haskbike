@@ -24,7 +24,7 @@ import           Database.BikeShare.Expressions          ( integrateColumns )
 import           Database.BikeShare.StationInformation   ( unInformationStationId )
 import           Database.BikeShare.StatusVariationQuery
 
-import           Lucid                                   ( HtmlT, Term, ToHtml (..) )
+import           Lucid                                   ( HtmlT, ToHtml (..) )
 import           Lucid.Html5
 
 import           Server.Page.Utils
