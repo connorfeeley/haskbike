@@ -30,8 +30,6 @@ import           Database.BikeShare.Migrations
 import           Database.BikeShare.Operations
 import           Database.BikeShare.Utils
 
-import           Text.Pretty.Simple.Extras
-
 import           Options.Applicative
 
 import           Prelude                       hiding ( log )
@@ -39,6 +37,8 @@ import           Prelude                       hiding ( log )
 import           Servant.Client                ( ClientError )
 
 import           System.Exit                   ( exitSuccess )
+
+import           Text.Pretty.Simple.Extras
 
 import           UnliftIO                      ( liftIO )
 
@@ -49,15 +49,13 @@ import           UnliftIO                      ( liftIO )
 dispatchDatabase :: Options -> AppM Connection
 dispatchDatabase options = do
   case optCommand options of
-    Poll _pollOptions
-      | optEnableMigration options -> do
+    Reset resetOptions -> handleReset options resetOptions >>= liftIO . pure
+    _ | optEnableMigration options -> do
           log I "Migrating database."
           withConn >>= liftIO . migrateDB
           log I "Migrated database."
           withConn >>= liftIO . pure
       | otherwise -> withConn >>= liftIO . pure
-    Reset resetOptions -> handleReset options resetOptions >>= liftIO . pure
-    _ -> withConn >>= liftIO . pure
 
 
 -- | Handle the 'Reset' command.
