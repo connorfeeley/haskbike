@@ -1,4 +1,13 @@
-{-# LANGUAGE FlexibleContexts #-}
+{-# OPTIONS_GHC -fno-warn-unused-binds -fno-warn-name-shadowing #-}
+{-# LANGUAGE CPP                   #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE GADTs                 #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE PolyKinds             #-}
+{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE UndecidableInstances  #-}
 
 module Database.BikeShare.Migrations where
 
@@ -88,11 +97,14 @@ initialSetup = BikeshareDb
   <*> (createTable "queries" $ QueryLog
         { _queryLogId       = field "id"         PG.serial notNull unique
         , _queryLogTime     = field "time"       (DataType (timestampType Nothing True)) notNull
-        , _queryLogEndpoint = field "endpoint"   (DataType pgTextType) notNull
+        , _queryLogEndpoint = field "endpoint"   (DataType pgTypeEndpoint) notNull
         , _queryLogSuccess  = field "success"    boolean notNull
         , _queryLogErrMsg   = field "error_msg"  (DataType pgTextType)
         , _queryLogErrJson  = field "error_json" (maybeType jsonb)
         })
+
+enumType :: Enum a => DataType Postgres a
+enumType = DataType pgTextType
 
 initialSetupStep :: MigrationSteps Postgres
   ()
