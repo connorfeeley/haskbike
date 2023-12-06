@@ -9,6 +9,7 @@ module Database.BikeShare.QueryLogs
      , QueryLog
      , QueryLogId
      , QueryLogT (..)
+     , QueryResult (..)
        -- Lenses
      , queryLogEndpoint
      , queryLogErrJson
@@ -20,7 +21,7 @@ module Database.BikeShare.QueryLogs
 
 import           Control.Lens
 
-import           Data.Aeson                         ( Value )
+import qualified Data.Aeson                         as Aeson
 import           Data.Int
 import qualified Data.Text                          as T
 import           Data.Time
@@ -30,13 +31,26 @@ import           Database.Beam.Backend              ( SqlSerial )
 import           Database.Beam.Postgres             ( PgJSONB )
 import           Database.BikeShare.EndpointQueried
 
+-- * Beam table definition.
+
+data QueryResult where
+  QuerySuccess :: UTCTime
+               -> EndpointQueried
+               -> QueryResult
+  QueryFailure :: UTCTime
+               -> EndpointQueried
+               -> T.Text
+               -> Aeson.Value
+               -> QueryResult
+  deriving (Show, Eq)
+
 data QueryLogT f where
   QueryLog :: { _queryLogId       :: C f (SqlSerial Int32)
               , _queryLogTime     :: C f UTCTime
               , _queryLogEndpoint :: C f EndpointQueried
               , _queryLogSuccess  :: C f Bool
               , _queryLogErrMsg   :: C f (Maybe T.Text)
-              , _queryLogErrJson  :: C f (Maybe (PgJSONB Value))
+              , _queryLogErrJson  :: C f (Maybe (PgJSONB Aeson.Value))
               } -> QueryLogT f
   deriving (Generic, Beamable)
 
@@ -58,10 +72,11 @@ queryLogTime     :: Lens' (QueryLogT f) (C f UTCTime)
 queryLogEndpoint :: Lens' (QueryLogT f) (C f EndpointQueried)
 queryLogSuccess  :: Lens' (QueryLogT f) (C f Bool)
 queryLogErrMsg   :: Lens' (QueryLogT f) (C f (Maybe T.Text))
-queryLogErrJson  :: Lens' (QueryLogT f) (C f (Maybe (PgJSONB Value)))
+queryLogErrJson  :: Lens' (QueryLogT f) (C f (Maybe (PgJSONB Aeson.Value)))
 QueryLog (LensFor queryLogId)       _ _ _ _ _ = tableLenses
 QueryLog _ (LensFor queryLogTime)     _ _ _ _ = tableLenses
 QueryLog _ _ (LensFor queryLogEndpoint) _ _ _ = tableLenses
 QueryLog _ _ _ (LensFor queryLogSuccess)  _ _ = tableLenses
 QueryLog _ _ _ _ (LensFor queryLogErrMsg)   _ = tableLenses
 QueryLog _ _ _ _  _ (LensFor queryLogErrJson) = tableLenses
+
