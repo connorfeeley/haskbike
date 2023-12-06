@@ -11,6 +11,7 @@ module Database.BikeShare.QueryLogs
      , QueryLogT (..)
        -- Lenses
      , queryLogEndpoint
+     , queryLogErrJson
      , queryLogErrMsg
      , queryLogId
      , queryLogSuccess
@@ -19,12 +20,14 @@ module Database.BikeShare.QueryLogs
 
 import           Control.Lens
 
+import           Data.Aeson                         ( Value )
 import           Data.Int
 import qualified Data.Text                          as T
 import           Data.Time
 
 import           Database.Beam
 import           Database.Beam.Backend              ( SqlSerial )
+import           Database.Beam.Postgres             ( PgJSON )
 import           Database.BikeShare.EndpointQueried
 
 data QueryLogT f where
@@ -33,6 +36,7 @@ data QueryLogT f where
               , _queryLogEndpoint :: C f EndpointQueried
               , _queryLogSuccess  :: C f Bool
               , _queryLogErrMsg   :: C f (Maybe T.Text)
+              , _queryLogErrJson  :: C f (Maybe (PgJSON Value))
               } -> QueryLogT f
   deriving (Generic, Beamable)
 
@@ -54,8 +58,10 @@ queryLogTime     :: Lens' (QueryLogT f) (C f UTCTime)
 queryLogEndpoint :: Lens' (QueryLogT f) (C f EndpointQueried)
 queryLogSuccess  :: Lens' (QueryLogT f) (C f Bool)
 queryLogErrMsg   :: Lens' (QueryLogT f) (C f (Maybe T.Text))
-QueryLog (LensFor queryLogId)       _ _ _ _ = tableLenses
-QueryLog _ (LensFor queryLogTime)     _ _ _ = tableLenses
-QueryLog _ _ (LensFor queryLogEndpoint) _ _ = tableLenses
-QueryLog _ _ _ (LensFor queryLogSuccess)  _ = tableLenses
-QueryLog _ _ _ _ (LensFor queryLogErrMsg)   = tableLenses
+queryLogErrJson  :: Lens' (QueryLogT f) (C f (Maybe (PgJSON Value)))
+QueryLog (LensFor queryLogId)       _ _ _ _ _ = tableLenses
+QueryLog _ (LensFor queryLogTime)     _ _ _ _ = tableLenses
+QueryLog _ _ (LensFor queryLogEndpoint) _ _ _ = tableLenses
+QueryLog _ _ _ (LensFor queryLogSuccess)  _ _ = tableLenses
+QueryLog _ _ _ _ (LensFor queryLogErrMsg)   _ = tableLenses
+QueryLog _ _ _ _  _ (LensFor queryLogErrJson) = tableLenses
