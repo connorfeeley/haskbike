@@ -22,6 +22,8 @@ module Database.BikeShare
      , bikeshareSystemInformationCount
      ) where
 
+import           Control.Lens             ( Lens' )
+
 import           Database.Beam
 import           Database.BikeShare.Types
 
@@ -106,6 +108,8 @@ bikeshareDb = defaultDbSettings `withDbModification`
       { _queryLogId       = "id"
       , _queryLogTime     = "time"
       , _queryLogEndpoint = "endpoint"
+      , _queryLogSuccess  = "endpoint"
+      , _queryLogErrMsg   = "endpoint"
       }
   -- , _bikeshareDiagnostics =
   --   setEntityName "diagnostics" <> modifyTableFields tableModification

@@ -11,24 +11,28 @@ module Database.BikeShare.QueryLogs
      , QueryLogT (..)
        -- Lenses
      , queryLogEndpoint
+     , queryLogErrMsg
      , queryLogId
+     , queryLogSuccess
      , queryLogTime
      ) where
 
 import           Control.Lens
 
 import           Data.Int
+import qualified Data.Text                          as T
 import           Data.Time
 
 import           Database.Beam
 import           Database.Beam.Backend              ( SqlSerial )
 import           Database.BikeShare.EndpointQueried
 
-
 data QueryLogT f where
-  QueryLog :: { _queryLogId       :: Columnar f (SqlSerial Int32)
-              , _queryLogTime     :: Columnar f UTCTime
-              , _queryLogEndpoint :: Columnar f EndpointQueried
+  QueryLog :: { _queryLogId       :: C f (SqlSerial Int32)
+              , _queryLogTime     :: C f UTCTime
+              , _queryLogEndpoint :: C f EndpointQueried
+              , _queryLogSuccess  :: C f Bool
+              , _queryLogErrMsg   :: C f (Maybe T.Text)
               } -> QueryLogT f
   deriving (Generic, Beamable)
 
@@ -48,6 +52,10 @@ instance Table QueryLogT where
 queryLogId       :: Lens' (QueryLogT f) (C f (SqlSerial Int32))
 queryLogTime     :: Lens' (QueryLogT f) (C f UTCTime)
 queryLogEndpoint :: Lens' (QueryLogT f) (C f EndpointQueried)
-QueryLog (LensFor queryLogId)       _ _ = tableLenses
-QueryLog _ (LensFor queryLogTime)     _ = tableLenses
-QueryLog _ _ (LensFor queryLogEndpoint) = tableLenses
+queryLogSuccess  :: Lens' (QueryLogT f) (C f Bool)
+queryLogErrMsg   :: Lens' (QueryLogT f) (C f (Maybe T.Text))
+QueryLog (LensFor queryLogId)       _ _ _ _ = tableLenses
+QueryLog _ (LensFor queryLogTime)     _ _ _ = tableLenses
+QueryLog _ _ (LensFor queryLogEndpoint) _ _ = tableLenses
+QueryLog _ _ _ (LensFor queryLogSuccess)  _ = tableLenses
+QueryLog _ _ _ _ (LensFor queryLogErrMsg)   = tableLenses
