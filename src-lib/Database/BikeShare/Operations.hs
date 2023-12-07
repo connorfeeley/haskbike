@@ -53,6 +53,7 @@ import           Database.Beam
 import           Database.Beam.Backend.SQL.BeamExtensions
 import           Database.Beam.Postgres
 import           Database.BikeShare
+import           Database.BikeShare.BeamConvertable
 import           Database.BikeShare.Expressions
 import           Database.BikeShare.Operations.Dockings
 import           Database.PostgreSQL.Simple               ( Only (..), query_ )
@@ -274,8 +275,8 @@ insertSystemInformation reported inf = do
   pure (insertedInfo, insertedInfoCount)
 
 
-insertQueryLog :: QueryResult -> AppM [QueryLog]
+insertQueryLog :: BeamConvertable QueryResult (QueryLogT (QExpr Postgres s)) => QueryResult -> AppM [QueryLog]
 insertQueryLog query =
   withPostgres $ runInsertReturningList $
   insert (bikeshareDb ^. bikeshareQueryLog)
-  (insertExpressions [toBeamQueryLog query])
+  (insertExpressions [convertToBeam query])

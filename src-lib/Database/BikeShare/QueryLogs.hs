@@ -17,7 +17,6 @@ module Database.BikeShare.QueryLogs
      , queryLogId
      , queryLogSuccess
      , queryLogTime
-     , toBeamQueryLog
      ) where
 
 import           Control.Lens
@@ -30,9 +29,11 @@ import           Data.Time
 import           Database.Beam
 import           Database.Beam.Backend              ( SqlSerial )
 import           Database.Beam.Postgres             ( PgJSONB (PgJSONB), Postgres )
+import           Database.BikeShare.BeamConvertable
 import           Database.BikeShare.EndpointQueried
 
--- * Beam table definition.
+
+-- * Associated concrete type.
 
 data QueryResult where
   QuerySuccess :: UTCTime
@@ -45,11 +46,13 @@ data QueryResult where
                -> QueryResult
   deriving (Show, Eq)
 
-toBeamQueryLog :: QueryResult -> QueryLogT (QExpr Postgres s)
-toBeamQueryLog (QuerySuccess t ep)                  =
-  QueryLog default_ (val_ t) (val_ ep) (val_ True)  (val_ Nothing) (val_ Nothing)
-toBeamQueryLog (QueryFailure t ep err_msg json_err) =
-  QueryLog default_ (val_ t) (val_ ep) (val_ False) ((val_ . Just) err_msg) ((val_ . Just . PgJSONB . toJSON) json_err)
+instance BeamConvertable QueryResult (QueryLogT (QExpr Postgres s)) where
+  convertToBeam (QuerySuccess t ep) =
+    QueryLog default_ (val_ t) (val_ ep) (val_ True)  (val_ Nothing) (val_ Nothing)
+  convertToBeam (QueryFailure t ep err_msg json_err) =
+    QueryLog default_ (val_ t) (val_ ep) (val_ False) ((val_ . Just) err_msg) ((val_ . Just . PgJSONB . toJSON) json_err)
+
+-- * Beam table definition.
 
 data QueryLogT f where
   QueryLog :: { _queryLogId       :: C f (SqlSerial Int32)
