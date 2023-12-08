@@ -69,6 +69,9 @@ build-clang:
 build:
     {{CABAL}} build
 
+redate:
+    git-privacy redate origin/master
+
 # Not working.
 # import-local-table TABLE CSVFILE:
 #     source ./.env.local
