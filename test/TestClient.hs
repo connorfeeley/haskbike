@@ -5,30 +5,30 @@ import           API.Client
 
 import           AppEnv
 
-import qualified CLI.Poll                 as Poll
+import qualified CLI.Poll                  as Poll
 
-import           Colog                    ( log, pattern I, pattern W )
+import           Colog                     ( log, pattern I, pattern W )
 
-import           Control.Exception        ( SomeException, try )
-import           Control.Monad            ( void )
+import           Control.Exception         ( SomeException, try )
+import           Control.Monad             ( void )
 
-import           Data.Time                ( getCurrentTimeZone )
+import           Data.Time                 ( getCurrentTimeZone )
 
-import           Database.Beam.Postgres   ( connect )
+import           Database.Beam.Postgres    ( connect )
 import           Database.BikeShare.Utils
 
-import           Fmt                      ( format )
+import           Fmt                       ( format )
 
-import           Text.Pretty.Simple.Extras
+import           Network.HTTP.Client       ( newManager )
+import           Network.HTTP.Client.TLS   ( tlsManagerSettings )
 
-import           Network.HTTP.Client      ( newManager )
-import           Network.HTTP.Client.TLS  ( tlsManagerSettings )
-
-import           Prelude                  hiding ( log, unwords )
+import           Prelude                   hiding ( log, unwords )
 
 import           Test.Tasty.HUnit
 
-import           UnliftIO                 ( liftIO, timeout )
+import           Text.Pretty.Simple.Extras
+
+import           UnliftIO                  ( liftIO, timeout )
 
 
 -- | Mark a test as expected to fail.
