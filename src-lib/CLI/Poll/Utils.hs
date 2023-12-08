@@ -121,19 +121,29 @@ requesterFn ep prefix query queue intervalSecsVar lastUpdated = void $ do
 -- * Functions for handling and inserting the appropriate query log records.
 
 handleResponseSuccess :: EndpointQueried -> UTCTime -> AppM [QueryLog]
-handleResponseSuccess ep lastUpdated = do
+handleResponseSuccess ep timestamp = do
   insertQueryLog query
-  where query = QuerySuccess lastUpdated ep
+  where query = QuerySuccess timestamp ep
 
 handleResponseError :: EndpointQueried -> ClientError -> AppM ()
 handleResponseError ep err = do
+  curTime <- liftIO getCurrentTime
   logException err
-  insertQueryLog queryFailure
+  insertQueryLog $ queryFailure curTime
   pure $ throw err
   where
-    queryFailure = QueryFailure (UTCTime (ModifiedJulianDay 0) 0) ep ((T.pack . errToQueryLog) err) Null
-    errToQueryLog (FailureResponse req resp)              = "Failure response: " <> show req <> " " <> show resp
-    errToQueryLog (DecodeFailure txt resp)                = "Decode failure: " <> show txt <> " " <> show resp
-    errToQueryLog (UnsupportedContentType mediaType resp) = "Unsupported content type: " <> show mediaType <> " " <> show resp
-    errToQueryLog (InvalidContentTypeHeader resp)         = "Invalid content type header" <> show resp
-    errToQueryLog (ConnectionError exep)                   = "Connection error: " <> show exep
+    queryFailure t = QueryFailure t ep (errTxt err) jsonForDecodeFailure
+    errTxt = T.pack . errToQueryLog
+    jsonForDecodeFailure = maybeDecodeFailure err
+
+errToQueryLog :: ClientError -> String
+errToQueryLog (FailureResponse req resp)              = "Failure response: "          <> show req <> " " <> show resp
+errToQueryLog (DecodeFailure txt resp)                = "Decode failure: "            <> show txt <> " " <> show resp
+errToQueryLog (UnsupportedContentType mediaType resp) = "Unsupported content type: "  <> show mediaType <> " " <> show resp
+errToQueryLog (InvalidContentTypeHeader resp)         = "Invalid content type header" <> show resp
+errToQueryLog (ConnectionError exep)                  = "Connection error: "          <> show exep
+
+-- | Try to decode the response body as JSON, defaulting to 'Null' on failure.
+maybeDecodeFailure :: ClientError -> Value
+maybeDecodeFailure (DecodeFailure _ resp) = fromMaybe Null ((decode . responseBody) resp)
+maybeDecodeFailure _                      = Null

@@ -48,9 +48,12 @@ data QueryResult where
 
 instance BeamConvertable QueryResult (QueryLogT (QExpr Postgres s)) where
   convertToBeam (QuerySuccess t ep) =
-    QueryLog default_ (val_ t) (val_ ep) (val_ True)  (val_ Nothing) (val_ Nothing)
+    QueryLog default_ (val_ t) (val_ ep) (val_ True) (val_ Nothing) (val_ Nothing)
   convertToBeam (QueryFailure t ep err_msg json_err) =
-    QueryLog default_ (val_ t) (val_ ep) (val_ False) ((val_ . Just) err_msg) ((val_ . Just . PgJSONB . toJSON) json_err)
+    QueryLog default_ (val_ t) (val_ ep) (val_ False) errTxt errJson
+    where
+      errTxt = (val_ . Just) err_msg
+      errJson = (val_ . Just . PgJSONB . toJSON) json_err
 
 -- * Beam table definition.
 
