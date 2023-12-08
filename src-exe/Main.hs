@@ -14,34 +14,34 @@ import           CLI.Poll
 import           CLI.Query
 import           CLI.ServeVisualize
 
-import           Colog                    ( LogAction, Severity (..), WithLog, cmap, fmtMessage, log, logTextStdout,
-                                            pattern D, pattern E, pattern I, usingLoggerT )
+import           Colog                     ( LogAction, Severity (..), WithLog, cmap, fmtMessage, log, logTextStdout,
+                                             pattern D, pattern E, pattern I, usingLoggerT )
 
-import           Control.Monad            ( unless, void, when )
-import           Control.Monad.IO.Class   ( MonadIO )
+import           Control.Monad             ( unless, void, when )
+import           Control.Monad.IO.Class    ( MonadIO )
 
-import qualified Data.Text                as Text
-import           Data.Text.Lazy           ( toStrict )
-import           Data.Time                ( getCurrentTimeZone )
+import qualified Data.Text                 as Text
+import           Data.Text.Lazy            ( toStrict )
+import           Data.Time                 ( getCurrentTimeZone )
 
-import           Database.Beam.Postgres   ( ConnectInfo (connectPassword), connect )
+import           Database.Beam.Postgres    ( ConnectInfo (connectPassword), connect )
 import           Database.BikeShare.Utils
 
 import           Fmt
 
-import           Text.Pretty.Simple.Extras
-
-import           Network.HTTP.Client      ( newManager )
-import           Network.HTTP.Client.TLS  ( tlsManagerSettings )
+import           Network.HTTP.Client       ( newManager )
+import           Network.HTTP.Client.TLS   ( tlsManagerSettings )
 
 import           Options.Applicative
 
-import           Prelude                  hiding ( log, unwords )
+import           Prelude                   hiding ( log, unwords )
 
-import           System.Exit              ( exitSuccess )
+import           System.Exit               ( exitSuccess )
 import           System.IO
 
-import           UnliftIO                 ( MonadUnliftIO, liftIO )
+import           Text.Pretty.Simple.Extras
+
+import           UnliftIO                  ( MonadUnliftIO, liftIO )
 
 import           Version
 

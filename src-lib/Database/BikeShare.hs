@@ -15,24 +15,25 @@ module Database.BikeShare
      , module Database.BikeShare.Types
      , bikeshareDb
        -- , bikeshareDiagnostics
+     , bikeshareQueryLog
      , bikeshareStationInformation
      , bikeshareStationStatus
      , bikeshareSystemInformation
      , bikeshareSystemInformationCount
      ) where
 
-
+import           Control.Lens             ( Lens' )
 
 import           Database.Beam
 import           Database.BikeShare.Types
 
 
--- | Define the database; only containing one table for now.
 data BikeshareDb f where
   BikeshareDb :: { _bikeshareStationInformation     :: f (TableEntity StationInformationT)
                  , _bikeshareStationStatus          :: f (TableEntity StationStatusT)
                  , _bikeshareSystemInformation      :: f (TableEntity SystemInformationT)
                  , _bikeshareSystemInformationCount :: f (TableEntity SystemInformationCountT)
+                 , _bikeshareQueryLog               :: f (TableEntity QueryLogT)
                  -- , _bikeshareDiagnostics         :: f (TableEntity DiagnosticsT)
                  } -> BikeshareDb f
   deriving (Generic, Database be)
@@ -102,6 +103,15 @@ bikeshareDb = defaultDbSettings `withDbModification`
       , _sysInfCntMechanicalCount    = "mechanical_count"
       , _sysInfCntEbikeCount         = "ebike_count"
       }
+  , _bikeshareQueryLog =
+    setEntityName "queries" <> modifyTableFields tableModification
+      { _queryLogId       = "id"
+      , _queryLogTime     = "time"
+      , _queryLogEndpoint = "endpoint"
+      , _queryLogSuccess  = "success"
+      , _queryLogErrMsg   = "error_msg"
+      , _queryLogErrJson  = "error_json"
+      }
   -- , _bikeshareDiagnostics =
   --   setEntityName "diagnostics" <> modifyTableFields tableModification
   --     { _diagnosticId   = "id"
@@ -109,14 +119,14 @@ bikeshareDb = defaultDbSettings `withDbModification`
   --     }
   }
 
--- bikeshareStationInformation :: Lens' (BikeshareDb f) (f (TableEntity StationInformationT))
--- bikeshareStationStatus      :: Lens' (BikeshareDb f) (f (TableEntity StationStatusT))
-
 -- Lenses
-BikeshareDb
-  (TableLens bikeshareStationInformation)
-  (TableLens bikeshareStationStatus)
-  (TableLens bikeshareSystemInformation)
-  (TableLens bikeshareSystemInformationCount)
-  -- (TableLens bikeshareDiagnostics)
-  = dbLenses
+bikeshareStationInformation     :: Lens' (BikeshareDb f) (f (TableEntity StationInformationT))
+bikeshareStationStatus          :: Lens' (BikeshareDb f) (f (TableEntity StationStatusT))
+bikeshareSystemInformation      :: Lens' (BikeshareDb f) (f (TableEntity SystemInformationT))
+bikeshareSystemInformationCount :: Lens' (BikeshareDb f) (f (TableEntity SystemInformationCountT))
+bikeshareQueryLog               :: Lens' (BikeshareDb f) (f (TableEntity QueryLogT))
+BikeshareDb (TableLens bikeshareStationInformation) _ _ _ _     = dbLenses
+BikeshareDb _ (TableLens bikeshareStationStatus) _ _ _          = dbLenses
+BikeshareDb _ _ (TableLens bikeshareSystemInformation) _ _      = dbLenses
+BikeshareDb _ _ _ (TableLens bikeshareSystemInformationCount) _ = dbLenses
+BikeshareDb _ _ _ _ (TableLens bikeshareQueryLog)               = dbLenses

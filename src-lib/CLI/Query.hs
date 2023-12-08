@@ -27,11 +27,11 @@ import           Database.BikeShare.Operations
 
 import           Fmt
 
-import           Text.Pretty.Simple.Extras
-
 import           Prelude                       hiding ( log, unlines )
 
 import           Servant.Client
+
+import           Text.Pretty.Simple.Extras
 
 import           UnliftIO                      ( concurrently, liftIO )
 

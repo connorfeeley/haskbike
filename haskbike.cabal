@@ -247,6 +247,7 @@ library
                     , Text.Pretty.Simple.Extras
                     , Database.BikeShare.Types
                     , Database.BikeShare
+                    , Database.BikeShare.BeamConvertable
                     , Database.BikeShare.ImportExport
                     , Database.BikeShare.Migrations
                     , Database.BikeShare.StatusVariationQuery
@@ -268,6 +269,8 @@ library
                     , Database.BikeShare.SystemInformation
                     , Database.BikeShare.StationInformation
                     , Database.BikeShare.StationStatus
+                    , Database.BikeShare.QueryLogs
+                    , Database.BikeShare.EndpointQueried
                     , Database.BikeShare.Diagnostics
                     , Paths_haskbike
 

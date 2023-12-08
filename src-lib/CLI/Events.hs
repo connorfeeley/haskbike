@@ -34,12 +34,11 @@ import           Database.BikeShare.StatusVariationQuery
 
 import           Fmt
 
-import           Text.Pretty.Simple.Extras
-
 import           Prelude                                 hiding ( log )
 
 import           System.Console.ANSI
 
+import           Text.Pretty.Simple.Extras
 import qualified Text.PrettyPrint.Boxes                  as Box
 
 import           UnliftIO

@@ -15,6 +15,7 @@
 
 module Database.BikeShare.Operations
      ( module Database.BikeShare.Operations.Dockings
+     , insertQueryLog
      , insertStationInformation
      , insertStationStatus
      , insertSystemInformation
@@ -52,15 +53,16 @@ import           Database.Beam
 import           Database.Beam.Backend.SQL.BeamExtensions
 import           Database.Beam.Postgres
 import           Database.BikeShare
+import           Database.BikeShare.BeamConvertable
 import           Database.BikeShare.Expressions
 import           Database.BikeShare.Operations.Dockings
 import           Database.PostgreSQL.Simple               ( Only (..), query_ )
 
-import           Text.Pretty.Simple.Extras
-
 import           GHC.Exts                                 ( fromString )
 
 import           Prelude                                  hiding ( log )
+
+import           Text.Pretty.Simple.Extras
 
 -- | Query database for disabled docks, returning tuples of (name, num_docks_disabled).
 queryDisabledDocks :: AppM [(Text.Text, Int32)] -- ^ List of tuples of (name, num_docks_disabled).
@@ -271,3 +273,10 @@ insertSystemInformation reported inf = do
     insert (bikeshareDb ^. bikeshareSystemInformationCount)
     (insertExpressions [fromJSONToBeamSystemInformationCount reported inf])
   pure (insertedInfo, insertedInfoCount)
+
+
+insertQueryLog :: BeamConvertable QueryResult (QueryLogT (QExpr Postgres s)) => QueryResult -> AppM [QueryLog]
+insertQueryLog query =
+  withPostgres $ runInsertReturningList $
+  insert (bikeshareDb ^. bikeshareQueryLog)
+  (insertExpressions [convertToBeam query])

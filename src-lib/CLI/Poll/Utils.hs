@@ -1,4 +1,7 @@
--- |
+{-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+
+-- | Utility functions for polling the API.
 
 module CLI.Poll.Utils
      ( createHandlingThread
@@ -7,7 +10,8 @@ module CLI.Poll.Utils
      , handleTimeElapsed
      , requesterFn
      ) where
-import           API.ClientLifted    ( runQueryM )
+
+import           API.ClientLifted                   ( runQueryM )
 import           API.Pollable
 import           API.ResponseWrapper
 
@@ -16,19 +20,25 @@ import           AppEnv
 import           Colog
 
 import           Control.Concurrent
-import           Control.Exception   ( throw )
+import           Control.Exception                  ( throw )
 import           Control.Lens
 import           Control.Monad
 
-import           Data.Maybe          ( fromMaybe, isJust, isNothing )
-import qualified Data.Text           as T
+import           Data.Aeson
+import           Data.Maybe                         ( fromMaybe, isJust, isNothing )
+import qualified Data.Text                          as T
+import           Data.Time
 import           Data.Time.Extras
 
-import           Fmt                 ( format )
+import           Database.BikeShare.EndpointQueried
+import           Database.BikeShare.Operations      ( insertQueryLog )
+import           Database.BikeShare.QueryLogs
+
+import           Fmt                                ( format )
 
 import           Servant.Client
 
-import           TextShow            ( showt )
+import           TextShow                           ( showt )
 
 import           UnliftIO
 
@@ -80,16 +90,19 @@ handleTTL logPrefix apiResult ttlVar extendBy = do
   liftIO $ atomically $ writeTVar ttlVar (ttlSecs + fromMaybe 0 extendBy)
 
 requesterFn :: Pollable (ResponseWrapper a)
-            => T.Text
+            => EndpointQueried
+            -> T.Text
             -> ClientM (ResponseWrapper a)
             -> TBQueue (ResponseWrapper a)
             -> TVar Int
             -> TVar Int
             -> AppM ()
-requesterFn prefix query queue intervalSecsVar lastUpdated = void $ do
+requesterFn ep prefix query queue intervalSecsVar lastUpdated = void $ do
   runQueryM query >>= \case
-    Left err -> logException err >> throw err
+    Left err -> handleResponseError ep err
     Right result -> do
+      handleResponseSuccess ep (result ^. respLastUpdated)
+
       -- Handle TTL upfront, so that we don't sleep when called
       -- for the first time from 'pollClient' (TTL = 0).
       intervalSecs <- liftIO $ readTVarIO intervalSecsVar
@@ -103,3 +116,24 @@ requesterFn prefix query queue intervalSecsVar lastUpdated = void $ do
       -- In that case, we should NOT write the result to the queue, and instead extend the
       -- time until our next poll by however long the time went backwards.
       when (isNothing elapsedResult) (liftIO $ atomically $ writeTBQueue queue result)
+
+
+-- * Functions for handling and inserting the appropriate query log records.
+
+handleResponseSuccess :: EndpointQueried -> UTCTime -> AppM [QueryLog]
+handleResponseSuccess ep lastUpdated = do
+  insertQueryLog query
+  where query = QuerySuccess lastUpdated ep
+
+handleResponseError :: EndpointQueried -> ClientError -> AppM ()
+handleResponseError ep err = do
+  logException err
+  insertQueryLog queryFailure
+  pure $ throw err
+  where
+    queryFailure = QueryFailure (UTCTime (ModifiedJulianDay 0) 0) ep ((T.pack . errToQueryLog) err) Null
+    errToQueryLog (FailureResponse req resp)              = "Failure response: " <> show req <> " " <> show resp
+    errToQueryLog (DecodeFailure txt resp)                = "Decode failure: " <> show txt <> " " <> show resp
+    errToQueryLog (UnsupportedContentType mediaType resp) = "Unsupported content type: " <> show mediaType <> " " <> show resp
+    errToQueryLog (InvalidContentTypeHeader resp)         = "Invalid content type header" <> show resp
+    errToQueryLog (ConnectionError exep)                   = "Connection error: " <> show exep
