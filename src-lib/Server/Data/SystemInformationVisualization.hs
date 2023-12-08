@@ -8,13 +8,10 @@ import           Control.Monad.Except
 
 import           Data.Aeson
 import           Data.Time
-import           Data.Time.Extras
 
 import           Database.Beam
 import           Database.BikeShare.Expressions
 import           Database.BikeShare.SystemInformation
-
-import           Server.StatusDataParams
 
 import           ServerEnv
 
@@ -47,15 +44,9 @@ fromBeamSysInfoCntToVisJSON sysInfCnt =
                                       }
 
 generateJsonDataSourceSysInfo :: Maybe LocalTime -> Maybe LocalTime -> ServerAppM [SystemInformationCountVisualization]
-generateJsonDataSourceSysInfo startTime endTime = do
+generateJsonDataSourceSysInfo _startTime _endTime = do
   -- Accessing the inner environment by using the serverEnv accessor.
   appEnv <- getAppEnvFromServer
-  let tz = envTimeZone appEnv
-  -- AppM actions can be lifter into ServerAppM by using a combination of liftIO and runReaderT.
-  currentUtc <- liftIO getCurrentTime
-
-  let params = StatusDataParams tz currentUtc (TimePair startTime endTime tz currentUtc)
-  let range = enforceTimeRangeBounds params
   result <- liftIO $ runAppM appEnv $ withPostgres $
     runSelectReturningList $ selectWith queryLatestSystemInfo
 

@@ -67,7 +67,7 @@ selectionProps _selName filterFn label dataUrl =
     -- Setup the `area` mark type with its encoding and interactive features
     areaLayer  = asSpec [mark Area  [MInterpolate StepAfter], areaEncoding []]
     -- Setup the `point` mark type with its encoding only
-    pointLayer = asSpec [mark Point [MInterpolate StepAfter], areaEncoding []]
+    _pointLayer = asSpec [mark Point [MInterpolate StepAfter], areaEncoding []]
   in
     makeProps label dataUrl dataTransforms [ areaLayer
                                            -- , pointLayer
