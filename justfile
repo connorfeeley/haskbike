@@ -45,7 +45,7 @@ test-one PATTERN:
     {{CABAL}} test --test-show-details=direct --test-options='--pattern /{{PATTERN}}/'
 
 poll:
-    {{CABAL}} run haskbike -- --plain poll -v --log-database
+    {{CABAL}} run haskbike -- --plain poll -v # --log-database
 
 export-rds-table TABLE:
     source ./.env.awsrds.ADMIN
