@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 -- | Poll the API for status updates, inserting results in database as needed.
 module CLI.Poll
      ( dispatchPoll
@@ -8,29 +9,28 @@ module CLI.Poll
 import           API.Client
 import           API.Pollable
 import           API.ResponseWrapper
-import qualified API.Types                             as AT
+import qualified API.Types                     as AT
 
 import           AppEnv
 
-import           CLI.Options                           ( PollOptions (..) )
+import           CLI.Options                   ( PollOptions (..) )
 import           CLI.Poll.Utils
 
-import           Colog                                 ( logDebug, logInfo )
+import           Colog                         ( logDebug, logInfo )
 
 import           Control.Lens
-import           Control.Monad                         ( void )
+import           Control.Monad                 ( void )
 
-import qualified Data.Text                             as T
+import qualified Data.Text                     as T
 
+import           Database.BikeShare
 import           Database.BikeShare.Operations
-import           Database.BikeShare.StationInformation
-import           Database.BikeShare.StationStatus
 
-import           Fmt                                   ( format )
+import           Fmt                           ( format )
 
-import           Text.Pretty.Simple.Extras                            ( pShowCompact )
+import           Prelude                       hiding ( log )
 
-import           Prelude                               hiding ( log )
+import           Text.Pretty.Simple.Extras     ( pShowCompact )
 
 import           UnliftIO
 
@@ -84,7 +84,7 @@ instance Pollable (ResponseWrapper [AT.StationStatus]) where
   request = stationStatus
 
   -- | Thread action to request station information from API.
-  requester = requesterFn "Stn Status" request
+  requester = requesterFn StationStatusEP "Stn Status" request
 
   -- | Thread action to handle API response for station status query.
   handler queue = void $ do
@@ -116,7 +116,7 @@ instance Pollable (ResponseWrapper [AT.StationInformation]) where
   request = stationInformation
 
   -- | Thread action to request station information from API.
-  requester = requesterFn "Stn Info" request
+  requester = requesterFn StationInformationEP "Stn Info" request
 
   -- | Thread action to handle API response for station information query.
   handler queue = void $ do
@@ -137,6 +137,7 @@ instance Pollable (ResponseWrapper [AT.StationInformation]) where
     where
       fmtLog inserted = format "ID: {}" (pShowCompact inserted)
 
+
 -- * System information handling.
 
 instance Pollable (ResponseWrapper AT.SystemInformation) where
@@ -144,7 +145,7 @@ instance Pollable (ResponseWrapper AT.SystemInformation) where
   request = systemInformation
 
   -- | Thread action to request station information from API.
-  requester = requesterFn "Sys Info" request
+  requester = requesterFn SystemInformationEP "Sys Info" request
 
   -- | Thread action to handle API response for station information query.
   handler queue = void $ do
