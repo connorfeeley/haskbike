@@ -25,6 +25,8 @@ module Database.BikeShare.SystemInformation
      , sysInfKeyId
      , sysInfKeyReported
      , sysInfoKey
+     , systemInformationCountModification
+     , systemInformationModification
      ) where
 
 import qualified API.Types                     as AT
@@ -168,7 +170,34 @@ fromBeamSystemInformationToJSON inf infCnt = AT.SystemInformation
   , AT._sysInfTimeZone             = T.unpack (_sysInfTimeZone inf)
   }
 
--- * Beam migrations.
+-- * Table modifications and migrations.
+
+-- | Table modifications for 'SystemInformation' table.
+systemInformationModification :: EntityModification (DatabaseEntity be db) be (TableEntity SystemInformationT)
+systemInformationModification =
+  setEntityName "system_information" <> modifyTableFields tableModification
+  { _sysInfKey                   = sysInfKeyFields ""
+  , _sysInfBuildHash             = "build_hash"
+  , _sysInfBuildLabel            = "build_label"
+  , _sysInfBuildNumber           = "build_number"
+  , _sysInfBuildVersion          = "build_version"
+  , _sysInfLanguage              = "language"
+  , _sysInfMobileHeadVersion     = "mobile_head_version"
+  , _sysInfMobileMinSuppVersion  = "mobile_minimum_supported_version"
+  , _sysInfName                  = "name"
+  , _sysInfSysId                 = "system_id"
+  , _sysInfTimeZone              = "timezone"
+  }
+
+-- | Table modifications for 'SystemInformationCount' table.
+systemInformationCountModification :: EntityModification (DatabaseEntity be db) be (TableEntity SystemInformationCountT)
+systemInformationCountModification =
+  setEntityName "system_information_count" <> modifyTableFields tableModification
+  { _sysInfCntKey                = sysInfKeyFields ""
+  , _sysInfCntStationCount       = "station_count"
+  , _sysInfCntMechanicalCount    = "mechanical_count"
+  , _sysInfCntEbikeCount         = "ebike_count"
+  }
 
 -- | Migration for the 'SystemInformation' table.
 createSystemInformation :: Migration Postgres (CheckedDatabaseEntity Postgres db (TableEntity SystemInformationT))

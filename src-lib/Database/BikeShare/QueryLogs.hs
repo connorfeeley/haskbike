@@ -10,12 +10,12 @@ module Database.BikeShare.QueryLogs
      , QueryLogId
      , QueryLogT (..)
      , QueryResult (..)
-       -- Lenses
      , createQueries
      , queryLogEndpoint
      , queryLogErrJson
      , queryLogErrMsg
      , queryLogId
+     , queryLogModification
      , queryLogSuccess
      , queryLogTime
      ) where
@@ -97,6 +97,20 @@ QueryLog _ _ _ (LensFor queryLogSuccess)  _ _ = tableLenses
 QueryLog _ _ _ _ (LensFor queryLogErrMsg)   _ = tableLenses
 QueryLog _ _ _ _  _ (LensFor queryLogErrJson) = tableLenses
 
+
+-- * Table modifications and migrations.
+
+-- | Table modifications for 'QueryLog' table.
+queryLogModification :: EntityModification (DatabaseEntity be db) be (TableEntity QueryLogT)
+queryLogModification =
+  setEntityName "queries" <> modifyTableFields tableModification
+  { _queryLogId       = "id"
+  , _queryLogTime     = "time"
+  , _queryLogEndpoint = "endpoint"
+  , _queryLogSuccess  = "success"
+  , _queryLogErrMsg   = "error_msg"
+  , _queryLogErrJson  = "error_json"
+  }
 
 -- | Migration for 'QueryLog' table.
 createQueries :: Migration Postgres (CheckedDatabaseEntity Postgres db (TableEntity QueryLogT))

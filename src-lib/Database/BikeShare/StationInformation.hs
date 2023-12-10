@@ -43,6 +43,7 @@ module Database.BikeShare.StationInformation
      , infoRideCodeSupport
      , infoStationId
      , info_id
+     , stationInformationModification
      , unInformationStationId
      ) where
 
@@ -233,34 +234,6 @@ instance ToField BeamPhysicalConfiguration where
 physicalConfiguration :: DataType Postgres BeamPhysicalConfiguration
 physicalConfiguration = DataType pgTextType
 
-
--- | Migration for the StationInformation table.
-createStationInformation :: Migration Postgres (CheckedDatabaseEntity Postgres db (TableEntity StationInformationT))
-createStationInformation =
-  createTable "station_information" $ StationInformation
-  { _infoId                    = field "id"                     Pg.serial notNull unique
-  , _infoStationId             = field "station_id"             int notNull unique
-  , _infoName                  = field "name"                   (varchar (Just 100)) notNull
-  , _infoPhysicalConfiguration = field "physical_configuration" physicalConfiguration
-  , _infoLat                   = field "lat"                    double notNull
-  , _infoLon                   = field "lon"                    double notNull
-  , _infoAltitude              = field "altitude"               (maybeType double)
-  , _infoAddress               = field "address"                (maybeType (varchar (Just 100)))
-  , _infoCapacity              = field "capacity"               int notNull
-  , _infoIsChargingStation     = field "is_charging_station"    boolean notNull
-  , _infoRentalMethods         = field "rental_methods"         (Pg.unboundedArray rentalMethod)
-  , _infoIsValetStation        = field "is_valet_station"       boolean notNull
-  , _infoIsVirtualStation      = field "is_virtual_station"     boolean notNull
-  , _infoGroups                = field "groups"                 (Pg.unboundedArray (varchar (Just 100)))
-  , _infoObcn                  = field "obcn"                   (varchar (Just 100)) notNull
-  , _infoNearbyDistance        = field "nearby_distance"        double notNull
-  , _infoBluetoothId           = field "bluetooth_id"           (varchar (Just 100)) notNull
-  , _infoRideCodeSupport       = field "ride_code_support"      boolean notNull
-  , _infoRentalUris            = field "rental_uris"            (Pg.unboundedArray (varchar (Just 100)))
-  , _infoActive                = field "active"                 boolean notNull
-  }
-
-
 -- | Convert from the JSON StationInformation to the Beam StationInformation type
 fromJSONToBeamStationInformation :: AT.StationInformation -> StationInformationT (QExpr Postgres s)
 fromJSONToBeamStationInformation (AT.StationInformation
@@ -357,3 +330,58 @@ fromBeamStationInformationToJSON (StationInformation
                         }
   where
     rentalUrisList = toList rentalUris
+
+-- * Table modifications and migrations.
+
+-- | Table modifications for the 'StationInformation' table.
+stationInformationModification :: EntityModification (DatabaseEntity be db) be (TableEntity StationInformationT)
+stationInformationModification =
+  setEntityName "station_information" <> modifyTableFields tableModification
+  { _infoId                    = "id"
+  , _infoStationId             = "station_id"
+  , _infoName                  = "name"
+  , _infoPhysicalConfiguration = "physical_configuration"
+  , _infoLat                   = "lat"
+  , _infoLon                   = "lon"
+  , _infoAltitude              = "altitude"
+  , _infoAddress               = "address"
+  , _infoCapacity              = "capacity"
+  , _infoIsChargingStation     = "is_charging_station"
+  , _infoRentalMethods         = "rental_methods"
+  , _infoIsValetStation        = "is_valet_station"
+  , _infoIsVirtualStation      = "is_virtual_station"
+  , _infoGroups                = "groups"
+  , _infoObcn                  = "obcn"
+  , _infoNearbyDistance        = "nearby_distance"
+  , _infoBluetoothId           = "bluetooth_id"
+  , _infoRideCodeSupport       = "ride_code_support"
+  , _infoRentalUris            = "rental_uris"
+  , _infoActive                = "active"
+  }
+
+
+-- | Migration for the StationInformation table.
+createStationInformation :: Migration Postgres (CheckedDatabaseEntity Postgres db (TableEntity StationInformationT))
+createStationInformation =
+  createTable "station_information" $ StationInformation
+  { _infoId                    = field "id"                     Pg.serial notNull unique
+  , _infoStationId             = field "station_id"             int notNull unique
+  , _infoName                  = field "name"                   (varchar (Just 100)) notNull
+  , _infoPhysicalConfiguration = field "physical_configuration" physicalConfiguration
+  , _infoLat                   = field "lat"                    double notNull
+  , _infoLon                   = field "lon"                    double notNull
+  , _infoAltitude              = field "altitude"               (maybeType double)
+  , _infoAddress               = field "address"                (maybeType (varchar (Just 100)))
+  , _infoCapacity              = field "capacity"               int notNull
+  , _infoIsChargingStation     = field "is_charging_station"    boolean notNull
+  , _infoRentalMethods         = field "rental_methods"         (Pg.unboundedArray rentalMethod)
+  , _infoIsValetStation        = field "is_valet_station"       boolean notNull
+  , _infoIsVirtualStation      = field "is_virtual_station"     boolean notNull
+  , _infoGroups                = field "groups"                 (Pg.unboundedArray (varchar (Just 100)))
+  , _infoObcn                  = field "obcn"                   (varchar (Just 100)) notNull
+  , _infoNearbyDistance        = field "nearby_distance"        double notNull
+  , _infoBluetoothId           = field "bluetooth_id"           (varchar (Just 100)) notNull
+  , _infoRideCodeSupport       = field "ride_code_support"      boolean notNull
+  , _infoRentalUris            = field "rental_uris"            (Pg.unboundedArray (varchar (Just 100)))
+  , _infoActive                = field "active"                 boolean notNull
+  }

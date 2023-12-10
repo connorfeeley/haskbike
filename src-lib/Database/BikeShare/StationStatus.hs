@@ -23,6 +23,7 @@ module Database.BikeShare.StationStatus
      , createStationStatus
      , fromBeamStationStatusToJSON
      , fromJSONToBeamStationStatus
+     , stationStatusModification
      , stationStatusType
      , statusIsChargingStation
      , statusLastReported
@@ -267,6 +268,28 @@ fromBeamStationStatusToJSON status =
                    }
   where
     StationInformationId sid = _statusStationId status
+
+-- * Table modifications and migrations.
+
+-- | Table modifications for 'StationStatus' table.
+stationStatusModification :: EntityModification (DatabaseEntity be db) be (TableEntity StationStatusT)
+stationStatusModification =
+  setEntityName "station_status" <> modifyTableFields tableModification
+  { _statusStationId             = StationInformationId "station_id"
+  , _statusLastReported          = "last_reported"
+  , _statusNumBikesAvailable     = "num_bikes_available"
+  , _statusNumBikesDisabled      = "num_bikes_disabled"
+  , _statusNumDocksAvailable     = "num_docks_available"
+  , _statusNumDocksDisabled      = "num_docks_disabled"
+  , _statusIsChargingStation     = "is_charging_station"
+  , _statusStatus                = "status"
+  , _statusIsInstalled           = "is_installed"
+  , _statusIsRenting             = "is_renting"
+  , _statusIsReturning           = "is_returning"
+  , _statusTraffic               = "traffic"
+  , _statusVehicleDocksAvailable = "vehicle_docks_available"
+  , _statusVehicleTypesAvailable = vehicleTypeFields "vehicle_types_available"
+  }
 
 -- | Migration for the StationStatus table.
 createStationStatus :: Migration Postgres (CheckedDatabaseEntity Postgres db (TableEntity StationStatusT))
