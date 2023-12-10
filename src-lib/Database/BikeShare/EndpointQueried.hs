@@ -6,34 +6,39 @@
 
 module Database.BikeShare.EndpointQueried
      ( EndpointQueried (..)
-     , pgTypeEndpoint
+     , createEndpointQueriedEnum
+     , endpointQueriedType
      ) where
 
 import           Database.Beam
-import           Database.Beam.Backend                      ( sqlValueSyntax )
-import           Database.Beam.Postgres                     ( Postgres )
+import           Database.Beam.Backend                ( sqlValueSyntax )
+import           Database.Beam.Migrate
+import           Database.Beam.Postgres               ( Postgres )
 import           Database.Beam.Postgres.CustomTypes
-import           Database.Beam.Postgres.Syntax              ( PgDataTypeDescr (..), PgDataTypeSyntax (..),
-                                                              PgValueSyntax, emit, pgDataTypeJSON )
+import           Database.Beam.Postgres.Syntax        ( PgValueSyntax )
 import           Database.PostgreSQL.Simple.FromField
-import qualified Database.PostgreSQL.Simple.TypeInfo.Static as Pg
 
 data EndpointQueried where
   StationInformationEP :: EndpointQueried
   StationStatusEP      :: EndpointQueried
   SystemInformationEP  :: EndpointQueried
-  deriving (Generic, Show, Eq, Ord, Bounded, Enum)
-
-pgTypeEndpoint :: PgDataTypeSyntax
-pgTypeEndpoint = PgDataTypeSyntax (PgDataTypeDescrOid (Pg.typoid Pg.text) Nothing) (emit "ENDPOINT_QUERIED_TYPE") (pgDataTypeJSON "endpoint_queried_type")
+  deriving (Show, Read, Eq, Ord, Enum, Bounded)
 
 instance FromBackendRow Postgres EndpointQueried where
+
+instance IsPgCustomDataType EndpointQueried where
+  -- 'pgDataTypeName' must match the name used in the 'FromField' instance.
+  pgDataTypeName _ = "endpoint_queried"
+
+  -- 'pgDataTypeDescription' must also match the implementation of 'fromField' and 'sqlValueSyntax'.
+  pgDataTypeDescription :: PgDataTypeSchema EndpointQueried
+  pgDataTypeDescription = pgCustomEnumSchema [StationInformationEP, StationStatusEP, SystemInformationEP]
 
 instance FromField EndpointQueried where
   fromField f mbValue = do
     fieldType <- typename f
     case fieldType of
-      "endpoint_queried_type" -> do
+      "endpoint_queried" -> do
         case mbValue of
           Nothing -> returnError UnexpectedNull f ""
           Just value -> case value of
@@ -41,11 +46,17 @@ instance FromField EndpointQueried where
             "station_status"      -> pure StationStatusEP
             "system_information"  -> pure SystemInformationEP
             _                     -> returnError ConversionFailed f "Could not 'read' value for 'EndpointQueried'"
-      _ ->
-        returnError Incompatible f ""
+      _ -> returnError Incompatible f ""
 
 instance HasSqlValueSyntax PgValueSyntax EndpointQueried where
   sqlValueSyntax = pgEnumValueSyntax $ \case
     StationInformationEP -> "station_information"
-    StationStatusEP      -> "station_statusB"
+    StationStatusEP      -> "station_status"
     SystemInformationEP  -> "system_information"
+
+-- | Data type of EndpointQueried custom Postgres enum.
+endpointQueriedType :: DataType Postgres EndpointQueried
+endpointQueriedType = (beamTypeForCustomPg . runMigrationSilenced) createEndpointQueriedEnum
+
+createEndpointQueriedEnum :: Migration Postgres (CheckedDatabaseEntity Postgres db (PgType EndpointQueried))
+createEndpointQueriedEnum = createEnum "endpoint_queried"

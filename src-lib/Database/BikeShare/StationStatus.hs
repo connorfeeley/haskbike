@@ -20,8 +20,10 @@ module Database.BikeShare.StationStatus
      , availableEfit
      , availableEfitG5
      , availableIconic
+     , createStationStatus
      , fromBeamStationStatusToJSON
      , fromJSONToBeamStationStatus
+     , stationStatusModification
      , stationStatusType
      , statusIsChargingStation
      , statusLastReported
@@ -54,7 +56,9 @@ import qualified Data.Text                                  as Text
 import           Data.Time
 
 import           Database.Beam
-import           Database.Beam.Backend                      ( BeamBackend, HasSqlValueSyntax (sqlValueSyntax) )
+import           Database.Beam.Backend                      ( BeamBackend, HasSqlValueSyntax (sqlValueSyntax),
+                                                              IsSql92DataTypeSyntax (..) )
+import           Database.Beam.Migrate
 import           Database.Beam.Postgres                     ( Postgres )
 import           Database.Beam.Postgres.Syntax              ( pgTextType )
 import           Database.BikeShare.StationInformation
@@ -264,3 +268,54 @@ fromBeamStationStatusToJSON status =
                    }
   where
     StationInformationId sid = _statusStationId status
+
+-- * Table modifications and migrations.
+
+-- | Table modifications for 'StationStatus' table.
+stationStatusModification :: EntityModification (DatabaseEntity be db) be (TableEntity StationStatusT)
+stationStatusModification =
+  setEntityName "station_status" <> modifyTableFields tableModification
+  { _statusStationId             = StationInformationId "station_id"
+  , _statusLastReported          = "last_reported"
+  , _statusNumBikesAvailable     = "num_bikes_available"
+  , _statusNumBikesDisabled      = "num_bikes_disabled"
+  , _statusNumDocksAvailable     = "num_docks_available"
+  , _statusNumDocksDisabled      = "num_docks_disabled"
+  , _statusIsChargingStation     = "is_charging_station"
+  , _statusStatus                = "status"
+  , _statusIsInstalled           = "is_installed"
+  , _statusIsRenting             = "is_renting"
+  , _statusIsReturning           = "is_returning"
+  , _statusTraffic               = "traffic"
+  , _statusVehicleDocksAvailable = "vehicle_docks_available"
+  , _statusVehicleTypesAvailable = vehicleTypeFields "vehicle_types_available"
+  }
+
+-- | Migration for the StationStatus table.
+createStationStatus :: Migration Postgres (CheckedDatabaseEntity Postgres db (TableEntity StationStatusT))
+createStationStatus =
+  createTable "station_status" $ StationStatus
+  { _statusStationId             = StationInformationId $ field "station_id" int notNull referenceInformationTable
+  , _statusLastReported          = field "last_reported"           (DataType (timestampType Nothing True))
+  , _statusNumBikesAvailable     = field "num_bikes_available"     int notNull
+  , _statusNumBikesDisabled      = field "num_bikes_disabled"      int notNull
+  , _statusNumDocksAvailable     = field "num_docks_available"     int notNull
+  , _statusNumDocksDisabled      = field "num_docks_disabled"      int notNull
+  , _statusIsChargingStation     = field "is_charging_station"     boolean notNull
+  , _statusStatus                = field "status"                  stationStatusType
+  , _statusIsInstalled           = field "is_installed"            boolean notNull
+  , _statusIsRenting             = field "is_renting"              boolean notNull
+  , _statusIsReturning           = field "is_returning"            boolean notNull
+  , _statusTraffic               = field "traffic"                 (maybeType (varchar (Just 100)))
+  , _statusVehicleDocksAvailable = field "vehicle_docks_available" int notNull
+  , _statusVehicleTypesAvailable = VehicleType (field "vehicle_types_available_boost"   int)
+                                               (field "vehicle_types_available_iconic"  int)
+                                               (field "vehicle_types_available_efit"    int)
+                                               (field "vehicle_types_available_efit_g5" int)
+  }
+
+referenceInformationTable :: BeamMigrateSqlBackend be => Constraint be
+referenceInformationTable = Constraint $ referencesConstraintSyntax "station_information" ["station_id"]
+                            Nothing
+                            (Just referentialActionCascadeSyntax)
+                            Nothing

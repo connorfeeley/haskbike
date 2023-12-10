@@ -222,7 +222,7 @@ queryStationStatusLatest station_id = withPostgres $ runSelectReturningOne $ sel
 
 -- | Count the number of rows in a given table.
 queryRowCount :: (Beamable table, Database Postgres db)
-              => Getting (DatabaseEntity Postgres db (TableEntity table)) (DatabaseSettings be BikeshareDb) (DatabaseEntity Postgres db (TableEntity table))
+              => Getting (DatabaseEntity Postgres db (TableEntity table)) (DatabaseSettings Postgres BikeshareDb) (DatabaseEntity Postgres db (TableEntity table))
               -- ^ Lens to the table in the database.
               -> AppM (Maybe Int32)     -- ^ Count of rows in the specified table.
 queryRowCount table = withPostgres $ runSelectReturningOne $ select $
