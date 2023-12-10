@@ -11,6 +11,8 @@
 
 module Database.BikeShare.Migrations where
 
+import           AppEnv
+
 import           Database.Beam.Migrate
 import           Database.Beam.Migrate.Simple
 import           Database.Beam.Postgres
@@ -41,8 +43,8 @@ allowDestructive :: (Monad m, MonadFail m) => BringUpToDateHooks m
 allowDestructive = defaultUpToDateHooks
   { runIrreversibleHook = pure True }
 
-migrateDB :: Database.Beam.Postgres.Connection -> IO (Maybe (CheckedDatabaseSettings Postgres BikeshareDb))
-migrateDB conn = runBeamPostgresDebug putStrLn conn $
+migrateDB :: AppM (Maybe (CheckedDatabaseSettings Postgres BikeshareDb))
+migrateDB = withPostgres $
   bringUpToDateWithHooks
     allowDestructive
     PG.migrationBackend

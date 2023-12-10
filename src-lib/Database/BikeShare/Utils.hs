@@ -7,67 +7,20 @@ module Database.BikeShare.Utils
      , dbnameProduction
      , dbnameTest
      , dropTables
-     , migrateDatabase
      , mkDbConnectInfo
      , mkDbParams
-     , runBeamPostgres'
-     , runBeamPostgresDebug'
-     , setupDatabaseName
-     , setupProductionDatabase
-     , uncurry5
      ) where
-
-
-
-import           Control.Monad                 ( void )
 
 import           Data.String                   ( fromString )
 
 import           Database.Beam.Postgres
 import           Database.BikeShare.Connection
-import           Database.BikeShare.Migrations ( migrateDB )
 import           Database.PostgreSQL.Simple
 
-import           Text.Pretty.Simple.Extras
-
-
-debug :: Bool
-debug = False
-
-
--- | Enable SQL debug output if DEBUG flag is set.
-runBeamPostgres' :: Connection  -- ^ Connection to the database.
-                 -> Pg a        -- ^ @MonadBeam@ in which we can run Postgres commands.
-                 -> IO a
-runBeamPostgres' =
-  if debug
-  then runBeamPostgresDebug'
-  else runBeamPostgres
-
-
--- | @runBeamPostgresDebug@ prefilled with @pPrintCompact@.
-runBeamPostgresDebug' :: Connection     -- ^ Connection to the database.
-                      -> Pg a           -- ^ @MonadBeam@ in which we can run Postgres commands.
-                      -> IO a
-runBeamPostgresDebug' = runBeamPostgresDebug pPrintCompact
 
 -- | Construct query to drop a table using cascade.
 dropCascade :: String -> Query
 dropCascade tableName = fromString $ "DROP TABLE IF EXISTS " ++ tableName ++" CASCADE"
-
--- | Utility function to uncurry a 5-argument function
-uncurry5 :: (a -> b -> c -> d -> e -> f) -> (a, b, c, d, e) -> f
-uncurry5 fn (a, b, c, d, e) = fn a b c d e
-
--- | Setup the production database.
-setupProductionDatabase :: IO Connection
-setupProductionDatabase = setupDatabaseName dbnameProduction
-
--- | Setup the named database.
-setupDatabaseName :: String -> IO Connection
-setupDatabaseName dbname = do
-  -- Connect to named database, drop all tables, and execute migrations.
-  mkDbConnectInfo dbname >>= connect >>= dropTables >>= migrateDatabase
 
 -- | Drop all tables in the named database.
 dropTables :: Connection -> IO Connection
@@ -80,11 +33,4 @@ dropTables conn = do
   _ <- execute_ conn $ dropCascade "beam_migration"
   _ <- execute_ conn $ dropCascade "beam_version"
 
-  pure conn
-
--- | Run database migrations.
-migrateDatabase :: Connection -> IO Connection
-migrateDatabase conn = do
-  -- Initialize the database.
-  void $ migrateDB conn
   pure conn
