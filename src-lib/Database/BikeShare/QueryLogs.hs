@@ -11,6 +11,7 @@ module Database.BikeShare.QueryLogs
      , QueryLogT (..)
      , QueryResult (..)
        -- Lenses
+     , createQueries
      , queryLogEndpoint
      , queryLogErrJson
      , queryLogErrMsg
@@ -27,8 +28,11 @@ import qualified Data.Text                          as T
 import           Data.Time
 
 import           Database.Beam
-import           Database.Beam.Backend              ( SqlSerial )
+import           Database.Beam.Backend              ( IsSql92DataTypeSyntax (..), SqlSerial )
+import           Database.Beam.Migrate
 import           Database.Beam.Postgres             ( PgJSONB (PgJSONB), Postgres )
+import qualified Database.Beam.Postgres             as Pg
+import           Database.Beam.Postgres.Syntax
 import           Database.BikeShare.BeamConvertable
 import           Database.BikeShare.EndpointQueried
 
@@ -93,3 +97,15 @@ QueryLog _ _ _ (LensFor queryLogSuccess)  _ _ = tableLenses
 QueryLog _ _ _ _ (LensFor queryLogErrMsg)   _ = tableLenses
 QueryLog _ _ _ _  _ (LensFor queryLogErrJson) = tableLenses
 
+
+-- | Migration for 'QueryLog' table.
+createQueries :: Migration Postgres (CheckedDatabaseEntity Postgres db (TableEntity QueryLogT))
+createQueries =
+  createTable "queries" $ QueryLog
+  { _queryLogId       = field "id"         Pg.serial notNull unique
+  , _queryLogTime     = field "time"       (DataType (timestampType Nothing True)) notNull
+  , _queryLogEndpoint = field "endpoint"   endpointQueriedType notNull -- Using custom enum type.
+  , _queryLogSuccess  = field "success"    boolean notNull
+  , _queryLogErrMsg   = field "error_msg"  (DataType pgTextType)
+  , _queryLogErrJson  = field "error_json" (maybeType Pg.jsonb)
+  }

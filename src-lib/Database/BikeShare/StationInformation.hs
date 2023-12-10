@@ -22,6 +22,7 @@ module Database.BikeShare.StationInformation
      , physicalConfiguration
      , rentalMethod
        -- Lenses
+     , createStationInformation
      , infoActive
      , infoAddress
      , infoAltitude
@@ -60,7 +61,9 @@ import qualified Data.Vector                                as Vector
 import           Database.Beam
 import           Database.Beam.Backend                      ( BeamBackend, HasSqlValueSyntax (sqlValueSyntax),
                                                               SqlSerial )
+import           Database.Beam.Migrate
 import           Database.Beam.Postgres                     ( Postgres )
+import qualified Database.Beam.Postgres                     as Pg
 import           Database.Beam.Postgres.Syntax              ( pgTextType )
 import           Database.PostgreSQL.Simple.FromField       ( Field (typeOid), FromField (..), ResultError (..),
                                                               returnError, typoid )
@@ -190,7 +193,7 @@ instance FromField BeamRentalMethod where
 instance ToField BeamRentalMethod where
   toField = toField . show
 
-rentalMethod :: DataType Postgres BeamRentalMethod
+rentalMethod :: DataType Pg.Postgres BeamRentalMethod
 rentalMethod = DataType pgTextType
 
 -- | Newtype wrapper for PhysicalConfiguration to allow us to define a custom FromBackendRow instance.
@@ -229,6 +232,34 @@ instance ToField BeamPhysicalConfiguration where
 
 physicalConfiguration :: DataType Postgres BeamPhysicalConfiguration
 physicalConfiguration = DataType pgTextType
+
+
+-- | Migration for the StationInformation table.
+createStationInformation :: Migration Postgres (CheckedDatabaseEntity Postgres db (TableEntity StationInformationT))
+createStationInformation =
+  createTable "station_information" $ StationInformation
+  { _infoId                    = field "id"                     Pg.serial notNull unique
+  , _infoStationId             = field "station_id"             int notNull unique
+  , _infoName                  = field "name"                   (varchar (Just 100)) notNull
+  , _infoPhysicalConfiguration = field "physical_configuration" physicalConfiguration
+  , _infoLat                   = field "lat"                    double notNull
+  , _infoLon                   = field "lon"                    double notNull
+  , _infoAltitude              = field "altitude"               (maybeType double)
+  , _infoAddress               = field "address"                (maybeType (varchar (Just 100)))
+  , _infoCapacity              = field "capacity"               int notNull
+  , _infoIsChargingStation     = field "is_charging_station"    boolean notNull
+  , _infoRentalMethods         = field "rental_methods"         (Pg.unboundedArray rentalMethod)
+  , _infoIsValetStation        = field "is_valet_station"       boolean notNull
+  , _infoIsVirtualStation      = field "is_virtual_station"     boolean notNull
+  , _infoGroups                = field "groups"                 (Pg.unboundedArray (varchar (Just 100)))
+  , _infoObcn                  = field "obcn"                   (varchar (Just 100)) notNull
+  , _infoNearbyDistance        = field "nearby_distance"        double notNull
+  , _infoBluetoothId           = field "bluetooth_id"           (varchar (Just 100)) notNull
+  , _infoRideCodeSupport       = field "ride_code_support"      boolean notNull
+  , _infoRentalUris            = field "rental_uris"            (Pg.unboundedArray (varchar (Just 100)))
+  , _infoActive                = field "active"                 boolean notNull
+  }
+
 
 -- | Convert from the JSON StationInformation to the Beam StationInformation type
 fromJSONToBeamStationInformation :: AT.StationInformation -> StationInformationT (QExpr Postgres s)
