@@ -6,8 +6,12 @@
 module CLI.Poll.Utils
      ( createHandlingThread
      , createPollingThread
+     , errToQueryLog
+     , handleResponseError
+     , handleResponseSuccess
      , handleTTL
      , handleTimeElapsed
+     , maybeDecodeFailure
      , requesterFn
      ) where
 

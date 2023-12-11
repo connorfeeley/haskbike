@@ -33,7 +33,7 @@ import           Servant.Client
 import           UnliftIO
 
 
-runQueryM :: (WithLog env Message m, MonadIO m, MonadUnliftIO m, MonadReader (Env m) m) => ClientM a -> m (Either ClientError a)
+runQueryM :: (m ~ AppM) => ClientM a -> m (Either ClientError a)
 runQueryM query = do
   env <- ask
   let clientManager = envClientManager env

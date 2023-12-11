@@ -239,6 +239,7 @@ library
                     , CLI.QueryFormat
                     , CLI.Database
                     , CLI.Options
+                    , API.APIEntity
                     , API.Types
                     , API.Utils
                     , API.Pollable

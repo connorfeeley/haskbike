@@ -2,11 +2,16 @@
 -- | Poll the API for status updates, inserting results in database as needed.
 module CLI.Poll
      ( dispatchPoll
+     , handlerStationInformation
+     , handlerStationStatus
+     , handlerSystemInformation
      , pollClient
      ) where
 
 
+import           API.APIEntity
 import           API.Client
+import           API.ClientLifted
 import           API.Pollable
 import           API.ResponseWrapper
 import qualified API.Types                     as AT
@@ -19,16 +24,20 @@ import           CLI.Poll.Utils
 import           Colog                         ( logDebug, logInfo )
 
 import           Control.Lens
-import           Control.Monad                 ( void )
+import           Control.Monad                 ( forever, void )
 
 import qualified Data.Text                     as T
+import           Data.Time
 
 import           Database.BikeShare
+import qualified Database.BikeShare            as DB
 import           Database.BikeShare.Operations
 
 import           Fmt                           ( format )
 
 import           Prelude                       hiding ( log )
+
+import           Servant.Client
 
 import           Text.Pretty.Simple.Extras     ( pShowCompact )
 
@@ -59,16 +68,21 @@ pollClient = do
     waitBoth infoPollOnce infoHandleOnce
 
 
+    -- FIXME
+    handlerStationInformation
+    handlerStationStatus
+    handlerSystemInformation
+
     logInfo "Initializing polling and handling threads."
     -- The polling threads.
-    infoPollingThread    <- createPollingThread infoQueueResp    infoTtl    infoLastUpdated
-    statusPollingThread  <- createPollingThread statusQueueResp  statusTtl  statusLastUpdated
-    sysInfoPollingThread <- createPollingThread sysInfoQueueResp sysInfoTtl sysInfoLastUpdated
+    infoPollingThread    <- (async . forever) (requester infoQueueResp    infoTtl    infoLastUpdated)
+    statusPollingThread  <- (async . forever) (requester statusQueueResp  statusTtl  statusLastUpdated)
+    sysInfoPollingThread <- (async . forever) (requester sysInfoQueueResp sysInfoTtl sysInfoLastUpdated)
 
     -- The handling threads for station information and station status.
-    infoHandlingThread    <- createHandlingThread infoQueueResp
-    statusHandlingThread  <- createHandlingThread statusQueueResp
-    sysInfoHandlingThread <- createHandlingThread sysInfoQueueResp
+    infoHandlingThread    <- (async . forever) (handler infoQueueResp)
+    statusHandlingThread  <- (async . forever) (handler statusQueueResp)
+    sysInfoHandlingThread <- (async . forever) (handler sysInfoQueueResp)
 
     -- Start concurrent operations and wait until any one of them finishes (which should not happen).
     -- If any thread finishes, we cancel the others as there is an implied dependency between them.
@@ -78,6 +92,47 @@ pollClient = do
 
     logInfo "Polling and handling threads running. Press Ctrl+C to terminate."
     return ()
+
+
+handlerStationInformation :: ( ApiFetcher ClientM [AT.StationInformation]
+                             , DbInserter AppM AT.StationInformation DB.StationInformationT Identity
+                             ) => AppM ()
+handlerStationInformation = void $ do
+  -- Convert API records to database entities and handle failures if necessary.
+  apiResult <- runQueryM (apiFetch :: ClientM (ResponseWrapper [AT.StationInformation]))
+  case apiResult of
+    Left err -> handleResponseError StationInformationEP err
+    Right resp -> do
+      handleResponseSuccess StationInformationEP (_respLastUpdated resp)
+      insertedResult <- dbInsert (_respData resp) :: AppM [DB.StationInformationT Identity]
+      logInfo $ format "(Info) Updated/inserted {} records into database." (length insertedResult)
+
+handlerStationStatus :: ( ApiFetcher ClientM [AT.StationStatus]
+                        , DbInserter AppM AT.StationStatus DB.StationStatusT Identity
+                        ) => AppM ()
+handlerStationStatus = void $ do
+  -- Convert API records to database entities and handle failures if necessary.
+  apiResult <- runQueryM (apiFetch :: ClientM (ResponseWrapper [AT.StationStatus]))
+  case apiResult of
+    Left err -> handleResponseError StationStatusEP err
+    Right resp -> do
+      handleResponseSuccess StationStatusEP (_respLastUpdated resp)
+      insertedResult <- dbInsert (_respData resp) :: AppM [DB.StationStatusT Identity]
+      logInfo $ format "(Info) Updated/inserted {} records into database." (length insertedResult)
+
+handlerSystemInformation :: ( ApiFetcher ClientM AT.SystemInformation
+                            , DbInserter AppM (UTCTime, AT.SystemInformation) DB.SystemInformationT Identity
+                            ) => AppM ()
+handlerSystemInformation = void $ do
+  -- Convert API records to database entities and handle failures if necessary.
+  apiResult <- runQueryM (apiFetch :: ClientM (ResponseWrapper AT.SystemInformation))
+  case apiResult of
+    Left err -> handleResponseError SystemInformationEP err
+    Right resp -> do
+      handleResponseSuccess SystemInformationEP (_respLastUpdated resp)
+      insertedResult <- dbInsert [(_respLastUpdated resp, _respData resp)] :: AppM [DB.SystemInformationT Identity]
+      logInfo $ format "(Info) Updated/inserted {} records into database." (length insertedResult)
+
 
 instance Pollable (ResponseWrapper [AT.StationStatus]) where
   -- | Endpoint (ClientM a)

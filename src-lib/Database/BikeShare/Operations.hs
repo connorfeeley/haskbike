@@ -109,8 +109,8 @@ queryStationInformationByIds ids =
     ids' = fromIntegral <$> ids
 
 -- | Insert station information into the database.
-insertStationInformation :: [AT.StationInformation]  -- ^ List of 'StationInformation' from the API response.
-                         -> AppM [StationInformation] -- ^ List of 'StationInformation' that where inserted.
+insertStationInformation :: [AT.StationInformation]             -- ^ List of 'StationInformation' from the API response.
+                         -> AppM [StationInformationT Identity] -- ^ List of 'StationInformation' that where inserted.
 insertStationInformation stations =
   withPostgres $ runInsertReturningList $ insertStationInformationExpr stations
 
