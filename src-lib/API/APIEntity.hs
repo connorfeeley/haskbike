@@ -24,6 +24,9 @@ import           Database.Beam.Backend.SQL.BeamExtensions ( MonadBeamInsertRetur
 import           Database.Beam.Postgres
 import           Database.Beam.Postgres.Full              hiding ( insert )
 import qualified Database.BikeShare                       as DB
+import qualified Database.BikeShare.StationInformation    as DB
+import qualified Database.BikeShare.StationStatus         as DB
+import qualified Database.BikeShare.SystemInformation     as DB
 
 import           Servant.Client                           ( ClientM )
 

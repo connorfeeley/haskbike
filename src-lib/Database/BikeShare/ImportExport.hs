@@ -5,21 +5,23 @@ module Database.BikeShare.ImportExport
      , importDbTestData
      ) where
 
-import qualified API.StationInformation        as AT
-import qualified API.StationStatus             as AT
+import qualified API.StationInformation                as AT
+import qualified API.StationStatus                     as AT
 
 import           AppEnv
 
 import           Control.Lens
 import           Control.Monad
 
-import           Data.Aeson                    ( eitherDecode, encode )
-import qualified Data.ByteString.Lazy          as L
+import           Data.Aeson                            ( eitherDecode, encode )
+import qualified Data.ByteString.Lazy                  as L
 import           Data.Time
 
 import           Database.Beam
 import           Database.BikeShare
 import           Database.BikeShare.Operations
+import           Database.BikeShare.StationInformation
+import           Database.BikeShare.StationStatus
 import           Database.BikeShare.Utils
 
 

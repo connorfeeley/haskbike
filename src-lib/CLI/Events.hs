@@ -27,9 +27,10 @@ import           Data.Time
 import           Data.Time.Extras
 
 import           Database.Beam
-import           Database.BikeShare
 import           Database.BikeShare.Expressions
 import           Database.BikeShare.Operations
+import           Database.BikeShare.StationInformation
+import           Database.BikeShare.StationStatus
 import           Database.BikeShare.StatusVariationQuery
 
 import           Fmt

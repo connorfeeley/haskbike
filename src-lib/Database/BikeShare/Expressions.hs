@@ -23,7 +23,6 @@ module Database.BikeShare.Expressions
      , systemStatusBetweenExpr
      ) where
 
-
 import qualified API.ResponseWrapper                      as AT
 import qualified API.StationInformation                   as AT
 import qualified API.StationStatus                        as AT
@@ -52,7 +51,10 @@ import           Database.Beam.Postgres.Syntax
 import qualified Database.Beam.Query.Adhoc                as Adhoc
 import           Database.Beam.Query.CTE                  ( QAnyScope )
 import           Database.BikeShare
+import           Database.BikeShare.StationInformation
+import           Database.BikeShare.StationStatus
 import           Database.BikeShare.StatusVariationQuery
+import           Database.BikeShare.SystemInformation
 
 import           Text.Pretty.Simple.Extras
 

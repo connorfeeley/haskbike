@@ -35,11 +35,11 @@ import           Data.Time
 import           Data.Time.Extras
 
 import           Database.Beam
-import           Database.BikeShare
 import           Database.BikeShare.Expressions
 import           Database.BikeShare.Operations
 import           Database.BikeShare.Operations.Factors
 import           Database.BikeShare.Operations.FactorsCSV
+import           Database.BikeShare.StationInformation
 import           Database.BikeShare.StatusVariationQuery
 
 import           Fmt

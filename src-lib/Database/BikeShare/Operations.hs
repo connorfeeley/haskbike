@@ -58,6 +58,10 @@ import           Database.BikeShare
 import           Database.BikeShare.BeamConvertable
 import           Database.BikeShare.Expressions
 import           Database.BikeShare.Operations.Dockings
+import           Database.BikeShare.QueryLogs
+import           Database.BikeShare.StationInformation
+import           Database.BikeShare.StationStatus
+import           Database.BikeShare.SystemInformation
 import           Database.PostgreSQL.Simple               ( Only (..), query_ )
 
 import           GHC.Exts                                 ( fromString )

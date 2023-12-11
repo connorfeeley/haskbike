@@ -6,18 +6,20 @@ import           CLI.Utils
 
 import           Control.Lens
 
-import           Data.Int            ( Int32 )
-import           Data.Text.Lazy      ( Text, chunksOf, pack, reverse, unlines, unpack, unwords )
-import           Data.Time           ( TimeZone, UTCTime )
+import           Data.Int                              ( Int32 )
+import           Data.Text.Lazy                        ( Text, chunksOf, pack, reverse, unlines, unpack, unwords )
+import           Data.Time                             ( TimeZone, UTCTime )
 
 import           Database.BikeShare
+import           Database.BikeShare.StationInformation
+import           Database.BikeShare.StationStatus
+import           Database.BikeShare.SystemInformation
 
 import           Fmt
 
-import           Prelude             hiding ( log, reverse, unlines, unwords )
+import           Prelude                               hiding ( log, reverse, unlines, unwords )
 
 import           System.Console.ANSI
-
 
 
 -- | Helper function to show a value as 'Text'.

@@ -52,7 +52,10 @@ import           Data.Int                                ( Int32 )
 
 import           Database.Beam
 import           Database.BikeShare
+import           Database.BikeShare.StationInformation
+import           Database.BikeShare.StationStatus
 import           Database.BikeShare.StatusVariationQuery
+import           Database.BikeShare.SystemInformation
 
 
 -- | Data type representing the type of statistic to query.
