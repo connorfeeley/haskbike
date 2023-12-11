@@ -55,7 +55,6 @@ import           Database.BikeShare
 import           Database.BikeShare.StatusVariationQuery
 import           Database.BikeShare.Tables.StationInformation
 import           Database.BikeShare.Tables.StationStatus
-import           Database.BikeShare.Tables.SystemInformation
 
 
 -- | Data type representing the type of statistic to query.

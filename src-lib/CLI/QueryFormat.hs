@@ -11,10 +11,8 @@ import           Data.Text.Lazy                               ( Text, chunksOf, 
                                                                 unwords )
 import           Data.Time                                    ( TimeZone, UTCTime )
 
-import           Database.BikeShare
 import           Database.BikeShare.Tables.StationInformation
 import           Database.BikeShare.Tables.StationStatus
-import           Database.BikeShare.Tables.SystemInformation
 
 import           Fmt
 

@@ -15,10 +15,8 @@ import           Data.Time
 
 import           Database.Beam
 import           Database.Beam.Postgres
-import           Database.BikeShare
 import           Database.BikeShare.Tables.StationInformation
 import           Database.BikeShare.Tables.StationStatus
-import           Database.BikeShare.Tables.SystemInformation
 
 
 -- | Data type representing a query for station status.

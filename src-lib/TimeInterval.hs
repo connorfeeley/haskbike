@@ -15,10 +15,8 @@ import           Data.Int                                     ( Int32 )
 import           Data.Time
 
 import           Database.Beam
-import           Database.BikeShare
 import           Database.BikeShare.Tables.StationInformation
 import           Database.BikeShare.Tables.StationStatus
-import           Database.BikeShare.Tables.SystemInformation
 
 
 _statusToIdAndTime :: StationStatusT f -> (Columnar f Int32, Columnar f UTCTime)
