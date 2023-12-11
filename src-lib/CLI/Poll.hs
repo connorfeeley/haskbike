@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 -- | Poll the API for status updates, inserting results in database as needed.
 module CLI.Poll
      ( dispatchPoll
@@ -11,7 +12,6 @@ module CLI.Poll
 
 import           API.APIEntity
 import           API.Client
-import           API.ClientLifted
 import           API.Pollable
 import           API.ResponseWrapper
 import qualified API.StationInformation                       as AT
@@ -43,8 +43,6 @@ import           Fmt                                          ( format )
 
 import           Prelude                                      hiding ( log )
 
-import           Servant.Client
-
 import           Text.Pretty.Simple.Extras                    ( pShowCompact )
 
 import           UnliftIO
@@ -75,9 +73,9 @@ pollClient = do
 
 
     -- FIXME
-    handlerStationInformation
-    handlerStationStatus
-    handlerSystemInformation
+    handlerStationInformation prepareData
+    handlerStationStatus prepareData
+    handlerSystemInformation prepareData dbInsert SystemInformationEP
 
     logInfo "Initializing polling and handling threads."
     -- The polling threads.
@@ -103,54 +101,50 @@ pollClient = do
 handlerStationInformation :: ( ApiFetcher AppM [AT.StationInformation]
                              , ApiConverter    [AT.StationInformation] [AT.StationInformation]
                              , DbInserter AppM  AT.StationInformation   DB.StationInformationT Identity
-                             ) => AppM ()
-handlerStationInformation = void $ do
+                             )
+                          => (ResponseWrapper [AT.StationInformation] -> [AT.StationInformation]) -> AppM ()
+handlerStationInformation prepare = void $ do
   -- Convert API records to database entities and handle failures if necessary.
   apiResult <- fetchFromApi
   case apiResult of
     Left err -> handleResponseError StationInformationEP err
     Right resp -> do
       handleResponseSuccess StationInformationEP (_respLastUpdated resp)
-      insertedResult <- dbInsert (transformStationInformation resp) :: AppM [DB.StationInformationT Identity]
+      insertedResult <- dbInsert (prepare resp) :: AppM [DB.StationInformationT Identity]
       logInfo $ format "(Info) Updated/inserted {} records into database." (length insertedResult)
-
-transformStationInformation :: ResponseWrapper [AT.StationInformation] -> [AT.StationInformation]
-transformStationInformation = _respData
-
 
 handlerStationStatus :: ( ApiFetcher AppM [AT.StationStatus]
                         , ApiConverter    [AT.StationStatus] [AT.StationStatus]
                         , DbInserter AppM AT.StationStatus DB.StationStatusT Identity
-                        ) => AppM ()
-handlerStationStatus = void $ do
+                        ) => (ResponseWrapper [AT.StationStatus] -> [AT.StationStatus]) -> AppM ()
+handlerStationStatus prepare = void $ do
   -- Convert API records to database entities and handle failures if necessary.
   apiResult <- fetchFromApi
   case apiResult of
     Left err -> handleResponseError StationStatusEP err
     Right resp -> do
       handleResponseSuccess StationStatusEP (_respLastUpdated resp)
-      insertedResult <- dbInsert (transformStationStatus resp) :: AppM [DB.StationStatusT Identity]
+      insertedResult <- dbInsert (prepare resp) :: AppM [DB.StationStatusT Identity]
       logInfo $ format "(Info) Updated/inserted {} records into database." (length insertedResult)
-
-transformStationStatus :: ResponseWrapper [AT.StationStatus] -> [AT.StationStatus]
-transformStationStatus = _respData
 
 handlerSystemInformation :: ( ApiFetcher AppM AT.SystemInformation
                             , ApiConverter    AT.SystemInformation (UTCTime, AT.SystemInformation)
                             , DbInserter AppM (UTCTime, AT.SystemInformation) DB.SystemInformationT Identity
-                            ) => AppM ()
-handlerSystemInformation = void $ do
+                            , HasTable DB.SystemInformationT
+                            )
+                         => (ResponseWrapper AT.SystemInformation -> (UTCTime, AT.SystemInformation))
+                         -> ([(UTCTime, AT.SystemInformation)] -> AppM [DB.SystemInformationT Identity])
+                         -> EndpointQueried
+                         -> AppM ()
+handlerSystemInformation prepare insertDb ep = void $ do
   -- Convert API records to database entities and handle failures if necessary.
   apiResult <- fetchFromApi
   case apiResult of
-    Left err -> handleResponseError SystemInformationEP err
+    Left err -> handleResponseError ep err
     Right resp -> do
-      handleResponseSuccess SystemInformationEP (_respLastUpdated resp)
-      insertedResult <- dbInsert [transformSystemInformation resp] :: AppM [DB.SystemInformationT Identity]
+      handleResponseSuccess ep (_respLastUpdated resp)
+      insertedResult <- insertDb [prepare resp]
       logInfo $ format "(Info) Updated/inserted {} records into database." (length insertedResult)
-
-transformSystemInformation :: ResponseWrapper AT.SystemInformation -> (UTCTime, AT.SystemInformation)
-transformSystemInformation resp = (_respLastUpdated resp, _respData resp)
 
 -- genericHandler :: ( ApiFetcher a1
 --                   , DbInserter AppM a2 d dm
