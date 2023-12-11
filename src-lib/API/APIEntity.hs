@@ -32,8 +32,8 @@ import           Servant.Client                               ( ClientM )
 
 
 -- Typeclass for fetching data from the API.
-class Monad m => ApiFetcher m a where
-  apiFetch :: m (ResponseWrapper a)
+class ApiFetcher a where
+  apiFetch :: ClientM (ResponseWrapper a)
 
 -- Typeclass for converting from API types to database types.
 class ToDbEntity apiType dbType where
@@ -47,13 +47,13 @@ class FromDbEntity dbType apiType where
 class Monad m => DbInserter m apiType dbType dbMonad where
   dbInsert :: HasTable dbType => [apiType] -> m [dbType dbMonad]
 
-
 class HasTable dbType where
   getTable :: DB.BikeshareDb f -> f (TableEntity dbType)
 
+
 -- * StationInformation instances.
 
-instance Monad ClientM => ApiFetcher ClientM [AT.StationInformation] where
+instance Monad ClientM => ApiFetcher [AT.StationInformation] where
   apiFetch = stationInformation
 
 instance ToDbEntity AT.StationInformation (DB.StationInformationT (QExpr Postgres s)) where
@@ -79,7 +79,7 @@ instance HasTable DB.StationInformationT where
 
 -- * StationStatus instances.
 
-instance Monad ClientM => ApiFetcher ClientM [AT.StationStatus] where
+instance Monad ClientM => ApiFetcher [AT.StationStatus] where
   apiFetch = stationStatus
 
 instance ToDbEntity AT.StationStatus (Maybe (DB.StationStatusT (QExpr Postgres s))) where
@@ -98,7 +98,7 @@ instance HasTable DB.StationStatusT where
 
 -- * SystemInformation instances.
 
-instance Monad ClientM => ApiFetcher ClientM AT.SystemInformation where
+instance Monad ClientM => ApiFetcher AT.SystemInformation where
   apiFetch = systemInformation
 
 instance ToDbEntity (UTCTime, AT.SystemInformation) (DB.SystemInformationT (QExpr Postgres s)) where
