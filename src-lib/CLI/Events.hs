@@ -15,32 +15,32 @@ import           CLI.QueryFormat
 
 import           Colog
 
-import           Control.Lens                            hiding ( para )
+import           Control.Lens                                 hiding ( para )
 
-import qualified Data.Char                               as Char
-import           Data.Int                                ( Int32 )
-import           Data.List                               ( sortOn )
-import           Data.Maybe                              ( fromMaybe )
-import           Data.Ord                                ( Down (Down) )
-import           Data.Text.Lazy                          ( pack, unpack )
+import qualified Data.Char                                    as Char
+import           Data.Int                                     ( Int32 )
+import           Data.List                                    ( sortOn )
+import           Data.Maybe                                   ( fromMaybe )
+import           Data.Ord                                     ( Down (Down) )
+import           Data.Text.Lazy                               ( pack, unpack )
 import           Data.Time
 import           Data.Time.Extras
 
 import           Database.Beam
 import           Database.BikeShare.Expressions
 import           Database.BikeShare.Operations
-import           Database.BikeShare.StationInformation
-import           Database.BikeShare.StationStatus
 import           Database.BikeShare.StatusVariationQuery
+import           Database.BikeShare.Tables.StationInformation
+import           Database.BikeShare.Tables.StationStatus
 
 import           Fmt
 
-import           Prelude                                 hiding ( log )
+import           Prelude                                      hiding ( log )
 
 import           System.Console.ANSI
 
 import           Text.Pretty.Simple.Extras
-import qualified Text.PrettyPrint.Boxes                  as Box
+import qualified Text.PrettyPrint.Boxes                       as Box
 
 import           UnliftIO
 

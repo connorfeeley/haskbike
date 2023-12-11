@@ -12,7 +12,7 @@ import           Data.Text
 import           Data.Time
 import           Data.Time.Extras
 
-import           Database.BikeShare.StationInformation
+import           Database.BikeShare.Tables.StationInformation
 
 import           Fmt
 

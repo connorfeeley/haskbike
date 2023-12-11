@@ -8,27 +8,27 @@ module API.APIEntity where
 
 import           API.Client
 import           API.ResponseWrapper
-import qualified API.StationInformation                   as AT
-import qualified API.StationStatus                        as AT
-import qualified API.SystemInformation                    as AT
+import qualified API.StationInformation                       as AT
+import qualified API.StationStatus                            as AT
+import qualified API.SystemInformation                        as AT
 
 import           AppEnv
 
 import           Control.Lens
 
-import           Data.Maybe                               ( mapMaybe )
+import           Data.Maybe                                   ( mapMaybe )
 import           Data.Time
 
 import           Database.Beam
-import           Database.Beam.Backend.SQL.BeamExtensions ( MonadBeamInsertReturning (runInsertReturningList) )
+import           Database.Beam.Backend.SQL.BeamExtensions     ( MonadBeamInsertReturning (runInsertReturningList) )
 import           Database.Beam.Postgres
-import           Database.Beam.Postgres.Full              hiding ( insert )
-import qualified Database.BikeShare                       as DB
-import qualified Database.BikeShare.StationInformation    as DB
-import qualified Database.BikeShare.StationStatus         as DB
-import qualified Database.BikeShare.SystemInformation     as DB
+import           Database.Beam.Postgres.Full                  hiding ( insert )
+import qualified Database.BikeShare                           as DB
+import qualified Database.BikeShare.Tables.StationInformation as DB
+import qualified Database.BikeShare.Tables.StationStatus      as DB
+import qualified Database.BikeShare.Tables.SystemInformation  as DB
 
-import           Servant.Client                           ( ClientM )
+import           Servant.Client                               ( ClientM )
 
 
 -- Typeclass for fetching data from the API.

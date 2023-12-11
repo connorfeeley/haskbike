@@ -21,7 +21,7 @@ import           Data.Time
 import           Data.Time.Extras
 
 import           Database.BikeShare.Operations
-import           Database.BikeShare.StationInformation ( StationInformation )
+import           Database.BikeShare.Tables.StationInformation ( StationInformation )
 
 import qualified Graphics.Vega.VegaLite                as VL
 

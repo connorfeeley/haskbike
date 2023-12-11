@@ -6,7 +6,7 @@
 {-# LANGUAGE TypeFamilies              #-}
 {-# LANGUAGE UndecidableInstances      #-}
 
-module Database.BikeShare.SystemInformation
+module Database.BikeShare.Tables.SystemInformation
      ( PrimaryKey (..)
      , SystemInformation
      , SystemInformationCount

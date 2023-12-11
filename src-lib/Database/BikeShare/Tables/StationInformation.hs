@@ -10,7 +10,7 @@
 {-# LANGUAGE UndecidableInstances      #-}
 
 
-module Database.BikeShare.StationInformation
+module Database.BikeShare.Tables.StationInformation
      ( BeamPhysicalConfiguration (..)
      , BeamRentalMethod (..)
      , PrimaryKey (..)

@@ -11,7 +11,7 @@ import qualified Data.Text                             as T
 import           Data.Time
 import           Data.Time.Extras
 
-import           Database.BikeShare.StationInformation
+import           Database.BikeShare.Tables.StationInformation
 
 import           Fmt
 

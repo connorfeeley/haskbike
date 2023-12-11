@@ -41,21 +41,21 @@ module Database.BikeShare.Operations.Dockings
      ) where
 
 
-import           API.StationStatus                       ( TorontoVehicleType (..) )
+import           API.StationStatus                            ( TorontoVehicleType (..) )
 
 import           AppEnv
 
-import           Control.Lens                            hiding ( reuse, (.=), (<.) )
+import           Control.Lens                                 hiding ( reuse, (.=), (<.) )
 
 import           Data.Aeson
-import           Data.Int                                ( Int32 )
+import           Data.Int                                     ( Int32 )
 
 import           Database.Beam
 import           Database.BikeShare
-import           Database.BikeShare.StationInformation
-import           Database.BikeShare.StationStatus
 import           Database.BikeShare.StatusVariationQuery
-import           Database.BikeShare.SystemInformation
+import           Database.BikeShare.Tables.StationInformation
+import           Database.BikeShare.Tables.StationStatus
+import           Database.BikeShare.Tables.SystemInformation
 
 
 -- | Data type representing the type of statistic to query.

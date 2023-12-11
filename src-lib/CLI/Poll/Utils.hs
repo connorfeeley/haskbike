@@ -15,7 +15,7 @@ module CLI.Poll.Utils
      , requesterFn
      ) where
 
-import           API.ClientLifted                   ( runQueryM )
+import           API.ClientLifted                    ( runQueryM )
 import           API.Pollable
 import           API.ResponseWrapper
 
@@ -24,25 +24,25 @@ import           AppEnv
 import           Colog
 
 import           Control.Concurrent
-import           Control.Exception                  ( throw )
+import           Control.Exception                   ( throw )
 import           Control.Lens
 import           Control.Monad
 
 import           Data.Aeson
-import           Data.Maybe                         ( fromMaybe, isJust, isNothing )
-import qualified Data.Text                          as T
+import           Data.Maybe                          ( fromMaybe, isJust, isNothing )
+import qualified Data.Text                           as T
 import           Data.Time
 import           Data.Time.Extras
 
 import           Database.BikeShare.EndpointQueried
-import           Database.BikeShare.Operations      ( insertQueryLog )
-import           Database.BikeShare.QueryLogs
+import           Database.BikeShare.Operations       ( insertQueryLog )
+import           Database.BikeShare.Tables.QueryLogs
 
-import           Fmt                                ( format )
+import           Fmt                                 ( format )
 
 import           Servant.Client
 
-import           TextShow                           ( showt )
+import           TextShow                            ( showt )
 
 import           UnliftIO
 

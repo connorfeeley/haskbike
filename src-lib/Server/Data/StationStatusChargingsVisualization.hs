@@ -16,7 +16,7 @@ import           Data.Time
 import           Data.Time.Extras
 
 import           Database.BikeShare.Operations
-import           Database.BikeShare.StationStatus
+import           Database.BikeShare.Tables.StationStatus
 
 import           GHC.Generics
 

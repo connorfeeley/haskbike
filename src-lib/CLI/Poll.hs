@@ -14,38 +14,38 @@ import           API.Client
 import           API.ClientLifted
 import           API.Pollable
 import           API.ResponseWrapper
-import qualified API.StationInformation                as AT
-import qualified API.StationStatus                     as AT
-import qualified API.SystemInformation                 as AT
+import qualified API.StationInformation                       as AT
+import qualified API.StationStatus                            as AT
+import qualified API.SystemInformation                        as AT
 
 import           AppEnv
 
-import           CLI.Options                           ( PollOptions (..) )
+import           CLI.Options                                  ( PollOptions (..) )
 import           CLI.Poll.Utils
 
-import           Colog                                 ( logDebug, logInfo )
+import           Colog                                        ( logDebug, logInfo )
 
 import           Control.Lens
-import           Control.Monad                         ( forever, void )
+import           Control.Monad                                ( forever, void )
 
-import qualified Data.Text                             as T
+import qualified Data.Text                                    as T
 import           Data.Time
 
 import           Database.BikeShare.EndpointQueried
 import           Database.BikeShare.Operations
-import           Database.BikeShare.StationInformation
-import qualified Database.BikeShare.StationInformation as DB
-import           Database.BikeShare.StationStatus
-import qualified Database.BikeShare.StationStatus      as DB
-import qualified Database.BikeShare.SystemInformation  as DB
+import           Database.BikeShare.Tables.StationInformation
+import qualified Database.BikeShare.Tables.StationInformation as DB
+import           Database.BikeShare.Tables.StationStatus
+import qualified Database.BikeShare.Tables.StationStatus      as DB
+import qualified Database.BikeShare.Tables.SystemInformation  as DB
 
-import           Fmt                                   ( format )
+import           Fmt                                          ( format )
 
-import           Prelude                               hiding ( log )
+import           Prelude                                      hiding ( log )
 
 import           Servant.Client
 
-import           Text.Pretty.Simple.Extras             ( pShowCompact )
+import           Text.Pretty.Simple.Extras                    ( pShowCompact )
 
 import           UnliftIO
 

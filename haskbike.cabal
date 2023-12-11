@@ -265,12 +265,12 @@ library
                     , Graphics.Vega.VegaLite.Extra
 
     -- Modules included in this library but not exported.
-    other-modules:    Database.BikeShare.SystemInformation
-                    , Database.BikeShare.StationInformation
-                    , Database.BikeShare.StationStatus
-                    , Database.BikeShare.QueryLogs
+    other-modules:    Database.BikeShare.Tables.SystemInformation
+                    , Database.BikeShare.Tables.StationInformation
+                    , Database.BikeShare.Tables.StationStatus
+                    , Database.BikeShare.Tables.QueryLogs
                     , Database.BikeShare.EndpointQueried
-                    , Database.BikeShare.Diagnostics
+                    , Database.BikeShare.Tables.Diagnostics
                     , Paths_haskbike
 
 

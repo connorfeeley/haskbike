@@ -21,7 +21,7 @@ import qualified Data.Text                               as T
 
 import           Database.Beam                           hiding ( div_ )
 import           Database.BikeShare.Expressions          ( integrateColumns )
-import           Database.BikeShare.StationInformation   ( unInformationStationId )
+import           Database.BikeShare.Tables.StationInformation   ( unInformationStationId )
 import           Database.BikeShare.StatusVariationQuery
 
 import           Lucid                                   ( HtmlT, ToHtml (..) )

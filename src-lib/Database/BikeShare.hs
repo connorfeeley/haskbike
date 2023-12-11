@@ -21,16 +21,16 @@ module Database.BikeShare
      , bikeshareSystemInformationCount
      ) where
 
-import           Control.Lens                          ( Lens' )
+import           Control.Lens                                 ( Lens' )
 
 import           Database.Beam
 import           Database.Beam.Postgres
 import           Database.Beam.Postgres.CustomTypes
 import           Database.BikeShare.EndpointQueried
-import           Database.BikeShare.QueryLogs
-import           Database.BikeShare.StationInformation
-import           Database.BikeShare.StationStatus
-import           Database.BikeShare.SystemInformation
+import           Database.BikeShare.Tables.QueryLogs
+import           Database.BikeShare.Tables.StationInformation
+import           Database.BikeShare.Tables.StationStatus
+import           Database.BikeShare.Tables.SystemInformation
 
 
 data BikeshareDb f where

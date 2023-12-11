@@ -35,20 +35,20 @@ module Database.BikeShare.Operations
      , queryTableSize
      ) where
 
-import qualified API.StationInformation                   as AT
-import qualified API.StationStatus                        as AT
-import qualified API.SystemInformation                    as AT
+import qualified API.StationInformation                       as AT
+import qualified API.StationStatus                            as AT
+import qualified API.SystemInformation                        as AT
 
 import           AppEnv
 
-import           Colog                                    ( logException )
+import           Colog                                        ( logException )
 
-import           Control.Lens                             hiding ( reuse, (<.) )
+import           Control.Lens                                 hiding ( reuse, (<.) )
 import           Control.Monad.Catch
 
-import           Data.Int                                 ( Int32 )
-import           Data.Maybe                               ( mapMaybe )
-import qualified Data.Text                                as Text
+import           Data.Int                                     ( Int32 )
+import           Data.Maybe                                   ( mapMaybe )
+import qualified Data.Text                                    as Text
 import           Data.Time
 
 import           Database.Beam
@@ -58,15 +58,15 @@ import           Database.BikeShare
 import           Database.BikeShare.BeamConvertable
 import           Database.BikeShare.Expressions
 import           Database.BikeShare.Operations.Dockings
-import           Database.BikeShare.QueryLogs
-import           Database.BikeShare.StationInformation
-import           Database.BikeShare.StationStatus
-import           Database.BikeShare.SystemInformation
-import           Database.PostgreSQL.Simple               ( Only (..), query_ )
+import           Database.BikeShare.Tables.QueryLogs
+import           Database.BikeShare.Tables.StationInformation
+import           Database.BikeShare.Tables.StationStatus
+import           Database.BikeShare.Tables.SystemInformation
+import           Database.PostgreSQL.Simple                   ( Only (..), query_ )
 
-import           GHC.Exts                                 ( fromString )
+import           GHC.Exts                                     ( fromString )
 
-import           Prelude                                  hiding ( log )
+import           Prelude                                      hiding ( log )
 
 import           Text.Pretty.Simple.Extras
 
