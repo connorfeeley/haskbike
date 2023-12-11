@@ -115,6 +115,7 @@
                   stylish-haskell
                   tasty-discover
                   weeder
+                  retrie
                   ;
                 inherit (self'.packages)
                   haskbike-completions;
