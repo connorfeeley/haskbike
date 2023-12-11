@@ -101,7 +101,8 @@ pollClient = do
 
 
 handlerStationInformation :: ( ApiFetcher AppM [AT.StationInformation]
-                             , DbInserter AppM AT.StationInformation DB.StationInformationT Identity
+                             , ApiConverter    [AT.StationInformation] [AT.StationInformation]
+                             , DbInserter AppM  AT.StationInformation   DB.StationInformationT Identity
                              ) => AppM ()
 handlerStationInformation = void $ do
   -- Convert API records to database entities and handle failures if necessary.
@@ -118,6 +119,7 @@ transformStationInformation = _respData
 
 
 handlerStationStatus :: ( ApiFetcher AppM [AT.StationStatus]
+                        , ApiConverter    [AT.StationStatus] [AT.StationStatus]
                         , DbInserter AppM AT.StationStatus DB.StationStatusT Identity
                         ) => AppM ()
 handlerStationStatus = void $ do
@@ -134,6 +136,7 @@ transformStationStatus :: ResponseWrapper [AT.StationStatus] -> [AT.StationStatu
 transformStationStatus = _respData
 
 handlerSystemInformation :: ( ApiFetcher AppM AT.SystemInformation
+                            , ApiConverter    AT.SystemInformation (UTCTime, AT.SystemInformation)
                             , DbInserter AppM (UTCTime, AT.SystemInformation) DB.SystemInformationT Identity
                             ) => AppM ()
 handlerSystemInformation = void $ do
