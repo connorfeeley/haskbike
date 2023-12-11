@@ -1,12 +1,10 @@
-{-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE GADTs                 #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TypeFamilies          #-}
-{-# LANGUAGE UndecidableInstances  #-}
+{-# LANGUAGE FlexibleContexts       #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE StarIsType             #-}
+{-# LANGUAGE TypeFamilies           #-}
 
 module API.APIEntity where
 
-import           API.Client
 import           API.ClientLifted
 import           API.ResponseWrapper
 import qualified API.StationInformation                       as AT
@@ -15,114 +13,117 @@ import qualified API.SystemInformation                        as AT
 
 import           AppEnv
 
-import           Control.Applicative                          ( liftA2 )
+import           CLI.Poll.Utils
+
+import           Colog
+
 import           Control.Lens
 
 import           Data.Maybe                                   ( mapMaybe )
-import           Data.Time
+import           Data.Time.Extras
 
 import           Database.Beam
 import           Database.Beam.Backend.SQL.BeamExtensions     ( MonadBeamInsertReturning (runInsertReturningList) )
 import           Database.Beam.Postgres
 import           Database.Beam.Postgres.Full                  hiding ( insert )
 import qualified Database.BikeShare                           as DB
+import           Database.BikeShare.EndpointQueried
 import qualified Database.BikeShare.Tables.StationInformation as DB
 import qualified Database.BikeShare.Tables.StationStatus      as DB
 import qualified Database.BikeShare.Tables.SystemInformation  as DB
 
+import           Fmt
+
 import           Servant.Client                               ( ClientError, ClientM )
 
+import           System.Directory.Internal.Prelude            ( exitFailure )
 
--- Typeclass for fetching data from the API.
-class Monad m => ApiFetcher m apiType where
-  fetchFromApi :: m (Either ClientError (ResponseWrapper apiType))
-
-class ApiConverter apiType interType where
-  prepareData :: ResponseWrapper apiType -> interType
-
--- Typeclass for converting from API types to database types.
-class ToDbEntity apiType dbType where
-  toDbEntity :: apiType -> dbType
-
--- Typeclass for inserting entities into the database.
-class Monad m => DbInserter m apiType dbType dbMonad where
-  dbInsert :: HasTable dbType => [apiType] -> m [dbType dbMonad]
-
-class HasTable dbType where
-  getTable :: DB.BikeshareDb f -> f (TableEntity dbType)
+import           UnliftIO
+import           UnliftIO.Concurrent
 
 
--- * StationInformation instances.
+data PollResult where
+  PollClientError :: ClientError -> PollResult
+  WentBackwards   :: Int -> PollResult
+  Success         :: (ResponseWrapper apiType, [dbType Identity]) -> PollResult
 
-instance ApiFetcher AppM [AT.StationInformation] where
-  fetchFromApi = runQueryM stationInformation
+class APIPersistable apiType dbType | apiType -> dbType where
+  fromAPI :: ResponseWrapper apiType -> [dbType (QExpr Postgres s)]
 
-instance ApiConverter [AT.StationInformation] [AT.StationInformation] where
-  prepareData = _respData
+  insertAPI :: ResponseWrapper apiType -> AppM [dbType Identity]
 
-instance ToDbEntity AT.StationInformation (DB.StationInformationT (QExpr Postgres s)) where
-  toDbEntity = DB.fromJSONToBeamStationInformation
+  fetchAndPersist :: EndpointQueried
+                  -> ClientM (ResponseWrapper apiType)
+                  -- ^ The function to fetch data from the API.
+                  -> Int
+                  -- ^ Last updated field of previous successful query.
+                  -> AppM PollResult
+                  -- ^ Return either an error or inserted DB items.
+  pollThread :: EndpointQueried -> ClientM (ResponseWrapper apiType) -> TVar Int -> AppM ()
 
-instance DbInserter AppM AT.StationInformation DB.StationInformationT Identity where
-  dbInsert stations = withPostgres $ runInsertReturningList $ insertOnConflict (getTable DB.bikeshareDb)
-    (insertExpressions (map toDbEntity stations))
-    (conflictingFields primaryKey) (onConflictUpdateInstead (\i -> ( DB._infoName                    i
-                                                                   , DB._infoPhysicalConfiguration   i
-                                                                   , DB._infoCapacity                i
-                                                                   , DB._infoIsChargingStation       i
-                                                                   , DB._infoIsValetStation          i
-                                                                   , DB._infoIsVirtualStation        i
-                                                                   )
-                                                            ))
+  -- Provide default implementations that can be overridden if needed.
+  fromAPI _   = []
 
-instance HasTable DB.StationInformationT where
-  getTable = DB._bikeshareStationInformation
+  insertAPI _ = pure []
+
+  fetchAndPersist ep apiFetch lastUpdated =
+    runQueryM apiFetch >>= \case
+      -- Handle client errors.
+      Left err -> do handleResponseError ep err >> pure (PollClientError err)
+
+      -- Retrieved response successfully.
+      Right respUnchecked -> do
+        handleResponseWrapper ep respUnchecked lastUpdated >>= \case
+          Just extendByMs -> pure (WentBackwards extendByMs) -- Went backwards - return early.
+          Nothing -> do -- Went forwards - handle response.
+            let resp = respUnchecked -- Response has now been vetted.
+            handleResponseSuccess ep (_respLastUpdated resp) -- Insert query log.
+            inserted <- insertAPI resp -- Insert response into database.
+            pure (Success (resp, inserted))
 
 
--- * StationStatus instances.
+  pollThread ep apiFetch lastUpdatedVar = do
+    lastUpdated <- liftIO $ readTVarIO lastUpdatedVar
+    result <- fetchAndPersist ep apiFetch lastUpdated
+    case result of
+      PollClientError _err     -> liftIO delayAndExitFailure
+      WentBackwards extendByMs -> liftIO (delaySecs extendByMs)
+      Success (resp, inserted) -> do
+        liftIO $ atomically $ writeTVar lastUpdatedVar (utcToPosix (_respLastUpdated resp) + timeToLiveS resp)
+        logInfo (format "[{}] Inserted {} records - sleeping for {}s" (show ep) (length inserted) (timeToLiveS resp))
+        -- Sleep for requisite TTL.
+        liftIO $ threadDelay (timeToLiveS resp * msPerS)
+    pure ()
+      where timeToLiveS = _respTtl
+            msPerS = 1000000
+            delaySecs secs = threadDelay (secs * msPerS)
+            delayAndExitFailure = delaySecs 10 >> exitFailure
 
-instance Monad ClientM => ApiFetcher AppM [AT.StationStatus] where
-  fetchFromApi = runQueryM stationStatus
+-- * Instances.
 
-instance ApiConverter [AT.StationStatus] [AT.StationStatus] where
-  prepareData = _respData
+instance APIPersistable [AT.StationInformation] DB.StationInformationT where
+  fromAPI resp = mapMaybe (Just . DB.fromJSONToBeamStationInformation) (_respData resp)
+  insertAPI resp = withPostgres $ runInsertReturningList $ insertOnConflict (DB.bikeshareDb ^. DB.bikeshareStationInformation)
+      (insertExpressions (fromAPI resp))
+      (conflictingFields primaryKey) (onConflictUpdateInstead (\i -> ( DB._infoName                    i
+                                                                     , DB._infoPhysicalConfiguration   i
+                                                                     , DB._infoCapacity                i
+                                                                     , DB._infoIsChargingStation       i
+                                                                     , DB._infoIsValetStation          i
+                                                                     , DB._infoIsVirtualStation        i
+                                                                     )
+                                                              ))
 
-instance ToDbEntity AT.StationStatus (Maybe (DB.StationStatusT (QExpr Postgres s))) where
-  toDbEntity = DB.fromJSONToBeamStationStatus
 
-instance DbInserter AppM AT.StationStatus DB.StationStatusT Identity where
-  dbInsert stations = withPostgres $ runInsertReturningList $ insertOnConflict (getTable DB.bikeshareDb)
-    (insertExpressions (mapMaybe toDbEntity stations))
+instance APIPersistable [AT.StationStatus] DB.StationStatusT where
+  fromAPI resp = mapMaybe DB.fromJSONToBeamStationStatus (_respData resp)
+  insertAPI resp = withPostgres $ runInsertReturningList $ insertOnConflict (DB.bikeshareDb ^. DB.bikeshareStationStatus)
+    (insertExpressions (fromAPI resp))
     anyConflict onConflictDoNothing
 
-instance HasTable DB.StationStatusT where
-  getTable = DB._bikeshareStationStatus
 
+instance APIPersistable AT.SystemInformation DB.SystemInformationT where
+  fromAPI resp = [DB.fromJSONToBeamSystemInformation (_respLastUpdated resp) (_respData resp)]
 
--- * SystemInformation instances.
-
-instance Monad ClientM => ApiFetcher AppM AT.SystemInformation where
-  fetchFromApi = runQueryM systemInformation
-
-instance ApiConverter AT.SystemInformation (UTCTime, AT.SystemInformation) where
-  prepareData = liftA2 (,) _respLastUpdated _respData
-
-instance ToDbEntity (UTCTime, AT.SystemInformation) (DB.SystemInformationT (QExpr Postgres s)) where
-  toDbEntity = uncurry DB.fromJSONToBeamSystemInformation
-
-instance ToDbEntity (UTCTime, AT.SystemInformation) (DB.SystemInformationCountT (QExpr Postgres s)) where
-  toDbEntity = uncurry DB.fromJSONToBeamSystemInformationCount
-
-instance DbInserter AppM (UTCTime, AT.SystemInformation) DB.SystemInformationT Identity where
-  dbInsert inf = withPostgres $ runInsertReturningList $ insert (getTable DB.bikeshareDb)
-    (insertExpressions (map toDbEntity inf))
-
-instance DbInserter AppM (UTCTime, AT.SystemInformation) DB.SystemInformationCountT Identity where
-  dbInsert inf = withPostgres $ runInsertReturningList $ insert (getTable DB.bikeshareDb)
-    (insertExpressions (map toDbEntity inf))
-
-instance HasTable DB.SystemInformationT where
-  getTable = DB._bikeshareSystemInformation
-
-instance HasTable DB.SystemInformationCountT where
-  getTable = DB._bikeshareSystemInformationCount
+  insertAPI resp = withPostgres $ runInsertReturningList $ insert (DB.bikeshareDb ^. DB.bikeshareSystemInformation)
+    (insertExpressions (fromAPI resp))
