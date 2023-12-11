@@ -40,7 +40,8 @@ module Database.BikeShare.Operations.Dockings
      , sumEvents
      ) where
 
-import           API.Types                               ( TorontoVehicleType (..) )
+
+import           API.StationStatus                       ( TorontoVehicleType (..) )
 
 import           AppEnv
 

@@ -29,7 +29,7 @@ module Database.BikeShare.SystemInformation
      , systemInformationModification
      ) where
 
-import qualified API.Types                     as AT
+import qualified API.SystemInformation         as AT
 
 import           Control.Lens
 

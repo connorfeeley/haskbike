@@ -15,18 +15,20 @@ module API.ClientLifted
 
 import           API.BikeShare
 import           API.Client
-import           API.Types
+import           API.ResponseWrapper
+import           API.StationInformation
+import           API.StationStatus
+import           API.SystemInformation
 
 import           AppEnv
 
-import           Colog                ( WithLog, logException )
+import           Colog                  ( logException )
 
 import           Control.Monad.Catch
-import           Control.Monad.Reader ( MonadReader (..) )
 
-import           Data.Aeson           ( Object )
+import           Data.Aeson             ( Object )
 
-import           Prelude              hiding ( log )
+import           Prelude                hiding ( log )
 
 import           Servant.Client
 

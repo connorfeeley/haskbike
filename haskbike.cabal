@@ -240,10 +240,12 @@ library
                     , CLI.Database
                     , CLI.Options
                     , API.APIEntity
-                    , API.Types
                     , API.Utils
                     , API.Pollable
                     , API.BikeShare
+                    , API.StationStatus
+                    , API.SystemInformation
+                    , API.StationInformation
                     , Data.Time.Extras
                     , Text.Pretty.Simple.Extras
                     , Database.BikeShare.Types
@@ -264,10 +266,7 @@ library
                     , Graphics.Vega.VegaLite.Extra
 
     -- Modules included in this library but not exported.
-    other-modules:    API.StationInformation
-                    , API.StationStatus
-                    , API.SystemInformation
-                    , Database.BikeShare.SystemInformation
+    other-modules:    Database.BikeShare.SystemInformation
                     , Database.BikeShare.StationInformation
                     , Database.BikeShare.StationStatus
                     , Database.BikeShare.QueryLogs

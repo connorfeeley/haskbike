@@ -14,7 +14,9 @@ import           API.Client
 import           API.ClientLifted
 import           API.Pollable
 import           API.ResponseWrapper
-import qualified API.Types                     as AT
+import qualified API.StationInformation        as AT
+import qualified API.StationStatus             as AT
+import qualified API.SystemInformation         as AT
 
 import           AppEnv
 

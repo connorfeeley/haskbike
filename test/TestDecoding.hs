@@ -3,7 +3,10 @@
 
 module TestDecoding where
 
-import           API.Types
+import           API.ResponseWrapper
+import           API.StationInformation
+import           API.StationStatus
+import           API.SystemInformation
 
 import           Data.Aeson              ( FromJSON, eitherDecode )
 import           Data.Aeson.BetterErrors ( Parse, ParseError, ParseError', asIntegral, asString, displayError,

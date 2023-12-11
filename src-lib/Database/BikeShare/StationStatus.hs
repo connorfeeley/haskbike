@@ -42,7 +42,7 @@ module Database.BikeShare.StationStatus
      , vehicleTypesAvailableIconic
      ) where
 
-import qualified API.Types                                  as AT
+import qualified API.StationStatus                          as AT
 
 import           Control.Lens
 

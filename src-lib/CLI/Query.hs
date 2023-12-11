@@ -6,7 +6,9 @@ module CLI.Query
 
 import           API.Client
 import           API.ClientLifted
-import           API.Types
+import           API.ResponseWrapper
+import           API.StationInformation
+import           API.StationStatus
 
 import           AppEnv
 

@@ -47,7 +47,7 @@ module Database.BikeShare.StationInformation
      , unInformationStationId
      ) where
 
-import qualified API.Types                                  as AT
+import qualified API.StationInformation                     as AT
 
 import           Control.Lens
 

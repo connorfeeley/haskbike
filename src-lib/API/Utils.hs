@@ -7,11 +7,11 @@ module API.Utils
      , stationStatusFromSimple
      ) where
 
-import           API.Types
+import           API.StationStatus
 
 import           Data.Time
 
-import           GHC.Generics ( Generic )
+import           GHC.Generics      ( Generic )
 
 
  {- |
