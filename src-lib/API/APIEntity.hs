@@ -7,6 +7,7 @@
 module API.APIEntity where
 
 import           API.Client
+import           API.ClientLifted
 import           API.ResponseWrapper
 import qualified API.StationInformation                       as AT
 import qualified API.StationStatus                            as AT
@@ -14,6 +15,7 @@ import qualified API.SystemInformation                        as AT
 
 import           AppEnv
 
+import           Control.Applicative                          ( liftA2 )
 import           Control.Lens
 
 import           Data.Maybe                                   ( mapMaybe )
@@ -28,20 +30,19 @@ import qualified Database.BikeShare.Tables.StationInformation as DB
 import qualified Database.BikeShare.Tables.StationStatus      as DB
 import qualified Database.BikeShare.Tables.SystemInformation  as DB
 
-import           Servant.Client                               ( ClientM )
+import           Servant.Client                               ( ClientError, ClientM )
 
 
 -- Typeclass for fetching data from the API.
-class ApiFetcher a where
-  apiFetch :: ClientM (ResponseWrapper a)
+class Monad m => ApiFetcher m apiType where
+  fetchFromApi :: m (Either ClientError (ResponseWrapper apiType))
+
+class Monad m => ApiConverter m apiType interType where
+  transform :: ResponseWrapper apiType -> m interType
 
 -- Typeclass for converting from API types to database types.
 class ToDbEntity apiType dbType where
   toDbEntity :: apiType -> dbType
-
--- Typeclass for converting from database types to API types.
-class FromDbEntity dbType apiType where
-  fromDbEntity :: dbType -> apiType
 
 -- Typeclass for inserting entities into the database.
 class Monad m => DbInserter m apiType dbType dbMonad where
@@ -53,8 +54,11 @@ class HasTable dbType where
 
 -- * StationInformation instances.
 
-instance Monad ClientM => ApiFetcher [AT.StationInformation] where
-  apiFetch = stationInformation
+instance ApiFetcher AppM [AT.StationInformation] where
+  fetchFromApi = runQueryM stationInformation
+
+instance ApiConverter AppM [AT.StationInformation] [AT.StationInformation] where
+  transform = pure . _respData
 
 instance ToDbEntity AT.StationInformation (DB.StationInformationT (QExpr Postgres s)) where
   toDbEntity = DB.fromJSONToBeamStationInformation
@@ -79,8 +83,11 @@ instance HasTable DB.StationInformationT where
 
 -- * StationStatus instances.
 
-instance Monad ClientM => ApiFetcher [AT.StationStatus] where
-  apiFetch = stationStatus
+instance Monad ClientM => ApiFetcher AppM [AT.StationStatus] where
+  fetchFromApi = runQueryM stationStatus
+
+instance ApiConverter AppM [AT.StationStatus] [AT.StationStatus] where
+  transform = pure . _respData
 
 instance ToDbEntity AT.StationStatus (Maybe (DB.StationStatusT (QExpr Postgres s))) where
   toDbEntity = DB.fromJSONToBeamStationStatus
@@ -98,8 +105,11 @@ instance HasTable DB.StationStatusT where
 
 -- * SystemInformation instances.
 
-instance Monad ClientM => ApiFetcher AT.SystemInformation where
-  apiFetch = systemInformation
+instance Monad ClientM => ApiFetcher AppM AT.SystemInformation where
+  fetchFromApi = runQueryM systemInformation
+
+instance ApiConverter AppM AT.SystemInformation (UTCTime, AT.SystemInformation) where
+  transform = liftA2 (,) <$> pure . _respLastUpdated <*> pure . _respData
 
 instance ToDbEntity (UTCTime, AT.SystemInformation) (DB.SystemInformationT (QExpr Postgres s)) where
   toDbEntity = uncurry DB.fromJSONToBeamSystemInformation

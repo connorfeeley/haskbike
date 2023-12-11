@@ -100,12 +100,12 @@ pollClient = do
     return ()
 
 
-handlerStationInformation :: ( ApiFetcher [AT.StationInformation]
+handlerStationInformation :: ( ApiFetcher AppM [AT.StationInformation]
                              , DbInserter AppM AT.StationInformation DB.StationInformationT Identity
                              ) => AppM ()
 handlerStationInformation = void $ do
   -- Convert API records to database entities and handle failures if necessary.
-  apiResult <- runQueryM (apiFetch :: ClientM (ResponseWrapper [AT.StationInformation]))
+  apiResult <- fetchFromApi
   case apiResult of
     Left err -> handleResponseError StationInformationEP err
     Right resp -> do
@@ -117,12 +117,12 @@ transformStationInformation :: ResponseWrapper [AT.StationInformation] -> [AT.St
 transformStationInformation = _respData
 
 
-handlerStationStatus :: ( ApiFetcher [AT.StationStatus]
+handlerStationStatus :: ( ApiFetcher AppM [AT.StationStatus]
                         , DbInserter AppM AT.StationStatus DB.StationStatusT Identity
                         ) => AppM ()
 handlerStationStatus = void $ do
   -- Convert API records to database entities and handle failures if necessary.
-  apiResult <- runQueryM (apiFetch :: ClientM (ResponseWrapper [AT.StationStatus]))
+  apiResult <- fetchFromApi
   case apiResult of
     Left err -> handleResponseError StationStatusEP err
     Right resp -> do
@@ -133,12 +133,12 @@ handlerStationStatus = void $ do
 transformStationStatus :: ResponseWrapper [AT.StationStatus] -> [AT.StationStatus]
 transformStationStatus = _respData
 
-handlerSystemInformation :: ( ApiFetcher AT.SystemInformation
+handlerSystemInformation :: ( ApiFetcher AppM AT.SystemInformation
                             , DbInserter AppM (UTCTime, AT.SystemInformation) DB.SystemInformationT Identity
                             ) => AppM ()
 handlerSystemInformation = void $ do
   -- Convert API records to database entities and handle failures if necessary.
-  apiResult <- runQueryM (apiFetch :: ClientM (ResponseWrapper AT.SystemInformation))
+  apiResult <- fetchFromApi
   case apiResult of
     Left err -> handleResponseError SystemInformationEP err
     Right resp -> do
