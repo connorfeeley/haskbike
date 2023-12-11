@@ -37,8 +37,8 @@ import           Servant.Client                               ( ClientError, Cli
 class Monad m => ApiFetcher m apiType where
   fetchFromApi :: m (Either ClientError (ResponseWrapper apiType))
 
-class Monad m => ApiConverter m apiType interType where
-  transform :: ResponseWrapper apiType -> m interType
+class ApiConverter apiType interType where
+  transform :: ResponseWrapper apiType -> interType
 
 -- Typeclass for converting from API types to database types.
 class ToDbEntity apiType dbType where
@@ -57,8 +57,8 @@ class HasTable dbType where
 instance ApiFetcher AppM [AT.StationInformation] where
   fetchFromApi = runQueryM stationInformation
 
-instance ApiConverter AppM [AT.StationInformation] [AT.StationInformation] where
-  transform = pure . _respData
+instance ApiConverter [AT.StationInformation] [AT.StationInformation] where
+  transform = _respData
 
 instance ToDbEntity AT.StationInformation (DB.StationInformationT (QExpr Postgres s)) where
   toDbEntity = DB.fromJSONToBeamStationInformation
@@ -86,8 +86,8 @@ instance HasTable DB.StationInformationT where
 instance Monad ClientM => ApiFetcher AppM [AT.StationStatus] where
   fetchFromApi = runQueryM stationStatus
 
-instance ApiConverter AppM [AT.StationStatus] [AT.StationStatus] where
-  transform = pure . _respData
+instance ApiConverter [AT.StationStatus] [AT.StationStatus] where
+  transform = _respData
 
 instance ToDbEntity AT.StationStatus (Maybe (DB.StationStatusT (QExpr Postgres s))) where
   toDbEntity = DB.fromJSONToBeamStationStatus
@@ -108,8 +108,8 @@ instance HasTable DB.StationStatusT where
 instance Monad ClientM => ApiFetcher AppM AT.SystemInformation where
   fetchFromApi = runQueryM systemInformation
 
-instance ApiConverter AppM AT.SystemInformation (UTCTime, AT.SystemInformation) where
-  transform = liftA2 (,) <$> pure . _respLastUpdated <*> pure . _respData
+instance ApiConverter AT.SystemInformation (UTCTime, AT.SystemInformation) where
+  transform = liftA2 (,) _respLastUpdated _respData
 
 instance ToDbEntity (UTCTime, AT.SystemInformation) (DB.SystemInformationT (QExpr Postgres s)) where
   toDbEntity = uncurry DB.fromJSONToBeamSystemInformation
