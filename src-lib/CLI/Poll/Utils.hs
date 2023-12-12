@@ -55,8 +55,7 @@ handleResponseWrapper ep resp pLastUpdated = do
 
 handleResponseBackwards :: EndpointQueried -> ResponseWrapper a -> Int -> Int -> Int -> AppM Int
 handleResponseBackwards ep _resp pLastUpdated lastUpdated timeElapsed = do
-  -- TODO: log at debug level - this is just noise. I already know the API is screwy.
-  logWarning (errorLog (show ep) (posixToUtc pLastUpdated) (posixToUtc lastUpdated) timeElapsed)
+  logDebug (errorLog (show ep) (posixToUtc pLastUpdated) (posixToUtc lastUpdated) timeElapsed)
   pure (-timeElapsed)
   where errorLog = format "({}) last updated went backwards: [{}] -> [{}] | {}s"
 
