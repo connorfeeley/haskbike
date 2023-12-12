@@ -7,9 +7,12 @@ module BikeShareAPI
      ( BikeShareAPI
      ) where
 
-import           API.Types
+import           API.ResponseWrapper
+import           API.StationInformation
+import           API.StationStatus
+import           API.SystemInformation
 
-import           Data.Aeson  ( Object )
+import           Data.Aeson             ( Object )
 
 import           Servant.API
 

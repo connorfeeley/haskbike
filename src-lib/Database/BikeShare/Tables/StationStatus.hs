@@ -9,7 +9,7 @@
 {-# LANGUAGE TypeFamilies              #-}
 {-# LANGUAGE UndecidableInstances      #-}
 
-module Database.BikeShare.StationStatus
+module Database.BikeShare.Tables.StationStatus
      ( BeamStationStatusString (..)
      , PrimaryKey (..)
      , StationStatus
@@ -42,30 +42,30 @@ module Database.BikeShare.StationStatus
      , vehicleTypesAvailableIconic
      ) where
 
-import qualified API.Types                                  as AT
+import qualified API.StationStatus                            as AT
 
 import           Control.Lens
 
-import qualified Data.ByteString.Char8                      as B
-import           Data.Coerce                                ( coerce )
+import qualified Data.ByteString.Char8                        as B
+import           Data.Coerce                                  ( coerce )
 import           Data.Int
-import           Data.List                                  ( find )
-import           Data.Maybe                                 ( listToMaybe )
-import           Data.String                                ( IsString (fromString) )
-import qualified Data.Text                                  as Text
+import           Data.List                                    ( find )
+import           Data.Maybe                                   ( listToMaybe )
+import           Data.String                                  ( IsString (fromString) )
+import qualified Data.Text                                    as Text
 import           Data.Time
 
 import           Database.Beam
-import           Database.Beam.Backend                      ( BeamBackend, HasSqlValueSyntax (sqlValueSyntax),
-                                                              IsSql92DataTypeSyntax (..) )
+import           Database.Beam.Backend                        ( BeamBackend, HasSqlValueSyntax (sqlValueSyntax),
+                                                                IsSql92DataTypeSyntax (..) )
 import           Database.Beam.Migrate
-import           Database.Beam.Postgres                     ( Postgres )
-import           Database.Beam.Postgres.Syntax              ( pgTextType )
-import           Database.BikeShare.StationInformation
-import           Database.PostgreSQL.Simple.FromField       ( Field (typeOid), FromField (..), ResultError (..),
-                                                              returnError, typoid )
-import           Database.PostgreSQL.Simple.ToField         ( ToField (..) )
-import           Database.PostgreSQL.Simple.TypeInfo.Static ( text )
+import           Database.Beam.Postgres                       ( Postgres )
+import           Database.Beam.Postgres.Syntax                ( pgTextType )
+import           Database.BikeShare.Tables.StationInformation
+import           Database.PostgreSQL.Simple.FromField         ( Field (typeOid), FromField (..), ResultError (..),
+                                                                returnError, typoid )
+import           Database.PostgreSQL.Simple.ToField           ( ToField (..) )
+import           Database.PostgreSQL.Simple.TypeInfo.Static   ( text )
 
 
 -- | Declare a (Beam) table for the 'StationStatus' type.

@@ -11,7 +11,10 @@
 
 module Utils where
 
-import qualified API.Types                       as AT
+import qualified API.ResponseWrapper             as AT
+import qualified API.StationInformation          as AT
+import qualified API.StationStatus               as AT
+import qualified API.SystemInformation           as AT
 import           API.Utils
 
 import           Data.Time

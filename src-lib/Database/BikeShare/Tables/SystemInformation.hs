@@ -6,7 +6,7 @@
 {-# LANGUAGE TypeFamilies              #-}
 {-# LANGUAGE UndecidableInstances      #-}
 
-module Database.BikeShare.SystemInformation
+module Database.BikeShare.Tables.SystemInformation
      ( PrimaryKey (..)
      , SystemInformation
      , SystemInformationCount
@@ -29,7 +29,7 @@ module Database.BikeShare.SystemInformation
      , systemInformationModification
      ) where
 
-import qualified API.Types                     as AT
+import qualified API.SystemInformation         as AT
 
 import           Control.Lens
 
@@ -145,7 +145,7 @@ fromJSONToBeamSystemInformation lastReported inf =
                     , _sysInfTimeZone             = val_ $ T.pack (AT._sysInfTimeZone inf)
                     }
 
-fromJSONToBeamSystemInformationCount :: UTCTime -> AT.SystemInformation -> SystemInformationCountT (QExpr Postgres s)
+fromJSONToBeamSystemInformationCount :: forall s. UTCTime -> AT.SystemInformation -> SystemInformationCountT (QExpr Postgres s)
 fromJSONToBeamSystemInformationCount lastReported inf =
   SystemInformationCount { _sysInfCntKey             = SystemInformationKey default_ (val_ lastReported)
                          , _sysInfCntStationCount    = (val_ . fromIntegral . AT._sysInfStationCount) inf

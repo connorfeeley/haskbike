@@ -23,33 +23,38 @@ module Database.BikeShare.Expressions
      , systemStatusBetweenExpr
      ) where
 
-
-import qualified API.Types                                as AT
+import qualified API.ResponseWrapper                          as AT
+import qualified API.StationInformation                       as AT
+import qualified API.StationStatus                            as AT
+import qualified API.SystemInformation                        as AT
 
 import           AppEnv
 
-import           Control.Lens                             hiding ( reuse, (<.) )
+import           Control.Lens                                 hiding ( reuse, (<.) )
 
 import           Data.Containers.ListUtils
-import           Data.Int                                 ( Int32 )
-import           Data.String                              ( IsString )
-import qualified Data.Text                                as T
-import qualified Data.Text                                as Text
+import           Data.Int                                     ( Int32 )
+import           Data.String                                  ( IsString )
+import qualified Data.Text                                    as T
+import qualified Data.Text                                    as Text
 import           Data.Time
 import           Data.Time.Extras
 
 import           Database.Beam
-import           Database.Beam.Backend                    ( timestampType )
-import           Database.Beam.Backend.SQL                ( BeamSqlBackend )
-import           Database.Beam.Backend.SQL.BeamExtensions ( BeamHasInsertOnConflict (anyConflict, onConflictDoNothing),
-                                                            insertOnConflict )
+import           Database.Beam.Backend                        ( timestampType )
+import           Database.Beam.Backend.SQL                    ( BeamSqlBackend )
+import           Database.Beam.Backend.SQL.BeamExtensions     ( BeamHasInsertOnConflict (anyConflict, onConflictDoNothing),
+                                                                insertOnConflict )
 import           Database.Beam.Postgres
 import           Database.Beam.Postgres.Full
 import           Database.Beam.Postgres.Syntax
-import qualified Database.Beam.Query.Adhoc                as Adhoc
-import           Database.Beam.Query.CTE                  ( QAnyScope )
+import qualified Database.Beam.Query.Adhoc                    as Adhoc
+import           Database.Beam.Query.CTE                      ( QAnyScope )
 import           Database.BikeShare
 import           Database.BikeShare.StatusVariationQuery
+import           Database.BikeShare.Tables.StationInformation
+import           Database.BikeShare.Tables.StationStatus
+import           Database.BikeShare.Tables.SystemInformation
 
 import           Text.Pretty.Simple.Extras
 

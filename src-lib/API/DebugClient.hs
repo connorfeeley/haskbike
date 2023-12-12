@@ -19,7 +19,10 @@ module API.DebugClient
      , versions
      ) where
 
-import           API.Types
+import           API.ResponseWrapper
+import           API.StationInformation
+import           API.StationStatus
+import           API.SystemInformation
 
 import           BikeShareAPI
 

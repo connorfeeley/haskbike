@@ -17,8 +17,13 @@ import           Database.Beam.Migrate
 import           Database.Beam.Migrate.Simple
 import           Database.Beam.Postgres
 import           Database.Beam.Postgres.CustomTypes
-import qualified Database.Beam.Postgres.Migrate     as PG
+import qualified Database.Beam.Postgres.Migrate               as PG
 import           Database.BikeShare
+import           Database.BikeShare.EndpointQueried
+import           Database.BikeShare.Tables.QueryLogs
+import           Database.BikeShare.Tables.StationInformation
+import           Database.BikeShare.Tables.StationStatus
+import           Database.BikeShare.Tables.SystemInformation
 
 
 initialSetup :: Migration Postgres (CheckedDatabaseSettings Postgres BikeshareDb)

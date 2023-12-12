@@ -15,42 +15,42 @@ module Server.Routes
      , server
      ) where
 
-import           API.StationStatus                          ( TorontoVehicleType (..) )
+import           API.StationStatus                            ( TorontoVehicleType (..) )
 
 import           AppEnv
 
 import           Colog
 
-import           Control.Lens                               hiding ( reuse )
+import           Control.Lens                                 hiding ( reuse )
 import           Control.Monad.Except
 
-import           Data.ByteString.Lazy                       ( ByteString )
-import           Data.Csv                                   ( encodeDefaultOrderedByName )
-import           Data.Default.Class                         ( def )
-import           Data.List                                  ( sortOn )
-import           Data.Maybe                                 ( fromMaybe, listToMaybe )
-import           Data.Text                                  ( Text )
-import qualified Data.Text                                  as T
+import           Data.ByteString.Lazy                         ( ByteString )
+import           Data.Csv                                     ( encodeDefaultOrderedByName )
+import           Data.Default.Class                           ( def )
+import           Data.List                                    ( sortOn )
+import           Data.Maybe                                   ( fromMaybe, listToMaybe )
+import           Data.Text                                    ( Text )
+import qualified Data.Text                                    as T
 import           Data.Time
 import           Data.Time.Extras
 
 import           Database.Beam
-import           Database.BikeShare
 import           Database.BikeShare.Expressions
 import           Database.BikeShare.Operations
 import           Database.BikeShare.Operations.Factors
 import           Database.BikeShare.Operations.FactorsCSV
 import           Database.BikeShare.StatusVariationQuery
+import           Database.BikeShare.Tables.StationInformation
 
 import           Fmt
 
-import           Lucid                                      ( ToHtml )
+import           Lucid                                        ( ToHtml )
 
 import           Servant
 import           Servant.HTML.Lucid
 import           Servant.Server.Generic
 
-import           Server.Classes                             ( ToHtmlComponents )
+import           Server.Classes                               ( ToHtmlComponents )
 import           Server.ComponentsAPI
 import           Server.Data.StationStatusVisualization
 import           Server.Data.SystemInformationVisualization

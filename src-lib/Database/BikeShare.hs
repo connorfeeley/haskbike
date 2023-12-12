@@ -12,7 +12,6 @@
 
 module Database.BikeShare
      ( BikeshareDb (..)
-     , module Database.BikeShare.Types
      , bikeshareDb
        -- , bikeshareDiagnostics
      , bikeshareQueryLog
@@ -22,12 +21,16 @@ module Database.BikeShare
      , bikeshareSystemInformationCount
      ) where
 
-import           Control.Lens                       ( Lens' )
+import           Control.Lens                                 ( Lens' )
 
 import           Database.Beam
 import           Database.Beam.Postgres
 import           Database.Beam.Postgres.CustomTypes
-import           Database.BikeShare.Types
+import           Database.BikeShare.EndpointQueried
+import           Database.BikeShare.Tables.QueryLogs
+import           Database.BikeShare.Tables.StationInformation
+import           Database.BikeShare.Tables.StationStatus
+import           Database.BikeShare.Tables.SystemInformation
 
 
 data BikeshareDb f where

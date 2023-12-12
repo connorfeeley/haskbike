@@ -6,9 +6,9 @@ module Server.Data.StationStatusChargingsVisualization
      , generateJsonDataSource
      ) where
 
-import           AppEnv                           ( envTimeZone, runAppM )
+import           AppEnv                                  ( envTimeZone, runAppM )
 
-import           Control.Lens                     hiding ( (.=) )
+import           Control.Lens                            hiding ( (.=) )
 import           Control.Monad.Except
 
 import           Data.Aeson
@@ -16,7 +16,7 @@ import           Data.Time
 import           Data.Time.Extras
 
 import           Database.BikeShare.Operations
-import           Database.BikeShare.StationStatus
+import           Database.BikeShare.Tables.StationStatus
 
 import           GHC.Generics
 

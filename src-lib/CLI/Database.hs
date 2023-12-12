@@ -10,7 +10,8 @@ module CLI.Database
 import           API.Client
 import           API.ClientLifted              ( runQueryM )
 import           API.ResponseWrapper
-import           API.Types
+import           API.StationInformation
+import           API.StationStatus
 
 import           AppEnv
 

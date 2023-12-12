@@ -11,3 +11,8 @@
 ## 1.2.0 -- 2023-11-29
 
 * Added database support for system information.
+
+## 1.3.0 -- 2023-12-12
+
+* Log query results (success, errors) to table.
+* Replaced the messy polling implementation that I hated.

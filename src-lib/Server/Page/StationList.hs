@@ -11,16 +11,16 @@ module Server.Page.StationList
 
 import           Control.Lens
 
-import           Data.Maybe                            ( catMaybes, fromMaybe )
+import           Data.Maybe                                   ( catMaybes, fromMaybe )
 import           Data.Text
 import           Data.Time
 
-import           Database.BikeShare.StationInformation
-import           Database.BikeShare.StationStatus
+import           Database.BikeShare.Tables.StationInformation
+import           Database.BikeShare.Tables.StationStatus
 
 import           Lucid
 
-import           Prelude                               hiding ( null )
+import           Prelude                                      hiding ( null )
 
 import           Servant
 

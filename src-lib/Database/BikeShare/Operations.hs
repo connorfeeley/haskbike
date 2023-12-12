@@ -35,18 +35,20 @@ module Database.BikeShare.Operations
      , queryTableSize
      ) where
 
-import qualified API.Types                                as AT
+import qualified API.StationInformation                       as AT
+import qualified API.StationStatus                            as AT
+import qualified API.SystemInformation                        as AT
 
 import           AppEnv
 
-import           Colog                                    ( logException )
+import           Colog                                        ( logException )
 
-import           Control.Lens                             hiding ( reuse, (<.) )
+import           Control.Lens                                 hiding ( reuse, (<.) )
 import           Control.Monad.Catch
 
-import           Data.Int                                 ( Int32 )
-import           Data.Maybe                               ( mapMaybe )
-import qualified Data.Text                                as Text
+import           Data.Int                                     ( Int32 )
+import           Data.Maybe                                   ( mapMaybe )
+import qualified Data.Text                                    as Text
 import           Data.Time
 
 import           Database.Beam
@@ -56,11 +58,15 @@ import           Database.BikeShare
 import           Database.BikeShare.BeamConvertable
 import           Database.BikeShare.Expressions
 import           Database.BikeShare.Operations.Dockings
-import           Database.PostgreSQL.Simple               ( Only (..), query_ )
+import           Database.BikeShare.Tables.QueryLogs
+import           Database.BikeShare.Tables.StationInformation
+import           Database.BikeShare.Tables.StationStatus
+import           Database.BikeShare.Tables.SystemInformation
+import           Database.PostgreSQL.Simple                   ( Only (..), query_ )
 
-import           GHC.Exts                                 ( fromString )
+import           GHC.Exts                                     ( fromString )
 
-import           Prelude                                  hiding ( log )
+import           Prelude                                      hiding ( log )
 
 import           Text.Pretty.Simple.Extras
 
@@ -109,8 +115,8 @@ queryStationInformationByIds ids =
     ids' = fromIntegral <$> ids
 
 -- | Insert station information into the database.
-insertStationInformation :: [AT.StationInformation]  -- ^ List of 'StationInformation' from the API response.
-                         -> AppM [StationInformation] -- ^ List of 'StationInformation' that where inserted.
+insertStationInformation :: [AT.StationInformation]             -- ^ List of 'StationInformation' from the API response.
+                         -> AppM [StationInformationT Identity] -- ^ List of 'StationInformation' that where inserted.
 insertStationInformation stations =
   withPostgres $ runInsertReturningList $ insertStationInformationExpr stations
 

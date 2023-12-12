@@ -11,7 +11,7 @@ import           Data.Time
 
 import           Database.Beam
 import           Database.BikeShare.Expressions
-import           Database.BikeShare.SystemInformation
+import           Database.BikeShare.Tables.SystemInformation
 
 import           ServerEnv
 

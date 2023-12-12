@@ -13,7 +13,7 @@
 
 -- | Database table definition for Haskbike diagnostics.
 
-module Database.BikeShare.Diagnostics
+module Database.BikeShare.Tables.Diagnostics
      ( Diagnostics
      , DiagnosticsId
      , DiagnosticsT (..)

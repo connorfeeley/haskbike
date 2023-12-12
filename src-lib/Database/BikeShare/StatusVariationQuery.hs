@@ -8,14 +8,15 @@ module Database.BikeShare.StatusVariationQuery
      , thresholdCondition
      ) where
 
-import           Control.Lens           hiding ( reuse, (<.) )
+import           Control.Lens                                 hiding ( reuse, (<.) )
 
-import           Data.Int               ( Int32 )
+import           Data.Int                                     ( Int32 )
 import           Data.Time
 
 import           Database.Beam
 import           Database.Beam.Postgres
-import           Database.BikeShare
+import           Database.BikeShare.Tables.StationInformation
+import           Database.BikeShare.Tables.StationStatus
 
 
 -- | Data type representing a query for station status.

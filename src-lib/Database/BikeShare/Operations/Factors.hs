@@ -14,17 +14,17 @@ module Database.BikeShare.Operations.Factors
      ) where
 import           AppEnv
 
-import           Control.Lens                            hiding ( (.=) )
+import           Control.Lens                                 hiding ( (.=) )
 
 import           Data.Aeson
-import qualified Data.Text                               as T
+import qualified Data.Text                                    as T
 
-import           Database.Beam                           hiding ( div_ )
-import           Database.BikeShare.Expressions          ( integrateColumns )
-import           Database.BikeShare.StationInformation   ( unInformationStationId )
+import           Database.Beam                                hiding ( div_ )
+import           Database.BikeShare.Expressions               ( integrateColumns )
 import           Database.BikeShare.StatusVariationQuery
+import           Database.BikeShare.Tables.StationInformation ( unInformationStationId )
 
-import           Lucid                                   ( HtmlT, ToHtml (..) )
+import           Lucid                                        ( HtmlT, ToHtml (..) )
 import           Lucid.Html5
 
 import           Server.Page.Utils

@@ -11,20 +11,21 @@ import           AppEnv
 import           CLI.Options
 import           CLI.QueryFormat
 
-import           Colog                         ( log, pattern D )
+import           Colog                                   ( log, pattern D )
 
-import           Data.Int                      ( Int32 )
-import           Data.Maybe                    ( fromMaybe )
+import           Data.Int                                ( Int32 )
+import           Data.Maybe                              ( fromMaybe )
 import           Data.Proxy
-import           Data.Text.Lazy                ( Text, pack )
+import           Data.Text.Lazy                          ( Text, pack )
 
 import           Database.Beam.Schema.Tables
 import           Database.BikeShare
 import           Database.BikeShare.Operations
+import           Database.BikeShare.Tables.StationStatus
 
 import           Fmt
 
-import           Prelude                       hiding ( log )
+import           Prelude                                 hiding ( log )
 
 import           System.Console.ANSI
 
