@@ -6,9 +6,9 @@ module Server.Data.StationStatusChargingsVisualization
      , generateJsonDataSource
      ) where
 
-import           AppEnv                           ( envTimeZone, runAppM )
+import           AppEnv                                  ( envTimeZone, runAppM )
 
-import           Control.Lens                     hiding ( (.=) )
+import           Control.Lens                            hiding ( (.=) )
 import           Control.Monad.Except
 
 import           Data.Aeson

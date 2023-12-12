@@ -15,15 +15,15 @@ module Server.Page.StatusVisualization
 
 import           Control.Lens
 
-import           Data.Int                              ( Int32 )
-import qualified Data.Text                             as T
+import           Data.Int                                     ( Int32 )
+import qualified Data.Text                                    as T
 import           Data.Time
 import           Data.Time.Extras
 
 import           Database.BikeShare.Operations
 import           Database.BikeShare.Tables.StationInformation ( StationInformation )
 
-import qualified Graphics.Vega.VegaLite                as VL
+import qualified Graphics.Vega.VegaLite                       as VL
 
 import           Lucid
 

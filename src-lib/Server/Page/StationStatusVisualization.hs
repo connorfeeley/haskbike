@@ -6,8 +6,8 @@ module Server.Page.StationStatusVisualization
      ) where
 
 
-import           Data.Maybe                            ( catMaybes )
-import qualified Data.Text                             as T
+import           Data.Maybe                                   ( catMaybes )
+import qualified Data.Text                                    as T
 import           Data.Time
 import           Data.Time.Extras
 

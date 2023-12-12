@@ -16,11 +16,11 @@ import           Database.BikeShare.Tables.StationInformation
 
 import           Fmt
 
-import qualified Graphics.Vega.VegaLite                 as VL
+import qualified Graphics.Vega.VegaLite                       as VL
 import           Graphics.Vega.VegaLite.Extra
 
 import           Lucid
-import           Lucid.Base                             ( makeAttribute )
+import           Lucid.Base                                   ( makeAttribute )
 import           Lucid.Servant
 
 import           Servant
