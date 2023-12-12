@@ -146,7 +146,7 @@ extraText :: [Maybe Text] -> Text
 extraText optValues =
   if null intercalated
   then ""
-  else "(" <> intercalated <> ")"
+  else " (" <> intercalated <> ")"
   where intercalated = intercalate ", " (catMaybes optValues)
 
 stationIdLink :: Monad m => (Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> Link) -> StationInformation -> HtmlT m ()
