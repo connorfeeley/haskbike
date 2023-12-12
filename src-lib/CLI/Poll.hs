@@ -35,9 +35,9 @@ pollClient = do
       (,,) <$> newTVarIO 0 <*> newTVarIO 0 <*> newTVarIO 0
 
     logInfo "Fetching from API once."
-    fetchAndPersist StationInformationEP stationInformation 0
-    fetchAndPersist StationStatusEP stationStatus 0
-    fetchAndPersist SystemInformationEP systemInformation 0
+    fetchAndPersist StationInformationEP stationInformation firstUpdate
+    fetchAndPersist StationStatusEP      stationStatus      firstUpdate
+    fetchAndPersist SystemInformationEP  systemInformation  firstUpdate
 
     logInfo "Initializing polling and handling threads."
     -- The polling threads.
@@ -50,6 +50,6 @@ pollClient = do
     _ <- waitAnyCancel [ infoPollingThread,  statusPollingThread,  sysInfoPollingThread ]
 
     logWarning "Polling threads terminated."
-    return ()
+    pure ()
 
-
+    where firstUpdate = 0

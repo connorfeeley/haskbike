@@ -122,8 +122,13 @@ instance APIPersistable [AT.StationStatus] DB.StationStatusT where
     anyConflict onConflictDoNothing
 
 
-instance APIPersistable AT.SystemInformation DB.SystemInformationT where
-  fromAPI resp = [DB.fromJSONToBeamSystemInformation (_respLastUpdated resp) (_respData resp)]
+instance APIPersistable AT.SystemInformation DB.SystemInformationCountT where
+  fromAPI resp = [DB.fromJSONToBeamSystemInformationCount (_respLastUpdated resp) (_respData resp)]
 
-  insertAPI resp = withPostgres $ runInsertReturningList $ insert (DB.bikeshareDb ^. DB.bikeshareSystemInformation)
-    (insertExpressions (fromAPI resp))
+  insertAPI resp = withPostgres $ do
+    infCnt <- runInsertReturningList $ insert (DB.bikeshareDb ^. DB.bikeshareSystemInformationCount)
+      (insertExpressions (fromAPI resp))
+    -- SystemInformationCount needs special handling, since it doesn't fit the typeclass's structure.
+    _inf   <- runInsertReturningList $ insert (DB.bikeshareDb ^. DB.bikeshareSystemInformation)
+      (insertExpressions [DB.fromJSONToBeamSystemInformation (_respLastUpdated resp) (_respData resp)])
+    pure infCnt
