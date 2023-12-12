@@ -16,3 +16,7 @@
 
 * Log query results (success, errors) to table.
 * Replaced the messy polling implementation that I hated.
+
+## 1.3.1 -- 2023-12-12
+
+* Fix tests broken by prior refactoring.
