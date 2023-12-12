@@ -29,36 +29,40 @@ module TestDatabase
      ) where
 
 import           API.ResponseWrapper
-import qualified API.ResponseWrapper                     as AT
-import qualified API.StationInformation                  as AT
-import qualified API.StationStatus                       as AT
-import qualified API.SystemInformation                   as AT
+import qualified API.StationInformation                       as AT
+import qualified API.StationStatus                            as AT
+import qualified API.SystemInformation                        as AT
 
 import           AppEnv
 
 import           Control.Lens
 
-import           Data.Aeson                              ( FromJSON, eitherDecode )
-import qualified Data.ByteString.Lazy                    as BL
-import           Data.Functor                            ( void )
-import           Data.Int                                ( Int32 )
+import           Data.Aeson                                   ( FromJSON, eitherDecode )
+import qualified Data.ByteString.Lazy                         as BL
+import           Data.Functor                                 ( void )
+import           Data.Int                                     ( Int32 )
 import           Data.Time
 
 import           Database.Beam
 import           Database.Beam.Postgres
-import           Database.BikeShare
+import           Database.BikeShare.Migrations
 import           Database.BikeShare.Operations
 import           Database.BikeShare.StatusVariationQuery
+import           Database.BikeShare.Tables.StationInformation
+import           Database.BikeShare.Tables.StationStatus
+import           Database.BikeShare.Tables.SystemInformation
 import           Database.BikeShare.Utils
 
 import           Fmt
 
 import           Test.Tasty.HUnit
 
-import           UnliftIO                                ( try )
+import           UnliftIO                                     ( try )
 
-setupTestDatabase :: IO Connection
-setupTestDatabase = connectTestDatabase >>= dropTables >>= migrateDatabase
+setupTestDatabase :: AppM ()
+setupTestDatabase = do
+  (void . liftIO) (connectTestDatabase >>= dropTables)
+  void migrateDB
 
 connectTestDatabase :: IO Connection
 connectTestDatabase = connectDbName dbnameTest "" "" "" ""
@@ -115,7 +119,7 @@ initDBWithAllTestData = do
 unit_insertSystemInformation :: IO ()
 unit_insertSystemInformation = do
   -- Connect to the database.
-  setupTestDatabase
+  runWithAppMSuppressLog dbnameTest setupTestDatabase
 
   status  <- getDecodedFileSystemInformation "test/json/system_information.json"
   let (reported, info) = (status ^. respLastUpdated, status ^. respData)
@@ -148,7 +152,7 @@ unit_insertSystemInformation = do
 unit_insertStationInformation :: IO ()
 unit_insertStationInformation = do
   -- Connect to the database.
-  setupTestDatabase
+  runWithAppMSuppressLog dbnameTest setupTestDatabase
 
   stationInformationResponse <- getDecodedFileInformation "test/json/station_information.json"
 
@@ -162,7 +166,7 @@ unit_insertStationInformation = do
 unit_insertStationStatus :: IO ()
 unit_insertStationStatus = do
   -- Connect to the database.
-  setupTestDatabase
+  runWithAppMSuppressLog dbnameTest setupTestDatabase
 
   info    <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
   status  <- getDecodedFileStatus      "test/json/station_status.json"
@@ -179,7 +183,7 @@ unit_insertStationStatus = do
 unit_queryStationStatus :: IO ()
 unit_queryStationStatus = do
   -- Connect to the database.
-  setupTestDatabase
+  runWithAppMSuppressLog dbnameTest setupTestDatabase
 
   info    <- getDecodedFileInformation  "docs/json/2.3/station_information-1.json"
   status  <- getDecodedFileStatus       "test/json/station_status.json"
@@ -200,7 +204,7 @@ unit_queryStationStatus = do
 unit_insertStationInformationApi :: IO ()
 unit_insertStationInformationApi = do
   -- Connect to the database.
-  setupTestDatabase
+  runWithAppMSuppressLog dbnameTest setupTestDatabase
 
   info    <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
 
@@ -212,7 +216,7 @@ unit_insertStationInformationApi = do
 unit_insertStationStatusApi :: IO ()
 unit_insertStationStatusApi = do
   -- Connect to the database.
-  setupTestDatabase
+  runWithAppMSuppressLog dbnameTest setupTestDatabase
 
   status  <- getDecodedFileStatus "docs/json/2.3/station_status-1.json"
 
@@ -231,7 +235,7 @@ unit_insertStationStatusApi = do
 unit_insertStationApi :: IO ()
 unit_insertStationApi = do
   -- Connect to the database.
-  setupTestDatabase
+  runWithAppMSuppressLog dbnameTest setupTestDatabase
 
   info    <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
   status  <- getDecodedFileStatus      "docs/json/2.3/station_status-1.json"
@@ -257,7 +261,7 @@ Between /station_status-1/ and /station_status-2/, station 7000 reported new dat
 -}
 unit_insertNewerStatusRecords :: IO ()
 unit_insertNewerStatusRecords = do
-  setupTestDatabase
+  runWithAppMSuppressLog dbnameTest setupTestDatabase
 
   -- Separate API status records into those that are newer than in the database entry and those that are unchanged.
   inserted <- doInsertNewerStatusRecords
@@ -287,7 +291,7 @@ doInsertNewerStatusRecords = do
 -- | HUnit test to assert that changed station status are inserted.
 unit_insertNewerStatusRecordsInsert :: IO ()
 unit_insertNewerStatusRecordsInsert = do
-  setupTestDatabase
+  runWithAppMSuppressLog dbnameTest setupTestDatabase
 
   {-
   - Insert information and status data (1)
@@ -318,7 +322,7 @@ doStatusInsertOnce = do
 -- | HUnit test to assert that reinserting rows is a no-op.
 unit_insertNewerStatusRecordsInsertTwice :: IO ()
 unit_insertNewerStatusRecordsInsertTwice = do
-  setupTestDatabase
+  runWithAppMSuppressLog dbnameTest setupTestDatabase
 
   inserted <- doStatusInsertTwice
 
@@ -347,7 +351,7 @@ doStatusInsertTwice = do
 -- | HUnit test to validate that a station ID can be looked up by its name, and vice-versa.
 unit_queryStationByIdAndName :: IO ()
 unit_queryStationByIdAndName = do
-  setupTestDatabase
+  runWithAppMSuppressLog dbnameTest setupTestDatabase
   info <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
   void $ runWithAppM dbnameTest $ insertStationInformation $ info ^. respData
 
@@ -364,7 +368,7 @@ unit_queryStationByIdAndName = do
 -- | HUnit test to query all status records for a station between two times.
 unit_queryStationStatusBetween :: IO ()
 unit_queryStationStatusBetween = do
-  setupTestDatabase
+  runWithAppMSuppressLog dbnameTest setupTestDatabase
   initDBWithAllTestData
 
   -- First status for #7001 was inserted at 2023-09-15 17:16:58; last status at 2023-09-15 17:35:00.
@@ -398,7 +402,7 @@ unit_queryStationStatusBetween = do
 -- | HUnit test to query all status records for a station between two times.
 unit_queryDockingUndockingCount :: IO ()
 unit_queryDockingUndockingCount = do
-  setupTestDatabase
+  runWithAppMSuppressLog dbnameTest setupTestDatabase
   initDBWithAllTestData
 
   -- Test dataset has 5 rows for station 7000, 3 rows for 7006, 5 for 7012, and 5 rows for 7148:

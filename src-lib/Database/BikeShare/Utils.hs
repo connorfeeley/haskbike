@@ -26,10 +26,12 @@ dropCascade tableName = fromString $ "DROP TABLE IF EXISTS " ++ tableName ++" CA
 dropTables :: Connection -> IO Connection
 dropTables conn = do
   -- Drop all tables.
+  _ <- execute_ conn $ dropCascade "queries"
   _ <- execute_ conn $ dropCascade "station_status"
   _ <- execute_ conn $ dropCascade "station_information"
   _ <- execute_ conn $ dropCascade "system_information_count"
   _ <- execute_ conn $ dropCascade "system_information"
+  _ <- execute_ conn "DROP TYPE IF EXISTS endpoint_queried CASCADE"
   _ <- execute_ conn $ dropCascade "beam_migration"
   _ <- execute_ conn $ dropCascade "beam_version"
 

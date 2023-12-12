@@ -38,7 +38,7 @@ import           Utils
 -- | HUnit test to query all charging events.
 unit_queryChargings :: IO ()
 unit_queryChargings = do
-  setupTestDatabase
+  runWithAppMSuppressLog dbnameTest setupTestDatabase
   initDBWithAllTestData
 
   chargings <- runWithAppM dbnameTest (queryChargingEventsCount variation)
@@ -56,7 +56,7 @@ sumTuples = foldr (\(_, a1, b1, c1) (a2, b2, c2) -> (a1 + a2, b1 + b2, c1 + c2))
 -- | HUnit test to query all charging events (using exported database dump).
 unit_queryChargings' :: IO ()
 unit_queryChargings' = do
-  setupTestDatabase
+  runWithAppMSuppressLog dbnameTest setupTestDatabase
   initDBWithExportedData
 
   chargings <- runWithAppM dbnameTest $ queryChargingEventsCount variation
@@ -71,7 +71,7 @@ unit_queryChargings' = do
 -- | HUnit test to query all charging events (using manually constructed test data).
 unit_queryChargingsManual :: IO ()
 unit_queryChargingsManual = do
-  setupTestDatabase
+  runWithAppMSuppressLog dbnameTest setupTestDatabase
 
   runWithAppM dbnameTest $ do
     -- Insert the single manually constructed station information.
@@ -112,7 +112,7 @@ unit_queryChargingsManual = do
 -- | HUnit test to query all charging events (using manually constructed test data).
 unit_queryDockingsManual :: IO ()
 unit_queryDockingsManual = do
-  setupTestDatabase
+  runWithAppMSuppressLog dbnameTest setupTestDatabase
 
   runWithAppM dbnameTest $ do
     -- Insert the single manually constructed station information.
@@ -167,7 +167,7 @@ unit_queryDockingsManual = do
 -- | HUnit test to query the number of {bikes, docks} {available, disabled} and {iconic, efit, efit g5} available across entire system at a point in time.
 unit_querySystemStatus :: IO ()
 unit_querySystemStatus = do
-  setupTestDatabase
+  runWithAppMSuppressLog dbnameTest setupTestDatabase
   initDBWithExportedData
 
   ctz <- getCurrentTimeZone

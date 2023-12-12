@@ -5,30 +5,31 @@ import           API.Client
 
 import           AppEnv
 
-import qualified CLI.Poll                  as Poll
+import qualified CLI.Poll                      as Poll
 
-import           Colog                     ( log, pattern I, pattern W )
+import           Colog                         ( log, pattern I, pattern W )
 
-import           Control.Exception         ( SomeException, try )
-import           Control.Monad             ( void )
+import           Control.Exception             ( SomeException, try )
+import           Control.Monad                 ( void )
 
-import           Data.Time                 ( getCurrentTimeZone )
+import           Data.Time                     ( getCurrentTimeZone )
 
-import           Database.Beam.Postgres    ( connect )
+import           Database.Beam.Postgres        ( connect )
+import           Database.BikeShare.Migrations
 import           Database.BikeShare.Utils
 
-import           Fmt                       ( format )
+import           Fmt                           ( format )
 
-import           Network.HTTP.Client       ( newManager )
-import           Network.HTTP.Client.TLS   ( tlsManagerSettings )
+import           Network.HTTP.Client           ( newManager )
+import           Network.HTTP.Client.TLS       ( tlsManagerSettings )
 
-import           Prelude                   hiding ( log, unwords )
+import           Prelude                       hiding ( log, unwords )
 
 import           Test.Tasty.HUnit
 
 import           Text.Pretty.Simple.Extras
 
-import           UnliftIO                  ( liftIO, timeout )
+import           UnliftIO                      ( liftIO, timeout )
 
 
 -- | Mark a test as expected to fail.
@@ -67,7 +68,7 @@ unit_poll = do
   -- Establish a connection to the database, drop all tables, and re-initialize it.
   -- Establish a connection to the database.
   connInfo <- mkDbConnectInfo dbnameTest
-  conn <- connect connInfo >>= dropTables >>= migrateDatabase
+  conn <- connect connInfo >>= dropTables
 
   clientManager <- liftIO $ newManager tlsManagerSettings
 
@@ -76,6 +77,7 @@ unit_poll = do
 
   -- Log the database connection parameters.
   runAppM env (log I $ format "Connected to database using: {}" (pShowCompact connInfo))
+  runAppM env migrateDB
   runAppM env doPoll
   where
     doPoll :: AppM ()

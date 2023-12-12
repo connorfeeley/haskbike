@@ -27,6 +27,8 @@ import           Test.Tasty.HUnit
 
 import           TestDatabase
 
+import           UnliftIO
+
 import           Utils
 
 
@@ -35,7 +37,7 @@ import           Utils
 -- | HUnit test to query each column multiplied by the time delta (in seconds) between the previous row.
 unit_queryFieldIntegrals :: IO ()
 unit_queryFieldIntegrals = do
-  _ <- setupTestDatabase
+  _ <- liftIO $ runWithAppMSuppressLog dbnameTest setupTestDatabase
   _ <- initDBWithExportedData
 
   let variation = StatusVariationQuery (Just 7001) [ EarliestTime (UTCTime (fromGregorian 2023 10 30) (timeOfDayToTime midnight))
@@ -64,7 +66,7 @@ unit_queryFieldIntegrals = do
 -- | HUnit test to calculate usage factors (query each column multiplied by the time delta (in seconds) between the previous row, divided by total time, divided by capacity).
 unit_queryStatusFactors :: IO ()
 unit_queryStatusFactors = do
-  _ <- setupTestDatabase
+  _ <- liftIO $ runWithAppMSuppressLog dbnameTest setupTestDatabase
   _ <- initDBWithExportedData
 
   let variation = StatusVariationQuery (Just 7001) [ EarliestTime (UTCTime (fromGregorian 2023 10 30) (timeOfDayToTime midnight))

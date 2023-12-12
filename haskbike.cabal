@@ -260,18 +260,18 @@ library
                     , Database.BikeShare.Operations.Factors
                     , Database.BikeShare.Operations.FactorsCSV
                     , Database.BikeShare.Expressions
+                    , Database.BikeShare.Tables.SystemInformation
+                    , Database.BikeShare.Tables.StationInformation
+                    , Database.BikeShare.Tables.StationStatus
+                    , Database.BikeShare.Tables.QueryLogs
+                    , Database.BikeShare.Tables.Diagnostics
+                    , Database.BikeShare.EndpointQueried
                     , Visualization.StationOccupancy
                     , Visualization.SystemInformation
                     , Graphics.Vega.VegaLite.Extra
 
     -- Modules included in this library but not exported.
-    other-modules:    Database.BikeShare.Tables.SystemInformation
-                    , Database.BikeShare.Tables.StationInformation
-                    , Database.BikeShare.Tables.StationStatus
-                    , Database.BikeShare.Tables.QueryLogs
-                    , Database.BikeShare.EndpointQueried
-                    , Database.BikeShare.Tables.Diagnostics
-                    , Paths_haskbike
+    other-modules:    Paths_haskbike
 
 
     -- LANGUAGE extensions used by modules in this package.
