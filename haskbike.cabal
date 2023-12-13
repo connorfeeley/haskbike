@@ -232,6 +232,7 @@ library
                     , Server.Components.ChargingHeader
                     , Server.Components.PerformanceData
                     , Server.Components.DockingHeader
+                    , Server.Components.LatestQueries
                     , CLI.Utils
                     , CLI.Poll
                     , CLI.Poll.Utils

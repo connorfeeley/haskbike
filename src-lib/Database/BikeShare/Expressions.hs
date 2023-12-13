@@ -12,6 +12,8 @@ module Database.BikeShare.Expressions
      , infoByIdExpr
      , insertStationInformationExpr
      , integrateColumns
+     , latestQueryLogsToMap
+     , queryLatestQueryLogs
      , queryLatestStatusBetweenExpr
      , queryLatestStatuses
      , queryLatestSystemInfo
@@ -34,6 +36,7 @@ import           Control.Lens                                 hiding ( reuse, (<
 
 import           Data.Containers.ListUtils
 import           Data.Int                                     ( Int32 )
+import qualified Data.Map                                     as Map
 import           Data.String                                  ( IsString )
 import qualified Data.Text                                    as T
 import qualified Data.Text                                    as Text
@@ -51,10 +54,14 @@ import           Database.Beam.Postgres.Syntax
 import qualified Database.Beam.Query.Adhoc                    as Adhoc
 import           Database.Beam.Query.CTE                      ( QAnyScope )
 import           Database.BikeShare
+import           Database.BikeShare.EndpointQueried
 import           Database.BikeShare.StatusVariationQuery
+import           Database.BikeShare.Tables.QueryLogs
 import           Database.BikeShare.Tables.StationInformation
 import           Database.BikeShare.Tables.StationStatus
 import           Database.BikeShare.Tables.SystemInformation
+
+import           Server.Components.LatestQueries
 
 import           Text.Pretty.Simple.Extras
 
@@ -348,3 +355,23 @@ queryLatestSystemInfo = do
     (all_ (bikeshareDb ^. bikeshareSystemInformationCount))
 
   pure $ reuse sysInfoCte
+
+-- | Get the latest query logs for each endpoint.
+queryLatestQueryLogs :: be ~ Postgres
+                     => With be BikeshareDb
+                     (Q be BikeshareDb s
+                      (QueryLogT (QExpr be s)))
+queryLatestQueryLogs = do
+  queryCte <- selecting $
+    pgNubBy_ _queryLogEndpoint $
+    orderBy_ (desc_ . _queryLogTime) $
+    filter_ (\s -> _queryLogTime s >=. daysAgo_ 7)
+    (all_ (_bikeshareQueryLog bikeshareDb))
+
+  pure $ reuse queryCte
+
+latestQueryLogsToMap :: TimeZone -> [QueryLog] -> LatestQueries
+latestQueryLogsToMap tz = LatestQueries . queryMap
+  where
+    queryMap = Map.fromList . map (\q -> (_queryLogEndpoint q, (utcToLocal . _queryLogTime) q))
+    utcToLocal = utcToLocalTime tz

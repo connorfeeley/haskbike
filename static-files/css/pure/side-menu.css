@@ -78,6 +78,8 @@ appears on the left side of the page.
 */
 
 #menu {
+  display: flex;
+  flex-direction: column;
   margin-left: -200px; /* "#menu" width */
   width: 200px;
   position: fixed;
@@ -248,8 +250,8 @@ Hides the menu at `48em`, but modify this based on your app's needs.
 }
 
 /* Add a footer at the bottom of the sidebar */
-#menu-footer {
-  position: absolute;
+#menu-footer-version {
+  /* position: absolute; */
   bottom: 0;
   width: 100%;
   background: #333; /* Giving the footer a different background to stand out, adjust as needed */
@@ -257,4 +259,25 @@ Hides the menu at `48em`, but modify this based on your app's needs.
   text-align: center;
   padding: 1em 0; /* Add some padding for aesthetic spacing */
   border-top: 1px solid #444; /* A slight border for visual separation can be adjusted as needed */
+}
+
+.last-updated {
+  background: #333; /* Giving the footer a different background to stand out, adjust as needed */
+  color: white;
+  text-align: center;
+  padding: 1em 0; /* Add some padding for aesthetic spacing */
+  border: 1px solid #444; /* A slight border for visual separation can be adjusted as needed */
+  padding: 0.5em;
+}
+
+.menu-vertical-spacer {
+  height: 100%;
+  flex-grow: 1;
+}
+
+/* Menu footer - pushed to bottom */
+#menu-footer {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
 }
