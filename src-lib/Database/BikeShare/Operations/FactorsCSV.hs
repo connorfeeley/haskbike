@@ -12,6 +12,8 @@ import           Data.Csv                              ( DefaultOrdered (..), To
 import           Database.Beam
 import           Database.BikeShare.Operations.Factors
 
+import           Server.Components.PerformanceData
+
 
 -- | Newtype wrapper used for encoding booleans as a CSV string.
 newtype CsvBool = CsvBool Bool

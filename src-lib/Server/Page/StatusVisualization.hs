@@ -1,7 +1,5 @@
 module Server.Page.StatusVisualization
-     ( ChargingHeader (..)
-     , DockingHeader (..)
-     , boolToText
+     ( boolToText
      , endTimeInput
      , formatTimeHtml
      , makeInputField
@@ -13,17 +11,14 @@ module Server.Page.StatusVisualization
      , vegaChart
      ) where
 
-import           Control.Lens
 
-import           Data.Int                                     ( Int32 )
-import qualified Data.Text                                    as T
+import qualified Data.Text                      as T
 import           Data.Time
 import           Data.Time.Extras
 
 import           Database.BikeShare.Operations
-import           Database.BikeShare.Tables.StationInformation ( StationInformation )
 
-import qualified Graphics.Vega.VegaLite                       as VL
+import qualified Graphics.Vega.VegaLite         as VL
 
 import           Lucid
 
@@ -33,53 +28,6 @@ import           Server.Page.Utils
 import           Server.StatusDataParams
 
 import           Visualization.StationOccupancy
-
-data DockingHeader where
-  DockingHeader :: { dockingEvents   :: [DockingEventsCount]
-                   } -> DockingHeader
-instance ToHtml DockingHeader where
-  toHtmlRaw = toHtml
-  toHtml params = do
-    (\events' -> div_ $ do
-        div_ [class_ "tooltip"] $ do
-          label_ [ for_ "dockings"
-                 , class_ "tooltip"
-                 ] (h3_ "Dockings")
-          div_ [class_ "tooltip-bottom"] $ do -- Tooltip content
-            p_ [class_ "pure-g"] (b_ [class_ "pure-u-1-2"] "Iconic: "   <> span_ [class_ "pure-u-1-2"] (showth (sumEvents Docking (iconicEvents events'))))
-            p_ [class_ "pure-g"] (b_ [class_ "pure-u-1-2"] "E-Fit: "    <> span_ [class_ "pure-u-1-2"] (showth (sumEvents Docking (efitEvents   events'))))
-            p_ [class_ "pure-g"] (b_ [class_ "pure-u-1-2"] "E-Fit G5: " <> span_ [class_ "pure-u-1-2"] (showth (sumEvents Docking (efitG5Events events'))))
-          div_ [id_ "dockings"] (showth (sumEvents Docking (allBikeEvents events')))
-        ) (dockingEvents params)
-    (\events' -> div_ $ do
-        div_ [class_ "tooltip"] $ do
-          label_ [ for_ "undockings"
-                 , class_ "tooltip"
-                 ] (h3_ "Undockings")
-          div_ [class_ "tooltip-bottom"] $ do -- Tooltip content
-            p_ [class_ "pure-g"] (b_ [class_ "pure-u-1-2"] "Iconic: "   <> span_ [class_ "pure-u-1-2"] (showth (sumEvents Undocking (iconicEvents events'))))
-            p_ [class_ "pure-g"] (b_ [class_ "pure-u-1-2"] "E-Fit: "    <> span_ [class_ "pure-u-1-2"] (showth (sumEvents Undocking (efitEvents   events'))))
-            p_ [class_ "pure-g"] (b_ [class_ "pure-u-1-2"] "E-Fit G5: " <> span_ [class_ "pure-u-1-2"] (showth (sumEvents Undocking (efitG5Events events'))))
-        div_ [id_ "undockings"] (showth (sumEvents Undocking (allBikeEvents events')))
-      ) (dockingEvents params)
-
-data ChargingHeader where
-  ChargingHeader :: { unChargingEvents :: [(StationInformation, Int32, Int32, Int32)] } -> ChargingHeader
-
-instance ToHtml ChargingHeader where
-  toHtmlRaw = toHtml
-  toHtml params =
-    div_ (do
-      div_ [class_ "tooltip"] $ do
-        label_ [for_ "charging-count"] (h3_ "Bikes Charged")
-        div_ [class_ "tooltip-bottom"] $ do -- Tooltip content
-          p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "E-Fit: "    <> span_ [class_ "pure-u-1-2"] (showth (params' ^. _2))
-          p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "E-Fit G5: " <> span_ [class_ "pure-u-1-2"] (showth (params' ^. _3))
-      div_ [id_ "charging-count"] (showth (abs (params' ^. _1))))
-    where params' = sumTuples (unChargingEvents params)
-
-sumTuples :: Num a => [(b, a, a, a)] -> (a, a, a)
-sumTuples = foldr (\(_, a1, b1, c1) (a2, b2, c2) -> (a1 + a2, b1 + b2, c1 + c2)) (0, 0, 0)
 
 -- This helper creates an input field with the provided 'id' and 'type' attributes.
 makeInputField :: Monad m => HtmlT m () -> T.Text -> T.Text -> T.Text -> HtmlT m ()

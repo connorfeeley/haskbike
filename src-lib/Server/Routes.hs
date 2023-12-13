@@ -12,6 +12,7 @@
 module Server.Routes
      ( API (..)
      , BikeShareExplorerAPI
+     , latestQueries
      , server
      ) where
 
@@ -51,6 +52,8 @@ import           Servant.HTML.Lucid
 import           Servant.Server.Generic
 
 import           Server.Classes                               ( ToHtmlComponents )
+import           Server.Components.LatestQueries
+import           Server.Components.PerformanceData
 import           Server.ComponentsAPI
 import           Server.Data.StationStatusVisualization
 import           Server.Data.SystemInformationVisualization
@@ -123,6 +126,25 @@ visualizationHandler = VisualizationAPI
   , systemInfo         = systemInfoVisualizationPage
   , performanceCsvPage = performanceCsvPageHandler
   }
+
+getLatestQueries :: ServerAppM LatestQueries
+getLatestQueries = do
+  appEnv <- asks serverAppEnv
+  latest <- liftIO $ runAppM appEnv $ withPostgres $ runSelectReturningList $ selectWith queryLatestQueryLogs
+  pure $ latestQueryLogsToMap (envTimeZone appEnv) latest
+
+-- | 'SideMenu' smart constructor.
+sideMenu :: (ToHtml a, ToHtmlComponents a) => a -> ServerAppM (PureSideMenu a)
+sideMenu page = do
+  latest <- getLatestQueries
+  pure $
+    PureSideMenu
+    { visPageParams = page
+    , staticLink    = fieldLink staticApi
+    , versionText   = getGitHash
+    , latestQueries = latest
+    }
+
 
 stationStatusData :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM [StationStatusVisualization]
 stationStatusData stationId startTime endTime = do
@@ -201,18 +223,15 @@ stationStatusVisualizationPage (Just stationId) startTime endTime = do
     Just info' -> do
       logInfo $ "Matched station information: " <> info' ^. infoName
       logInfo $ "Static path: " <> toUrlPiece (fieldLink staticApi)
-      let visualizationPage = StationStatusVisualizationPage { _statusVisPageStationInfo    = info'
-                                                             , _statusVisPageStationId      = stationId
-                                                             , _statusVisPageTimeRange      = TimePair startTime endTime tz currentUtc
-                                                             , _statusVisPageTimeZone       = tz
-                                                             , _statusVisPageCurrentUtc     = currentUtc
-                                                             , _statusVisPageDataLink       = fieldLink dataForStation (Just stationId) startTime endTime
-                                                             , _statusVisPageStaticLink     = fieldLink staticApi
-                                                             }
-      pure PureSideMenu { visPageParams = visualizationPage
-                        , staticLink    = fieldLink staticApi
-                        , versionText   = getGitHash
-                        }
+      sideMenu $
+        StationStatusVisualizationPage { _statusVisPageStationInfo    = info'
+                                       , _statusVisPageStationId      = stationId
+                                       , _statusVisPageTimeRange      = TimePair startTime endTime tz currentUtc
+                                       , _statusVisPageTimeZone       = tz
+                                       , _statusVisPageCurrentUtc     = currentUtc
+                                       , _statusVisPageDataLink       = fieldLink dataForStation (Just stationId) startTime endTime
+                                       , _statusVisPageStaticLink     = fieldLink staticApi
+                                       }
     _ ->  throwError err404 { errBody = "Unknown station ID." }
 stationStatusVisualizationPage Nothing _ _ =
   throwError err404 { errBody = "Station ID parameter is required." }
@@ -243,17 +262,14 @@ systemStatusVisualizationPage startTime endTime = do
         , sysStatVisInfNumEfitG5     = st ^. _8 & fromIntegral
         }
 
-  let visualizationPage = SystemStatusVisualizationPage { _systemStatusVisPageTimeRange     = TimePair startTime endTime tz currentUtc
-                                                        , _systemStatusVisPageTimeZone      = tz
-                                                        , _systemStatusVisPageCurrentUtc    = currentUtc
-                                                        , _systemStatusVisPageInfo          = (fromMaybe def . listToMaybe . reverse . map systemStatusInfo) systemStatus -- use the latest value
-                                                        , _systemStatusVisPageDataLink      = fieldLink dataForStation Nothing startTime endTime
-                                                        , _systemStatusVisPageStaticLink    = fieldLink staticApi
-                                                        }
-  pure PureSideMenu { visPageParams = visualizationPage
-                    , staticLink    = fieldLink staticApi
-                    , versionText   = getGitHash
-                    }
+  sideMenu $
+    SystemStatusVisualizationPage { _systemStatusVisPageTimeRange     = TimePair startTime endTime tz currentUtc
+                                  , _systemStatusVisPageTimeZone      = tz
+                                  , _systemStatusVisPageCurrentUtc    = currentUtc
+                                  , _systemStatusVisPageInfo          = (fromMaybe def . listToMaybe . reverse . map systemStatusInfo) systemStatus -- use the latest value
+                                  , _systemStatusVisPageDataLink      = fieldLink dataForStation Nothing startTime endTime
+                                  , _systemStatusVisPageStaticLink    = fieldLink staticApi
+                                  }
 
 stationListPage :: Maybe T.Text -> ServerAppM (PureSideMenu StationList)
 stationListPage selection = do
@@ -269,15 +285,13 @@ stationListPage selection = do
     Just "all"      -> logInfo "Filtering for all stations" >> pure SelectionAll
     _               -> logInfo "No filter applied" >> pure SelectionAll
   let sorted = sortOn (_infoStationId . fst) latest
-  let page = StationList { _stationList = sorted
-                         , _staticLink = fieldLink staticApi
-                         , _stationListSelection = selectionVal
-                         , _visualizationPageLink  = fieldLink pageForStation
-                         }
-  pure PureSideMenu { visPageParams = page
-                    , staticLink    = fieldLink staticApi
-                    , versionText   = getGitHash
-                    }
+  sideMenu $
+    StationList
+    { _stationList = sorted
+    , _staticLink = fieldLink staticApi
+    , _stationListSelection = selectionVal
+    , _visualizationPageLink  = fieldLink pageForStation
+    }
 
 -- | Create the system status visualization page record.
 systemInfoVisualizationPage :: Maybe LocalTime -> Maybe LocalTime -> ServerAppM (PureSideMenu SystemInfoVisualizationPage)
@@ -286,18 +300,15 @@ systemInfoVisualizationPage startTime endTime = do
   let tz = envTimeZone appEnv
   currentUtc <- liftIO getCurrentTime
 
-  let visualizationPage = SystemInfoVisualizationPage
-        { _sysInfoVisPageTimeRange     = TimePair startTime endTime tz currentUtc
-        , _sysInfoVisPageTimeZone      = tz
-        , _sysInfoVisPageCurrentUtc    = currentUtc
-        , _sysInfoVisPageDataLink      = fieldLink systemInfoData startTime endTime
-        , _sysInfoVisPageStaticLink    = fieldLink staticApi
-        , _sysInfoVisPageSysStatusLink = fieldLink systemStatus Nothing Nothing
-        }
-  pure PureSideMenu { visPageParams = visualizationPage
-                    , staticLink    = fieldLink staticApi
-                    , versionText   = getGitHash
-                    }
+  sideMenu $
+    SystemInfoVisualizationPage
+    { _sysInfoVisPageTimeRange     = TimePair startTime endTime tz currentUtc
+    , _sysInfoVisPageTimeZone      = tz
+    , _sysInfoVisPageCurrentUtc    = currentUtc
+    , _sysInfoVisPageDataLink      = fieldLink systemInfoData startTime endTime
+    , _sysInfoVisPageStaticLink    = fieldLink staticApi
+    , _sysInfoVisPageSysStatusLink = fieldLink systemStatus Nothing Nothing
+    }
 
 performanceCsvPageHandler :: Maybe LocalTime -> Maybe LocalTime -> ServerAppM (PureSideMenu PerformanceCSV)
 performanceCsvPageHandler startTime endTime = do
@@ -308,29 +319,20 @@ performanceCsvPageHandler startTime endTime = do
 
   logInfo $ format "Rendering performance CSV page"
 
-  pure $ sideMenu $ PerformanceCSV { performanceCsvPageTimeRange  = TimePair startTime endTime tz currentUtc
-                                   , performanceCsvPageTimeZone   = tz
-                                   , performanceCsvPageCurrentUtc = currentUtc
-                                   , performanceCsvPageDataLink   = fieldLink performanceCsv Nothing startTime endTime
-                                   , performanceCsvPageStaticLink = fieldLink staticApi
-                                   }
-
--- | 'SideMenu' smart constructor.
-sideMenu :: (ToHtml a, ToHtmlComponents a) => a -> PureSideMenu a
-sideMenu page = PureSideMenu { visPageParams = page
-                             , staticLink    = fieldLink staticApi
-                             , versionText   = getGitHash
-                             }
+  sideMenu $
+    PerformanceCSV
+    { performanceCsvPageTimeRange  = TimePair startTime endTime tz currentUtc
+    , performanceCsvPageTimeZone   = tz
+    , performanceCsvPageCurrentUtc = currentUtc
+    , performanceCsvPageDataLink   = fieldLink performanceCsv Nothing startTime endTime
+    , performanceCsvPageStaticLink = fieldLink staticApi
+    }
 
 homePageHandler :: ServerAppM (PureSideMenu IndexPage)
 homePageHandler = do
   _appEnv <- asks serverAppEnv
-  let page = IndexPage { _stationStatusLink = fieldLink pageForStation
-                       }
-  pure PureSideMenu { visPageParams = page
-                    , staticLink    = fieldLink staticApi
-                    , versionText   = getGitHash
-                    }
+  sideMenu $
+    IndexPage { _stationStatusLink = fieldLink pageForStation }
 
 -- routesLinks :: API (AsLink Link)
 -- routesLinks = allFieldLinks
