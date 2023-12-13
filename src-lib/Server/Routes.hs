@@ -51,6 +51,7 @@ import           Servant.HTML.Lucid
 import           Servant.Server.Generic
 
 import           Server.Classes                               ( ToHtmlComponents )
+import           Server.Components.PerformanceData
 import           Server.ComponentsAPI
 import           Server.Data.StationStatusVisualization
 import           Server.Data.SystemInformationVisualization

@@ -26,7 +26,9 @@ import           Servant
 import           Servant.HTML.Lucid
 import           Servant.Server.Generic                  ( AsServerT )
 
-import           Server.Page.StatusVisualization
+import           Server.Components.ChargingHeader
+import           Server.Components.DockingHeader
+import           Server.Components.PerformanceData
 import           Server.StatusDataParams
 
 import           ServerEnv
