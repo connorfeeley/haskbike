@@ -20,3 +20,7 @@
 ## 1.3.1 -- 2023-12-12
 
 * Fix tests broken by prior refactoring.
+
+## 1.3.2 -- 2023-12-13
+
+* Show latest time the bike share Toronto API was queried in the sidebar.
