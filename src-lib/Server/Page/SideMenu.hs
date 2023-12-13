@@ -63,10 +63,14 @@ renderMenu params =
     div_ [id_ "menu-footer"] $ do
       div_ [class_ "menu-vertical-spacer"] mempty
       toHtml (latestQueries params)
-      div_ [class_ "menu-footer-element"] ("Version: " <> versionLink (versionText params))
+      renderVersion params
 
+-- | Render the version link.
+renderVersion :: (Monad m, ToHtml a, ToHtmlComponents a) => PureSideMenu a -> HtmlT m ()
+renderVersion params = div_ [class_ "menu-footer-element menu-footer-version"] $ "Version: " <> renderedVersion params
+  where renderedVersion = toHtml . versionLink . versionText
 
--- | Render the version element of the footer.
+-- | Render the version link.
 versionLink :: Monad m => String -> HtmlT m ()
 versionLink version = a_ [href_ (urlForVersion version)] (toHtml shortVersion)
   where

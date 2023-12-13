@@ -24,7 +24,7 @@ instance ToHtml LatestQueries where
   toHtml params = forM_ (Map.toList (unLatestQueries params)) divForEndpoint
 
 divForEndpoint :: Monad m => (EndpointQueried, LocalTime) -> HtmlT m ()
-divForEndpoint (ep, _time) = div_ [class_ "last-updated"] (foo ep)
+divForEndpoint (ep, _time) = div_ [class_ "menu-footer-element"] (foo ep)
 
 foo :: Monad m => EndpointQueried -> HtmlT m ()
 foo ep = p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] ((toHtml . endpointName) ep) <> span_ [class_ "pure-u-1-2"] "Placeholder"

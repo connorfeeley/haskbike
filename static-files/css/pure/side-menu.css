@@ -261,7 +261,16 @@ Hides the menu at `48em`, but modify this based on your app's needs.
   border-top: 1px solid #444; /* A slight border for visual separation can be adjusted as needed */
 }
 
-.last-updated {
+.menu-footer-element {
+  background: #333; /* Giving the footer a different background to stand out, adjust as needed */
+  color: white;
+  text-align: left;
+  padding: 1em 0; /* Add some padding for aesthetic spacing */
+  border: 1px solid #444; /* A slight border for visual separation can be adjusted as needed */
+  padding: 0.5em;
+}
+
+.menu-footer-version {
   background: #333; /* Giving the footer a different background to stand out, adjust as needed */
   color: white;
   text-align: center;
