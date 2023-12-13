@@ -362,13 +362,16 @@ queryLatestQueryLogs :: be ~ Postgres
                      (Q be BikeshareDb s
                       (QueryLogT (QExpr be s)))
 queryLatestQueryLogs = do
-  queryCte <- selecting $
-    pgNubBy_ _queryLogEndpoint $
-    orderBy_ (desc_ . _queryLogTime) $
-    filter_ (\s -> _queryLogTime s >=. daysAgo_ 7)
-    (all_ (_bikeshareQueryLog bikeshareDb))
-
-  pure $ reuse queryCte
+  ranked <- selecting $ do
+    withWindow_ (\row -> frame_ (partitionBy_ (_queryLogEndpoint row)) (orderPartitionBy_ (desc_ $ _queryLogTime row)) noBounds_)
+                (\row w -> ( row
+                           , rank_ `over_` w
+                           )
+                ) (all_ (bikeshareDb ^. bikeshareQueryLog))
+  pure $ do
+    partitioned <- reuse ranked
+    guard_ (partitioned ^. _2 ==. 1) -- Is max rank (latest record in partition)
+    pure (partitioned ^. _1)
 
 latestQueryLogsToMap :: TimeZone -> [QueryLog] -> LatestQueries
 latestQueryLogsToMap tz = LatestQueries . queryMap
