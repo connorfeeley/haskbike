@@ -1,4 +1,4 @@
--- |
+-- | Component for displaying the latest queries.
 
 module Server.Components.LatestQueries
      ( LatestQueries (..)
@@ -19,18 +19,35 @@ data LatestQueries where
   LatestQueries :: { unLatestQueries :: Map.Map EndpointQueried LocalTime
                    } -> LatestQueries
 
+
 instance ToHtml LatestQueries where
   toHtmlRaw = toHtml
-  toHtml params = forM_ (Map.toList (unLatestQueries params)) divForEndpoint
+  toHtml params = forM_ (Map.toList (unLatestQueries params)) (uncurry divForEndpoint)
 
-divForEndpoint :: Monad m => (EndpointQueried, LocalTime) -> HtmlT m ()
-divForEndpoint (ep, _time) = div_ [class_ "menu-footer-element"] (foo ep)
 
-foo :: Monad m => EndpointQueried -> HtmlT m ()
-foo ep = p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] ((toHtml . endpointName) ep) <> span_ [class_ "pure-u-1-2"] "Placeholder"
+divForEndpoint :: Monad m => EndpointQueried -> LocalTime -> HtmlT m ()
+divForEndpoint ep time = div_ [class_ "menu-footer-element"] (endpointElement ep time)
+
+
+endpointElement :: Monad m => EndpointQueried -> LocalTime -> HtmlT m ()
+endpointElement ep time =
+  p_ [class_ "pure-g"] $ title <> content
+  where style = style_ "padding-left: 1em;"
+        title = b_ [class_ "pure-u-1-2"] ((toHtml . endpointName) ep)
+        content = span_ [class_ "pure-u-1-2", style] ((toHtml . formatTimeHtml) time)
+
 
 endpointName :: EndpointQueried -> T.Text
 endpointName ep = case ep of
   StationInformationEP -> "Station information"
   StationStatusEP      -> "Station status"
-  SystemInformationEP  -> "System information"
+  SystemInformationEP  -> "System  information"
+
+
+formatTimeHtml :: LocalTime -> T.Text
+formatTimeHtml = T.pack . formatTime defaultTimeLocale shortTimeFormat
+
+
+-- Short month name, day, hours-minutes-seconds
+shortTimeFormat :: String
+shortTimeFormat = "%b %d %H:%M:%S"
