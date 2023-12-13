@@ -267,6 +267,16 @@ Hides the menu at `48em`, but modify this based on your app's needs.
   text-align: left;
   padding: 1em 0; /* Add some padding for aesthetic spacing */
   border: 1px solid #444; /* A slight border for visual separation can be adjusted as needed */
+  /* padding: 0.5em; */
+}
+
+.latest-updated {
+  text-align: left;
+  padding: 0.5em; /* Add some padding for aesthetic spacing */
+}
+
+.latest-updated-header {
+  text-decoration: underline;
   padding: 0.5em;
 }
 
