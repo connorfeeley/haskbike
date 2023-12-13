@@ -23,23 +23,22 @@ data LatestQueries where
 instance ToHtml LatestQueries where
   toHtmlRaw = toHtml
   toHtml params = div_ [class_ "menu-footer-element"] $
-    h3_ [class_ "menu-heading latest-updated-header"] "Latest queries" >>
+    h3_ [class_ "menu-heading latest-updated-header"] "Last Updated" >>
     forM_ (Map.toList (unLatestQueries params)) (uncurry endpointElement)
 
 
 endpointElement :: Monad m => EndpointQueried -> LocalTime -> HtmlT m ()
 endpointElement ep time =
   p_ [class_ "pure-g latest-updated"] $ title <> content
-  where style = style_ "padding-left: 1em;"
-        title = b_ [class_ "pure-u-1-2"] ((toHtml . endpointName) ep)
-        content = span_ [class_ "pure-u-1-2", style] ((toHtml . formatTimeHtml) time)
+  where title = b_ [class_ "latest-updated-endpoint"] ((toHtml . endpointName) ep)
+        content = span_ [class_ "latest-updated-time"] ((toHtml . formatTimeHtml) time)
 
 
 endpointName :: EndpointQueried -> T.Text
 endpointName ep = case ep of
   StationInformationEP -> "Station information"
   StationStatusEP      -> "Station status"
-  SystemInformationEP  -> "System  information"
+  SystemInformationEP  -> "System information"
 
 
 formatTimeHtml :: LocalTime -> T.Text

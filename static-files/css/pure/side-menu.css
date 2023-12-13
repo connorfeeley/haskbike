@@ -280,6 +280,11 @@ Hides the menu at `48em`, but modify this based on your app's needs.
   padding: 0.5em;
 }
 
+/* .latest-updated-endpoint { } */
+.latest-updated-time {
+  padding-left: 1em;
+}
+
 .menu-footer-version {
   background: #333; /* Giving the footer a different background to stand out, adjust as needed */
   color: white;
