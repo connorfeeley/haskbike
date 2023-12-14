@@ -110,6 +110,7 @@
                   floskell
                   hasktags
                   cabal-install
+                  cabal-plan
                   hlint
                   doctest
                   stylish-haskell
