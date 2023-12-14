@@ -3,7 +3,6 @@
 {-# LANGUAGE DerivingStrategies    #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE RankNTypes            #-}
 {-# LANGUAGE TypeOperators         #-}
 
@@ -30,6 +29,7 @@ import           Server.DebugAPI
 import           Server.Page.IndexPage
 import           Server.Page.SideMenu
 import           Server.RobotsTXT
+import           Server.StaticAPI
 import           Server.Utils
 import           Server.VisualizationAPI
 
@@ -60,10 +60,6 @@ server = API { debugApi          = debugApiHandler
              }
 
 -- * Handlers.
-
-staticHandler :: StaticAPI (AsServerT ServerAppM)
-staticHandler =  StaticAPI $ serveDirectoryWebApp "static-files"
-
 
 homePageHandler :: ServerAppM (PureSideMenu IndexPage)
 homePageHandler = do

@@ -214,6 +214,7 @@ library
                     , Server.RobotsTXT
                     , Server.Utils
                     , Server.DataAPI
+                    , Server.StaticAPI
                     , Server.VisualizationAPI
                     , Server.ComponentsAPI
                     , Server.DebugAPI

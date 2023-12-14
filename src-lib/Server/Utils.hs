@@ -3,9 +3,10 @@
 -- |
 
 module Server.Utils
-     ( StaticAPI (..)
+     ( getLatestQueries
      , sideMenu
      ) where
+
 import           Database.Beam
 import           Database.BikeShare.Expressions
 
@@ -16,12 +17,12 @@ import           Servant
 import           Server.Classes
 import           Server.Components.LatestQueries
 import           Server.Page.SideMenu
+import           Server.StaticAPI
 
 import           ServerEnv
 
-import           UnliftIO
-
 import           Version
+
 
 getLatestQueries :: ServerAppM LatestQueries
 getLatestQueries = do
@@ -40,11 +41,3 @@ sideMenu page = do
     , versionText   = getGitHash
     , latestQueries = latest
     }
-
--- * Serve static files.
-
-data StaticAPI mode where
-  StaticAPI ::
-    { staticApi :: mode :- "static" :> Raw
-    } -> StaticAPI mode
-  deriving stock Generic

@@ -39,6 +39,7 @@ import           Server.Page.StationList
 import           Server.Page.StationStatusVisualization
 import           Server.Page.SystemInfoVisualization
 import           Server.Page.SystemStatusVisualization
+import           Server.StaticAPI
 import           Server.Utils
 
 import           ServerEnv
