@@ -270,6 +270,7 @@ library
                     , Database.BikeShare.Tables.SystemInformation
                     , Database.BikeShare.Tables.StationInformation
                     , Database.BikeShare.Tables.StationStatus
+                    , Database.BikeShare.Tables.StationStatusDelta
                     , Database.BikeShare.Tables.QueryLogs
                     , Database.BikeShare.Tables.Diagnostics
                     , Database.BikeShare.EndpointQueried
