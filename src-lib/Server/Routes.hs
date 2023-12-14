@@ -1,10 +1,5 @@
-{-# LANGUAGE ConstraintKinds       #-}
-{-# LANGUAGE DataKinds             #-}
-{-# LANGUAGE DerivingStrategies    #-}
-{-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE RankNTypes            #-}
-{-# LANGUAGE TypeOperators         #-}
+{-# LANGUAGE DataKinds          #-}
+{-# LANGUAGE DerivingStrategies #-}
 
 -- | This module contains the route definitions for the visualization server.
 
@@ -36,40 +31,43 @@ import           Server.VisualizationAPI
 import           ServerEnv
 
 
+-- | The API type.
 data API mode where
-  API :: { debugApi          :: mode :- NamedRoutes DebugAPI
-         , home              :: mode :- Get '[HTML] (PureSideMenu IndexPage)
-         , dataApi           :: mode :- NamedRoutes DataAPI
-         , visualizationApi  :: mode :- NamedRoutes VisualizationAPI
-         , componentsApi     :: mode :- NamedRoutes ComponentsAPI
-         , static            :: mode :- NamedRoutes StaticAPI
-         , robots            :: mode :- NamedRoutes RobotsAPI
+  API :: { debugApi         :: mode :- NamedRoutes DebugAPI
+         , homePage         :: mode :- Get '[HTML] (PureSideMenu IndexPage)
+         , dataApi          :: mode :- NamedRoutes DataAPI
+         , visualizationApi :: mode :- NamedRoutes VisualizationAPI
+         , componentsApi    :: mode :- NamedRoutes ComponentsAPI
+         , static           :: mode :- NamedRoutes StaticAPI
+         , robotsTxtFile    :: mode :- NamedRoutes RobotsAPI
          } -> API mode
   deriving stock Generic
 
 type BikeShareExplorerAPI = NamedRoutes API
-
-server :: API (AsServerT ServerAppM)
-server = API { debugApi          = debugApiHandler
-             , home              = homePageHandler
-             , dataApi           = statusHandler
-             , visualizationApi  = visualizationHandler
-             , componentsApi     = componentsHandler
-             , static            = staticHandler
-             , robots            = robotsHandler
-             }
-
--- * Handlers.
-
-homePageHandler :: ServerAppM (PureSideMenu IndexPage)
-homePageHandler = do
-  _appEnv <- asks serverAppEnv
-  sideMenu $
-    IndexPage { _stationStatusLink = fieldLink pageForStation }
 
 -- routesLinks :: API (AsLink Link)
 -- routesLinks = allFieldLinks
 
 -- apiProxy :: Proxy (ToServantApi API)
 -- apiProxy = genericApi (Proxy :: Proxy API)
+
+-- | The API handlers.
+server :: API (AsServerT ServerAppM)
+server = API { debugApi         = debugApiHandler
+             , homePage         = homePageHandler
+             , dataApi          = statusHandler
+             , visualizationApi = visualizationHandler
+             , componentsApi    = componentsHandler
+             , static           = staticHandler
+             , robotsTxtFile    = robotsHandler
+             }
+
+-- * Handlers.
+
+-- | Handler render the home page.
+homePageHandler :: ServerAppM (PureSideMenu IndexPage)
+homePageHandler = do
+  _appEnv <- asks serverAppEnv
+  sideMenu $
+    IndexPage { _stationStatusLink = fieldLink pageForStation }
 
