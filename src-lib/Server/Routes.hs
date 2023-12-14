@@ -25,9 +25,6 @@ import           Colog
 import           Control.Lens                                 hiding ( reuse )
 import           Control.Monad.Except
 
-import qualified Data.ByteString.Char8                        as BSW
-import qualified Data.ByteString.Lazy                         as BL
-import           Data.Csv                                     ( encodeDefaultOrderedByName )
 import           Data.Default.Class                           ( def )
 import           Data.List                                    ( sortOn )
 import           Data.Maybe                                   ( fromMaybe, listToMaybe )
@@ -38,9 +35,6 @@ import           Data.Time.Extras
 import           Database.Beam
 import           Database.BikeShare.Expressions
 import           Database.BikeShare.Operations
-import           Database.BikeShare.Operations.Factors
-import           Database.BikeShare.Operations.FactorsCSV
-import           Database.BikeShare.StatusVariationQuery
 import           Database.BikeShare.Tables.StationInformation
 
 import           Fmt
@@ -53,10 +47,7 @@ import           Servant.Server.Generic
 
 import           Server.Classes                               ( ToHtmlComponents )
 import           Server.Components.LatestQueries
-import           Server.Components.PerformanceData
 import           Server.ComponentsAPI
-import           Server.Data.StationStatusVisualization
-import           Server.Data.SystemInformationVisualization
 import           Server.DataAPI
 import           Server.DebugAPI
 import           Server.Page.IndexPage
@@ -67,7 +58,6 @@ import           Server.Page.StationStatusVisualization
 import           Server.Page.SystemInfoVisualization
 import           Server.Page.SystemStatusVisualization
 import           Server.RobotsTXT
-import           Server.StatusDataParams
 import           Server.VisualizationAPI
 
 import           ServerEnv
@@ -109,16 +99,6 @@ data StaticAPI mode where
 
 -- * Handlers.
 
-statusHandler :: DataAPI (AsServerT ServerAppM)
-statusHandler =  DataAPI { dataForStation       = stationStatusData
-                         , integralsForStation  = stationIntegralData
-                         , factorsForStation    = stationFactorData
-                         , systemInfoData       = systemInfoDataHandler
-                         , performanceCsv       = performanceCsvHandler
-                         , dockingEventsData    = handleDockingEventsData
-                         , chargingEventsData   = handleChargingEventsData
-                         }
-
 staticHandler :: StaticAPI (AsServerT ServerAppM)
 staticHandler =  StaticAPI $ serveDirectoryWebApp "static-files"
 
@@ -148,70 +128,6 @@ sideMenu page = do
     , versionText   = getGitHash
     , latestQueries = latest
     }
-
-
-stationStatusData :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM [StationStatusVisualization]
-stationStatusData stationId startTime endTime = do
-  logInfo $ format "Creating JSON payload for {station ID: {}, start time: {}, end time: {}} " stationId startTime endTime
-  dataSource <- generateJsonDataSource stationId startTime endTime
-  logDebug "Created JSON payload"
-  pure dataSource
-
-
-stationIntegralData :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM [StatusIntegral]
-stationIntegralData stationId startTime endTime = do
-  logInfo $ format "Creating integral JSON payload for {station ID: {}, start time: {}, end time: {}} " stationId startTime endTime
-  dataSource <- generateJsonDataSourceIntegral  stationId startTime endTime
-  logDebug "Created integral JSON payload"
-  pure dataSource
-
-
-stationFactorData :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM [StatusFactor]
-stationFactorData stationId startTime endTime = do
-  logInfo $ format "Creating factor JSON payload for {station ID: {}, start time: {}, end time: {}} " stationId startTime endTime
-  dataSource <- generateJsonDataSourceFactor  stationId startTime endTime
-  logDebug "Created factor JSON payload"
-  pure dataSource
-
-systemInfoDataHandler :: Maybe LocalTime -> Maybe LocalTime -> ServerAppM [SystemInformationCountVisualization]
-systemInfoDataHandler startTime endTime = do
-  logInfo $ format "Creating system information JSON payload for {start time: {}, end time: {}} " startTime endTime
-  dataSource <- generateJsonDataSourceSysInfo startTime endTime
-  logDebug "Created factor JSON payload"
-  pure dataSource
-
-performanceCsvHandler :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM (Headers '[Header "Content-Disposition" T.Text] BL.ByteString)
-performanceCsvHandler stationId startTime endTime = do
-  logInfo $ format "Creating performance data CSV payload for {station ID: {}, start time: {}, end time: {}} " stationId startTime endTime
-
-  appEnv <- getAppEnvFromServer
-  let tz = envTimeZone appEnv
-  currentUtc <- liftIO getCurrentTime
-
-  let params = StatusDataParams tz currentUtc (TimePair startTime endTime tz currentUtc)
-  let range = enforceTimeRangeBounds params
-  let variation = StatusVariationQuery (fromIntegral <$> stationId)
-        [ EarliestTime (localTimeToUTC tz (earliestTime range))
-        , LatestTime   (localTimeToUTC tz (latestTime range))
-        ]
-
-  integrals <- liftIO $ runAppM appEnv $ queryIntegratedStatus variation
-
-  logDebug "Created performance data CSV payload"
-
-  let fileContent = encodeIntegrals integrals
-
-  let stationIdString :: String = maybe "system" (format "station-{}") stationId
-  let filename :: String = format "{}-performance-{}-{}.csv" stationIdString (earliestTime range) (latestTime range)
-  pure $ addHeader (format "attachment; filename=\"{}\"" (replaceSpaces filename)) (fileContent :: BL.ByteString)
-  where
-    encodeIntegrals = encodeDefaultOrderedByName . map (PerformanceDataCSV . integralToPerformanceData)
-
-replaceSpaces :: String -> String
-replaceSpaces [] = []
-replaceSpaces (x:xs)
-    | x == ' ' = "-" ++ replaceSpaces xs
-    | otherwise = x : replaceSpaces xs
 
 
 -- | Create the station status visualization page record.
@@ -344,46 +260,3 @@ homePageHandler = do
 -- apiProxy :: Proxy (ToServantApi API)
 -- apiProxy = genericApi (Proxy :: Proxy API)
 
-handleDockingEventsData :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM [DockingEventsCount]
-handleDockingEventsData stationId startTime endTime = do
-  -- Accessing the inner environment by using the serverEnv accessor.
-  appEnv <- asks serverAppEnv
-  let tz = envTimeZone appEnv
-  -- AppM actions can be lifted into ServerAppM by using a combination of liftIO and runReaderT.
-  currentUtc <- liftIO getCurrentTime
-
-  -- TODO: awkward having to compute time bounds here and in 'StationStatusVisualization'
-  let times' = enforceTimeRangeBounds (StatusDataParams tz currentUtc (TimePair startTime endTime tz currentUtc))
-  let (earliest, latest) = (earliestTime times', latestTime times')
-
-  logInfo $ format "Rendering page for {station ID: {}, start time: {}, end time: {}} " stationId earliest latest
-
-  let variation = StatusVariationQuery (fromIntegral <$> stationId) [ EarliestTime (localTimeToUTC tz earliest)
-                                                                    , LatestTime   (localTimeToUTC tz latest)
-                                                                    ]
-  liftIO $ runAppM appEnv $ queryDockingEventsCount variation
-
-handleChargingEventsData :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM [ChargingEvent]
-handleChargingEventsData stationId startTime endTime = do
-  -- Accessing the inner environment by using the serverEnv accessor.
-  appEnv <- asks serverAppEnv
-  let tz = envTimeZone appEnv
-  -- AppM actions can be lifted into ServerAppM by using a combination of liftIO and runReaderT.
-  currentUtc <- liftIO getCurrentTime
-
-  -- TODO: awkward having to compute time bounds here and in 'StationStatusVisualization'
-  let times' = enforceTimeRangeBounds (StatusDataParams tz currentUtc (TimePair startTime endTime tz currentUtc))
-  let (earliest, latest) = (earliestTime times', latestTime times')
-
-  logInfo $ format "Rendering page for {station ID: {}, start time: {}, end time: {}} " stationId earliest latest
-
-  let variation = StatusVariationQuery (fromIntegral <$> stationId) [ EarliestTime (localTimeToUTC tz earliest)
-                                                                    , LatestTime   (localTimeToUTC tz latest)
-                                                                    ]
-  events <- liftIO $ runAppM appEnv $ queryChargingEventsCount variation
-  let result = map (\(_info, _totalCount, efitCount, efitG5Count) ->
-                      [ ChargingEvent EFit (fromIntegral efitCount)
-                      , ChargingEvent EFitG5 (fromIntegral efitG5Count)
-                      ])
-               events
-  pure $ concat result
