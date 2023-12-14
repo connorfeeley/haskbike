@@ -12,6 +12,7 @@ module Database.BikeShare.Tables.StationStatusDelta
      , StationStatusDeltaId
      , StationStatusDeltaT (..)
      , VehicleTypeMixin (..)
+     , createStationStatusDelta
      , deltaBoost
      , deltaEfit
      , deltaEfitG5
@@ -22,15 +23,18 @@ module Database.BikeShare.Tables.StationStatusDelta
      , deltaNumDocksAvailable
      , deltaNumDocksDisabled
      , deltaVehicleDocksAvailable
+     , stationStatusDeltaModification
      ) where
 
 import           Control.Lens
 
 import           Data.Int
 import           Data.String                             ( IsString, fromString )
+import qualified Data.Text                               as T
 
 import           Database.Beam
 import           Database.Beam.Backend                   ( timestampType )
+import           Database.Beam.Backend.SQL.Builder
 import           Database.Beam.Migrate
 import           Database.Beam.Postgres
 import           Database.BikeShare.Tables.StationStatus
@@ -109,7 +113,9 @@ stationStatusDeltaModification =
 createStationStatusDelta :: Migration Postgres (CheckedDatabaseEntity Postgres db (TableEntity StationStatusDeltaT))
 createStationStatusDelta =
   createTable "station_status_delta" $ StationStatusDelta
-  { _deltaId                    = StationStatusId (StationInformationId $ field "id" int notNull) (field "last_reported" (DataType (timestampType Nothing True)) notNull)
+  { _deltaId                    = StationStatusId
+                                  (StationInformationId (field "id" int notNull))
+                                  (field "last_reported" (DataType (timestampType Nothing True)) notNull)
   , _deltaNumBikesAvailable     = field "num_bikes_available"     int notNull
   , _deltaNumBikesDisabled      = field "num_bikes_disabled"      int notNull
   , _deltaNumDocksAvailable     = field "num_docks_available"     int notNull
@@ -122,7 +128,13 @@ createStationStatusDelta =
   }
 
 referenceStatusTable :: BeamMigrateSqlBackend be => Constraint be
-referenceStatusTable = Constraint $ referencesConstraintSyntax "station_status" ["station_id"] --FIXME
-                            Nothing
-                            (Just referentialActionCascadeSyntax)
-                            Nothing
+referenceStatusTable = Constraint $ referencesConstraintSyntax "station_status" ["station_id", "last_reported"]
+                       Nothing
+                       (Just referentialActionCascadeSyntax)
+                       Nothing
+
+referenceStatusTableField :: BeamMigrateSqlBackend be => T.Text -> Constraint be
+referenceStatusTableField referenceField = Constraint $ referencesConstraintSyntax "station_status" [referenceField]
+                       Nothing
+                       (Just referentialActionCascadeSyntax)
+                       Nothing
