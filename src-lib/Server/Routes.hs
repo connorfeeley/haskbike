@@ -25,12 +25,12 @@ import           Colog
 import           Control.Lens                                 hiding ( reuse )
 import           Control.Monad.Except
 
-import           Data.ByteString.Lazy                         ( ByteString )
+import qualified Data.ByteString.Char8                        as BSW
+import qualified Data.ByteString.Lazy                         as BL
 import           Data.Csv                                     ( encodeDefaultOrderedByName )
 import           Data.Default.Class                           ( def )
 import           Data.List                                    ( sortOn )
 import           Data.Maybe                                   ( fromMaybe, listToMaybe )
-import           Data.Text                                    ( Text )
 import qualified Data.Text                                    as T
 import           Data.Time
 import           Data.Time.Extras
@@ -66,6 +66,7 @@ import           Server.Page.StationList
 import           Server.Page.StationStatusVisualization
 import           Server.Page.SystemInfoVisualization
 import           Server.Page.SystemStatusVisualization
+import           Server.RobotsTXT
 import           Server.StatusDataParams
 import           Server.VisualizationAPI
 
@@ -76,25 +77,28 @@ import           TimeInterval
 import           Version
 
 data API mode where
-  API :: { debug             :: mode :- NamedRoutes DebugAPI
+  API :: { debugApi          :: mode :- NamedRoutes DebugAPI
          , home              :: mode :- Get '[HTML] (PureSideMenu IndexPage)
-         , stationData       :: mode :- NamedRoutes DataAPI
-         , visualizationPage :: mode :- NamedRoutes VisualizationAPI
-         , componentsPage    :: mode :- NamedRoutes ComponentsAPI
+         , dataApi           :: mode :- NamedRoutes DataAPI
+         , visualizationApi  :: mode :- NamedRoutes VisualizationAPI
+         , componentsApi     :: mode :- NamedRoutes ComponentsAPI
          , static            :: mode :- NamedRoutes StaticAPI
+         , robots            :: mode :- NamedRoutes RobotsAPI
          } -> API mode
   deriving stock Generic
 
 type BikeShareExplorerAPI = NamedRoutes API
 
 server :: API (AsServerT ServerAppM)
-server = API { debug             = debugApiHandler
+server = API { debugApi          = debugApiHandler
              , home              = homePageHandler
-             , stationData       = statusHandler
-             , visualizationPage = visualizationHandler
-             , componentsPage    = componentsHandler
+             , dataApi           = statusHandler
+             , visualizationApi  = visualizationHandler
+             , componentsApi     = componentsHandler
              , static            = staticHandler
+             , robots            = robotsHandler
              }
+
 -- * Serve static files.
 
 data StaticAPI mode where
@@ -176,7 +180,7 @@ systemInfoDataHandler startTime endTime = do
   logDebug "Created factor JSON payload"
   pure dataSource
 
-performanceCsvHandler :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM (Headers '[Header "Content-Disposition" Text] ByteString)
+performanceCsvHandler :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM (Headers '[Header "Content-Disposition" T.Text] BL.ByteString)
 performanceCsvHandler stationId startTime endTime = do
   logInfo $ format "Creating performance data CSV payload for {station ID: {}, start time: {}, end time: {}} " stationId startTime endTime
 
@@ -199,7 +203,7 @@ performanceCsvHandler stationId startTime endTime = do
 
   let stationIdString :: String = maybe "system" (format "station-{}") stationId
   let filename :: String = format "{}-performance-{}-{}.csv" stationIdString (earliestTime range) (latestTime range)
-  pure $ addHeader (format "attachment; filename=\"{}\"" (replaceSpaces filename)) (fileContent :: ByteString)
+  pure $ addHeader (format "attachment; filename=\"{}\"" (replaceSpaces filename)) (fileContent :: BL.ByteString)
   where
     encodeIntegrals = encodeDefaultOrderedByName . map (PerformanceDataCSV . integralToPerformanceData)
 

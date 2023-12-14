@@ -211,6 +211,7 @@ library
                     , Server
                     , ServerEnv
                     , Server.Routes
+                    , Server.RobotsTXT
                     , Server.DataAPI
                     , Server.VisualizationAPI
                     , Server.ComponentsAPI
