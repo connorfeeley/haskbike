@@ -23,9 +23,9 @@ setStationId stationId status = status { AT._statusStationId = stationId }
 
 addBikesAvailable, addBikesDisabled, addDocksAvailable, addDocksDisabled :: Int -> AT.StationStatus -> AT.StationStatus
 addBikesAvailable inc status = status { AT._statusNumBikesAvailable = AT._statusNumBikesAvailable status + inc }
-addBikesDisabled  inc status = status { AT._statusNumBikesDisabled  = AT._statusNumBikesDisabled status  + inc }
+addBikesDisabled  inc status = status { AT._statusNumBikesDisabled  = AT._statusNumBikesDisabled  status + inc }
 addDocksAvailable inc status = status { AT._statusNumDocksAvailable = AT._statusNumDocksAvailable status + inc }
-addDocksDisabled  inc status = status { AT._statusNumDocksDisabled  = AT._statusNumDocksDisabled status  + inc }
+addDocksDisabled  inc status = status { AT._statusNumDocksDisabled  = AT._statusNumDocksDisabled  status + inc }
 
 baseStatus7001, baseStatus7002 :: AT.StationStatus
 baseStatus7001 = setStationId 7001 baseStatus
@@ -71,12 +71,10 @@ defaultLastReported = UTCTime (fromGregorian 2023 01 01) (timeOfDayToTime midnig
 
 unit_testStatusDeltas :: IO ()
 unit_testStatusDeltas = do
-  putStrLn "Testing status deltas..."
   assertEqual "Intersection" intersection (Map.fromList
                                            [ (7001, expectedDeltaFields { statusDeltaStationId = 7001 })
                                            , (7002, expectedDeltaFields { statusDeltaStationId = 7002 })
                                            ])
-  putStrLn "Done."
   where
     expectedDeltaFields =
       StatusDeltaFields
