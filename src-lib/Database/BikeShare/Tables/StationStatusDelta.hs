@@ -4,6 +4,7 @@
 {-# LANGUAGE TypeFamilies              #-}
 {-# LANGUAGE UndecidableInstances      #-}
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
+
 -- |
 
 module Database.BikeShare.Tables.StationStatusDelta
@@ -34,7 +35,6 @@ import qualified Data.Text                               as T
 
 import           Database.Beam
 import           Database.Beam.Backend                   ( timestampType )
-import           Database.Beam.Backend.SQL.Builder
 import           Database.Beam.Migrate
 import           Database.Beam.Postgres
 import           Database.BikeShare.Tables.StationStatus

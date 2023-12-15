@@ -17,6 +17,7 @@ module Database.BikeShare
      , bikeshareQueryLog
      , bikeshareStationInformation
      , bikeshareStationStatus
+     , bikeshareStationStatusDelta
      , bikeshareSystemInformation
      , bikeshareSystemInformationCount
      ) where
@@ -32,6 +33,7 @@ import           Database.BikeShare.Tables.StationInformation
 import           Database.BikeShare.Tables.StationStatus
 import           Database.BikeShare.Tables.StationStatusDelta
 import           Database.BikeShare.Tables.SystemInformation
+
 
 
 data BikeshareDb f where

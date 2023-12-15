@@ -267,6 +267,7 @@ library
                     , Database.BikeShare.Operations.Factors
                     , Database.BikeShare.Operations.FactorsCSV
                     , Database.BikeShare.Expressions
+                    , Database.BikeShare.StatusDeltaFields
                     , Database.BikeShare.Tables.SystemInformation
                     , Database.BikeShare.Tables.StationInformation
                     , Database.BikeShare.Tables.StationStatus
@@ -321,6 +322,7 @@ test-suite haskbike-test
                     , TestOperations
                     , TestChargings
                     , TestMisc
+                    , TestDeltas
                     , Utils
 
     -- LANGUAGE extensions used by modules in this package.
