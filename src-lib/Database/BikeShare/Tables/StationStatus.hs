@@ -43,6 +43,7 @@ module Database.BikeShare.Tables.StationStatus
      ) where
 
 import qualified API.StationStatus                            as AT
+import qualified API.VehicleType                              as AT
 
 import           Control.Lens
 
@@ -260,11 +261,12 @@ fromBeamStationStatusToJSON status =
                    , AT._statusIsReturning           = status ^. statusIsReturning
                    , AT._statusTraffic               = fmap Text.unpack $ status ^. statusTraffic
                    , AT._statusVehicleDocksAvailable = [ AT.VehicleDock (map show [AT.Boost, AT.Iconic, AT.EFit, AT.EFitG5]) (fromIntegral $ status ^. statusVehicleDocksAvailable) ]
-                   , AT._statusVehicleTypesAvailable = [ AT.VehicleType AT.Boost  (fromIntegral (status ^. vehicleTypesAvailableBoost))
-                                                       , AT.VehicleType AT.Iconic (fromIntegral (status ^. vehicleTypesAvailableIconic))
-                                                       , AT.VehicleType AT.EFit   (fromIntegral (status ^. vehicleTypesAvailableEfit))
-                                                       , AT.VehicleType AT.EFitG5 (fromIntegral (status ^. vehicleTypesAvailableEfitG5))
-                                                       ]
+                   , AT._statusVehicleTypesAvailable =
+                     AT.listToMap [ AT.VehicleType AT.Boost  (fromIntegral (status ^. vehicleTypesAvailableBoost))
+                                  , AT.VehicleType AT.Iconic (fromIntegral (status ^. vehicleTypesAvailableIconic))
+                                  , AT.VehicleType AT.EFit   (fromIntegral (status ^. vehicleTypesAvailableEfit))
+                                  , AT.VehicleType AT.EFitG5 (fromIntegral (status ^. vehicleTypesAvailableEfitG5))
+                                  ]
                    }
   where
     StationInformationId sid = _statusStationId status

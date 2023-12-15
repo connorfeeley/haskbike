@@ -253,6 +253,7 @@ library
                     , API.StationStatus
                     , API.SystemInformation
                     , API.StationInformation
+                    , API.VehicleType
                     , Data.Time.Extras
                     , Text.Pretty.Simple.Extras
                     , Database.BikeShare

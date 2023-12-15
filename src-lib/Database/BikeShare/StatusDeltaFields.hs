@@ -6,6 +6,7 @@ module Database.BikeShare.StatusDeltaFields
      ) where
 
 import           API.StationStatus
+import           API.VehicleType
 
 import           Control.Lens
 
