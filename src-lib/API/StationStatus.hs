@@ -94,7 +94,7 @@ data StationStatus where
                    , _statusIsReturning           :: Bool
                    , _statusTraffic               :: Maybe String -- PBSC doesn't seem to set this field
                    , _statusVehicleDocksAvailable :: [VehicleDock]
-                   , _statusVehicleTypesAvailable :: Map.Map TorontoVehicleType VehicleType
+                   , _statusVehicleTypesAvailable :: Map.Map TorontoVehicleType Int
                    } -> StationStatus
   deriving (Show, Generic)
 

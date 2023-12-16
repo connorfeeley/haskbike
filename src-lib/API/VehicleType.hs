@@ -71,11 +71,11 @@ instance FromJSON TorontoVehicleType where
      _         -> fail ("Invalid TorontoVehicleType: " ++ show t)
 
 -- | List of 'VehicleType' to Map.
-listToMap :: [VehicleType] -> Map.Map TorontoVehicleType VehicleType
+listToMap :: [VehicleType] -> Map.Map TorontoVehicleType Int
 listToMap = Map.fromList . map elemToKV
 
-elemToKV :: VehicleType -> (TorontoVehicleType, VehicleType)
-elemToKV vt = (vehicleTypeId vt, vt)
+elemToKV :: VehicleType -> (TorontoVehicleType, Int)
+elemToKV vt = (vehicleTypeId vt, vehicleTypeCnt vt)
 
 mapToList :: Map.Map TorontoVehicleType VehicleType -> [VehicleType]
 mapToList = map kvToElem . Map.toList

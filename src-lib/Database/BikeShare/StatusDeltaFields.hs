@@ -9,7 +9,7 @@ import           API.StationStatus
 import           API.VehicleType
 
 import qualified Data.Map          as Map
-import           Data.Maybe        ( listToMaybe )
+import           Data.Maybe        ( fromMaybe, listToMaybe )
 import           Data.Time
 
 
@@ -49,8 +49,8 @@ calculateDelta a b = StatusDeltaFields
     vta = _statusVehicleTypesAvailable
 
 
-lookupCount :: Ord k => k -> Map.Map k VehicleType -> Int
-lookupCount tvt vt = maybe 0 vehicleTypeCnt (Map.lookup tvt vt)
+lookupCount :: Ord k => k -> Map.Map k Int -> Int
+lookupCount tvt vt = fromMaybe 0 (Map.lookup tvt vt)
 
 vehicleDocks :: Num b => StationStatus -> b
 vehicleDocks status = maybe 0 (fromIntegral . dock_count) (listToMaybe (_statusVehicleDocksAvailable status))

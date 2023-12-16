@@ -1,5 +1,3 @@
--- | Station infrormation table definition and functions.
-
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Use camelCase" #-}
 
@@ -8,6 +6,8 @@
 {-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE TypeFamilies              #-}
 {-# LANGUAGE UndecidableInstances      #-}
+
+-- | Station infrormation table definition and functions.
 
 module Database.BikeShare.Tables.StationStatus
      ( BeamStationStatusString (..)
@@ -50,7 +50,7 @@ import           Control.Lens
 import qualified Data.ByteString.Char8                        as B
 import           Data.Coerce                                  ( coerce )
 import           Data.Int
-import           Data.List                                    ( find )
+import qualified Data.Map                                     as Map
 import           Data.Maybe                                   ( listToMaybe )
 import           Data.String                                  ( IsString (fromString) )
 import qualified Data.Text                                    as Text
@@ -238,8 +238,8 @@ fromJSONToBeamStationStatus status
   | otherwise = Nothing
   where
     -- | Find the vehicle type in the list of vehicle types available; default to 0 if not found.
-    findByType' vehicle_type = find (\x -> AT.vehicleTypeId x == vehicle_type) $ status ^. AT.statusVehicleTypesAvailable
-    findByType  vehicle_type = fromIntegral $ maybe 0 AT.vehicleTypeCnt (findByType' vehicle_type)
+    vta = AT._statusVehicleTypesAvailable status
+    findByType vehicle_type = (maybe 0 fromIntegral . Map.lookup vehicle_type) vta
     num_boost   = findByType AT.Boost
     num_iconic  = findByType AT.Iconic
     num_efit    = findByType AT.EFit
