@@ -8,9 +8,7 @@ module Database.BikeShare.StatusDeltaFields
 import           API.StationStatus
 import           API.VehicleType
 
-import           Control.Lens
-
-import           Data.List         ( find )
+import qualified Data.Map          as Map
 import           Data.Maybe        ( listToMaybe )
 import           Data.Time
 
@@ -42,17 +40,17 @@ calculateDelta a b = StatusDeltaFields
   , statusDeltaNumDocksAvailable           = _statusNumDocksAvailable b - _statusNumDocksAvailable a
   , statusDeltaNumDocksDisabled            = _statusNumDocksDisabled  b - _statusNumDocksDisabled  a
   , statusDeltaVehicleDocksAvailable       = vehicleDocks  b - vehicleDocks  a
-  , statusDeltaVehicleTypesAvailableBoost  = num_boost     b - num_boost     a
-  , statusDeltaVehicleTypesAvailableIconic = num_iconic    b - num_iconic    a
-  , statusDeltaVehicleTypesAvailableEfit   = num_efit      b - num_efit      a
-  , statusDeltaVehicleTypesAvailableEfitG5 = num_efit_g5   b - num_efit_g5   a
+  , statusDeltaVehicleTypesAvailableBoost  = (lookupCount Boost  . vta) b - (lookupCount Boost  . vta) a
+  , statusDeltaVehicleTypesAvailableIconic = (lookupCount Iconic . vta) b - (lookupCount Iconic . vta) a
+  , statusDeltaVehicleTypesAvailableEfit   = (lookupCount EFit   . vta) b - (lookupCount EFit   . vta) a
+  , statusDeltaVehicleTypesAvailableEfitG5 = (lookupCount EFitG5 . vta) b - (lookupCount EFitG5 . vta) a
   }
   where
-    -- | Find the vehicle type in the list of vehicle types available; default to 0 if not found.
-    findByType' status vehicle_type = find (\x -> vehicle_type_id x == vehicle_type) $ status ^. statusVehicleTypesAvailable
-    findByType  status vehicle_type = fromIntegral $ maybe 0 type_count (findByType' status vehicle_type)
-    num_boost   status = findByType status Boost
-    num_iconic  status = findByType status Iconic
-    num_efit    status = findByType status EFit
-    num_efit_g5 status = findByType status EFitG5
-    vehicleDocks status = maybe 0 (fromIntegral . dock_count) $ listToMaybe $ status ^. statusVehicleDocksAvailable
+    vta = _statusVehicleTypesAvailable
+
+
+lookupCount :: Ord k => k -> Map.Map k VehicleType -> Int
+lookupCount tvt vt = maybe 0 type_count (Map.lookup tvt vt)
+
+vehicleDocks :: Num b => StationStatus -> b
+vehicleDocks status = maybe 0 (fromIntegral . dock_count) (listToMaybe (_statusVehicleDocksAvailable status))

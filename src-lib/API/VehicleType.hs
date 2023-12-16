@@ -91,7 +91,7 @@ typeInList vehicleType = find (\x -> vehicle_type_id x == vehicleType)
 findByType :: (Num b, Foldable t) => TorontoVehicleType -> t VehicleType -> b
 findByType vehicle_type xs = fromIntegral $ maybe 0 type_count (typeInList vehicle_type xs)
 
-numBoost, numIconic, numEfit, numEfitG5 :: [VehicleType] -> Integer
+numBoost, numIconic, numEfit, numEfitG5 :: Num a => [VehicleType] -> a
 numBoost  = findByType Boost
 numIconic = findByType Iconic
 numEfit   = findByType EFit
