@@ -5,8 +5,9 @@ module TestDeltas
      ( unit_testStatusDeltas
      ) where
 
-import qualified API.StationStatus                    as AT
+import           API.StationStatus
 import           API.Utils
+import           API.VehicleType
 
 import           Data.Function                        ( (&) )
 import qualified Data.Map                             as Map
@@ -17,29 +18,22 @@ import           Database.BikeShare.StatusDeltaFields
 import           Test.Tasty.HUnit
 
 
-setStationId :: Int -> AT.StationStatus -> AT.StationStatus
-setStationId stationId status = status { AT._statusStationId = stationId }
+setStationId :: Int -> StationStatus -> StationStatus
+setStationId stationId status = status { _statusStationId = stationId }
 
-
-addBikesAvailable, addBikesDisabled, addDocksAvailable, addDocksDisabled :: Int -> AT.StationStatus -> AT.StationStatus
-addBikesAvailable inc status = status { AT._statusNumBikesAvailable = AT._statusNumBikesAvailable status + inc }
-addBikesDisabled  inc status = status { AT._statusNumBikesDisabled  = AT._statusNumBikesDisabled  status + inc }
-addDocksAvailable inc status = status { AT._statusNumDocksAvailable = AT._statusNumDocksAvailable status + inc }
-addDocksDisabled  inc status = status { AT._statusNumDocksDisabled  = AT._statusNumDocksDisabled  status + inc }
-
-baseStatus7001, baseStatus7002 :: AT.StationStatus
+baseStatus7001, baseStatus7002 :: StationStatus
 baseStatus7001 = setStationId 7001 baseStatus
 baseStatus7002 = setStationId 7002 baseStatus
 
 -- "Original" map - current API data.
-mapOrig :: Map.Map Int AT.StationStatus
+mapOrig :: Map.Map Int StationStatus
 mapOrig = Map.fromList
           [ (7001, baseStatus7001)
           , (7002, baseStatus7002)
           ]
 
 -- "New" map - data fetched from API but not yet inserted.
-mapNew :: Map.Map Int AT.StationStatus
+mapNew :: Map.Map Int StationStatus
 mapNew = Map.fromList
          [ (7001, newBaseStatus baseStatus7001)
          , (7002, newBaseStatus baseStatus7002)
@@ -50,16 +44,35 @@ mapNew = Map.fromList
                          & addBikesAvailable  1
                          & addBikesDisabled   1
 
-addTimeToStatus :: NominalDiffTime -> AT.StationStatus -> AT.StationStatus
+nthStatus :: [StationStatus -> StationStatus]
+nthStatus =
+  map (addTimeToStatus 1 .)
+  [ addBikesAvailable  1
+  . addBikesDisabled   1
+
+  , addBikesAvailable  3
+  . addBikesDisabled   0
+
+  , addBikesAvailable  (-2)
+  . addBikesDisabled   1
+
+  , addBikesAvailable  0
+  . addBikesDisabled   10
+  ]
+
+foldFunctions :: StationStatus -> [StationStatus -> StationStatus] -> StationStatus
+foldFunctions baseValue functions = foldl (flip ($)) baseValue functions
+
+addTimeToStatus :: NominalDiffTime -> StationStatus -> StationStatus
 addTimeToStatus diffTime status =
-  status { AT._statusLastReported = addTime diffTime status
+  status { _statusLastReported = addTime diffTime status
          }
 
-addTime :: NominalDiffTime -> AT.StationStatus -> Maybe UTCTime
-addTime diffTime  status = maybe (Just defaultLastReported) (Just . addUTCTime diffTime) (AT._statusLastReported status)
+addTime :: NominalDiffTime -> StationStatus -> Maybe UTCTime
+addTime diffTime  status = maybe (Just defaultLastReported) (Just . addUTCTime diffTime) (_statusLastReported status)
 
 -- Our operation to combine two Ints and produce a Float
-_f :: AT.StationStatus -> AT.StationStatus -> StatusDeltaFields
+_f :: StationStatus -> StationStatus -> StatusDeltaFields
 _f = calculateDelta
 
 -- Step 1: Intersection
