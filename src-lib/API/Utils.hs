@@ -8,7 +8,9 @@ module API.Utils
      ) where
 
 import           API.StationStatus
+import           API.VehicleType
 
+import qualified Data.Map          as Map
 import           Data.Time
 
 import           GHC.Generics      ( Generic )
@@ -62,12 +64,12 @@ stationStatusFromSimple base status =
        , _statusNumDocksAvailable     = docksAvailable status
        , _statusNumDocksDisabled      = docksDisabled status
        , _statusVehicleDocksAvailable = [mkVehicleDock (docksAvailable status)]
-       , _statusVehicleTypesAvailable = availableList
+       , _statusVehicleTypesAvailable = Map.fromList availableList
        }
   where
-    availableList = [ mkIconic (iconicAvailable status)
-                    , mkEfit (efitAvailable status)
-                    , mkEfitG5 (efitG5Available status)
+    availableList = [ (Iconic, mkIconic (iconicAvailable status))
+                    , (EFit,   mkEfit (efitAvailable status))
+                    , (EFitG5, mkEfitG5 (efitG5Available status))
                     ]
 
 -- | Station status record initialized with arbitrary defaults.
@@ -85,7 +87,7 @@ baseStatus =
                 -- Number of docks (must match above).
                 , _statusVehicleDocksAvailable = [mkVehicleDock 0]
                 -- Number of each bike type.
-                , _statusVehicleTypesAvailable = [mkIconic 0, mkEfit 0, mkEfitG5 0]
+                , _statusVehicleTypesAvailable = Map.fromList [(Iconic, mkIconic 0), (EFit, mkEfit 0), (EFitG5, mkEfitG5 0)]
                 -- Boring stuff.
                 , _statusStatus                = InService
                 , _statusIsInstalled           = True

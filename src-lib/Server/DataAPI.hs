@@ -8,7 +8,8 @@ module Server.DataAPI
      , statusHandler
      ) where
 
-import           API.StationStatus                          ( TorontoVehicleType (..) )
+
+import           API.VehicleType
 
 import           Colog
 

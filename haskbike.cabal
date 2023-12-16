@@ -253,6 +253,7 @@ library
                     , API.StationStatus
                     , API.SystemInformation
                     , API.StationInformation
+                    , API.VehicleType
                     , Data.Time.Extras
                     , Text.Pretty.Simple.Extras
                     , Database.BikeShare
@@ -267,9 +268,11 @@ library
                     , Database.BikeShare.Operations.Factors
                     , Database.BikeShare.Operations.FactorsCSV
                     , Database.BikeShare.Expressions
+                    , Database.BikeShare.StatusDeltaFields
                     , Database.BikeShare.Tables.SystemInformation
                     , Database.BikeShare.Tables.StationInformation
                     , Database.BikeShare.Tables.StationStatus
+                    , Database.BikeShare.Tables.StationStatusDelta
                     , Database.BikeShare.Tables.QueryLogs
                     , Database.BikeShare.Tables.Diagnostics
                     , Database.BikeShare.EndpointQueried
@@ -320,6 +323,7 @@ test-suite haskbike-test
                     , TestOperations
                     , TestChargings
                     , TestMisc
+                    , TestDeltas
                     , Utils
 
     -- LANGUAGE extensions used by modules in this package.

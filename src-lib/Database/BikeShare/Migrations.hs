@@ -23,15 +23,23 @@ import           Database.BikeShare.EndpointQueried
 import           Database.BikeShare.Tables.QueryLogs
 import           Database.BikeShare.Tables.StationInformation
 import           Database.BikeShare.Tables.StationStatus
+import           Database.BikeShare.Tables.StationStatusDelta
 import           Database.BikeShare.Tables.SystemInformation
 
 
+{- Set up entire database.
+
+Can render with:
+  >>> (Text.Pretty.Simple.pPrint . Database.Beam.Postgres.Migrate.migrateScript) initialSetupStep
+  >>> (Text.Pretty.Simple.pPrint . take 1 . drop 14 . Database.Beam.Postgres.Migrate.migrateScript) initialSetupStep
+-}
 initialSetup :: Migration Postgres (CheckedDatabaseSettings Postgres BikeshareDb)
 initialSetup = do
   BikeshareDb
   <$> enumSetup -- Create custom Postgres enum type for the different endpoints that are queried.
   <*> createStationInformation
   <*> createStationStatus
+  <*> createStationStatusDelta
   <*> createSystemInformation
   <*> createSystemInformationCount
   <*> createQueries
@@ -62,3 +70,4 @@ enumSetupStep = migrationStep
 
 enumSetup :: Migration Postgres (CheckedDatabaseEntity Postgres db (PgType EndpointQueried))
 enumSetup = createEndpointQueriedEnum
+

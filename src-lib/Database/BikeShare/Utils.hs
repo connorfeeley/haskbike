@@ -28,6 +28,7 @@ dropTables conn = do
   -- Drop all tables.
   _ <- execute_ conn $ dropCascade "queries"
   _ <- execute_ conn $ dropCascade "station_status"
+  _ <- execute_ conn $ dropCascade "station_status_delta"
   _ <- execute_ conn $ dropCascade "station_information"
   _ <- execute_ conn $ dropCascade "system_information_count"
   _ <- execute_ conn $ dropCascade "system_information"

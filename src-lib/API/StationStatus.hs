@@ -6,9 +6,7 @@
 module API.StationStatus
      ( StationStatus (..)
      , StationStatusString (..)
-     , TorontoVehicleType (..)
      , VehicleDock (..)
-     , VehicleType (..)
      , statusIsChargingStation
      , statusIsInstalled
      , statusIsRenting
@@ -26,15 +24,16 @@ module API.StationStatus
      ) where
 
 import           API.Classes
+import           API.VehicleType
 
 import           Control.Lens         hiding ( (.=) )
 
 import           Data.Aeson           ( FromJSON (parseJSON), KeyValue ((.=)), ToJSON (toJSON), Value (String), object,
                                         withObject, withText, (.:), (.:?) )
 import           Data.Attoparsec.Text ( Parser, choice, parseOnly, string )
-import           Data.Char            ( toUpper )
 import           Data.Either          ( fromRight )
 import           Data.Functor         ( ($>) )
+import qualified Data.Map             as Map
 import qualified Data.Text            as Text
 import           Data.Time
 import           Data.Time.Extras
@@ -95,7 +94,7 @@ data StationStatus where
                    , _statusIsReturning           :: Bool
                    , _statusTraffic               :: Maybe String -- PBSC doesn't seem to set this field
                    , _statusVehicleDocksAvailable :: [VehicleDock]
-                   , _statusVehicleTypesAvailable :: [VehicleType]
+                   , _statusVehicleTypesAvailable :: Map.Map TorontoVehicleType VehicleType
                    } -> StationStatus
   deriving (Show, Generic)
 
@@ -114,7 +113,7 @@ instance ToJSON StationStatus where
            , "is_returning"             .= _statusIsReturning                         station
            , "traffic"                  .= _statusTraffic                             station
            , "vehicle_docks_available"  .= _statusVehicleDocksAvailable               station
-           , "vehicle_types_available"  .= _statusVehicleTypesAvailable               station
+           , "vehicle_types_available"  .= Map.toList (_statusVehicleTypesAvailable   station)
            ]
 instance FromJSON StationStatus where
   parseJSON = withObject "StationStatus" $ \v -> StationStatus
@@ -131,7 +130,7 @@ instance FromJSON StationStatus where
     <*> v .: "is_returning"
     <*> v .:? "traffic"
     <*> v .: "vehicle_docks_available"
-    <*> v .: "vehicle_types_available"
+    <*> (listToMap <$> (v .: "vehicle_types_available"))
 
 -- | A type representing a BikeShare station's vehicle dock status.
 data VehicleDock where
@@ -143,69 +142,12 @@ data VehicleDock where
 instance ToJSON VehicleDock where
   toJSON docks_available =
     object [ "vehicle_type_ids" .= vehicle_type_ids docks_available
-            , "count"           .= dock_count             docks_available
-            ]
+           , "count"            .= dock_count       docks_available
+           ]
 instance FromJSON VehicleDock where
   parseJSON = withObject "VehicleDock" $ \v -> VehicleDock
     <$> v .: "vehicle_type_ids"
     <*> v .: "count"
-
--- | A type representing a BikeShare station's vehicle type status.
-data VehicleType where
-  VehicleType :: { vehicle_type_id :: TorontoVehicleType
-                 , type_count :: Int
-                 } -> VehicleType
-  deriving (Show, Generic, Eq, Ord)
-
-instance ToJSON VehicleType where
-  toJSON types_available =
-    object [ "vehicle_type_id" .= show (vehicle_type_id types_available)
-            , "count"          .= type_count            types_available
-            ]
-instance FromJSON VehicleType where
-  parseJSON = withObject "VehicleType" $ \v -> VehicleType
-    <$> v .: "vehicle_type_id"
-    <*> v .: "count"
-
-data TorontoVehicleType where
-  Boost  :: TorontoVehicleType
-  Iconic :: TorontoVehicleType
-  EFit   :: TorontoVehicleType
-  EFitG5 :: TorontoVehicleType
-  deriving (Generic, Eq, Ord)
-
-instance Show TorontoVehicleType where
-  show Boost  = "BOOST"
-  show Iconic = "ICONIC"
-  show EFit   = "EFIT"
-  show EFitG5 = "EFIT G5"
-
--- | Read instance for 'TorontoVehicleType' (case-insensitive).
-instance Read TorontoVehicleType where
-  readsPrec _ = fromRight [] . parseOnly parser . Text.pack . map toUpper
-    where
-    parser :: Parser [(TorontoVehicleType, String)]
-    parser = choice
-      [ string "BOOST"    $> [(Boost,  "")]
-      , string "ICONIC"   $> [(Iconic, "")]
-      , string "EFIT"     $> [(EFit,   "")]
-      , string "EFIT G5"  $> [(EFitG5, "")]
-      ]
-
-instance ToJSON TorontoVehicleType where
-  toJSON Boost  = String (Text.pack "BOOST")
-  toJSON Iconic = String (Text.pack "ICONIC")
-  toJSON EFit   = String (Text.pack "EFIT")
-  toJSON EFitG5 = String (Text.pack "EFIT G5")
-
-instance FromJSON TorontoVehicleType where
-  parseJSON = withText "TorontoVehicleType" $ \t -> case t of
-     "BOOST"   -> return Boost
-     "ICONIC"  -> return Iconic
-     "EFIT"    -> return EFit
-     "EFIT G5" -> return EFitG5
-     _         -> fail ("Invalid TorontoVehicleType: " ++ show t)
-
 
 instance HasDataField [StationStatus] where
   -- For a list of SystemStatus, we expect to find them under the 'stations' key

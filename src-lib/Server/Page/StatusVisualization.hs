@@ -11,12 +11,9 @@ module Server.Page.StatusVisualization
      , vegaChart
      ) where
 
-
 import qualified Data.Text                      as T
 import           Data.Time
 import           Data.Time.Extras
-
-import           Database.BikeShare.Operations
 
 import qualified Graphics.Vega.VegaLite         as VL
 
@@ -24,10 +21,10 @@ import           Lucid
 
 import           Servant
 
-import           Server.Page.Utils
 import           Server.StatusDataParams
 
 import           Visualization.StationOccupancy
+
 
 -- This helper creates an input field with the provided 'id' and 'type' attributes.
 makeInputField :: Monad m => HtmlT m () -> T.Text -> T.Text -> T.Text -> HtmlT m ()

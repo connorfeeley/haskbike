@@ -41,7 +41,7 @@ module Database.BikeShare.Operations.Dockings
      ) where
 
 
-import           API.StationStatus                            ( TorontoVehicleType (..) )
+import           API.VehicleType
 
 import           AppEnv
 
