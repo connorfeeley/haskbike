@@ -50,7 +50,7 @@ calculateDelta a b = StatusDeltaFields
 
 
 lookupCount :: Ord k => k -> Map.Map k VehicleType -> Int
-lookupCount tvt vt = maybe 0 type_count (Map.lookup tvt vt)
+lookupCount tvt vt = maybe 0 vehicleTypeCnt (Map.lookup tvt vt)
 
 vehicleDocks :: Num b => StationStatus -> b
 vehicleDocks status = maybe 0 (fromIntegral . dock_count) (listToMaybe (_statusVehicleDocksAvailable status))

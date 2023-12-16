@@ -16,15 +16,15 @@ import           GHC.Generics         ( Generic )
 
 -- | A type representing a BikeShare station's vehicle type status.
 data VehicleType where
-  VehicleType :: { vehicle_type_id :: TorontoVehicleType
-                 , type_count :: Int
+  VehicleType :: { vehicleTypeId  :: TorontoVehicleType
+                 , vehicleTypeCnt :: Int
                  } -> VehicleType
   deriving (Show, Generic, Eq, Ord)
 
 instance ToJSON VehicleType where
   toJSON types_available =
-    object [ "vehicle_type_id" .= show (vehicle_type_id types_available)
-            , "count"          .= type_count            types_available
+    object [ "vehicle_type_id" .= show (vehicleTypeId types_available)
+            , "count"          .= vehicleTypeCnt      types_available
             ]
 instance FromJSON VehicleType where
   parseJSON = withObject "VehicleType" $ \v -> VehicleType
@@ -75,7 +75,7 @@ listToMap :: [VehicleType] -> Map.Map TorontoVehicleType VehicleType
 listToMap = Map.fromList . map elemToKV
 
 elemToKV :: VehicleType -> (TorontoVehicleType, VehicleType)
-elemToKV vt = (vehicle_type_id vt, vt)
+elemToKV vt = (vehicleTypeId vt, vt)
 
 mapToList :: Map.Map TorontoVehicleType VehicleType -> [VehicleType]
 mapToList = map kvToElem . Map.toList
@@ -85,11 +85,11 @@ kvToElem = snd
 
 -- | Find the vehicle type in the list of vehicle types available; default to 0 if not found.
 typeInList :: Foldable t => TorontoVehicleType -> t VehicleType -> Maybe VehicleType
-typeInList vehicleType = find (\x -> vehicle_type_id x == vehicleType)
+typeInList vehicleType = find (\x -> vehicleTypeId x == vehicleType)
 
 -- | Find the corresponding value in the list.
 findByType :: (Num b, Foldable t) => TorontoVehicleType -> t VehicleType -> b
-findByType vehicle_type xs = fromIntegral $ maybe 0 type_count (typeInList vehicle_type xs)
+findByType tvt xs = fromIntegral $ maybe 0 vehicleTypeCnt (typeInList tvt xs)
 
 numBoost, numIconic, numEfit, numEfitG5 :: Num a => [VehicleType] -> a
 numBoost  = findByType Boost

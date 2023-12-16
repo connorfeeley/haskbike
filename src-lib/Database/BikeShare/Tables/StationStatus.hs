@@ -238,8 +238,8 @@ fromJSONToBeamStationStatus status
   | otherwise = Nothing
   where
     -- | Find the vehicle type in the list of vehicle types available; default to 0 if not found.
-    findByType' vehicle_type = find (\x -> AT.vehicle_type_id x == vehicle_type) $ status ^. AT.statusVehicleTypesAvailable
-    findByType  vehicle_type = fromIntegral $ maybe 0 AT.type_count (findByType' vehicle_type)
+    findByType' vehicle_type = find (\x -> AT.vehicleTypeId x == vehicle_type) $ status ^. AT.statusVehicleTypesAvailable
+    findByType  vehicle_type = fromIntegral $ maybe 0 AT.vehicleTypeCnt (findByType' vehicle_type)
     num_boost   = findByType AT.Boost
     num_iconic  = findByType AT.Iconic
     num_efit    = findByType AT.EFit
