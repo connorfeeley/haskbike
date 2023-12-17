@@ -28,6 +28,7 @@ import           Database.Beam.Postgres
 import           Database.Beam.Postgres.Full                  hiding ( insert )
 import qualified Database.BikeShare                           as DB
 import           Database.BikeShare.EndpointQueried
+import           Database.BikeShare.Operations                ( insertStationInformation )
 import qualified Database.BikeShare.Tables.StationInformation as DB
 import qualified Database.BikeShare.Tables.StationStatus      as DB
 import qualified Database.BikeShare.Tables.SystemInformation  as DB
@@ -103,16 +104,7 @@ class APIPersistable apiType dbType | apiType -> dbType where
 
 instance APIPersistable [AT.StationInformation] DB.StationInformationT where
   fromAPI resp = mapMaybe (Just . DB.fromJSONToBeamStationInformation) (_respData resp)
-  insertAPI resp = withPostgres $ runInsertReturningList $ insertOnConflict (DB.bikeshareDb ^. DB.bikeshareStationInformation)
-      (insertExpressions (fromAPI resp))
-      (conflictingFields primaryKey) (onConflictUpdateInstead (\i -> ( DB._infoName                    i
-                                                                     , DB._infoPhysicalConfiguration   i
-                                                                     , DB._infoCapacity                i
-                                                                     , DB._infoIsChargingStation       i
-                                                                     , DB._infoIsValetStation          i
-                                                                     , DB._infoIsVirtualStation        i
-                                                                     )
-                                                              ))
+  insertAPI resp = insertStationInformation (_respData resp)
 
 
 instance APIPersistable [AT.StationStatus] DB.StationStatusT where
