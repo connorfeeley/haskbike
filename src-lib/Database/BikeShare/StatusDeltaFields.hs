@@ -8,6 +8,7 @@ module Database.BikeShare.StatusDeltaFields
 import           API.StationStatus
 import           API.VehicleType
 
+import           Data.Function     ( (&) )
 import qualified Data.Map          as Map
 import           Data.Maybe        ( fromMaybe, listToMaybe )
 import           Data.Time
@@ -54,3 +55,13 @@ lookupCount tvt vt = fromMaybe 0 (Map.lookup tvt vt)
 
 vehicleDocks :: Num b => StationStatus -> b
 vehicleDocks status = maybe 0 (fromIntegral . dock_count) (listToMaybe (_statusVehicleDocksAvailable status))
+
+
+type StatusMap = Map.Map Int StationStatus
+
+processNewStatus :: StatusMap -> StatusMap -> StatusMap
+processNewStatus old new = undefined
+  where newDeltas = calculateNewDeltas old new
+
+calculateNewDeltas :: (k ~ Int, Ord k) => Map.Map k StationStatus -> Map.Map k StationStatus -> [StatusDeltaFields]
+calculateNewDeltas old new = Map.elems (Map.intersectionWith calculateDelta old new)

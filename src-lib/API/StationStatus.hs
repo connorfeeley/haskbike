@@ -104,7 +104,7 @@ data StationStatus where
                    , _statusVehicleDocksAvailable :: [VehicleDock]
                    , _statusVehicleTypesAvailable :: Map.Map TorontoVehicleType Int
                    } -> StationStatus
-  deriving (Show, Generic)
+  deriving (Show, Generic, Eq)
 
 instance ToJSON StationStatus where
   toJSON station =
