@@ -114,11 +114,20 @@ queryStationInformationByIds ids =
   where
     ids' = fromIntegral <$> ids
 
--- | Insert station information into the database.
-insertStationInformation :: [AT.StationInformation]             -- ^ List of 'StationInformation' from the API response.
+-- | Insert new station information into the database.
+insertStationInformation :: UTCTime
+                         -> [AT.StationInformation]             -- ^ List of 'StationInformation' from the API response.
                          -> AppM [StationInformationT Identity] -- ^ List of 'StationInformation' that where inserted.
-insertStationInformation stations =
-  withPostgres $ runInsertReturningList $ insertStationInformationExpr stations
+insertStationInformation reported stations = withPostgresTransaction $ do
+  -- ^ Use a transaction to ensure that the database is not left in an inconsistent state.
+  -- Update the station information that is already in the database to set active = False.
+  runUpdate $ update (_bikeshareStationInformation bikeshareDb)
+    (\inf -> _infoActive inf <-. val_ False)
+    (\inf -> _infoActive inf &&. _infoId inf `in_` (fromIntegral . AT.infoStationId <$> stations))
+
+  -- Insert only the stations that are not already in the database.
+  runInsertReturningList $ do
+    insertStationInformationExpr reported stations
 
 {- |
 Insert station statuses into the database.

@@ -40,6 +40,7 @@ module Database.BikeShare.Tables.StationInformation
      , infoPhysicalConfiguration
      , infoRentalMethods
      , infoRentalUris
+     , infoReported
      , infoRideCodeSupport
      , infoStationId
      , info_id
@@ -56,12 +57,13 @@ import           Data.Coerce                                ( coerce )
 import           Data.Int
 import           Data.Maybe                                 ( fromMaybe )
 import qualified Data.Text                                  as Text
+import           Data.Time
 import           Data.Vector                                ( fromList, toList )
 import qualified Data.Vector                                as Vector
 
 import           Database.Beam
 import           Database.Beam.Backend                      ( BeamBackend, HasSqlValueSyntax (sqlValueSyntax),
-                                                              SqlSerial )
+                                                              SqlSerial, timestampType )
 import           Database.Beam.Migrate
 import           Database.Beam.Postgres                     ( Postgres )
 import qualified Database.Beam.Postgres                     as Pg
@@ -94,6 +96,7 @@ data StationInformationT f where
                         , _infoRideCodeSupport       :: Columnar f Bool
                         , _infoRentalUris            :: Columnar f (Vector.Vector Text.Text)
                         , _infoActive                :: Columnar f Bool
+                        , _infoReported              :: Columnar f UTCTime
                         } -> StationInformationT f
   deriving (Generic, Beamable)
 
@@ -140,27 +143,29 @@ infoBluetoothId             :: Lens' (StationInformationT f) (C f Text.Text)
 infoRideCodeSupport         :: Lens' (StationInformationT f) (C f Bool)
 infoRentalUris              :: Lens' (StationInformationT f) (C f (Vector.Vector Text.Text))
 infoActive                  :: Lens' (StationInformationT f) (C f Bool)
+infoReported                :: Lens' (StationInformationT f) (C f UTCTime)
 
-StationInformation (LensFor info_id)                     _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
-StationInformation _ (LensFor infoStationId)               _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
-StationInformation _ _ (LensFor infoName)                    _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
-StationInformation _ _ _ (LensFor infoPhysicalConfiguration)   _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
-StationInformation _ _ _ _ (LensFor infoLat)                     _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
-StationInformation _ _ _ _ _ (LensFor infoLon)                     _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
-StationInformation _ _ _ _ _ _ (LensFor infoAltitude)                _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
-StationInformation _ _ _ _ _ _ _ (LensFor infoAddress)                 _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
-StationInformation _ _ _ _ _ _ _ _ (LensFor infoCapacity)                _ _ _ _ _ _ _ _ _ _ _ = tableLenses
-StationInformation _ _ _ _ _ _ _ _ _ (LensFor infoIsChargingStation)       _ _ _ _ _ _ _ _ _ _ = tableLenses
-StationInformation _ _ _ _ _ _ _ _ _ _ (LensFor infoRentalMethods)           _ _ _ _ _ _ _ _ _ = tableLenses
-StationInformation _ _ _ _ _ _ _ _ _ _ _ (LensFor infoIsValetStation)          _ _ _ _ _ _ _ _ = tableLenses
-StationInformation _ _ _ _ _ _ _ _ _ _ _ _ (LensFor infoIsVirtualStation)        _ _ _ _ _ _ _ = tableLenses
-StationInformation _ _ _ _ _ _ _ _ _ _ _ _ _ (LensFor infoGroups)                  _ _ _ _ _ _ = tableLenses
-StationInformation _ _ _ _ _ _ _ _ _ _ _ _ _ _ (LensFor infoObcn)                    _ _ _ _ _ = tableLenses
-StationInformation _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (LensFor infoNearbyDistance)          _ _ _ _ = tableLenses
-StationInformation _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (LensFor infoBluetoothId)             _ _ _ = tableLenses
-StationInformation _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (LensFor infoRideCodeSupport)         _ _ = tableLenses
-StationInformation _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (LensFor infoRentalUris)              _ = tableLenses
-StationInformation _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (LensFor infoActive)                  = tableLenses
+StationInformation (LensFor info_id)                     _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
+StationInformation _ (LensFor infoStationId)               _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
+StationInformation _ _ (LensFor infoName)                    _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
+StationInformation _ _ _ (LensFor infoPhysicalConfiguration)   _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
+StationInformation _ _ _ _ (LensFor infoLat)                     _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
+StationInformation _ _ _ _ _ (LensFor infoLon)                     _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
+StationInformation _ _ _ _ _ _ (LensFor infoAltitude)                _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
+StationInformation _ _ _ _ _ _ _ (LensFor infoAddress)                 _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
+StationInformation _ _ _ _ _ _ _ _ (LensFor infoCapacity)                _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
+StationInformation _ _ _ _ _ _ _ _ _ (LensFor infoIsChargingStation)       _ _ _ _ _ _ _ _ _ _ _ = tableLenses
+StationInformation _ _ _ _ _ _ _ _ _ _ (LensFor infoRentalMethods)           _ _ _ _ _ _ _ _ _ _ = tableLenses
+StationInformation _ _ _ _ _ _ _ _ _ _ _ (LensFor infoIsValetStation)          _ _ _ _ _ _ _ _ _ = tableLenses
+StationInformation _ _ _ _ _ _ _ _ _ _ _ _ (LensFor infoIsVirtualStation)        _ _ _ _ _ _ _ _ = tableLenses
+StationInformation _ _ _ _ _ _ _ _ _ _ _ _ _ (LensFor infoGroups)                  _ _ _ _ _ _ _ = tableLenses
+StationInformation _ _ _ _ _ _ _ _ _ _ _ _ _ _ (LensFor infoObcn)                    _ _ _ _ _ _ = tableLenses
+StationInformation _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (LensFor infoNearbyDistance)          _ _ _ _ _ = tableLenses
+StationInformation _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (LensFor infoBluetoothId)             _ _ _ _ = tableLenses
+StationInformation _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (LensFor infoRideCodeSupport)         _ _ _ = tableLenses
+StationInformation _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (LensFor infoRentalUris)              _ _ = tableLenses
+StationInformation _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (LensFor infoActive)                  _ = tableLenses
+StationInformation _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (LensFor infoReported)                = tableLenses
 
 -- | Newtype wrapper for RentalMethod to allow us to define a custom FromBackendRow instance.
 -- Don't want to implement database-specific code for the underlying RentalMethod type.
@@ -235,27 +240,29 @@ physicalConfiguration :: DataType Postgres BeamPhysicalConfiguration
 physicalConfiguration = DataType pgTextType
 
 -- | Convert from the JSON StationInformation to the Beam StationInformation type
-fromJSONToBeamStationInformation :: AT.StationInformation -> StationInformationT (QExpr Postgres s)
-fromJSONToBeamStationInformation (AT.StationInformation
-                                  station_id
-                                  name
-                                  physical_configuration
-                                  lat
-                                  lon
-                                  altitude
-                                  address
-                                  capacity
-                                  is_charging_station
-                                  rental_methods
-                                  is_valet_station
-                                  is_virtual_station
-                                  groups
-                                  obcn
-                                  nearby_distance
-                                  bluetooth_id
-                                  ride_code_support
-                                  rental_uris
-                                 ) =
+fromJSONToBeamStationInformation :: UTCTime -> AT.StationInformation -> StationInformationT (QExpr Postgres s)
+fromJSONToBeamStationInformation
+  reported
+  (AT.StationInformation
+   station_id
+   name
+   physical_configuration
+   lat
+   lon
+   altitude
+   address
+   capacity
+   is_charging_station
+   rental_methods
+   is_valet_station
+   is_virtual_station
+   groups
+   obcn
+   nearby_distance
+   bluetooth_id
+   ride_code_support
+   rental_uris
+  ) =
   StationInformation { _infoId                    = default_
                      , _infoStationId             = fromIntegral station_id
                      , _infoName                  = val_ $ Text.pack name
@@ -274,8 +281,9 @@ fromJSONToBeamStationInformation (AT.StationInformation
                      , _infoNearbyDistance        = val_ nearby_distance
                      , _infoBluetoothId           = val_ $ Text.pack bluetooth_id
                      , _infoRideCodeSupport       = val_ ride_code_support
-                     , _infoActive                = val_ True
                      , _infoRentalUris            = val_ $ fromList [uriAndroid, uriIos, uriWeb]
+                     , _infoActive                = val_ True
+                     , _infoReported              = val_ reported
                      }
   where
     uriAndroid = Text.pack (AT.rentalUrisAndroid rental_uris)
@@ -305,6 +313,7 @@ fromBeamStationInformationToJSON (StationInformation
                                   rideCodeSupport
                                   rentalUris
                                   _active
+                                  _reported
                                  ) =
   AT.StationInformation { AT.infoStationId               = fromIntegral stationId
                         , AT.infoName                    = show name
@@ -384,4 +393,5 @@ createStationInformation =
   , _infoRideCodeSupport       = field "ride_code_support"      boolean notNull
   , _infoRentalUris            = field "rental_uris"            (Pg.unboundedArray (varchar (Just 100)))
   , _infoActive                = field "active"                 boolean notNull
+  , _infoReported              = field "reported"               (DataType (timestampType Nothing True)) notNull
   }

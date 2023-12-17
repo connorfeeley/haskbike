@@ -87,8 +87,9 @@ handleStationInformation = do
 
   for_ (rightToMaybe stationInfo) $ \response -> do
         let stations = response ^. respData
+        let reported = response ^. respLastUpdated
         log D "Inserting station information into database."
-        insertStationInformation stations >>= report
+        insertStationInformation reported stations >>= report
         log D "Inserted station information into database."
   where
     report = log I . ("Stations inserted: " <>) . Text.pack . show . length

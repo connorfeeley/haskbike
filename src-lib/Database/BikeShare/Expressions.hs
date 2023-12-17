@@ -98,16 +98,17 @@ infoByIdExpr stationIds =
     (all_ (bikeshareDb ^. bikeshareStationInformation))
 
 -- | Insert station information into the database.
-insertStationInformationExpr :: [AT.StationInformation] -> SqlInsert Postgres StationInformationT
-insertStationInformationExpr stations =
+insertStationInformationExpr :: UTCTime -> [AT.StationInformation] -> SqlInsert Postgres StationInformationT
+insertStationInformationExpr reported stations =
   insertOnConflict (bikeshareDb ^. bikeshareStationInformation)
-  (insertExpressions (map fromJSONToBeamStationInformation stations))
+  (insertExpressions (map (fromJSONToBeamStationInformation reported) stations))
   (conflictingFields primaryKey) (onConflictUpdateInstead (\i -> ( _infoName                    i
                                                                  , _infoPhysicalConfiguration   i
                                                                  , _infoCapacity                i
                                                                  , _infoIsChargingStation       i
                                                                  , _infoIsValetStation          i
                                                                  , _infoIsVirtualStation        i
+                                                                 , _infoActive                  i
                                                                  )
                                                           ))
 
@@ -378,3 +379,20 @@ latestQueryLogsToMap tz = LatestQueries . queryMap
   where
     queryMap = Map.fromList . map (\q -> (_queryLogEndpoint q, (utcToLocal . _queryLogTime) q))
     utcToLocal = utcToLocalTime tz
+
+-- | Get the latest query logs for each endpoint.
+queryLatestInfoBefore :: be ~ Postgres
+                     => With be BikeshareDb
+                     (Q be BikeshareDb s
+                      (StationInformationT (QExpr be s)))
+queryLatestInfoBefore = do
+  ranked <- selecting $ do
+    withWindow_ (\row -> frame_ (partitionBy_ (_infoStationId row)) (orderPartitionBy_ (desc_ $ _infoId row)) noBounds_)
+                (\row w -> ( row
+                           , rank_ `over_` w
+                           )
+                ) (all_ (bikeshareDb ^. bikeshareStationInformation))
+  pure $ do
+    partitioned <- reuse ranked
+    guard_ (partitioned ^. _2 ==. 1) -- Is max rank (latest record in partition)
+    pure (partitioned ^. _1)

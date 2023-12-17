@@ -73,9 +73,10 @@ unit_queryChargingsManual :: IO ()
 unit_queryChargingsManual = do
   runWithAppMSuppressLog dbnameTest setupTestDatabase
 
+  ct <- getCurrentTime
   runWithAppM dbnameTest $ do
     -- Insert the single manually constructed station information.
-    void $ insertStationInformation [manualStationInformation]
+    void $ insertStationInformation ct [manualStationInformation]
     -- Insert manually constructed station status.
     void $ insertStationStatus manualStatus
 
@@ -114,9 +115,11 @@ unit_queryDockingsManual :: IO ()
 unit_queryDockingsManual = do
   runWithAppMSuppressLog dbnameTest setupTestDatabase
 
+  ct <- getCurrentTime
+
   runWithAppM dbnameTest $ do
     -- Insert the single manually constructed station information.
-    void $ insertStationInformation [manualStationInformation]
+    void $ insertStationInformation ct [manualStationInformation]
     -- Insert manually constructed station status.
     void $ insertStationStatus manualStatus
 

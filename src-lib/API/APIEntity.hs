@@ -103,8 +103,8 @@ class APIPersistable apiType dbType | apiType -> dbType where
 -- * Instances.
 
 instance APIPersistable [AT.StationInformation] DB.StationInformationT where
-  fromAPI resp = mapMaybe (Just . DB.fromJSONToBeamStationInformation) (_respData resp)
-  insertAPI resp = insertStationInformation (_respData resp)
+  fromAPI resp = mapMaybe (Just . DB.fromJSONToBeamStationInformation (_respLastUpdated resp)) (_respData resp)
+  insertAPI resp = insertStationInformation (_respLastUpdated resp) (_respData resp)
 
 
 instance APIPersistable [AT.StationStatus] DB.StationStatusT where

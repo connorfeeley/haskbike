@@ -115,11 +115,13 @@ importDbTestDataInfo inputDir filePrefix = do
   infoJson <- L.readFile (inputDir <> filePrefix)
   let info = eitherDecode infoJson :: Either String [AT.StationInformation]
 
+  reported <- getCurrentTime
+
   case info of
     Left err -> do
       putStrLn ("Error decoding JSON dump: " <> err)
       pure ()
-    Right info' -> void $ runWithAppM dbnameTest $ insertStationInformation info'
+    Right info' -> void $ runWithAppM dbnameTest $ insertStationInformation reported info'
 
 {- |
 Import station status from a JSON file.
