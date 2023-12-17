@@ -19,6 +19,7 @@ module AppEnv
      , withConn
      , withManager
      , withPostgres
+     , withPostgresTransaction
      ) where
 
 import           API.BikeShare
@@ -37,6 +38,7 @@ import           Data.Time                     ( TimeZone, getCurrentTimeZone )
 import           Database.Beam.Postgres        ( Connection, Pg, SqlError, connect, runBeamPostgres,
                                                  runBeamPostgresDebug )
 import           Database.BikeShare.Connection ( mkDbConnectInfo )
+import           Database.PostgreSQL.Simple    ( withTransaction )
 
 import           GHC.Stack                     ( HasCallStack )
 
@@ -96,6 +98,21 @@ withPostgres action = do
         then runBeamPostgresDebug putStrLn
         else runBeamPostgres
   res <- try $ liftIO (dbFunction conn action)
+  case res of
+    Left (e :: SqlError) ->
+      logException e >>
+      throw e
+    Right result -> pure result
+
+-- | Run a Beam operation in a transaction using database connection from the environment.
+withPostgresTransaction :: (WithAppMEnv (Env env) Message m) => Pg a -> m a
+withPostgresTransaction action = do
+  logDatabase <- asks envLogDatabase
+  conn <- withConn
+  let dbFunction = if logDatabase
+        then runBeamPostgresDebug putStrLn
+        else runBeamPostgres
+  res <- try $ liftIO (withTransaction conn $ dbFunction conn action)
   case res of
     Left (e :: SqlError) ->
       logException e >>
