@@ -169,7 +169,7 @@ stationInfoMostlyEq apiInfo dbInfo =
   && isEq AT.infoCapacity a b
   && isEq AT.infoIsChargingStation a b
   && isEq AT.infoRentalMethods a b
-  && isEq (fromMaybe False . AT.infoIsValetStation) a b
+  && isEq AT.infoIsValetStation a b
   && isEq AT.infoIsVirtualStation a b
   && isEq AT.infoGroups a b
   && isEq AT.infoObcn a b

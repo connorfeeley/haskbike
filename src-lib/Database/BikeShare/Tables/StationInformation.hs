@@ -55,7 +55,6 @@ import           Control.Lens
 import qualified Data.ByteString.Char8                      as B
 import           Data.Coerce                                ( coerce )
 import           Data.Int
-import           Data.Maybe                                 ( fromMaybe )
 import qualified Data.Text                                  as T
 import qualified Data.Text                                  as Text
 import           Data.Time
@@ -275,7 +274,7 @@ fromJSONToBeamStationInformation
                      , _infoCapacity              = fromIntegral capacity
                      , _infoIsChargingStation     = val_ is_charging_station
                      , _infoRentalMethods         = val_ $ fromList (coerce rental_methods :: [BeamRentalMethod])
-                     , _infoIsValetStation        = val_ $ fromMaybe False is_valet_station
+                     , _infoIsValetStation        = val_ is_valet_station
                      , _infoIsVirtualStation      = val_ is_virtual_station
                      , _infoGroups                = val_ $ fromList $ fmap Text.pack groups
                      , _infoObcn                  = val_ $ Text.pack obcn
@@ -326,7 +325,7 @@ fromBeamStationInformationToJSON (StationInformation
                         , AT.infoCapacity                = fromIntegral capacity
                         , AT.infoIsChargingStation       = isChargingStation
                         , AT.infoRentalMethods           = coerce (toList rentalMethods) :: [AT.RentalMethod]
-                        , AT.infoIsValetStation          = Just isValetStation
+                        , AT.infoIsValetStation          = isValetStation
                         , AT.infoIsVirtualStation        = isVirtualStation
                         , AT.infoGroups                  = Text.unpack <$> toList groups
                         , AT.infoObcn                    = Text.unpack obcn
