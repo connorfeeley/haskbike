@@ -17,18 +17,20 @@ module Database.BikeShare.Tables.StationInformation
      , StationInformation
      , StationInformationId
      , StationInformationT (..)
+     , createStationInformation
      , fromBeamStationInformationToJSON
      , fromJSONToBeamStationInformation
      , physicalConfiguration
      , rentalMethod
+     , stationInformationModification
        -- Lenses
-     , createStationInformation
      , infoActive
      , infoAddress
      , infoAltitude
      , infoBluetoothId
      , infoCapacity
      , infoGroups
+     , infoId
      , infoIsChargingStation
      , infoIsValetStation
      , infoIsVirtualStation
@@ -43,9 +45,7 @@ module Database.BikeShare.Tables.StationInformation
      , infoReported
      , infoRideCodeSupport
      , infoStationId
-     , info_id
-     , stationInformationModification
-     , unInformationStationId
+     , unInformationId
      ) where
 
 import qualified API.StationInformation                     as AT
@@ -111,19 +111,19 @@ deriving instance Eq StationInformation
 
 -- | Inform Beam about the table.
 instance Table StationInformationT where
-  data PrimaryKey StationInformationT f = StationInformationId { _unInformationStationId :: C f Int32 }
+  data PrimaryKey StationInformationT f = StationInformationId { _unInformationId :: C f (SqlSerial Int32) }
     deriving (Generic, Beamable)
-  primaryKey = StationInformationId <$> _infoStationId
+  primaryKey = StationInformationId <$> _infoId
 
 -- | Lenses (technically, Iso)
 -- Lens' always works with part of a data structure (can set or view), while an Iso can swap between two different types bi-directionally.
-unInformationStationId :: Iso (PrimaryKey StationInformationT f1) (PrimaryKey StationInformationT f2) (C f1 Int32) (C f2 Int32)
-unInformationStationId = iso (\ (StationInformationId key) -> key) StationInformationId
-{-# INLINE unInformationStationId #-}
+unInformationId :: Iso (PrimaryKey StationInformationT f1) (PrimaryKey StationInformationT f2) (C f1 (SqlSerial Int32)) (C f2 (SqlSerial Int32))
+unInformationId = iso (\ (StationInformationId key) -> key) StationInformationId
+{-# INLINE unInformationId #-}
 
 
 -- | StationInformation Lenses
-info_id                     :: Lens' (StationInformationT f) (C f (SqlSerial Int32))
+infoId                      :: Lens' (StationInformationT f) (C f (SqlSerial Int32))
 infoStationId               :: Lens' (StationInformationT f) (C f Int32)
 infoName                    :: Lens' (StationInformationT f) (C f Text.Text)
 infoPhysicalConfiguration   :: Lens' (StationInformationT f) (C f BeamPhysicalConfiguration)
@@ -145,7 +145,7 @@ infoRentalUris              :: Lens' (StationInformationT f) (C f (Vector.Vector
 infoActive                  :: Lens' (StationInformationT f) (C f Bool)
 infoReported                :: Lens' (StationInformationT f) (C f UTCTime)
 
-StationInformation (LensFor info_id)                     _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
+StationInformation (LensFor infoId)                     _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
 StationInformation _ (LensFor infoStationId)               _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
 StationInformation _ _ (LensFor infoName)                    _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
 StationInformation _ _ _ (LensFor infoPhysicalConfiguration)   _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses

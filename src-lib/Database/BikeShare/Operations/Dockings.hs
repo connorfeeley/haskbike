@@ -187,7 +187,7 @@ queryDockingEventsCountExpr variation = withPostgres $ runSelectReturningList $ 
       (reuse cte)
 
     info <- all_ (bikeshareDb ^. bikeshareStationInformation)
-    guard_' ((events' ^. _1) `references_'` info)
+    guard_' ((events' ^. _1) ==?. _infoStationId info)
 
     -- Return tuples of station information and the dockings and undockings.
     pure ( info
@@ -236,7 +236,7 @@ queryChargingEventsCount variation = withPostgres $ runSelectReturningList $ sel
                   (reuse cte)
 
     guard_ ( _infoIsChargingStation stationInfo' ==. val_ True &&.
-            (chargingsSum ^. _1)                    `references_` stationInfo'
+            (chargingsSum ^. _1) ==. _infoStationId stationInfo'
            )
 
     pure ( stationInfo'

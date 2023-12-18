@@ -66,7 +66,7 @@ instance ToJSON StationStatusVisualization where
 -- | Convert from the Beam StationStatus type to StationStatusVisualization
 fromBeamStationStatusToVisJSON :: StationStatus -> StationStatusVisualization
 fromBeamStationStatusToVisJSON status =
-  StationStatusVisualization { _statusVisStationId       = Just (fromIntegral sid)
+  StationStatusVisualization { _statusVisStationId       = (Just . fromIntegral . _statusStationId) status
                              , _statusVisLastReported    = status ^. statusLastReported
                              , _statusVisChargingStation = status ^. statusIsChargingStation
                              , _statusVisBikesAvailable  = fromIntegral (status ^. statusNumBikesAvailable)
@@ -77,8 +77,7 @@ fromBeamStationStatusToVisJSON status =
                              , _statusVisAvailableEfit   = fromIntegral (status ^. vehicleTypesAvailableEfit)
                              , _statusVisAvailableEfitG5 = fromIntegral (status ^. vehicleTypesAvailableEfitG5)
                              }
-  where
-    StationInformationId sid = _statusStationId status
+
 
 generateJsonDataSource :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM [StationStatusVisualization]
 generateJsonDataSource (Just stationId) startTime endTime = do

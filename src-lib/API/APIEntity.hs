@@ -25,10 +25,9 @@ import           Data.Time.Extras
 import           Database.Beam
 import           Database.Beam.Backend.SQL.BeamExtensions     ( MonadBeamInsertReturning (runInsertReturningList) )
 import           Database.Beam.Postgres
-import           Database.Beam.Postgres.Full                  hiding ( insert )
 import qualified Database.BikeShare                           as DB
 import           Database.BikeShare.EndpointQueried
-import           Database.BikeShare.Operations                ( insertStationInformation )
+import           Database.BikeShare.Operations                ( insertStationInformation, insertStationStatus )
 import qualified Database.BikeShare.Tables.StationInformation as DB
 import qualified Database.BikeShare.Tables.StationStatus      as DB
 import qualified Database.BikeShare.Tables.SystemInformation  as DB
@@ -108,10 +107,8 @@ instance APIPersistable [AT.StationInformation] DB.StationInformationT where
 
 
 instance APIPersistable [AT.StationStatus] DB.StationStatusT where
-  fromAPI resp = mapMaybe DB.fromJSONToBeamStationStatus (_respData resp)
-  insertAPI resp = withPostgres $ runInsertReturningList $ insertOnConflict (DB.bikeshareDb ^. DB.bikeshareStationStatus)
-    (insertExpressions (fromAPI resp))
-    anyConflict onConflictDoNothing
+  fromAPI _resp = undefined
+  insertAPI resp = insertStationStatus (_respData resp)
 
 
 instance APIPersistable AT.SystemInformation DB.SystemInformationCountT where

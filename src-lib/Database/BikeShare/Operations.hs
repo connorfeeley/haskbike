@@ -41,12 +41,10 @@ import qualified API.SystemInformation                        as AT
 
 import           AppEnv
 
-import           Colog                                        ( logException )
-
 import           Control.Lens                                 hiding ( reuse, (<.) )
-import           Control.Monad.Catch
 
 import           Data.Int                                     ( Int32 )
+import qualified Data.Map                                     as Map
 import           Data.Maybe                                   ( mapMaybe )
 import qualified Data.Text                                    as Text
 import           Data.Time
@@ -89,7 +87,7 @@ queryStationStatusFields =
   withPostgres $ runSelectReturningList $ select $ do
   info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
   status <- all_ (bikeshareDb ^. bikeshareStationStatus)
-  guard_ (_statusStationId status `references_` info)
+  guard_ (_statusStationId status ==. _infoStationId info)
   pure ( info   ^. infoName
        , status ^. statusNumBikesAvailable
        , status ^. statusNumBikesDisabled
@@ -134,20 +132,21 @@ Insert station statuses into the database.
 -}
 insertStationStatus :: [AT.StationStatus] -- ^ List of 'AT.StationStatus' from the API response.
                     -> AppM [StationStatus]
-insertStationStatus apiStatus
-  | null apiStatus = pure []
-  | otherwise = do
-      result <- try $ withPostgres $ runInsertReturningList $
-          insertOnConflict (bikeshareDb ^. bikeshareStationStatus)
-          (insertExpressions (mapMaybe fromJSONToBeamStationStatus apiStatus)
-         ) anyConflict onConflictDoNothing
+insertStationStatus apiStatus =
+  withPostgresTransaction $ do
+    info <- runSelectReturningList $ select $
+      filter_ (\inf -> _infoStationId inf `in_` map (val_ . fromIntegral) (AT._statusStationId <$> apiStatus))
+      (all_ (bikeshareDb ^. bikeshareStationInformation))
 
-      case result of
-        Left (e :: SqlError) ->
-          logException e >>
-          throwM e >>
-          pure []
-        Right inserted -> pure inserted
+    let infoMap = Map.fromList $ map (\inf -> ((fromIntegral . _infoStationId) inf, _infoId inf)) info
+    let statusMap = Map.fromList $ map (\ss -> (AT._statusStationId ss, ss)) apiStatus
+    let statusWithInfoId = Map.elems (Map.intersectionWith (,) infoMap statusMap)
+
+    runInsertReturningList $
+      insertOnConflict (bikeshareDb ^. bikeshareStationStatus)
+      (insertExpressions (mapMaybe (uncurry fromJSONToBeamStationStatus) statusWithInfoId)
+     ) anyConflict onConflictDoNothing
+
 
 {- |
 Query the statuses for a station between two times.
@@ -232,7 +231,7 @@ queryStationStatusLatest station_id = withPostgres $ runSelectReturningOne $ sel
   guard_ (_infoStationId info ==. val_ ( fromIntegral station_id))
   status <- orderBy_ (desc_ . _statusLastReported)
             (all_ (bikeshareDb ^. bikeshareStationStatus))
-  guard_ (_statusStationId status `references_` info)
+  guard_ (_statusStationId status ==. _infoStationId info)
   pure status
 
 -- | Count the number of rows in a given table.

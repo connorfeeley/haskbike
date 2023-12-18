@@ -42,7 +42,7 @@ thresholdCondition (LatestTime threshold) status   = status ^. statusLastReporte
 
 -- | Construct a filter expression corresponding to the station ID.
 stationIdCondition :: Maybe Int32 -> StationStatusT (QExpr Postgres s) -> QExpr Postgres s Bool
-stationIdCondition (Just stationId) status = _statusStationId status ==. val_ (StationInformationId stationId)
+stationIdCondition (Just stationId) status = _statusStationId status ==. val_ stationId
 stationIdCondition Nothing _               = val_ True
 
 
