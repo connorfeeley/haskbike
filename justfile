@@ -47,6 +47,9 @@ test-one PATTERN:
 poll:
     {{CABAL}} run haskbike -- --plain poll -v # --log-database
 
+visualize:
+    {{CABAL}} run haskbike -- --plain visualize -v # --log-database
+
 export-rds-table TABLE:
     source ./.env.awsrds.ADMIN
     PGPASSWORD=$HASKBIKE_PASSWORD psql -h "$HASKBIKE_PGDBHOST" -p "$HASKBIKE_PGDBPORT" -U "$HASKBIKE_USERNAME" \
