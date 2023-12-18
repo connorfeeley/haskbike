@@ -320,6 +320,7 @@ test-suite haskbike-test
 
     -- Modules included in this test suite, other than Main.
     other-modules:    TestDecoding
+                    , TestEncoding
                     , TestClient
                     , TestDatabase
                     , TestOperations

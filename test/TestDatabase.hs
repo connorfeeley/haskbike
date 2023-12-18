@@ -29,16 +29,12 @@ module TestDatabase
      ) where
 
 import           API.ResponseWrapper
-import qualified API.StationInformation                       as AT
-import qualified API.StationStatus                            as AT
 import qualified API.SystemInformation                        as AT
 
 import           AppEnv
 
 import           Control.Lens
 
-import           Data.Aeson                                   ( FromJSON, eitherDecode )
-import qualified Data.ByteString.Lazy                         as BL
 import           Data.Functor                                 ( void )
 import           Data.Int                                     ( Int32 )
 import           Data.Time
@@ -46,7 +42,6 @@ import           Data.Time
 import           Database.Beam
 import           Database.Beam.Postgres
 import           Database.BikeShare.EventCounts
-import           Database.BikeShare.Migrations
 import           Database.BikeShare.Operations
 import           Database.BikeShare.StatusVariationQuery
 import           Database.BikeShare.Tables.StationInformation
@@ -60,47 +55,7 @@ import           Test.Tasty.HUnit
 
 import           UnliftIO                                     ( try )
 
-setupTestDatabase :: AppM ()
-setupTestDatabase = do
-  void dropTables
-  void migrateDB
-
-connectTestDatabase :: IO Connection
-connectTestDatabase = connectDbName dbnameTest "" "" "" ""
-
-
--- | Helper function to decode a JSON file.
-decodeFile :: FromJSON a => FilePath -- ^ Path to the JSON file.
-           -> IO (Either String a)   -- ^ Decoded value.
-decodeFile file = eitherDecode <$> BL.readFile file
-
-{- | Read a file as JSON and decode it into a data type.
-
-The file is located at the given 'FilePath'. If the decoding is successful,
-the decoded value is returned. If there is an error decoding the JSON, an
-assertion failure with the error message is thrown.
--}
-getDecodedFile :: FromJSON a => FilePath -- ^ Path to the JSON file.
-                             -> IO a     -- ^ Decoded value.
-getDecodedFile filePath = either (assertFailure . ("Error decoding JSON: " ++)) return =<< decodeFile filePath
-
--- | Helper function to decode 'StationInformation' from a JSON file.
-getDecodedFileInformation :: FromJSON (ResponseWrapper [AT.StationInformation])
-                          => FilePath                                     -- ^ Path to the JSON file.
-                          -> IO (ResponseWrapper [AT.StationInformation]) -- ^ Decoded 'StationInformationReponse'.
-getDecodedFileInformation = getDecodedFile
-
--- | Helper function to decode 'StationStatus' from a JSON file.
-getDecodedFileStatus :: FromJSON (ResponseWrapper [AT.StationStatus])
-                     => FilePath                                -- ^ Path to the JSON file.
-                     -> IO (ResponseWrapper [AT.StationStatus]) -- ^ Decoded 'StationStatusReponse'.
-getDecodedFileStatus = getDecodedFile
-
--- | Helper function to decode 'SystemInformation' from a JSON file.
-getDecodedFileSystemInformation :: FromJSON (ResponseWrapper AT.SystemInformation)
-                                => FilePath                                  -- ^ Path to the JSON file.
-                                -> IO (ResponseWrapper AT.SystemInformation) -- ^ Decoded 'StationStatusReponse'.
-getDecodedFileSystemInformation = getDecodedFile
+import           Utils
 
 
 -- | Initialize empty database from the test station information response and all 22 station status responses.
@@ -456,6 +411,3 @@ checkConditions stationId thresholds expectDockings expectUndockings = do
 
 findInList :: Int32 -> [DockingEventsCount] -> Maybe DockingEventsCount
 findInList key tuples = tuples ^? folded . filtered (\k -> k ^. eventsStation . infoStationId == key)
-
--- unit_roundtripStationInformation :: IO ()
--- unit_roundtripStationInformation = undefined
