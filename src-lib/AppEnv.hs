@@ -103,6 +103,7 @@ withPostgres action = do
       logException e >>
       throw e
     Right result -> pure result
+{-# INLINE withPostgres #-}
 
 -- | Run a Beam operation in a transaction using database connection from the environment.
 withPostgresTransaction :: (WithAppMEnv (Env env) Message m) => Pg a -> m a
@@ -118,6 +119,7 @@ withPostgresTransaction action = do
       logException e >>
       throw e
     Right result -> pure result
+{-# INLINE withPostgresTransaction #-}
 
 -- | Fetch client manager from the environment.
 withManager :: (WithAppMEnv (Env env) Message m) => m Manager
