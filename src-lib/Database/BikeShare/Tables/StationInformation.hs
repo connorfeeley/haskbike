@@ -374,7 +374,7 @@ createStationInformation :: Migration Postgres (CheckedDatabaseEntity Postgres d
 createStationInformation =
   createTable "station_information" $ StationInformation
   { _infoId                    = field "id"                     Pg.serial notNull unique
-  , _infoStationId             = field "station_id"             int notNull unique
+  , _infoStationId             = field "station_id"             int notNull
   , _infoName                  = field "name"                   (varchar (Just 100)) notNull
   , _infoPhysicalConfiguration = field "physical_configuration" physicalConfiguration
   , _infoLat                   = field "lat"                    double notNull

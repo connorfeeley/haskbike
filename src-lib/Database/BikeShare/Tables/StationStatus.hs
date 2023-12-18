@@ -64,6 +64,7 @@ import           Database.Beam.Backend                        ( BeamBackend, Has
 import           Database.Beam.Backend.SQL                    ( SqlSerial )
 import           Database.Beam.Migrate
 import           Database.Beam.Postgres                       ( Postgres )
+import qualified Database.Beam.Postgres                       as Pg
 import           Database.Beam.Postgres.Syntax                ( pgTextType )
 import           Database.BikeShare.Tables.StationInformation
 import           Database.PostgreSQL.Simple.FromField         ( Field (typeOid), FromField (..), ResultError (..),
@@ -283,7 +284,7 @@ fromBeamStationStatusToJSON status =
 stationStatusModification :: EntityModification (DatabaseEntity be db) be (TableEntity StationStatusT)
 stationStatusModification =
   setEntityName "station_status" <> modifyTableFields tableModification
-  { _statusInfoId                = StationInformationId "station_id"
+  { _statusInfoId                = StationInformationId "info_id"
   , _statusStationId             = "station_id"
   , _statusLastReported          = "last_reported"
   , _statusNumBikesAvailable     = "num_bikes_available"
@@ -304,8 +305,8 @@ stationStatusModification =
 createStationStatus :: Migration Postgres (CheckedDatabaseEntity Postgres db (TableEntity StationStatusT))
 createStationStatus =
   createTable "station_status" $ StationStatus
-  { _statusInfoId                = StationInformationId (field "id" int notNull (referenceInformationTable ["id"]))
-  , _statusStationId             = field "station_id"              int notNull (referenceInformationTable ["station_id"])
+  { _statusInfoId                = StationInformationId (field "info_id" Pg.serial notNull unique (referenceInformationTable ["id"]))
+  , _statusStationId             = field "station_id"              int notNull
   , _statusLastReported          = field "last_reported"           (DataType (timestampType Nothing True))
   , _statusNumBikesAvailable     = field "num_bikes_available"     int notNull
   , _statusNumBikesDisabled      = field "num_bikes_disabled"      int notNull
