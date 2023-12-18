@@ -6,17 +6,15 @@ import           CLI.Utils
 
 import           Control.Lens
 
-import           Data.Int                                     ( Int32 )
-import           Data.Text.Lazy                               ( Text, chunksOf, pack, reverse, unlines, unpack,
-                                                                unwords )
-import           Data.Time                                    ( TimeZone, UTCTime )
+import           Data.Int                                ( Int32 )
+import           Data.Text.Lazy                          ( Text, chunksOf, pack, reverse, unlines, unpack, unwords )
+import           Data.Time                               ( TimeZone, UTCTime )
 
-import           Database.BikeShare.Tables.StationInformation
 import           Database.BikeShare.Tables.StationStatus
 
 import           Fmt
 
-import           Prelude                                      hiding ( log, reverse, unlines, unwords )
+import           Prelude                                 hiding ( log, reverse, unlines, unwords )
 
 import           System.Console.ANSI
 

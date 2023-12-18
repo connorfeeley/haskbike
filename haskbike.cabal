@@ -262,6 +262,7 @@ library
                     , Database.BikeShare.Migrations
                     , Database.BikeShare.StatusVariationQuery
                     , Database.BikeShare.Utils
+                    , Database.BikeShare.EventCounts
                     , Database.BikeShare.Connection
                     , Database.BikeShare.Operations
                     , Database.BikeShare.Operations.Dockings
