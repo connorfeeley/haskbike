@@ -22,6 +22,7 @@ import           AppEnv
 import           Data.Functor                            ( void )
 import           Data.Time
 
+import           Database.BikeShare.EventCounts
 import           Database.BikeShare.Operations
 import           Database.BikeShare.StatusVariationQuery
 import           Database.BikeShare.Utils

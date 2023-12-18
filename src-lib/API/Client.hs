@@ -1,6 +1,6 @@
--- | This module contains the BikeShare API client.
-
 {-# LANGUAGE DataKinds #-}
+
+-- | This module contains the BikeShare API client.
 
 module API.Client
      ( bikeShareAPIClient

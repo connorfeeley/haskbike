@@ -45,6 +45,7 @@ import           Data.Time
 
 import           Database.Beam
 import           Database.Beam.Postgres
+import           Database.BikeShare.EventCounts
 import           Database.BikeShare.Migrations
 import           Database.BikeShare.Operations
 import           Database.BikeShare.StatusVariationQuery
@@ -61,7 +62,7 @@ import           UnliftIO                                     ( try )
 
 setupTestDatabase :: AppM ()
 setupTestDatabase = do
-  (void . liftIO) (connectTestDatabase >>= dropTables)
+  void dropTables
   void migrateDB
 
 connectTestDatabase :: IO Connection
@@ -269,10 +270,10 @@ unit_insertNewerStatusRecords = do
   assertEqual "API status records newer than database entry"      302 (length inserted)
 
   -- Station 7000 should be in the list of API records that would trigger a database update, but not in the list of unchanged records.
-  assertBool "Station 7000 record is newer"          (has (traverse . statusStationId . unInformationStationId . only 7000) inserted)
+  assertBool "Station 7000 record is newer"          (has (traverse . statusStationId . only 7000) inserted)
 
   -- Station 7001 should be in the list of API records that would /not/ trigger a database update, but not in the list of newer records.
-  assertBool "Station 7001 record is unchanged" (not (has (traverse . statusStationId . unInformationStationId . only 7001) inserted))
+  assertBool "Station 7001 record is unchanged" (not (has (traverse . statusStationId . only 7001) inserted))
 
 doInsertNewerStatusRecords :: IO [StationStatus]
 doInsertNewerStatusRecords = do
@@ -455,3 +456,6 @@ checkConditions stationId thresholds expectDockings expectUndockings = do
 
 findInList :: Int32 -> [DockingEventsCount] -> Maybe DockingEventsCount
 findInList key tuples = tuples ^? folded . filtered (\k -> k ^. eventsStation . infoStationId == key)
+
+-- unit_roundtripStationInformation :: IO ()
+-- unit_roundtripStationInformation = undefined

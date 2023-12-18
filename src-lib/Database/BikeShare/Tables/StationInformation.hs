@@ -56,6 +56,7 @@ import qualified Data.ByteString.Char8                      as B
 import           Data.Coerce                                ( coerce )
 import           Data.Int
 import           Data.Maybe                                 ( fromMaybe )
+import qualified Data.Text                                  as T
 import qualified Data.Text                                  as Text
 import           Data.Time
 import           Data.Vector                                ( fromList, toList )
@@ -316,7 +317,7 @@ fromBeamStationInformationToJSON (StationInformation
                                   _reported
                                  ) =
   AT.StationInformation { AT.infoStationId               = fromIntegral stationId
-                        , AT.infoName                    = show name
+                        , AT.infoName                    = T.unpack name
                         , AT.infoPhysicalConfiguration   = coerce physicalConfiguration' :: AT.PhysicalConfiguration
                         , AT.infoLat                     = lat
                         , AT.infoLon                     = lon

@@ -10,6 +10,7 @@ module Server.DebugAPI
 
 import           Colog
 
+import           Data.Pool
 import           Data.String                ( fromString )
 
 import           Database.Beam
@@ -47,11 +48,11 @@ versionHandler = pure (("version", getCabalVersion), ("git-version", getGitVersi
 
 sleepDatabaseHandler :: Int -> ServerAppM ()
 sleepDatabaseHandler seconds = do
-  env <- ask -- Get the ServerEnv within ServerAppM context
+  env <- getAppEnvFromServer -- Get the ServerEnv within ServerAppM context
 
   logInfo $ format "Sleeping database for {} seconds" seconds
   -- throwString "This will print last as an error message"
   --   `finally` logInfo "This will print second"
-  let conn = envDBConnection (serverAppEnv env)
-  _ :: [Only ()] <- liftIO $ query_ conn $ fromString ("SELECT pg_sleep(" ++ show seconds ++ ")")
+  pool <- liftIO $ runAppM env withConnPool
+  _ :: [Only ()] <- liftIO $ withResource pool (\conn -> query_ conn (fromString ("SELECT pg_sleep(" ++ show seconds ++ ")")))
   pure ()

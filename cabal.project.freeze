@@ -155,6 +155,7 @@ constraints: any.Glob ==0.10.2,
              any.random ==1.2.1.1,
              any.recv ==0.0.0,
              any.reflection ==2.1.7,
+             any.resource-pool ==0.4.0.0,
              any.resourcet ==1.2.6,
              any.rts ==1.0.2,
              any.run-st ==0.1.3.0,
@@ -245,4 +246,4 @@ constraints: any.Glob ==0.10.2,
              any.x509-validation ==1.6.12,
              any.zigzag ==0.0.1.0,
              any.zlib ==0.6.3.0
-index-state: hackage.haskell.org 2023-10-04T17:12:14Z
+index-state: hackage.haskell.org 2023-12-14T17:42:04Z

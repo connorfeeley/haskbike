@@ -172,7 +172,7 @@ instance ToJSON StationInformation where
            , "capacity"                 .= infoCapacity                 station
            , "is_charging_station"      .= infoIsChargingStation        station
            , "rental_methods"           .= infoRentalMethods            station
-           , "is_valet_station"         .= infoIsValetStation           station
+           , "is_valet_station"         .= maybe Null toJSON (infoIsValetStation station)
            , "is_virtual_station"       .= infoIsVirtualStation         station
            , "groups"                   .= infoGroups                   station
            , "obcn"                     .= infoObcn                     station

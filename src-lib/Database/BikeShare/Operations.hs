@@ -17,6 +17,7 @@ module Database.BikeShare.Operations
      ( module Database.BikeShare.Operations.Dockings
      , insertQueryLog
      , insertStationInformation
+     , insertStationInformation'
      , insertStationStatus
      , insertSystemInformation
      , printDisabledDocks
@@ -45,7 +46,8 @@ import           Control.Lens                                 hiding ( reuse, (<
 
 import           Data.Int                                     ( Int32 )
 import qualified Data.Map                                     as Map
-import           Data.Maybe                                   ( mapMaybe )
+import           Data.Maybe                                   ( catMaybes, fromMaybe, mapMaybe )
+import           Data.Pool                                    ( withResource )
 import qualified Data.Text                                    as Text
 import           Data.Time
 
@@ -116,16 +118,68 @@ queryStationInformationByIds ids =
 insertStationInformation :: UTCTime
                          -> [AT.StationInformation]             -- ^ List of 'StationInformation' from the API response.
                          -> AppM [StationInformationT Identity] -- ^ List of 'StationInformation' that where inserted.
-insertStationInformation reported stations = withPostgresTransaction $ do
-  -- ^ Use a transaction to ensure that the database is not left in an inconsistent state.
-  -- Update the station information that is already in the database to set active = False.
-  runUpdate $ update (_bikeshareStationInformation bikeshareDb)
-    (\inf -> _infoActive inf <-. val_ False)
-    (\inf -> _infoActive inf &&. _infoId inf `in_` (fromIntegral . AT.infoStationId <$> stations))
+insertStationInformation reported stations = do
+  (_, _, inserted) <- insertStationInformation' reported stations
+  pure inserted
 
-  -- Insert only the stations that are not already in the database.
-  runInsertReturningList $ do
-    insertStationInformationExpr reported stations
+-- insertStationInformation' :: UTCTime
+--                          -> [AT.StationInformation]             -- ^ List of 'StationInformation' from the API response.
+--                          -> AppM [StationInformationT Identity] -- ^ List of 'StationInformation' that where inserted.
+insertStationInformation' reported stations =
+  -- Use a transaction to ensure that the database is not left in an inconsistent state.
+  withPostgresTransaction $ do
+    -- Retrieve all active stations
+    info <- runSelectReturningList $ select $
+      filter_ (\inf -> _infoActive inf ==. val_ True)
+      (all_ (bikeshareDb ^. bikeshareStationInformation))
+
+    -- Pairs of (StationInformation, AT.StationInformation) where the API data is meaningfully different from the database contents.
+    let newerInfo = infoHasNewer (apiInfoMap stations) (infoMap info)
+    -- Station information from the API which is not already present in the database.
+    let newInfo = infoNewStation (apiInfoMap stations) (infoMap info)
+
+    -- Update the station information that is already in the database to set active = False.
+    updated <- runUpdateReturningList $ update (_bikeshareStationInformation bikeshareDb)
+      (\inf -> _infoActive inf <-. val_ False)
+      (\inf -> _infoId inf `in_` idsToUpdate newerInfo)
+
+    -- Insert only the stations that are not already in the database.
+    inserted <- runInsertReturningList $ do
+      insertStationInformationExpr reported (map snd newerInfo ++ newInfo)
+    pure (info, updated, inserted)
+  where
+    infoMap    = Map.fromList . map (\inf -> ((fromIntegral . _infoStationId) inf, inf))
+    apiInfoMap = Map.fromList . map (\inf -> (AT.infoStationId inf, inf))
+    infoHasNewer apiInfo info = catMaybes . Map.elems $ Map.intersectionWith stationInfoChanged apiInfo info
+    infoNewStation apiInfo info = Map.elems (Map.difference apiInfo info)
+    idsToUpdate = map (fromIntegral . _infoId . fst)
+
+stationInfoChanged :: AT.StationInformation -> StationInformation -> Maybe (StationInformation, AT.StationInformation)
+stationInfoChanged apiInfo info
+  | stationInfoMostlyEq apiInfo info = Nothing
+  | otherwise = Just (info, apiInfo)
+
+stationInfoMostlyEq apiInfo dbInfo =
+  isEq AT.infoName a b
+  && isEq AT.infoPhysicalConfiguration a b
+  && isEq AT.infoLat a b
+  && isEq AT.infoLon a b
+  && isEq AT.infoAltitude a b
+  && isEq AT.infoAddress a b
+  && isEq AT.infoCapacity a b
+  && isEq AT.infoIsChargingStation a b
+  && isEq AT.infoRentalMethods a b
+  && isEq (fromMaybe False . AT.infoIsValetStation) a b
+  && isEq AT.infoIsVirtualStation a b
+  && isEq AT.infoGroups a b
+  && isEq AT.infoObcn a b
+  && isEq AT.infoNearbyDistance a b
+  && isEq AT.infoBluetoothId a b
+  && isEq AT.infoRideCodeSupport a b
+  && isEq AT.infoRentalUris a b
+  where a = apiInfo
+        b = fromBeamStationInformationToJSON dbInfo
+        isEq f a' b' = f a' == f b'
 
 {- |
 Insert station statuses into the database.
@@ -135,7 +189,9 @@ insertStationStatus :: [AT.StationStatus] -- ^ List of 'AT.StationStatus' from t
 insertStationStatus apiStatus =
   withPostgresTransaction $ do
     info <- runSelectReturningList $ select $
-      filter_ (\inf -> _infoStationId inf `in_` map (val_ . fromIntegral) (AT._statusStationId <$> apiStatus))
+      filter_ (\inf -> _infoStationId inf `in_` map (val_ . fromIntegral . AT._statusStationId) apiStatus
+                   &&. _infoActive inf ==. val_ True
+              )
       (all_ (bikeshareDb ^. bikeshareStationInformation))
 
     let infoMap = Map.fromList $ map (\inf -> ((fromIntegral . _infoStationId) inf, _infoId inf)) info
@@ -246,8 +302,8 @@ queryRowCount table = withPostgres $ runSelectReturningOne $ select $
 queryTableSize :: String                -- ^ Name of the table.
                -> AppM (Maybe String)    -- ^ Size of the table.
 queryTableSize tableName = do
-  conn <- withConn
-  [Only size] <- liftIO $ query_ conn $ fromString ("SELECT pg_size_pretty(pg_total_relation_size('" ++ tableName ++ "'))")
+  pool <- withConnPool
+  [Only size] <- liftIO (withResource pool (\conn -> query_ conn $ fromString ("SELECT pg_size_pretty(pg_total_relation_size('" ++ tableName ++ "'))")))
   return size
 
 querySystemStatusAtRange :: UTCTime -> UTCTime -> Integer
