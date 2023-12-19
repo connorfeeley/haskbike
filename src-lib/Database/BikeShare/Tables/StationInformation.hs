@@ -18,7 +18,6 @@ module Database.BikeShare.Tables.StationInformation
      , fromBeamStationInformationToJSON
      , fromJSONToBeamStationInformation
      , physicalConfiguration
-     , rentalMethod
      , stationInformationModification
        -- Lenses
      , infoActive
@@ -197,8 +196,8 @@ instance FromField BeamRentalMethod where
 instance ToField BeamRentalMethod where
   toField = toField . show
 
-rentalMethod :: DataType Pg.Postgres BeamRentalMethod
-rentalMethod = DataType pgTextType
+rentalMethodType :: DataType Pg.Postgres BeamRentalMethod
+rentalMethodType = DataType pgTextType
 
 -- | Newtype wrapper for PhysicalConfiguration to allow us to define a custom FromBackendRow instance.
 -- Don't want to implement database-specific code for the underlying PhysicalConfiguration type.
@@ -381,7 +380,7 @@ createStationInformation =
   , _infoAddress               = field "address"                (maybeType Pg.text)
   , _infoCapacity              = field "capacity"               int notNull
   , _infoIsChargingStation     = field "is_charging_station"    boolean notNull
-  , _infoRentalMethods         = field "rental_methods"         (Pg.unboundedArray rentalMethod) notNull
+  , _infoRentalMethods         = field "rental_methods"         (Pg.unboundedArray rentalMethodType) notNull
   , _infoIsValetStation        = field "is_valet_station"       boolean notNull
   , _infoIsVirtualStation      = field "is_virtual_station"     boolean notNull
   , _infoGroups                = field "groups"                 (Pg.unboundedArray Pg.text) notNull
