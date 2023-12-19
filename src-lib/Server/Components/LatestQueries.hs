@@ -36,9 +36,13 @@ endpointElement ep time =
 
 endpointName :: EndpointQueried -> T.Text
 endpointName ep = case ep of
+  VersionsEP           -> "Versions"
+  VehicleTypesEP       -> "Vehicle types"
   StationInformationEP -> "Station information"
   StationStatusEP      -> "Station status"
   SystemInformationEP  -> "System information"
+  SystemRegionsEP      -> "System regions"
+  SystemPricingPlansEP -> "System pricing plans"
 
 
 formatTimeHtml :: LocalTime -> T.Text
