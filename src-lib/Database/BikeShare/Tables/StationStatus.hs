@@ -317,7 +317,7 @@ createStationStatus =
   , _statusIsInstalled           = field "is_installed"            boolean notNull
   , _statusIsRenting             = field "is_renting"              boolean notNull
   , _statusIsReturning           = field "is_returning"            boolean notNull
-  , _statusTraffic               = field "traffic"                 (maybeType (varchar (Just 100)))
+  , _statusTraffic               = field "traffic"                 (maybeType Pg.text)
   , _statusVehicleDocksAvailable = field "vehicle_docks_available" int notNull
   , _statusVehicleTypesAvailable = VehicleType (field "vehicle_types_available_boost"   int notNull)
                                                (field "vehicle_types_available_iconic"  int notNull)
