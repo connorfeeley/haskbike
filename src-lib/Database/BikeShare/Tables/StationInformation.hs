@@ -64,7 +64,8 @@ import           Database.Beam.Backend                      ( BeamBackend, HasSq
 import           Database.Beam.Migrate
 import           Database.Beam.Postgres                     ( Postgres )
 import qualified Database.Beam.Postgres                     as Pg
-import           Database.Beam.Postgres.Syntax              ( pgTextType )
+import           Database.Beam.Postgres.Syntax              ( PgExpressionSyntax (PgExpressionSyntax), emit,
+                                                              pgTextType )
 import           Database.PostgreSQL.Simple.FromField       ( Field (typeOid), FromField (..), ResultError (..),
                                                               returnError, typoid )
 import           Database.PostgreSQL.Simple.ToField         ( ToField (..) )
@@ -87,7 +88,7 @@ data StationInformationT f where
                         , _infoIsValetStation        :: Columnar f Bool
                         , _infoIsVirtualStation      :: Columnar f Bool
                         , _infoGroups                :: Columnar f (Vector.Vector Text.Text)
-                        , _infoObcn                  :: Columnar f Text.Text
+                        , _infoObcn                  :: Columnar f (Maybe Text.Text)
                         , _infoNearbyDistance        :: Columnar f Double
                         , _infoBluetoothId           :: Columnar f Text.Text
                         , _infoRideCodeSupport       :: Columnar f Bool
@@ -134,7 +135,7 @@ infoRentalMethods           :: Lens' (StationInformationT f) (C f (Vector.Vector
 infoIsValetStation          :: Lens' (StationInformationT f) (C f Bool)
 infoIsVirtualStation        :: Lens' (StationInformationT f) (C f Bool)
 infoGroups                  :: Lens' (StationInformationT f) (C f (Vector.Vector Text.Text))
-infoObcn                    :: Lens' (StationInformationT f) (C f Text.Text)
+infoObcn                    :: Lens' (StationInformationT f) (C f (Maybe Text.Text))
 infoNearbyDistance          :: Lens' (StationInformationT f) (C f Double)
 infoBluetoothId             :: Lens' (StationInformationT f) (C f Text.Text)
 infoRideCodeSupport         :: Lens' (StationInformationT f) (C f Bool)
@@ -274,7 +275,7 @@ fromJSONToBeamStationInformation
                      , _infoIsValetStation        = val_ is_valet_station
                      , _infoIsVirtualStation      = val_ is_virtual_station
                      , _infoGroups                = val_ $ fromList $ fmap Text.pack groups
-                     , _infoObcn                  = val_ $ Text.pack obcn
+                     , _infoObcn                  = val_ . Just . Text.pack $ obcn
                      , _infoNearbyDistance        = val_ nearby_distance
                      , _infoBluetoothId           = val_ $ Text.pack bluetooth_id
                      , _infoRideCodeSupport       = val_ ride_code_support
@@ -325,7 +326,7 @@ fromBeamStationInformationToJSON (StationInformation
                         , AT.infoIsValetStation          = isValetStation
                         , AT.infoIsVirtualStation        = isVirtualStation
                         , AT.infoGroups                  = Text.unpack <$> toList groups
-                        , AT.infoObcn                    = Text.unpack obcn
+                        , AT.infoObcn                    = maybe "" Text.unpack obcn
                         , AT.infoNearbyDistance          = nearbyDistance
                         , AT.infoBluetoothId             = Text.unpack bluetoothId
                         , AT.infoRideCodeSupport         = rideCodeSupport
@@ -372,23 +373,30 @@ createStationInformation =
   createTable "station_information" $ StationInformation
   { _infoId                    = field "id"                     Pg.serial notNull unique
   , _infoStationId             = field "station_id"             int notNull
-  , _infoName                  = field "name"                   (varchar (Just 100)) notNull
-  , _infoPhysicalConfiguration = field "physical_configuration" physicalConfiguration
+  , _infoName                  = field "name"                   Pg.text notNull
+  , _infoPhysicalConfiguration = field "physical_configuration" physicalConfiguration notNull
   , _infoLat                   = field "lat"                    double notNull
   , _infoLon                   = field "lon"                    double notNull
   , _infoAltitude              = field "altitude"               (maybeType double)
-  , _infoAddress               = field "address"                (maybeType (varchar (Just 100)))
+  , _infoAddress               = field "address"                (maybeType Pg.text)
   , _infoCapacity              = field "capacity"               int notNull
   , _infoIsChargingStation     = field "is_charging_station"    boolean notNull
-  , _infoRentalMethods         = field "rental_methods"         (Pg.unboundedArray rentalMethod)
+  , _infoRentalMethods         = field "rental_methods"         (Pg.unboundedArray rentalMethod) notNull
   , _infoIsValetStation        = field "is_valet_station"       boolean notNull
   , _infoIsVirtualStation      = field "is_virtual_station"     boolean notNull
-  , _infoGroups                = field "groups"                 (Pg.unboundedArray (varchar (Just 100)))
-  , _infoObcn                  = field "obcn"                   (varchar (Just 100)) notNull
+  , _infoGroups                = field "groups"                 (Pg.unboundedArray Pg.text) notNull
+  , _infoObcn                  = field "obcn"                   (maybeType Pg.text)
   , _infoNearbyDistance        = field "nearby_distance"        double notNull
-  , _infoBluetoothId           = field "bluetooth_id"           (varchar (Just 100)) notNull
+  , _infoBluetoothId           = field "bluetooth_id"           Pg.text
   , _infoRideCodeSupport       = field "ride_code_support"      boolean notNull
-  , _infoRentalUris            = field "rental_uris"            (Pg.unboundedArray (varchar (Just 100)))
+  , _infoRentalUris            = field "rental_uris"            (Pg.unboundedArray Pg.text) notNull
   , _infoActive                = field "active"                 boolean notNull
-  , _infoReported              = field "reported"               (DataType (timestampType Nothing True)) notNull
+  , _infoReported              = field "reported"               (DataType (timestampType Nothing True)) (defaultTo_ currentTimestampUtc_) notNull
   }
+
+-- | Postgres @NOW()@ function. Returns the server's timestamp
+nowUtc_ :: QExpr Postgres s UTCTime
+nowUtc_ = QExpr (\_ -> PgExpressionSyntax (emit "NOW() at time zone 'UTC'"))
+
+currentTimestampUtc_ :: QExpr Postgres s UTCTime
+currentTimestampUtc_ = QExpr (\_ -> PgExpressionSyntax (emit "CURRENT_TIMESTAMP"))
