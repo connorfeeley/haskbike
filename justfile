@@ -4,7 +4,9 @@
 
 set shell := ["bash", "-c"]
 
-export CABAL := "cabal --with-gcc=clang --with-ld=clang --ghc-options=-fllvm"
+set positional-arguments := true
+
+export CABAL := "cabal --with-gcc=clang --with-ld=clang"
 
 export ENDPOINT := "http://localhost:8081"
 # export ENDPOINT := "https://bikes.cfeeley.org"
@@ -44,8 +46,13 @@ test:
 test-one PATTERN:
     {{CABAL}} test --test-show-details=direct --test-options='--pattern /{{PATTERN}}/'
 
-poll:
-    {{CABAL}} run haskbike -- --plain poll -v # --log-database
+poll *ARGS:
+    {{CABAL}} run haskbike -- --plain poll -v {{ARGS}}
+
+reset *ARGS:
+    #!/usr/bin/env bash
+    source ./.env.local
+    {{CABAL}} run haskbike -- --plain reset --reset-only -v --log-database {{ARGS}}
 
 visualize:
     {{CABAL}} run haskbike -- --plain visualize -v # --log-database
@@ -82,10 +89,23 @@ module-timings:
     nix run "nixpkgs#time-ghc-modules"
 
 
-# Not working.
-# import-local-table TABLE CSVFILE:
-#     source ./.env.local
+import-local-table TABLE CSVFILE:
+    #!/usr/bin/env bash
+    source ./.env.local
+    PGPASSWORD=$HASKBIKE_PASSWORD psql -h "$HASKBIKE_PGDBHOST" -p "$HASKBIKE_PGDBPORT" -U "$HASKBIKE_USERNAME" \
+        -d haskbike \
+        -c "COPY {{TABLE}} FROM '{{CSVFILE}}' WITH (FORMAT csv, DELIMITER '^', HEADER true)"
 
-#     PGPASSWORD=$HASKBIKE_PASSWORD psql -h "$HASKBIKE_PGDBHOST" -p "$HASKBIKE_PGDBPORT" -U "$HASKBIKE_USERNAME" \
-#         -d haskbike \
-#         -c "COPY {{TABLE}} FROM '{{CSVFILE}}' WITH (FORMAT csv, DELIMITER '^', HEADER false)"
+import-local-station-info CSVFILE:
+    #!/usr/bin/env bash
+    source ./.env.local
+    PGPASSWORD=$HASKBIKE_PASSWORD psql -h "$HASKBIKE_PGDBHOST" -p "$HASKBIKE_PGDBPORT" -U "$HASKBIKE_USERNAME" \
+        -d haskbike \
+        -c "COPY station_information (id, station_id, name, physical_configuration, lat, lon, altitude, address, capacity, is_charging_station, rental_methods, is_valet_station, is_virtual_station, groups, obcn, nearby_distance, bluetooth_id, ride_code_support, rental_uris, active) FROM '{{CSVFILE}}' WITH (FORMAT csv, DELIMITER '^', HEADER true)"
+
+import-local-station-status CSVFILE:
+    #!/usr/bin/env bash
+    source ./.env.local
+    PGPASSWORD=$HASKBIKE_PASSWORD psql -h "$HASKBIKE_PGDBHOST" -p "$HASKBIKE_PGDBPORT" -U "$HASKBIKE_USERNAME" \
+        -d haskbike \
+        -c "COPY station_status (station_id, last_reported, num_bikes_available, num_bikes_disabled, num_docks_available, num_docks_disabled, is_charging_station, status, is_installed, is_renting, is_returning, traffic, vehicle_docks_available, vehicle_types_available_boost, vehicle_types_available_iconic, vehicle_types_available_efit, vehicle_types_available_efit_g5) FROM '{{CSVFILE}}' WITH (FORMAT csv, DELIMITER '^', HEADER true)"
