@@ -25,7 +25,6 @@ import           Control.Monad                 ( unless )
 import           Data.Foldable                 ( for_ )
 import qualified Data.Text                     as Text
 
-import           Database.Beam.Postgres        ( Connection )
 import           Database.BikeShare            ( bikeshareStationInformation, bikeshareStationStatus )
 import           Database.BikeShare.Migrations
 import           Database.BikeShare.Operations
@@ -47,26 +46,25 @@ import           UnliftIO                      ( liftIO )
 -- | Helper functions.
 
 -- | Dispatch CLI arguments to the database interface.
-dispatchDatabase :: Options -> AppM Connection
+dispatchDatabase :: Options -> AppM ()
 dispatchDatabase options = do
   case optCommand options of
-    Reset resetOptions -> handleReset options resetOptions >>= liftIO . pure
+    Reset resetOptions -> handleReset options resetOptions
     _ | optEnableMigration options -> do
           log I "Migrating database."
           migrateDB
           log I "Migrated database."
-          withConn >>= liftIO . pure
-      | otherwise -> withConn >>= liftIO . pure
+      | otherwise -> pure ()
 
 
 -- | Handle the 'Reset' command.
-handleReset :: (AppM ~ m, WithAppMEnv env Message m)  => Options -> ResetOptions -> m Connection
+handleReset :: Options -> ResetOptions -> AppM ()
 handleReset options resetOptions = do
   pPrintCompact options
   pPrintCompact resetOptions
   if optResetOnly resetOptions
-    then log W "Only resetting database..." >> withConn >>= liftIO . dropTables >> log W "Database reset; exiting." >> liftIO exitSuccess
-    else log W "Resetting database..."      >> withConn >>= liftIO . dropTables >> log W "Database reset." >>
+    then log W "Only resetting database..." >> dropTables >> migrateDB >> log W "Database reset; exiting." >> liftIO exitSuccess
+    else log W "Resetting database..."      >> dropTables >> log W "Database reset." >>
          log W "Migrating database."        >> migrateDB >> log W "Migrations performed." >>
          log I "Initializing database."     >> handleInformation >> liftIO exitSuccess
 
@@ -87,8 +85,9 @@ handleStationInformation = do
 
   for_ (rightToMaybe stationInfo) $ \response -> do
         let stations = response ^. respData
+        let reported = response ^. respLastUpdated
         log D "Inserting station information into database."
-        insertStationInformation stations >>= report
+        insertStationInformation reported stations >>= report
         log D "Inserted station information into database."
   where
     report = log I . ("Stations inserted: " <>) . Text.pack . show . length

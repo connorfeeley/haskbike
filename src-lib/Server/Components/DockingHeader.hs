@@ -2,7 +2,7 @@
 
 module Server.Components.DockingHeader where
 
-import           Database.BikeShare.Operations.Dockings
+import           Database.BikeShare.EventCounts
 
 import           Lucid
 

@@ -32,7 +32,6 @@ import           Control.Monad.Reader
 import           Data.Fixed               ( Pico )
 import           Data.Time
 
-import           Database.Beam.Postgres
 import           Database.BikeShare.Utils
 
 import           Network.HTTP.Client
@@ -136,10 +135,10 @@ ntAppM s a =
 -- | Helper function to run a computation in the ServerAppM monad, returning an IO monad.
 runWithServerAppM :: String -> ServerAppM a -> IO a
 runWithServerAppM dbname action = do
-  conn <- mkDbConnectInfo dbname >>= connect
+  connPool <- mkDbConnectInfo dbname >>= mkDatabaseConnectionPool
   currentTimeZone <- getCurrentTimeZone
   clientManager <- liftIO $ newManager tlsManagerSettings
-  let env = mainEnv Info False True currentTimeZone conn clientManager
+  let env = mainEnv Info False True currentTimeZone connPool clientManager
   let serverEnv = ServerEnv { serverAppEnv         = env
                             , serverPort           = 8081
                             , serverTimeoutSeconds = 5 * 60
@@ -152,10 +151,10 @@ runWithServerAppM dbname action = do
 -- | This function is the same as runWithServerAppM, but overrides the log action to be a no-op.
 runWithServerAppMSuppressLog :: String -> ServerAppM a -> IO a
 runWithServerAppMSuppressLog dbname action = do
-  conn <- mkDbConnectInfo dbname >>= connect
+  connPool <- mkDbConnectInfo dbname >>= mkDatabaseConnectionPool
   currentTimeZone <- getCurrentTimeZone
   clientManager <- liftIO $ newManager tlsManagerSettings
-  let env = mainEnv Info False True currentTimeZone conn clientManager
+  let env = mainEnv Info False True currentTimeZone connPool clientManager
   let serverEnv = ServerEnv { serverAppEnv         = env
                             , serverPort           = 8081
                             , serverTimeoutSeconds = 5 * 60
@@ -168,10 +167,10 @@ runWithServerAppMSuppressLog dbname action = do
 -- | Helper function to run a computation in the ServerAppM monad with debug and database logging, returning an IO monad.
 runWithServerAppMDebug :: String -> ServerAppM a -> IO a
 runWithServerAppMDebug dbname action = do
-  conn <- mkDbConnectInfo dbname >>= connect
+  connPool <- mkDbConnectInfo dbname >>= mkDatabaseConnectionPool
   currentTimeZone <- getCurrentTimeZone
   clientManager <- liftIO $ newManager tlsManagerSettings
-  let env = mainEnv Debug True True currentTimeZone conn clientManager
+  let env = mainEnv Debug True True currentTimeZone connPool clientManager
   let serverEnv = ServerEnv { serverAppEnv         = env
                             , serverPort           = 8081
                             , serverTimeoutSeconds = 5 * 60

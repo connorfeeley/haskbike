@@ -102,6 +102,7 @@ common common-depends
                     , boxes
                     , exceptions
                     , cassava
+                    , resource-pool
 
 -- Dependencies needed by targets exercising the API client.
 common api-client-depends
@@ -262,6 +263,7 @@ library
                     , Database.BikeShare.Migrations
                     , Database.BikeShare.StatusVariationQuery
                     , Database.BikeShare.Utils
+                    , Database.BikeShare.EventCounts
                     , Database.BikeShare.Connection
                     , Database.BikeShare.Operations
                     , Database.BikeShare.Operations.Dockings
@@ -318,6 +320,7 @@ test-suite haskbike-test
 
     -- Modules included in this test suite, other than Main.
     other-modules:    TestDecoding
+                    , TestEncoding
                     , TestClient
                     , TestDatabase
                     , TestOperations

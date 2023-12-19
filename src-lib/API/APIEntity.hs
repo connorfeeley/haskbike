@@ -25,9 +25,9 @@ import           Data.Time.Extras
 import           Database.Beam
 import           Database.Beam.Backend.SQL.BeamExtensions     ( MonadBeamInsertReturning (runInsertReturningList) )
 import           Database.Beam.Postgres
-import           Database.Beam.Postgres.Full                  hiding ( insert )
 import qualified Database.BikeShare                           as DB
 import           Database.BikeShare.EndpointQueried
+import           Database.BikeShare.Operations                ( insertStationInformation, insertStationStatus )
 import qualified Database.BikeShare.Tables.StationInformation as DB
 import qualified Database.BikeShare.Tables.StationStatus      as DB
 import qualified Database.BikeShare.Tables.SystemInformation  as DB
@@ -102,24 +102,13 @@ class APIPersistable apiType dbType | apiType -> dbType where
 -- * Instances.
 
 instance APIPersistable [AT.StationInformation] DB.StationInformationT where
-  fromAPI resp = mapMaybe (Just . DB.fromJSONToBeamStationInformation) (_respData resp)
-  insertAPI resp = withPostgres $ runInsertReturningList $ insertOnConflict (DB.bikeshareDb ^. DB.bikeshareStationInformation)
-      (insertExpressions (fromAPI resp))
-      (conflictingFields primaryKey) (onConflictUpdateInstead (\i -> ( DB._infoName                    i
-                                                                     , DB._infoPhysicalConfiguration   i
-                                                                     , DB._infoCapacity                i
-                                                                     , DB._infoIsChargingStation       i
-                                                                     , DB._infoIsValetStation          i
-                                                                     , DB._infoIsVirtualStation        i
-                                                                     )
-                                                              ))
+  fromAPI resp = mapMaybe (Just . DB.fromJSONToBeamStationInformation (_respLastUpdated resp)) (_respData resp)
+  insertAPI resp = insertStationInformation (_respLastUpdated resp) (_respData resp)
 
 
 instance APIPersistable [AT.StationStatus] DB.StationStatusT where
-  fromAPI resp = mapMaybe DB.fromJSONToBeamStationStatus (_respData resp)
-  insertAPI resp = withPostgres $ runInsertReturningList $ insertOnConflict (DB.bikeshareDb ^. DB.bikeshareStationStatus)
-    (insertExpressions (fromAPI resp))
-    anyConflict onConflictDoNothing
+  fromAPI _resp = undefined
+  insertAPI resp = insertStationStatus (_respData resp)
 
 
 instance APIPersistable AT.SystemInformation DB.SystemInformationCountT where

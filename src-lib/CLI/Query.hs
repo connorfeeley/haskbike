@@ -61,7 +61,7 @@ refreshStationData = do
     (Left err, _) -> logException err >> throwM err
     (_, Left err) -> logException err >> throwM err
     (Right info, Right status) -> do
-      insInfo   <- insertStationInformation (info   ^. respData)
+      insInfo   <- insertStationInformation (info ^. respLastUpdated) (info ^. respData)
       insStatus <- insertStationStatus      (status ^. respData)
       log D $ format "Inserted {} information records and {} status records." (length insInfo) (length insStatus)
 

@@ -149,7 +149,7 @@ data StationInformation where
                         , infoCapacity                :: Int
                         , infoIsChargingStation       :: Bool
                         , infoRentalMethods           :: [RentalMethod]
-                        , infoIsValetStation          :: Maybe Bool
+                        , infoIsValetStation          :: Bool
                         , infoIsVirtualStation        :: Bool
                         , infoGroups                  :: [String]
                         , infoObcn                    :: String
@@ -194,7 +194,7 @@ instance FromJSON StationInformation where
     <*> v .:  "capacity"
     <*> v .:  "is_charging_station"
     <*> v .:  "rental_methods"
-    <*> v .:? "is_valet_station"
+    <*> (fromMaybe False <$> (v .:? "is_valet_station"))
     <*> v .:  "is_virtual_station"
     <*> v .:  "groups"
     <*> v .:  "obcn"

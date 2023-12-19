@@ -49,7 +49,7 @@ import           Database.Beam.Backend.SQL                    ( BeamSqlBackend )
 import           Database.Beam.Backend.SQL.BeamExtensions     ( BeamHasInsertOnConflict (anyConflict, onConflictDoNothing),
                                                                 insertOnConflict )
 import           Database.Beam.Postgres
-import           Database.Beam.Postgres.Full
+import           Database.Beam.Postgres.Full                  hiding ( insert )
 import           Database.Beam.Postgres.Syntax
 import qualified Database.Beam.Query.Adhoc                    as Adhoc
 import           Database.Beam.Query.CTE                      ( QAnyScope )
@@ -74,7 +74,7 @@ systemStatusBetweenExpr start_time end_time =
   do
     info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
     status <- all_ (bikeshareDb ^. bikeshareStationStatus)
-    guard_ (_statusStationId status `references_` info &&.
+    guard_ (_statusStationId status ==. _infoStationId info &&.
             between_  (status ^. statusLastReported) (val_ start_time) (val_ end_time)
            )
     pure status
@@ -86,7 +86,7 @@ statusBetweenExpr station_id start_time end_time =
     info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
     status <- orderBy_ (asc_ . _statusLastReported)
               (all_ (bikeshareDb ^. bikeshareStationStatus))
-    guard_ (_statusStationId status `references_` info &&.
+    guard_ (_statusStationId status ==. _infoStationId info &&.
             (info   ^. infoStationId) ==. val_ (fromIntegral station_id) &&.
             between_ (status ^. statusLastReported) (val_ start_time) (val_ end_time))
     pure status
@@ -98,24 +98,25 @@ infoByIdExpr stationIds =
     (all_ (bikeshareDb ^. bikeshareStationInformation))
 
 -- | Insert station information into the database.
-insertStationInformationExpr :: [AT.StationInformation] -> SqlInsert Postgres StationInformationT
-insertStationInformationExpr stations =
-  insertOnConflict (bikeshareDb ^. bikeshareStationInformation)
-  (insertExpressions (map fromJSONToBeamStationInformation stations))
-  (conflictingFields primaryKey) (onConflictUpdateInstead (\i -> ( _infoName                    i
-                                                                 , _infoPhysicalConfiguration   i
-                                                                 , _infoCapacity                i
-                                                                 , _infoIsChargingStation       i
-                                                                 , _infoIsValetStation          i
-                                                                 , _infoIsVirtualStation        i
-                                                                 )
-                                                          ))
+insertStationInformationExpr :: UTCTime -> [AT.StationInformation] -> SqlInsert Postgres StationInformationT
+insertStationInformationExpr reported stations =
+  insert (bikeshareDb ^. bikeshareStationInformation)
+  (insertExpressions (map (fromJSONToBeamStationInformation reported) stations))
+  -- (conflictingFields primaryKey) (onConflictUpdateInstead (\i -> ( _infoName                    i
+  --                                                                , _infoPhysicalConfiguration   i
+  --                                                                , _infoCapacity                i
+  --                                                                , _infoIsChargingStation       i
+  --                                                                , _infoIsValetStation          i
+  --                                                                , _infoIsVirtualStation        i
+  --                                                                , _infoActive                  i
+  --                                                                )
+  --                                                         ))
 
 disabledDocksExpr :: Q Postgres BikeshareDb s (QGenExpr QValueContext Postgres s Text.Text, QGenExpr QValueContext Postgres s Int32)
 disabledDocksExpr = do
   info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
   status <- all_ (bikeshareDb ^. bikeshareStationStatus)
-  guard_ (_statusStationId status `references_` info &&. status ^. statusNumDocksDisabled >. 0)
+  guard_ (_statusStationId status ==. _infoStationId info &&. status ^. statusNumDocksDisabled >. 0)
   pure ( info   ^. infoName
        , status ^. statusNumDocksDisabled
        )
@@ -126,7 +127,7 @@ queryStationStatusExpr limit = do
   status <- case limit of
     Just limit' -> limit_ limit' $ all_ (bikeshareDb ^. bikeshareStationStatus)
     Nothing     ->                 all_ (bikeshareDb ^. bikeshareStationStatus)
-  guard_ (_statusStationId status `references_` info)
+  guard_ (_statusStationId status ==. _infoStationId info)
   pure (info, status)
 
 queryStationIdExpr :: String -> Q Postgres BikeshareDb s (StationInformationT (QExpr Postgres s))
@@ -235,7 +236,7 @@ integrateColumns :: be ~ Postgres
                       be
                       BikeshareDb
                       (Q be BikeshareDb s
-                        ( PrimaryKey StationInformationT (QGenExpr QValueContext be s)
+                        ( QGenExpr QValueContext be s Int32
                         , QGenExpr QValueContext be s Bool    -- ^ Charging station
                         , QGenExpr QValueContext be s Int32   -- ^ Station capacity
                         , QGenExpr QValueContext be s Int32   -- ^ Total seconds
@@ -309,7 +310,7 @@ integrateColumns variation = do
                  ) (reuse chargings)
 
     info <- all_ (bikeshareDb ^. bikeshareStationInformation)
-    guard_ ((chargingsSum ^. _1) `references_` info)
+    guard_ ((chargingsSum ^. _1) ==. _infoStationId info &&. _infoActive info ==. val_ True)
 
     pure ( chargingsSum ^. _1            -- Station ID
          , info ^. infoIsChargingStation -- Is charging station
@@ -336,7 +337,7 @@ queryLatestStatuses = do
     info <- reuse infoCte
     status <- reuse statusCte
 
-    guard_' (_statusStationId status `references_'` info)
+    guard_' (_statusStationId status ==?. _infoStationId info)
 
     pure (info, status)
 
@@ -378,3 +379,20 @@ latestQueryLogsToMap tz = LatestQueries . queryMap
   where
     queryMap = Map.fromList . map (\q -> (_queryLogEndpoint q, (utcToLocal . _queryLogTime) q))
     utcToLocal = utcToLocalTime tz
+
+-- | Get the latest query logs for each endpoint.
+queryLatestInfoBefore :: be ~ Postgres
+                     => With be BikeshareDb
+                     (Q be BikeshareDb s
+                      (StationInformationT (QExpr be s)))
+queryLatestInfoBefore = do
+  ranked <- selecting $ do
+    withWindow_ (\row -> frame_ (partitionBy_ (_infoStationId row)) (orderPartitionBy_ (desc_ $ _infoId row)) noBounds_)
+                (\row w -> ( row
+                           , rank_ `over_` w
+                           )
+                ) (all_ (bikeshareDb ^. bikeshareStationInformation))
+  pure $ do
+    partitioned <- reuse ranked
+    guard_ (partitioned ^. _2 ==. 1) -- Is max rank (latest record in partition)
+    pure (partitioned ^. _1)

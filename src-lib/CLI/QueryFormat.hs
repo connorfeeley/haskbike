@@ -6,17 +6,15 @@ import           CLI.Utils
 
 import           Control.Lens
 
-import           Data.Int                                     ( Int32 )
-import           Data.Text.Lazy                               ( Text, chunksOf, pack, reverse, unlines, unpack,
-                                                                unwords )
-import           Data.Time                                    ( TimeZone, UTCTime )
+import           Data.Int                                ( Int32 )
+import           Data.Text.Lazy                          ( Text, chunksOf, pack, reverse, unlines, unpack, unwords )
+import           Data.Time                               ( TimeZone, UTCTime )
 
-import           Database.BikeShare.Tables.StationInformation
 import           Database.BikeShare.Tables.StationStatus
 
 import           Fmt
 
-import           Prelude                                      hiding ( log, reverse, unlines, unwords )
+import           Prelude                                 hiding ( log, reverse, unlines, unwords )
 
 import           System.Console.ANSI
 
@@ -60,7 +58,7 @@ formatStationInfo (timeZone, name, status) =
 
 formattedName :: String -> StationStatus -> Text
 formattedName name status =
-    format "{}[{}{}]{} {}{}{}" boldCode idPrefix (status ^. statusStationId . unInformationStationId) resetIntens underCode name resetUnder
+    format "{}[{}{}]{} {}{}{}" boldCode idPrefix (status ^. statusStationId) resetIntens underCode name resetUnder
     where idPrefix = resetIntens <> "# " <> boldCode
 
 -- Format the last reported time in the specified time zone (namerly, the system's time zone).

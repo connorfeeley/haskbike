@@ -8,14 +8,13 @@ module Database.BikeShare.StatusVariationQuery
      , thresholdCondition
      ) where
 
-import           Control.Lens                                 hiding ( reuse, (<.) )
+import           Control.Lens                            hiding ( reuse, (<.) )
 
-import           Data.Int                                     ( Int32 )
+import           Data.Int                                ( Int32 )
 import           Data.Time
 
 import           Database.Beam
 import           Database.Beam.Postgres
-import           Database.BikeShare.Tables.StationInformation
 import           Database.BikeShare.Tables.StationStatus
 
 
@@ -42,7 +41,7 @@ thresholdCondition (LatestTime threshold) status   = status ^. statusLastReporte
 
 -- | Construct a filter expression corresponding to the station ID.
 stationIdCondition :: Maybe Int32 -> StationStatusT (QExpr Postgres s) -> QExpr Postgres s Bool
-stationIdCondition (Just stationId) status = _statusStationId status ==. val_ (StationInformationId stationId)
+stationIdCondition (Just stationId) status = _statusStationId status ==. val_ stationId
 stationIdCondition Nothing _               = val_ True
 
 

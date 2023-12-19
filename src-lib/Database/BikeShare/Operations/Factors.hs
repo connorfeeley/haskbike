@@ -12,14 +12,13 @@ module Database.BikeShare.Operations.Factors
 
 import           AppEnv
 
-import           Control.Lens                                 hiding ( (.=) )
+import           Control.Lens                            hiding ( (.=) )
 
 import           Data.Aeson
 
-import           Database.Beam                                hiding ( div_ )
-import           Database.BikeShare.Expressions               ( integrateColumns )
+import           Database.Beam                           hiding ( div_ )
+import           Database.BikeShare.Expressions          ( integrateColumns )
 import           Database.BikeShare.StatusVariationQuery
-import           Database.BikeShare.Tables.StationInformation ( unInformationStationId )
 
 
 -- * Types and functions used to calculate availability integrals.
@@ -68,7 +67,7 @@ queryIntegratedStatus variation = do
   pure $
     map (\(sId, charging, capacity, totalSeconds, stationIntegrals, bikeIntegrals) -> (
             StatusIntegral { intStatusVariation          = variation
-                           , intStatusStationId          = fromIntegral (sId ^. unInformationStationId)
+                           , intStatusStationId          = fromIntegral sId
                            , intStatusCharging           = charging
                            , intStatusCapacity           = fromIntegral capacity
                            , intStatusTotalSeconds       = fromIntegral totalSeconds

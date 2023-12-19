@@ -10,56 +10,62 @@ module AppEnv
      , WithAppMEnv
      , ask
      , asks
+     , executeWithConnPool
      , mainEnv
+     , mkDatabaseConnectionPool
      , runAppM
      , runWithAppM
      , runWithAppMDebug
      , runWithAppMSuppressLog
      , simpleEnv
-     , withConn
+     , withConnPool
      , withManager
+     , withPooledConn
      , withPostgres
+     , withPostgresTransaction
      ) where
 
 import           API.BikeShare
 
-import           Colog                         ( HasLog (..), LogAction (..), Message, Msg (msgSeverity), Severity (..),
-                                                 filterBySeverity, logException, richMessageAction,
-                                                 simpleMessageAction )
+import           Colog                                  ( HasLog (..), LogAction (..), Message, Msg (msgSeverity),
+                                                          Severity (..), filterBySeverity, logException,
+                                                          richMessageAction, simpleMessageAction )
 
-import           Control.Exception             ( throw )
+import           Control.Exception                      ( throw )
 import           Control.Monad.Catch
 import           Control.Monad.Except
-import           Control.Monad.Reader          ( MonadReader, ReaderT (..), ask, asks )
+import           Control.Monad.Reader                   ( MonadReader, ReaderT (..), ask, asks )
 
-import           Data.Time                     ( TimeZone, getCurrentTimeZone )
+import           Data.Pool
+import           Data.Time                              ( TimeZone, getCurrentTimeZone )
 
-import           Database.Beam.Postgres        ( Connection, Pg, SqlError, connect, runBeamPostgres,
-                                                 runBeamPostgresDebug )
-import           Database.BikeShare.Connection ( mkDbConnectInfo )
+import           Database.Beam.Postgres                 ( ConnectInfo, Connection, Pg, SqlError, close, connect,
+                                                          runBeamPostgres, runBeamPostgresDebug )
+import           Database.BikeShare.Connection          ( mkDbConnectInfo )
+import           Database.PostgreSQL.Simple.Transaction ( withTransaction )
 
-import           GHC.Stack                     ( HasCallStack )
+import           GHC.Stack                              ( HasCallStack )
 
-import           Network.HTTP.Client           ( Manager, newManager )
-import           Network.HTTP.Client.TLS       ( tlsManagerSettings )
+import           Network.HTTP.Client                    ( Manager, newManager )
+import           Network.HTTP.Client.TLS                ( tlsManagerSettings )
 
-import           Prelude                       hiding ( log )
+import           Prelude                                hiding ( log )
 
-import           Servant                       ( ServerError )
+import           Servant                                ( ServerError )
 import           Servant.Client
 
-import           UnliftIO                      ( MonadUnliftIO )
+import           UnliftIO                               ( MonadUnliftIO )
 
 
 -- Application environment
 data Env m where
-  Env :: { envLogAction     :: !(LogAction m Message)
-         , envLogDatabase   :: !Bool
-         , envMinSeverity   :: !Severity
-         , envTimeZone      :: !TimeZone
-         , envDBConnection  :: !Connection
-         , envClientManager :: !Manager
-         , envBaseUrl       :: !BaseUrl
+  Env :: { envLogAction        :: !(LogAction m Message)
+         , envLogDatabase      :: !Bool
+         , envMinSeverity      :: !Severity
+         , envTimeZone         :: !TimeZone
+         , envDBConnectionPool :: !(Pool Connection)
+         , envClientManager    :: !Manager
+         , envBaseUrl          :: !BaseUrl
          } -> Env m
 
 -- Application type
@@ -83,24 +89,48 @@ instance MonadError ServerError AppM where
   throwError = AppM . throwM
   catchError action handler = AppM $ catch (unAppM action) (unAppM . handler)
 
--- | Fetch database connection from environment monad.
-withConn :: (WithAppMEnv (Env env) Message m) => m Connection
-withConn = asks envDBConnection >>= liftIO . pure
+-- | Fetch database connection pool from environment monad.
+withConnPool :: (WithAppMEnv (Env env) Message m) => m (Pool Connection)
+withConnPool = asks envDBConnectionPool
+
+-- | Helper function to execute a given action with a database connection from a given resource pool.
+executeWithConnPool :: MonadIO m => (Connection -> p -> IO a) -> p -> Pool Connection -> m a
+executeWithConnPool dbFunction action pool = liftIO (withResource pool (`dbFunction` action))
+
+-- | Acquire a database connection from the resource pool in environment monad, and execute a given action.
+withPooledConn :: (WithAppMEnv (Env env) Message m) => (Connection -> p -> IO a) -> p -> m a
+withPooledConn dbFunction action = withConnPool >>= executeWithConnPool dbFunction action
 
 -- | Run a Beam operation using database connection from the environment.
 withPostgres :: (WithAppMEnv (Env env) Message m) => Pg a -> m a
 withPostgres action = do
   logDatabase <- asks envLogDatabase
-  conn <- withConn
   let dbFunction = if logDatabase
         then runBeamPostgresDebug putStrLn
         else runBeamPostgres
-  res <- try $ liftIO (dbFunction conn action)
+  res <- try $ withPooledConn dbFunction action
   case res of
     Left (e :: SqlError) ->
       logException e >>
       throw e
     Right result -> pure result
+{-# INLINE withPostgres #-}
+
+-- | Run a Beam operation in a transaction using database connection from the environment.
+withPostgresTransaction :: (WithAppMEnv (Env env) Message m) => Pg a -> m a
+withPostgresTransaction action = do
+  logDatabase <- asks envLogDatabase
+  pool <- withConnPool
+  let dbFunction = if logDatabase
+        then runBeamPostgresDebug putStrLn
+        else runBeamPostgres
+  res <- try $ liftIO $ withResource pool $ \conn -> withTransaction conn (dbFunction conn action)
+  case res of
+    Left (e :: SqlError) ->
+      logException e >>
+      throw e
+    Right result -> pure result
+{-# INLINE withPostgresTransaction #-}
 
 -- | Fetch client manager from the environment.
 withManager :: (WithAppMEnv (Env env) Message m) => m Manager
@@ -117,26 +147,27 @@ instance HasLog (Env m) Message m where
   {-# INLINE setLogAction #-}
 
 -- | Simple environment for the main application.
-simpleEnv :: TimeZone -> Connection -> Manager -> Env AppM
-simpleEnv timeZone conn manager = Env { envLogAction     = mainLogAction Info False
-                                      , envLogDatabase   = False
-                                      , envMinSeverity   = Info
-                                      , envTimeZone      = timeZone
-                                      , envDBConnection  = conn
-                                      , envClientManager = manager
-                                      , envBaseUrl       = bikeshareBaseUrl
-                                      }
+simpleEnv :: TimeZone -> Pool Connection -> Manager -> Env AppM
+simpleEnv timeZone connPool manager =
+  Env { envLogAction        = mainLogAction Info False
+      , envLogDatabase      = False
+      , envMinSeverity      = Info
+      , envTimeZone         = timeZone
+      , envDBConnectionPool = connPool
+      , envClientManager    = manager
+      , envBaseUrl          = bikeshareBaseUrl
+      }
 
 -- | Environment for the main application.
-mainEnv :: Severity -> Bool -> Bool -> TimeZone -> Connection -> Manager -> Env AppM
-mainEnv sev logDatabase logRichOutput timeZone conn manager =
-  Env { envLogAction     = mainLogAction sev logRichOutput
-      , envLogDatabase   = logDatabase
-      , envMinSeverity   = Info
-      , envTimeZone      = timeZone
-      , envDBConnection  = conn
-      , envClientManager = manager
-      , envBaseUrl       = bikeshareBaseUrl
+mainEnv :: Severity -> Bool -> Bool -> TimeZone -> Pool Connection -> Manager -> Env AppM
+mainEnv sev logDatabase logRichOutput timeZone connPool manager =
+  Env { envLogAction        = mainLogAction sev logRichOutput
+      , envLogDatabase      = logDatabase
+      , envMinSeverity      = Info
+      , envTimeZone         = timeZone
+      , envDBConnectionPool = connPool
+      , envClientManager    = manager
+      , envBaseUrl          = bikeshareBaseUrl
       }
 
 -- | Log action for the main application.
@@ -153,27 +184,30 @@ runAppM env app = runReaderT (unAppM app) env
 -- | Helper function to run a computation in the AppM monad, returning an IO monad.
 runWithAppM :: String -> AppM a -> IO a
 runWithAppM dbname action = do
-  conn <- mkDbConnectInfo dbname >>= connect
+  connPool <- mkDbConnectInfo dbname >>= mkDatabaseConnectionPool
   currentTimeZone <- getCurrentTimeZone
   clientManager <- liftIO $ newManager tlsManagerSettings
-  let env = mainEnv Info False True currentTimeZone conn clientManager
+  let env = mainEnv Info False True currentTimeZone connPool clientManager
   runAppM env action
 
 -- | This function is the same as runWithAppM, but overrides the log action to be a no-op.
 runWithAppMSuppressLog :: String -> AppM a -> IO a
 runWithAppMSuppressLog dbname action = do
-  conn <- mkDbConnectInfo dbname >>= connect
+  connPool <- mkDbConnectInfo dbname >>= mkDatabaseConnectionPool
   currentTimeZone <- getCurrentTimeZone
   clientManager <- liftIO $ newManager tlsManagerSettings
-  let env = (mainEnv Info False True currentTimeZone conn clientManager) { envLogAction = mempty }
+  let env = (mainEnv Info False True currentTimeZone connPool clientManager) { envLogAction = mempty }
   runAppM env action
 
 
 -- | Helper function to run a computation in the AppM monad with debug and database logging, returning an IO monad.
 runWithAppMDebug :: String -> AppM a -> IO a
 runWithAppMDebug dbname action = do
-  conn <- mkDbConnectInfo dbname >>= connect
+  connPool <- mkDbConnectInfo dbname >>= mkDatabaseConnectionPool
   currentTimeZone <- getCurrentTimeZone
   clientManager <- liftIO $ newManager tlsManagerSettings
-  let env = mainEnv Debug True True currentTimeZone conn clientManager
+  let env = mainEnv Debug True True currentTimeZone connPool clientManager
   runAppM env action
+
+mkDatabaseConnectionPool :: ConnectInfo -> IO (Pool Connection)
+mkDatabaseConnectionPool connInfo = newPool (defaultPoolConfig (connect connInfo) close 30 5)

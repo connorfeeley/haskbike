@@ -21,6 +21,7 @@ import qualified Data.Text                                  as T
 import           Data.Time
 import           Data.Time.Extras
 
+import           Database.BikeShare.EventCounts
 import           Database.BikeShare.Operations.Dockings
 import           Database.BikeShare.Operations.Factors
 import           Database.BikeShare.Operations.FactorsCSV

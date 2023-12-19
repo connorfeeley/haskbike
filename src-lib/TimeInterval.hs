@@ -10,17 +10,9 @@ module TimeInterval
      , secondsPerIntervalForRange
      ) where
 
-import           Data.Fixed                                   ( Fixed (MkFixed), Pico )
-import           Data.Int                                     ( Int32 )
+import           Data.Fixed ( Fixed (MkFixed), Pico )
 import           Data.Time
 
-import           Database.Beam
-import           Database.BikeShare.Tables.StationInformation
-import           Database.BikeShare.Tables.StationStatus
-
-
-_statusToIdAndTime :: StationStatusT f -> (Columnar f Int32, Columnar f UTCTime)
-_statusToIdAndTime s = ((_unInformationStationId . _statusStationId) s, _statusLastReported s)
 
 
 {- Generate a list of times between two times, incrementing every whole unit of the specified number of minutes.

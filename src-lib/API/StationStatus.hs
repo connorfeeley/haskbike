@@ -7,6 +7,13 @@ module API.StationStatus
      ( StationStatus (..)
      , StationStatusString (..)
      , VehicleDock (..)
+     , addBikesAvailable
+     , addBikesDisabled
+     , addDocksAvailable
+     , addDocksDisabled
+     , addEfit
+     , addEfitG5
+     , addIconic
      , statusIsChargingStation
      , statusIsInstalled
      , statusIsRenting
@@ -21,6 +28,7 @@ module API.StationStatus
      , statusTraffic
      , statusVehicleDocksAvailable
      , statusVehicleTypesAvailable
+     , updateMap
      ) where
 
 import           API.Classes
@@ -94,9 +102,9 @@ data StationStatus where
                    , _statusIsReturning           :: Bool
                    , _statusTraffic               :: Maybe String -- PBSC doesn't seem to set this field
                    , _statusVehicleDocksAvailable :: [VehicleDock]
-                   , _statusVehicleTypesAvailable :: Map.Map TorontoVehicleType VehicleType
+                   , _statusVehicleTypesAvailable :: Map.Map TorontoVehicleType Int
                    } -> StationStatus
-  deriving (Show, Generic)
+  deriving (Show, Generic, Eq)
 
 instance ToJSON StationStatus where
   toJSON station =
@@ -152,6 +160,23 @@ instance FromJSON VehicleDock where
 instance HasDataField [StationStatus] where
   -- For a list of SystemStatus, we expect to find them under the 'stations' key
   getDataField obj = obj .: "stations"
+
+
+-- * Functions for updating 'StationStatus'.
+
+updateMap :: TorontoVehicleType -> Int -> StationStatus -> Map.Map TorontoVehicleType Int
+updateMap tvt inc status = Map.insertWith (+) tvt inc (_statusVehicleTypesAvailable status)
+
+addIconic, addEfit, addEfitG5 :: Int -> StationStatus -> StationStatus
+addIconic inc status = status { _statusVehicleTypesAvailable = updateMap Iconic inc status }
+addEfit inc status   = status { _statusVehicleTypesAvailable = updateMap EFit   inc status }
+addEfitG5 inc status = status { _statusVehicleTypesAvailable = updateMap EFitG5 inc status }
+
+addBikesAvailable, addBikesDisabled, addDocksAvailable, addDocksDisabled :: Int -> StationStatus -> StationStatus
+addBikesAvailable inc status = status { _statusNumBikesAvailable = _statusNumBikesAvailable status + inc }
+addBikesDisabled  inc status = status { _statusNumBikesDisabled  = _statusNumBikesDisabled  status + inc }
+addDocksAvailable inc status = status { _statusNumDocksAvailable = _statusNumDocksAvailable status + inc }
+addDocksDisabled  inc status = status { _statusNumDocksDisabled  = _statusNumDocksDisabled  status + inc }
 
 
 -- | Lenses

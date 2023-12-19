@@ -20,11 +20,12 @@ import           Colog                     ( LogAction, Severity (..), WithLog, 
 import           Control.Monad             ( unless, void, when )
 import           Control.Monad.IO.Class    ( MonadIO )
 
+import           Data.Pool
 import qualified Data.Text                 as Text
 import           Data.Text.Lazy            ( toStrict )
 import           Data.Time                 ( getCurrentTimeZone )
 
-import           Database.Beam.Postgres    ( ConnectInfo (connectPassword), connect )
+import           Database.Beam.Postgres    ( ConnectInfo (connectPassword), close, connect )
 import           Database.BikeShare.Utils
 
 import           Fmt
@@ -63,19 +64,17 @@ main = do
   -- Get the current time zone.
   timeZone <- getCurrentTimeZone
 
-  -- Establish a connection to the database.
+  -- Set up database connection pool.
   connInfo <- mkDbConnectInfo (optDatabase options)
-  conn <- usingLoggerT logStdoutAction $ do
-    log I $ format "Connecting to database: {}" (pShowCompact (obfuscatePassword connInfo))
-    conn <- liftIO $ connect connInfo
-    log I "Database connection established."
-    pure conn
+  usingLoggerT logStdoutAction $
+    log I $ format "Using database connection: {}" (pShowCompact (obfuscatePassword connInfo))
+  connPool <- newPool (defaultPoolConfig (connect connInfo) close 30 5)
 
   -- Create HTTPS client manager.
   clientManager <- liftIO $ newManager tlsManagerSettings
 
   -- Create the application environment.
-  let env = mainEnv (logLevel options) (logDatabase options) (optLogRichOutput options) timeZone conn clientManager
+  let env = mainEnv (logLevel options) (logDatabase options) (optLogRichOutput options) timeZone connPool clientManager
 
   -- Disable stdout and stderr bufferring when --unbuffered is set.
   unless (optLogBuffering options) disableOutputBuffering
