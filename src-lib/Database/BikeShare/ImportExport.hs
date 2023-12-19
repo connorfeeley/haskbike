@@ -11,7 +11,6 @@ import qualified API.StationStatus                            as AT
 import           AppEnv
 
 import           Control.Lens
-import           Control.Monad
 
 import           Data.Aeson                                   ( eitherDecode, encode )
 import qualified Data.ByteString.Lazy                         as L
@@ -98,11 +97,12 @@ Export table data to a JSON file.
 
 >>> importDbTestData "test/dumps/" "station_information_2023-10-30.json" "station_status_2023-10-29_2023-10-30.json"
 -}
-importDbTestData :: FilePath -> FilePath -> FilePath -> IO ()
+importDbTestData :: FilePath -> FilePath -> FilePath -> IO ([StationInformationT Identity], [StationStatusT Identity])
 importDbTestData inputDir infoFile statusFile = do
-  importDbTestDataInfo inputDir infoFile
+  info <- importDbTestDataInfo inputDir infoFile
+  status <- importDbTestDataStatus inputDir statusFile
 
-  importDbTestDataStatus inputDir statusFile
+  pure (info, status)
 
 
 {- |
@@ -110,7 +110,7 @@ Import station information from a JSON file.
 
 >>> importDbTestDataInfo "test/dumps/" "station_information_2023-10-30.json"
 -}
-importDbTestDataInfo :: FilePath -> FilePath -> IO ()
+importDbTestDataInfo :: FilePath -> FilePath -> IO [StationInformationT Identity]
 importDbTestDataInfo inputDir filePrefix = do
   infoJson <- L.readFile (inputDir <> filePrefix)
   let info = eitherDecode infoJson :: Either String [AT.StationInformation]
@@ -120,15 +120,15 @@ importDbTestDataInfo inputDir filePrefix = do
   case info of
     Left err -> do
       putStrLn ("Error decoding JSON dump: " <> err)
-      pure ()
-    Right info' -> void $ runWithAppM dbnameTest $ insertStationInformation reported info'
+      pure []
+    Right info' -> runWithAppM dbnameTest $ insertStationInformation reported info'
 
 {- |
 Import station status from a JSON file.
 
 >>> importDbTestDataStatus "test/dumps/" "station_status_2023-10-29_2023-10-30.json"
 -}
-importDbTestDataStatus :: FilePath -> FilePath -> IO ()
+importDbTestDataStatus :: FilePath -> FilePath -> IO [StationStatusT Identity]
 importDbTestDataStatus inputDir filePrefix = do
   statusJson <- L.readFile (inputDir <> filePrefix)
   let status = eitherDecode statusJson :: Either String [AT.StationStatus]
@@ -136,5 +136,5 @@ importDbTestDataStatus inputDir filePrefix = do
   case status of
     Left err -> do
       putStrLn ("Error decoding JSON dump: " <> err)
-      pure ()
-    Right status' -> void $ runWithAppM dbnameTest $ insertStationStatus status'
+      pure []
+    Right status' -> runWithAppM dbnameTest $ insertStationStatus status'

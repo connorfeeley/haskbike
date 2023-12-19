@@ -13,23 +13,25 @@
 module Utils where
 
 import           API.ResponseWrapper
-import qualified API.StationInformation          as AT
-import qualified API.StationStatus               as AT
-import qualified API.SystemInformation           as AT
+import qualified API.StationInformation                       as AT
+import qualified API.StationStatus                            as AT
+import qualified API.SystemInformation                        as AT
 import           API.Utils
 
 import           AppEnv
 
-import           Control.Monad                   ( void )
+import           Control.Monad                                ( void )
 
 import           Data.Aeson
-import qualified Data.ByteString                 as B
-import qualified Data.ByteString.Lazy            as BL
-import           Data.FileEmbed                  ( embedDir )
+import qualified Data.ByteString                              as B
+import qualified Data.ByteString.Lazy                         as BL
+import           Data.FileEmbed                               ( embedDir )
 import           Data.Time
 
 import           Database.BikeShare.ImportExport
 import           Database.BikeShare.Migrations
+import qualified Database.BikeShare.Tables.StationInformation as DB
+import qualified Database.BikeShare.Tables.StationStatus      as DB
 import           Database.BikeShare.Utils
 
 import           Test.Tasty.HUnit
@@ -38,7 +40,7 @@ import           Test.Tasty.HUnit
 -- * Test setup.
 
 -- | Initialize empty database from exported station information and station status JSON.
-initDBWithExportedData :: IO ()
+initDBWithExportedData :: IO ([DB.StationInformation], [DB.StationStatus])
 initDBWithExportedData = do
   importDbTestData "test/dumps/" "station_information_2023-10-30.json" "station_status_2023-10-30_2023-10-30.json"
 
