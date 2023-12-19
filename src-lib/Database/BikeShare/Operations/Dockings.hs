@@ -120,6 +120,7 @@ queryChargingEventsCount variation = withPostgres $ runSelectReturningList $ sel
 
   pure $ do
     stationInfo' <- reuse stationInfo
+    guard_ (_infoIsChargingStation stationInfo' ==. val_ True &&. _infoActive stationInfo' ==. val_ True)
     chargingsSum <-
       aggregate_ (\(row, pBikesDisabled, pEFit, pEFitG5) ->
                     let dBikesDisabled = row ^. statusNumBikesDisabled - pBikesDisabled
@@ -136,8 +137,7 @@ queryChargingEventsCount variation = withPostgres $ runSelectReturningList $ sel
                      ))
                   (reuse cte)
 
-    guard_ ( _infoIsChargingStation stationInfo' ==. val_ True &&.
-            (chargingsSum ^. _1) ==. _infoStationId stationInfo'
+    guard_' ( (chargingsSum ^. _1) ==?. _infoStationId stationInfo'
            )
 
     pure ( stationInfo'

@@ -310,7 +310,7 @@ integrateColumns variation = do
                  ) (reuse chargings)
 
     info <- all_ (bikeshareDb ^. bikeshareStationInformation)
-    guard_ ((chargingsSum ^. _1) ==. _infoStationId info)
+    guard_ ((chargingsSum ^. _1) ==. _infoStationId info &&. _infoActive info ==. val_ True)
 
     pure ( chargingsSum ^. _1            -- Station ID
          , info ^. infoIsChargingStation -- Is charging station
