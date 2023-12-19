@@ -224,7 +224,7 @@ unit_insertNewerStatusRecords = do
   -- Separate API status records into those that are newer than in the database entry and those that are unchanged.
   inserted <- doInsertNewerStatusRecords
 
-  assertEqual "API status records newer than database entry"      302 (length inserted)
+  assertEqual "No API status records newer than database entries" 302 (length inserted)
 
   -- Station 7000 should be in the list of API records that would trigger a database update, but not in the list of unchanged records.
   assertBool "Station 7000 record is newer"          (has (traverse . statusStationId . only 7000) inserted)
@@ -242,7 +242,7 @@ doInsertNewerStatusRecords = do
   void $ runWithAppM dbnameTest $ insertStationInformation (_respLastUpdated info) (_respData info)
   void $ runWithAppM dbnameTest $ insertStationStatus      $ status_1 ^. respData
 
-  -- Return maps of updated and same API statuses
+  -- Return inserted station status.
   runWithAppM dbnameTest $ insertStationStatus $ status_2 ^. respData
 
 

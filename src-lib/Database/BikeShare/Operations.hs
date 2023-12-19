@@ -46,7 +46,7 @@ import           Control.Lens                                 hiding ( reuse, (<
 
 import           Data.Int                                     ( Int32 )
 import qualified Data.Map                                     as Map
-import           Data.Maybe                                   ( catMaybes, fromMaybe, mapMaybe )
+import           Data.Maybe                                   ( catMaybes, mapMaybe )
 import           Data.Pool                                    ( withResource )
 import qualified Data.Text                                    as Text
 import           Data.Time
@@ -194,14 +194,14 @@ insertStationStatus apiStatus =
               )
       (all_ (bikeshareDb ^. bikeshareStationInformation))
 
-    let infoMap = Map.fromList $ map (\inf -> ((fromIntegral . _infoStationId) inf, inf)) info
-    let statusMap = Map.fromList $ map (\ss -> (AT._statusStationId ss, ss)) apiStatus
+    let infoMap          = Map.fromList (map (\inf -> ((fromIntegral . _infoStationId) inf, inf)) info)
+    let statusMap        = Map.fromList (map (\ss  -> (AT._statusStationId ss, ss)) apiStatus)
     let statusWithInfoId = Map.elems (Map.intersectionWith (\inf ss -> (_infoId inf, ss)) infoMap statusMap)
 
     runInsertReturningList $
       insertOnConflict (bikeshareDb ^. bikeshareStationStatus)
       (insertExpressions (mapMaybe (uncurry fromJSONToBeamStationStatus) statusWithInfoId)
-     ) anyConflict onConflictDoNothing
+      ) (conflictingFields primaryKey) onConflictDoNothing
 
 
 {- |

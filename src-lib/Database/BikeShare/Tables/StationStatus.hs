@@ -305,24 +305,24 @@ stationStatusModification =
 createStationStatus :: Migration Postgres (CheckedDatabaseEntity Postgres db (TableEntity StationStatusT))
 createStationStatus =
   createTable "station_status" $ StationStatus
-  { _statusInfoId                = StationInformationId (field "info_id" Pg.serial notNull unique (referenceInformationTable ["id"]))
+  { _statusInfoId                = StationInformationId (field "info_id" Pg.serial notNull (referenceInformationTable ["id"]))
   , _statusStationId             = field "station_id"              int notNull
-  , _statusLastReported          = field "last_reported"           (DataType (timestampType Nothing True))
+  , _statusLastReported          = field "last_reported"           (DataType (timestampType Nothing True)) notNull
   , _statusNumBikesAvailable     = field "num_bikes_available"     int notNull
   , _statusNumBikesDisabled      = field "num_bikes_disabled"      int notNull
   , _statusNumDocksAvailable     = field "num_docks_available"     int notNull
   , _statusNumDocksDisabled      = field "num_docks_disabled"      int notNull
   , _statusIsChargingStation     = field "is_charging_station"     boolean notNull
-  , _statusStatus                = field "status"                  stationStatusType
+  , _statusStatus                = field "status"                  stationStatusType notNull
   , _statusIsInstalled           = field "is_installed"            boolean notNull
   , _statusIsRenting             = field "is_renting"              boolean notNull
   , _statusIsReturning           = field "is_returning"            boolean notNull
   , _statusTraffic               = field "traffic"                 (maybeType (varchar (Just 100)))
   , _statusVehicleDocksAvailable = field "vehicle_docks_available" int notNull
-  , _statusVehicleTypesAvailable = VehicleType (field "vehicle_types_available_boost"   int)
-                                               (field "vehicle_types_available_iconic"  int)
-                                               (field "vehicle_types_available_efit"    int)
-                                               (field "vehicle_types_available_efit_g5" int)
+  , _statusVehicleTypesAvailable = VehicleType (field "vehicle_types_available_boost"   int notNull)
+                                               (field "vehicle_types_available_iconic"  int notNull)
+                                               (field "vehicle_types_available_efit"    int notNull)
+                                               (field "vehicle_types_available_efit_g5" int notNull)
   }
 
 referenceInformationTable :: BeamMigrateSqlBackend be => [T.Text] -> Constraint be
