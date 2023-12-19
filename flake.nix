@@ -84,6 +84,7 @@
             # haskbike.source = ./.;
             # aeson.source = "2.1.2.0";
             # zlib.source = pkgs.zlib;
+            resource-pool.source = "0.4.0.0";
           };
 
           # The base package set representing a specific GHC version.
