@@ -32,7 +32,6 @@ import           Database.Beam.Backend              ( IsSql92DataTypeSyntax (..)
 import           Database.Beam.Migrate
 import           Database.Beam.Postgres             ( PgJSONB (PgJSONB), Postgres )
 import qualified Database.Beam.Postgres             as Pg
-import           Database.Beam.Postgres.Syntax
 import           Database.BikeShare.BeamConvertable
 import           Database.BikeShare.EndpointQueried
 
@@ -120,6 +119,6 @@ createQueries =
   , _queryLogTime     = field "time"       (DataType (timestampType Nothing True)) notNull
   , _queryLogEndpoint = field "endpoint"   endpointQueriedType notNull -- Using custom enum type.
   , _queryLogSuccess  = field "success"    boolean notNull
-  , _queryLogErrMsg   = field "error_msg"  (DataType pgTextType)
+  , _queryLogErrMsg   = field "error_msg"  (maybeType Pg.text)
   , _queryLogErrJson  = field "error_json" (maybeType Pg.jsonb)
   }
