@@ -89,7 +89,7 @@ data StationInformationT f where
                         , _infoGroups                :: Columnar f (Vector.Vector Text.Text)
                         , _infoObcn                  :: Columnar f (Maybe Text.Text)
                         , _infoNearbyDistance        :: Columnar f Double
-                        , _infoBluetoothId           :: Columnar f Text.Text
+                        , _infoBluetoothId           :: Columnar f (Maybe Text.Text)
                         , _infoRideCodeSupport       :: Columnar f Bool
                         , _infoRentalUris            :: Columnar f (Vector.Vector Text.Text)
                         , _infoActive                :: Columnar f Bool
@@ -136,7 +136,7 @@ infoIsVirtualStation        :: Lens' (StationInformationT f) (C f Bool)
 infoGroups                  :: Lens' (StationInformationT f) (C f (Vector.Vector Text.Text))
 infoObcn                    :: Lens' (StationInformationT f) (C f (Maybe Text.Text))
 infoNearbyDistance          :: Lens' (StationInformationT f) (C f Double)
-infoBluetoothId             :: Lens' (StationInformationT f) (C f Text.Text)
+infoBluetoothId             :: Lens' (StationInformationT f) (C f (Maybe Text.Text))
 infoRideCodeSupport         :: Lens' (StationInformationT f) (C f Bool)
 infoRentalUris              :: Lens' (StationInformationT f) (C f (Vector.Vector Text.Text))
 infoActive                  :: Lens' (StationInformationT f) (C f Bool)
@@ -184,9 +184,10 @@ instance (HasSqlValueSyntax be String, Show BeamRentalMethod) => HasSqlValueSynt
   sqlValueSyntax = sqlValueSyntax . show
 
 instance FromField BeamRentalMethod where
-   fromField f mdata = if typeOid f /= typoid text -- TODO: any way to determine this automatically?
-   then returnError Incompatible f ""
-   else case B.unpack `fmap` mdata of
+   fromField f mdata = do
+     if typeOid f /= typoid text -- TODO: any way to determine this automatically?
+        then returnError Incompatible f ""
+        else case B.unpack `fmap` mdata of
           Nothing  -> returnError UnexpectedNull f ""
           Just dat ->
              case [ x | (x,t) <- reads dat, ("","") <- lex t ] of
@@ -196,7 +197,7 @@ instance FromField BeamRentalMethod where
 instance ToField BeamRentalMethod where
   toField = toField . show
 
-rentalMethodType :: DataType Pg.Postgres BeamRentalMethod
+rentalMethodType :: DataType Postgres BeamRentalMethod
 rentalMethodType = DataType pgTextType
 
 -- | Newtype wrapper for PhysicalConfiguration to allow us to define a custom FromBackendRow instance.
@@ -276,7 +277,7 @@ fromJSONToBeamStationInformation
                      , _infoGroups                = val_ $ fromList $ fmap Text.pack groups
                      , _infoObcn                  = val_ . Just . Text.pack $ obcn
                      , _infoNearbyDistance        = val_ nearby_distance
-                     , _infoBluetoothId           = val_ $ Text.pack bluetooth_id
+                     , _infoBluetoothId           = val_ bluetoothId
                      , _infoRideCodeSupport       = val_ ride_code_support
                      , _infoRentalUris            = val_ $ fromList [uriAndroid, uriIos, uriWeb]
                      , _infoActive                = val_ True
@@ -286,6 +287,7 @@ fromJSONToBeamStationInformation
     uriAndroid = Text.pack (AT.rentalUrisAndroid rental_uris)
     uriIos     = Text.pack (AT.rentalUrisIos rental_uris)
     uriWeb     = Text.pack (AT.rentalUrisWeb rental_uris)
+    bluetoothId = if null bluetooth_id then Just . Text.pack $ bluetooth_id else Nothing
 
 -- | Convert from the Beam StationInformation type to the JSON StationInformation
 fromBeamStationInformationToJSON :: StationInformation -> AT.StationInformation
@@ -327,7 +329,7 @@ fromBeamStationInformationToJSON (StationInformation
                         , AT.infoGroups                  = Text.unpack <$> toList groups
                         , AT.infoObcn                    = maybe "" Text.unpack obcn
                         , AT.infoNearbyDistance          = nearbyDistance
-                        , AT.infoBluetoothId             = Text.unpack bluetoothId
+                        , AT.infoBluetoothId             = maybe "" Text.unpack bluetoothId
                         , AT.infoRideCodeSupport         = rideCodeSupport
                         , AT.infoRentalUris              = AT.RentalURIs { AT.rentalUrisAndroid = maybe "" Text.unpack (rentalUrisList ^? element 1)
                                                                          , AT.rentalUrisIos     = maybe "" Text.unpack (rentalUrisList ^? element 2)
@@ -386,14 +388,14 @@ createStationInformation =
   , _infoGroups                = field "groups"                 (Pg.unboundedArray Pg.text) notNull
   , _infoObcn                  = field "obcn"                   (maybeType Pg.text)
   , _infoNearbyDistance        = field "nearby_distance"        double notNull
-  , _infoBluetoothId           = field "bluetooth_id"           Pg.text
+  , _infoBluetoothId           = field "bluetooth_id"           (maybeType Pg.text)
   , _infoRideCodeSupport       = field "ride_code_support"      boolean notNull
   , _infoRentalUris            = field "rental_uris"            (Pg.unboundedArray Pg.text) notNull
   , _infoActive                = field "active"                 boolean notNull
   , _infoReported              = field "reported"               (DataType (timestampType Nothing True)) (defaultTo_ currentTimestampUtc_) notNull
   }
 
--- | Postgres @NOW()@ function. Returns the server's timestamp
+-- | Postgres @NOW()@ function. Returns the server's timestamp in UTC.
 nowUtc_ :: QExpr Postgres s UTCTime
 nowUtc_ = QExpr (\_ -> PgExpressionSyntax (emit "NOW() at time zone 'UTC'"))
 
