@@ -36,7 +36,9 @@ instance IsPgCustomDataType EndpointQueried where
 
   -- 'pgDataTypeDescription' must also match the implementation of 'fromField' and 'sqlValueSyntax'.
   pgDataTypeDescription :: PgDataTypeSchema EndpointQueried
-  pgDataTypeDescription = pgCustomEnumSchema [StationInformationEP, StationStatusEP, SystemInformationEP]
+  pgDataTypeDescription =
+    pgCustomEnumSchema
+    [VersionsEP, VehicleTypesEP, StationInformationEP, StationStatusEP, SystemRegionsEP, SystemInformationEP, SystemPricingPlansEP]
 
 instance FromField EndpointQueried where
   fromField f mbValue = do
