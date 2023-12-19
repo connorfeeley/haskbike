@@ -63,7 +63,7 @@ handleReset options resetOptions = do
   pPrintCompact options
   pPrintCompact resetOptions
   if optResetOnly resetOptions
-    then log W "Only resetting database..." >> dropTables >> log W "Database reset; exiting." >> liftIO exitSuccess
+    then log W "Only resetting database..." >> dropTables >> migrateDB >> log W "Database reset; exiting." >> liftIO exitSuccess
     else log W "Resetting database..."      >> dropTables >> log W "Database reset." >>
          log W "Migrating database."        >> migrateDB >> log W "Migrations performed." >>
          log I "Initializing database."     >> handleInformation >> liftIO exitSuccess
