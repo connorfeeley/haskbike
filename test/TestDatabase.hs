@@ -34,6 +34,7 @@ import qualified API.SystemInformation                        as AT
 import           AppEnv
 
 import           Control.Lens
+import           Control.Monad                                ( unless )
 
 import           Data.Functor                                 ( void )
 import           Data.Int                                     ( Int32 )
@@ -182,10 +183,11 @@ unit_insertStationStatusApi = do
     insertStationStatus $ status ^. respData
 
   -- Exception was expected - only return error if inserted succeeded.
-  -- If the insertion succeeded, then database schema does not enforce foreign key constraint correctly.
+  -- If the insertion succeeded and is not length 0, then database schema does not enforce foreign key constraint correctly.
   case insertedStatus of
     Left (_ :: SqlError) -> pure ()
-    Right _              -> assertFailure "Unable to insert status records without information populated"
+    Right inserted       -> unless (null inserted)
+      (assertFailure ("Was able to insert status records without information populated: " <> (show . length) inserted <> " inserted"))
 
 -- | HUnit test for inserting station information and status, with data from the actual API.
 unit_insertStationApi :: IO ()

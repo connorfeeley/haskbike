@@ -194,9 +194,9 @@ insertStationStatus apiStatus =
               )
       (all_ (bikeshareDb ^. bikeshareStationInformation))
 
-    let infoMap = Map.fromList $ map (\inf -> ((fromIntegral . _infoStationId) inf, _infoId inf)) info
+    let infoMap = Map.fromList $ map (\inf -> ((fromIntegral . _infoStationId) inf, inf)) info
     let statusMap = Map.fromList $ map (\ss -> (AT._statusStationId ss, ss)) apiStatus
-    let statusWithInfoId = Map.elems (Map.intersectionWith (,) infoMap statusMap)
+    let statusWithInfoId = Map.elems (Map.intersectionWith (\inf ss -> (_infoId inf, ss)) infoMap statusMap)
 
     runInsertReturningList $
       insertOnConflict (bikeshareDb ^. bikeshareStationStatus)
