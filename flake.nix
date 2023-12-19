@@ -159,6 +159,22 @@
 
         packages.haskbike-static = pkgs.haskell.lib.justStaticExecutables self'.packages.haskbike;
 
+        # Display a graph of all modules and how they depend on each other
+        packages.module-deps-with-filetype = pkgs.writeShellScript "mainserv-module-deps-with-filetype" ''
+          shopt -s globstar
+          filetype="$1"
+          ${config.haskellProjects.default.basePackages.graphmod}/bin/graphmod \
+          ${/*silence warnings for missing external dependencies*/""} \
+          --quiet \
+          ${/*applies some kind of import simplification*/""} \
+          --prune-edges \
+          ./src-*/**/*.hs \
+          | ${pkgs.graphviz}/bin/dot \
+            ${/*otherwise it’s a bit cramped*/""} \
+            -Gsize="20,20!" \
+            -T"$filetype"
+        '';
+
         treefmt.config = {
           inherit (config.flake-root) projectRootFile;
           # This is the default, and can be overriden.

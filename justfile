@@ -76,6 +76,12 @@ build:
 redate:
     git-privacy redate origin/master
 
+module-timings:
+    cabal clean
+    cabal build --ghc-options "-O0 -ddump-to-file -ddump-timings"
+    nix run "nixpkgs#time-ghc-modules"
+
+
 # Not working.
 # import-local-table TABLE CSVFILE:
 #     source ./.env.local
