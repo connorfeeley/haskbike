@@ -142,7 +142,7 @@ infoRentalUris              :: Lens' (StationInformationT f) (C f (Vector.Vector
 infoActive                  :: Lens' (StationInformationT f) (C f Bool)
 infoReported                :: Lens' (StationInformationT f) (C f UTCTime)
 
-StationInformation (LensFor infoId)                     _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
+StationInformation (LensFor infoId)                      _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
 StationInformation _ (LensFor infoStationId)               _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
 StationInformation _ _ (LensFor infoName)                    _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
 StationInformation _ _ _ (LensFor infoPhysicalConfiguration)   _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
