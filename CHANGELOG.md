@@ -30,3 +30,7 @@
 * Rework station information database schema:
   * Insert new station information records (when changed).
   * Use station information serial ID column as station status foreign key.
+
+## 2.1.1 -- 2023-12-20
+
+* Track nixpkgs-unstable.
