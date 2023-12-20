@@ -84,8 +84,15 @@
             # haskbike.source = ./.;
             # aeson.source = "2.1.2.0";
             # zlib.source = pkgs.zlib;
+
             resource-pool.source = "0.4.0.0";
+
+            # 2023-12-20: latest hackage versions.
             servant.source = "0.20.1";
+            servant-client-core.source = "0.20";
+            servant-docs.source = "0.13";
+            servant-server.source = "0.20";
+            servant-client.source = "0.20";
           };
 
           # The base package set representing a specific GHC version.
