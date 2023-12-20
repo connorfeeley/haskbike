@@ -135,7 +135,6 @@
                 inherit (pkgs)
                   stack
                   reuse
-                  pgadmin
                   litecli
                   pgformatter
                   nixos-rebuild
