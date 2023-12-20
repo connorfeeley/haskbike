@@ -1,6 +1,6 @@
 BEGIN;
 -- Note: run in emacs with '\e', then paste into buffer, save, kill buffer
--- \i ~/source/haskbike/scripts/migrate-stn-info-reported-3-init.sql
+-- \i ~/source/haskbike/scripts/migrate-stn-info-reported-3.sql
 
 -- Disable triggers.
 SET session_replication_role = 'replica';
