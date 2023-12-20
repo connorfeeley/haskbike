@@ -24,3 +24,9 @@
 ## 1.3.2 -- 2023-12-13
 
 * Show latest time the bike share Toronto API was queried in the sidebar.
+
+## 2.0.0 -- 2023-12-20
+
+* Rework station information database schema:
+  * Insert new station information records (when changed).
+  * Use station information serial ID column as station status foreign key.
