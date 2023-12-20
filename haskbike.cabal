@@ -60,9 +60,10 @@ extra-source-files: test/json/*.json
 -- Linker (use gold) common warning flags.
 common compile-flags
     ghc-options: -Wall -fwrite-ide-info
-  if os(linux)
-    ghc-options:       -optl-fuse-ld=gold
-    ld-options:        -fuse-ld=gold
+    -- Link with gold on Linux.
+    if os(linux)
+      ghc-options:       -optl-fuse-ld=gold
+      ld-options:        -fuse-ld=gold
 
 -- Common language extensions.
 common common-extensions
@@ -77,6 +78,14 @@ common common-extensions
 
 -- Common dependencies shared by all targets.
 common common-depends
+    -- Linking to the C++ standard library
+    if impl(ghc >= 9.4)
+      build-depends: system-cxx-std-lib == 1.0
+    elif os(linux)
+      extra-libraries: stdc++
+    elif os(darwin)
+      extra-libraries: c++
+
     build-depends:    base
                     , bytestring
                     , pretty-simple
