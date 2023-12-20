@@ -34,3 +34,7 @@
 ## 2.1.1 -- 2023-12-20
 
 * Track nixpkgs-unstable.
+
+## 2.1.2 -- 2023-12-20
+
+* Track nixos-unstable; fix build failures with latest nixpkgs.
