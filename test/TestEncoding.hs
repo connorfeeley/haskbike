@@ -9,6 +9,8 @@ import qualified API.StationInformation                       as AT
 
 import           AppEnv
 
+import           Control.Monad                                ( forM_ )
+
 import           Data.List                                    ( sortOn )
 import qualified Data.Map                                     as Map
 
@@ -43,8 +45,9 @@ unit_roundtripStationInformation = do
   let intersected = Map.intersection (apiMap insertedJson) ((apiMap . _respData) infoJson)
   assertEqual "Station information intersection length" 732 (length intersected)
 
-  assertEqual "Station information roundtrip" (sortOn AT.infoStationId insertedJson) ((sortOn AT.infoStationId . _respData) infoJson)
-  pure ()
+  -- Zip inserted data and API data together and assert each element is equal; done per-element to make errors readable.
+  forM_ (zip (sortOn AT.infoStationId insertedJson) ((sortOn AT.infoStationId . _respData) infoJson)) $ \(ins, api) ->
+    assertEqual "Station information encoding roundtrip" api ins
 
 apiMap :: [AT.StationInformation] -> Map.Map Int AT.StationInformation
 apiMap = Map.fromList . map (\inf -> (AT.infoStationId inf, inf))
