@@ -287,7 +287,7 @@ fromJSONToBeamStationInformation
     uriAndroid = Text.pack (AT.rentalUrisAndroid rental_uris)
     uriIos     = Text.pack (AT.rentalUrisIos rental_uris)
     uriWeb     = Text.pack (AT.rentalUrisWeb rental_uris)
-    bluetoothId = if null bluetooth_id then Just . Text.pack $ bluetooth_id else Nothing
+    bluetoothId = if not (null bluetooth_id) then Just . Text.pack $ bluetooth_id else Nothing
 
 -- | Convert from the Beam StationInformation type to the JSON StationInformation
 fromBeamStationInformationToJSON :: StationInformation -> AT.StationInformation
