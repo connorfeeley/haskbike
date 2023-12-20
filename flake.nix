@@ -99,7 +99,7 @@
           # By default, this is pkgs.haskellPackages.
           # You may also create your own. See https://haskell.flake.page/package-set
           # basePackages = pkgs.haskellPackages;
-          basePackages = pkgs.haskell.packages.ghc928;
+          basePackages = pkgs.haskell.packages.ghc92;
 
           devShell =
             let
