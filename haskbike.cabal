@@ -57,12 +57,6 @@ extra-doc-files:    CHANGELOG.md
 extra-source-files: test/json/*.json
                   , docs/json/2.3/*.json
 
--- Enable SQL debugging output.
-Flag DEBUG
-  Description: Enable debug support
-  Default:     False
-  Manual:      True
-
 -- Linker (use gold) common warning flags.
 common compile-flags
     ghc-options: -Wall -fwrite-ide-info
