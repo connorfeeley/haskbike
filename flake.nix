@@ -32,6 +32,14 @@
           projectRoot = ./.;
 
           settings = {
+            # fmt = { self, super, ... }: {
+            #   custom = _pkg:
+            #     pkgs.lib.pipe pkgs.haskellPackages.fmt [
+            #       (pkgs.haskell.lib.compose.addBuildDepends [ pkgs.haskellPackages.system-cxx-std-lib ])
+            #       (pkgs.haskell.lib.compose.addExtraLibraries [ "pkgs.haskellPackages.c++" ])
+            #       (pkgs.haskell.lib.compose.overrideCabal (drv: { doCheck = false; }))
+            #     ];
+            # };
             haskbike = { self, super, ... }: {
               custom = _pkg: pkgs.lib.pipe super.haskbike [
                 # Replace Version.hs with a generated one, since it requires access to the git directory
@@ -46,6 +54,13 @@
                   {
                     postPatch = o.postPatch or "" + "cp ${versionFile} src-lib/Version.hs";
                     doCheck = false;
+
+                    # checkInputs = [ pkgs.ephemeralpg ];
+
+                    # preCheck = ''
+                    #   export HASKBIKE_TEST_POSTGRES="$(pg_tmp -w 1200)"
+                    # '';
+
                     postInstall = o.postInstall or "" + ''
                       mkdir -p $out/share/haskbike/www/static
                       cp -r ${./static-files}/* $out/share/haskbike/www/static/
