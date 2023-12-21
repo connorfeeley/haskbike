@@ -155,6 +155,8 @@
 
                   timescaledb-tune
                   timescaledb-parallel-copy
+
+                  ghostscript
                   ;
                 inherit (pkgs.nodePackages) prettier;
                 # PostgreSQL with extensions
