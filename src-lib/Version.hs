@@ -11,8 +11,6 @@ module Version
 
 import           Data.Version   ( showVersion )
 
-import           Fmt
-
 import           GitHash
 
 import           Paths_haskbike ( version )
@@ -24,7 +22,7 @@ getCabalVersion :: String
 getCabalVersion = showVersion version
 
 getGitVersion :: String
-getGitVersion = format "{} {} ({})" tag (if dirty then ("(dirty)" :: String) else "") date
+getGitVersion = tag <> " " <> (if dirty then ("(dirty)" :: String) else "") <> " " <> date
   where
     tag   = giTag        gi
     date  = giCommitDate gi

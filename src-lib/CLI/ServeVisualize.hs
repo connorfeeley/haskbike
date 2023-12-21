@@ -9,7 +9,7 @@ import           CLI.Options
 
 import           Colog
 
-import           Fmt
+import qualified Data.Text   as T
 
 import           Prelude     hiding ( log )
 
@@ -23,7 +23,7 @@ import           UnliftIO    ( liftIO )
 -- | Dispatch CLI arguments to the visualization server.
 dispatchVisualize :: ServeVisualizeOptions -> AppM ()
 dispatchVisualize options = do
-  log I $ format "Launching visualization web server on port {}." (optServeVisualizePort options)
+  log I $ "Launching visualization web server on port " <> (T.pack . show) (optServeVisualizePort options)
   env <- ask
 
   let serverEnv = ServerEnv { serverAppEnv         = env

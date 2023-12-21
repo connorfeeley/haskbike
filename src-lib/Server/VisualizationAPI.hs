@@ -26,8 +26,6 @@ import           Database.BikeShare.Expressions
 import           Database.BikeShare.Operations
 import           Database.BikeShare.Tables.StationInformation
 
-import           Fmt                                          ( format )
-
 import           Servant
 import           Servant.HTML.Lucid
 import           Servant.Server.Generic
@@ -155,7 +153,7 @@ systemStatusVisualizationPage startTime endTime = do
 stationListPage :: Maybe T.Text -> ServerAppM (PureSideMenu StationList)
 stationListPage selection = do
   appEnv <- asks serverAppEnv
-  logInfo $ format "Rendering station list"
+  logInfo $ "Rendering station list"
 
   latest <- liftIO $ runAppM appEnv $ withPostgres $ runSelectReturningList $ selectWith queryLatestStatuses
 
@@ -198,7 +196,7 @@ performanceCsvPageHandler startTime endTime = do
   -- AppM actions can be lifted into ServerAppM by using a combination of liftIO and runReaderT.
   currentUtc <- liftIO getCurrentTime
 
-  logInfo $ format "Rendering performance CSV page"
+  logInfo $ "Rendering performance CSV page"
 
   sideMenu $
     PerformanceCSV

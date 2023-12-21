@@ -34,8 +34,6 @@ import           Database.BikeShare.StatusVariationQuery
 import           Database.BikeShare.Tables.StationInformation
 import           Database.BikeShare.Tables.StationStatus
 
-import           Fmt
-
 import           Prelude                                      hiding ( log )
 
 import           System.Console.ANSI
@@ -56,8 +54,8 @@ dispatchEvents (EventRange options)  = do
   let firstDay = fromMaybe yesterday (startDay options)
   let lastDay = fromMaybe today (endDay options)
 
-  log I $ format "Getting counts of each bike time every two hours between {} and {}." firstDay lastDay
-  log D $ format "Options: {}" (pShowCompact options)
+  -- log I $ format "Getting counts of each bike time every two hours between {} and {}." firstDay lastDay
+  -- log D $ format "Options: {}" (pShowCompact options)
 
   -- Run queries concurrently (automatic thread pool size).
   countsAtTimes <- pooledMapConcurrently (uncurry bikeCountsAtMoment) (dayTimesRange firstDay lastDay)
@@ -66,7 +64,7 @@ dispatchEvents (EventRange options)  = do
 
 dispatchEvents (EventCounts options) = do
   -- Calculate number of dockings and undockings
-  log D $ format "Options: {}" (pShowCompact options)
+  -- log D $ format "Options: {}" (pShowCompact options)
 
   -- Determine current day and previous day.
   today <- liftIO $ utctDay <$> getCurrentTime
@@ -78,20 +76,20 @@ dispatchEvents (EventCounts options) = do
   let endDay' = fromMaybe today endDay
 
   -- Get undocking/docking counts.
-  log I $ format "Calculating number of event counts for (optional) station {} (limit: {})." (maybeF stationId) (optEventsCountLimit options)
+  -- log I $ format "Calculating number of event counts for (optional) station {} (limit: {})." (maybeF stationId) (optEventsCountLimit options)
   eventSums <- eventsForRange stationId startDay' startTime endDay' endTime
 
   let sortOrder = Undocking
   liftIO $ do
-    putStrLn $ format "\nSorted by differentials ({}):" (sortedMessage sortOrder)
+    -- putStrLn $ format "\nSorted by differentials ({}):" (sortedMessage sortOrder)
     formatDockingEventsDifferential $ takeMaybe limit $ sortOnVariation sortOrder (sortedEventsBoth eventSums)
 
     putStrLn ""
     formatDockingEventsCount $ takeMaybe limit $ sortDockingEventsCount sortOrder (sortOnVariationTotal Undocking eventSums)
   where
     sortedMessage :: AvailabilityCountVariation -> String
-    sortedMessage Docking   = format "{} >> {}" (showLower Docking) (showLower Undocking)
-    sortedMessage Undocking = format "{} >> {}" (showLower Undocking) (showLower Docking)
+    sortedMessage Docking   = (showLower Docking) <> " >> " <> (showLower Undocking)
+    sortedMessage Undocking = (showLower Undocking) <> " >> " <> (showLower Docking)
 
     limit :: Maybe Int
     limit = optEventsCountLimit options
@@ -143,7 +141,7 @@ takeMaybe Nothing xs      = xs
 
 bikeCountsAtMoment :: Day -> TimeOfDay -> AppM (Day, TimeOfDay, Int32, Int32, Int32, Int32)
 bikeCountsAtMoment day timeOfDay = do
-  log I $ format "Getting number of bikes by type in the system on {} at {}" day timeOfDay
+  -- log I $ format "Getting number of bikes by type in the system on {} at {}" day timeOfDay
   statusForMoment <- withPostgres $ runSelectReturningList $ select $
     queryLatestStatusBetweenExpr earliestTime latestTime
   pure ( day

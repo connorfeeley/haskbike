@@ -32,8 +32,6 @@ import qualified Database.BikeShare.Tables.StationInformation as DB
 import qualified Database.BikeShare.Tables.StationStatus      as DB
 import qualified Database.BikeShare.Tables.SystemInformation  as DB
 
-import           Fmt
-
 import           Servant.Client                               ( ClientError, ClientM )
 
 import           System.Directory.Internal.Prelude            ( exitFailure )
@@ -90,7 +88,7 @@ class APIPersistable apiType dbType | apiType -> dbType where
       WentBackwards extendByMs -> liftIO (delaySecs extendByMs)
       Success (resp, inserted) -> do
         liftIO $ atomically $ writeTVar lastUpdatedVar (utcToPosix (_respLastUpdated resp) + timeToLiveS resp)
-        logInfo (format "[{}] Inserted {} records - sleeping for {}s" (show ep) (length inserted) (timeToLiveS resp))
+        -- logInfo ("[" <> (show ep) <> "] Inserted " <> (length inserted) <> "records - sleeping for "<> (timeToLiveS resp)<>"s")
         -- Sleep for requisite TTL.
         liftIO $ threadDelay (timeToLiveS resp * msPerS)
     pure ()

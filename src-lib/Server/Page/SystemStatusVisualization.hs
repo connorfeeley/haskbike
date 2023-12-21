@@ -13,8 +13,6 @@ import qualified Data.Text                       as T
 import           Data.Time
 import           Data.Time.Extras
 
-import           Fmt
-
 import           Graphics.Vega.VegaLite.Extra
 
 import           Lucid
@@ -117,9 +115,9 @@ instance ToHtml SystemStatusVisualizationPage where
       staticLink = _systemStatusVisPageStaticLink params
 
       dateHeader :: T.Text
-      dateHeader = format "{} ➜ {}"
-                   (prettyTime (earliestTime times'))
-                   (prettyTime (latestTime   times'))
+      dateHeader =
+                   (T.pack . show $ prettyTime (earliestTime times')) <> " ➜ " <>
+                   (T.pack . show $ prettyTime (latestTime   times'))
 
       times' = enforceTimeRangeBounds (StatusDataParams (tz $ _systemStatusVisPageTimeRange params)
                                                         (currentUtcTime $ _systemStatusVisPageTimeRange params)

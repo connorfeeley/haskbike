@@ -12,8 +12,6 @@ import           Data.Time                               ( TimeZone, UTCTime )
 
 import           Database.BikeShare.Tables.StationStatus
 
-import           Fmt
-
 import           Prelude                                 hiding ( log, reverse, unlines, unwords )
 
 import           System.Console.ANSI
@@ -25,7 +23,7 @@ showText = pack . show
 
 -- | Format text with ANSI colour codes.
 colouredText :: ColorIntensity -> Color -> Text -> Text
-colouredText intensity colour text = format "{}{}{}" (setSGRCode [SetColor Foreground intensity colour]) text (setSGRCode [])
+colouredText intensity colour text = pack (setSGRCode [SetColor Foreground intensity colour]) <> text <> pack (setSGRCode [])
 
 -- | Helper functions for Formatting text with ANSI colour codes.
 boldCode, resetIntens, italCode, resetItal, underCode, resetUnder :: Text
@@ -58,7 +56,7 @@ formatStationInfo (timeZone, name, status) =
 
 formattedName :: String -> StationStatus -> Text
 formattedName name status =
-    format "{}[{}{}]{} {}{}{}" boldCode idPrefix (status ^. statusStationId) resetIntens underCode name resetUnder
+    boldCode <> "[" <> idPrefix <> (pack . show $ status ^. statusStationId) <> "]" <> resetIntens <> " " <> underCode <> pack name <> resetUnder
     where idPrefix = resetIntens <> "# " <> boldCode
 
 -- Format the last reported time in the specified time zone (namerly, the system's time zone).
@@ -77,16 +75,16 @@ formattedBool b = if b
 fmtAvailability :: (Text, Int32, Int32) -> Text
 fmtAvailability (name, avail, disabled)
   = colouredText Dull Yellow name
- <> colouredText Vivid Green  (fmt $ padLeftF 2 ' ' avail)    <> " available" <> tab
+ <> colouredText Vivid Green  ((pack . show) avail)    <> " available" <> tab
  <> boldCode <> "|" <> tab <> resetIntens
- <> colouredText Vivid Red    (fmt $ padLeftF 2 ' ' disabled) <> " disabled"
+ <> colouredText Vivid Red    ((pack . show) disabled) <> " disabled"
  where tab = "\t" :: Text
 
 fmtBikeAvailability :: Text -> Int32 -> Text
 fmtBikeAvailability name count
   = tab
- <> colouredText Dull Yellow (fmt $ padLeftF 9 ' ' name) <> ": "
- <> colouredText Vivid Green  (fmt $ padLeftF 2 ' ' count) <> tab <> boldCode <> "|" <> resetIntens
+ <> colouredText Dull Yellow ((pack . show) name) <> ": "
+ <> colouredText Vivid Green  ((pack . show) count) <> tab <> boldCode <> "|" <> resetIntens
  where tab = "\t" :: Text
 
 withHeader :: Text -> [Text] -> [Text]

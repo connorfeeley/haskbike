@@ -13,13 +13,12 @@ import           Control.Exception             ( SomeException, try )
 import           Control.Monad                 ( void )
 
 import           Data.Pool
+import qualified Data.Text                     as T
 import           Data.Time                     ( getCurrentTimeZone )
 
 import           Database.Beam.Postgres        ( close, connect )
 import           Database.BikeShare.Migrations
 import           Database.BikeShare.Utils
-
-import           Fmt                           ( format )
 
 import           Network.HTTP.Client           ( newManager )
 import           Network.HTTP.Client.TLS       ( tlsManagerSettings )
@@ -78,7 +77,7 @@ unit_poll = do
   let env = mainEnv W False False timeZone pool clientManager
 
   -- Log the database connection parameters.
-  runAppM env (log I $ format "Connected to database using: {}" (pShowCompact connInfo))
+  -- runAppM env (log I $ "Connected to database using: " <> (pShowCompact connInfo))
   runAppM env migrateDB
   runAppM env doPoll
   where

@@ -27,8 +27,6 @@ import           Database.BikeShare.Operations.Factors
 import           Database.BikeShare.Operations.FactorsCSV
 import           Database.BikeShare.StatusVariationQuery
 
-import           Fmt                                        ( format )
-
 import           GHC.Generics                               ( Generic )
 
 import           Servant
@@ -114,7 +112,7 @@ statusHandler =  DataAPI { dataForStation       = stationStatusData
 
 stationStatusData :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM [StationStatusVisualization]
 stationStatusData stationId startTime endTime = do
-  logInfo $ format "Creating JSON payload for {station ID: {}, start time: {}, end time: {}} " stationId startTime endTime
+  logInfo $ "Creating JSON payload for {station ID: "<>(T.pack . show) stationId <>", start time: "<>(T.pack . show) startTime <>", end time: "<>(T.pack . show) endTime<>" "
   dataSource <- generateJsonDataSource stationId startTime endTime
   logDebug "Created JSON payload"
   pure dataSource
@@ -122,7 +120,7 @@ stationStatusData stationId startTime endTime = do
 
 stationIntegralData :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM [StatusIntegral]
 stationIntegralData stationId startTime endTime = do
-  logInfo $ format "Creating integral JSON payload for {station ID: {}, start time: {}, end time: {}} " stationId startTime endTime
+  -- logInfo $ format "Creating integral JSON payload for {station ID: {}, start time: {}, end time: {}} " stationId startTime endTime
   dataSource <- generateJsonDataSourceIntegral  stationId startTime endTime
   logDebug "Created integral JSON payload"
   pure dataSource
@@ -130,21 +128,21 @@ stationIntegralData stationId startTime endTime = do
 
 stationFactorData :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM [StatusFactor]
 stationFactorData stationId startTime endTime = do
-  logInfo $ format "Creating factor JSON payload for {station ID: {}, start time: {}, end time: {}} " stationId startTime endTime
+  -- logInfo $ format "Creating factor JSON payload for {station ID: {}, start time: {}, end time: {}} " stationId startTime endTime
   dataSource <- generateJsonDataSourceFactor  stationId startTime endTime
   logDebug "Created factor JSON payload"
   pure dataSource
 
 systemInfoDataHandler :: Maybe LocalTime -> Maybe LocalTime -> ServerAppM [SystemInformationCountVisualization]
 systemInfoDataHandler startTime endTime = do
-  logInfo $ format "Creating system information JSON payload for {start time: {}, end time: {}} " startTime endTime
+  -- logInfo $ format "Creating system information JSON payload for {start time: {}, end time: {}} " startTime endTime
   dataSource <- generateJsonDataSourceSysInfo startTime endTime
   logDebug "Created factor JSON payload"
   pure dataSource
 
 performanceCsvHandler :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM (Headers '[Header "Content-Disposition" T.Text] BL.ByteString)
 performanceCsvHandler stationId startTime endTime = do
-  logInfo $ format "Creating performance data CSV payload for {station ID: {}, start time: {}, end time: {}} " stationId startTime endTime
+  -- logInfo $ format "Creating performance data CSV payload for {station ID: {}, start time: {}, end time: {}} " stationId startTime endTime
 
   appEnv <- getAppEnvFromServer
   let tz = envTimeZone appEnv
@@ -163,9 +161,9 @@ performanceCsvHandler stationId startTime endTime = do
 
   let fileContent = encodeIntegrals integrals
 
-  let stationIdString :: String = maybe "system" (format "station-{}") stationId
-  let filename :: String = format "{}-performance-{}-{}.csv" stationIdString (earliestTime range) (latestTime range)
-  pure $ addHeader (format "attachment; filename=\"{}\"" (replaceSpaces filename)) (fileContent :: BL.ByteString)
+  let stationIdString :: String = maybe "system" show stationId
+  let filename :: String = show stationIdString <> "-performance-" <> show (earliestTime range) <> "-" <> show (latestTime range)
+  pure $ addHeader ("attachment; filename=\"" <> (T.pack . show) (replaceSpaces filename) <> "\"") (fileContent :: BL.ByteString)
   where
     encodeIntegrals = encodeDefaultOrderedByName . map (PerformanceDataCSV . integralToPerformanceData)
 
@@ -187,7 +185,7 @@ handleDockingEventsData stationId startTime endTime = do
   let times' = enforceTimeRangeBounds (StatusDataParams tz currentUtc (TimePair startTime endTime tz currentUtc))
   let (earliest, latest) = (earliestTime times', latestTime times')
 
-  logInfo $ format "Rendering page for {station ID: {}, start time: {}, end time: {}} " stationId earliest latest
+  -- logInfo $ format "Rendering page for {station ID: {}, start time: {}, end time: {}} " stationId earliest latest
 
   let variation = StatusVariationQuery (fromIntegral <$> stationId) [ EarliestTime (localTimeToUTC tz earliest)
                                                                     , LatestTime   (localTimeToUTC tz latest)
@@ -206,7 +204,7 @@ handleChargingEventsData stationId startTime endTime = do
   let times' = enforceTimeRangeBounds (StatusDataParams tz currentUtc (TimePair startTime endTime tz currentUtc))
   let (earliest, latest) = (earliestTime times', latestTime times')
 
-  logInfo $ format "Rendering page for {station ID: {}, start time: {}, end time: {}} " stationId earliest latest
+  -- logInfo $ format "Rendering page for {station ID: {}, start time: {}, end time: {}} " stationId earliest latest
 
   let variation = StatusVariationQuery (fromIntegral <$> stationId) [ EarliestTime (localTimeToUTC tz earliest)
                                                                     , LatestTime   (localTimeToUTC tz latest)

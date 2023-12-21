@@ -23,8 +23,6 @@ import           Database.BikeShare
 import           Database.BikeShare.Operations
 import           Database.BikeShare.Tables.StationStatus
 
-import           Fmt
-
 import           Prelude                                 hiding ( log )
 
 import           System.Console.ANSI
@@ -43,26 +41,25 @@ dispatchDebug _options = do
 
   let tableSize = tableValuesNeeded (Proxy :: Proxy StationStatusT)
 
-  log D $ format "Number of rows in station_status table: {}" numStatusRows
-  liftIO $ putStrLn $ format "Info table contains {} rows" tableSize
+  -- log D $ format "Number of rows in station_status table: {}" numStatusRows
+  -- liftIO $ putStrLn $ format "Info table contains {} rows" tableSize
 
   -- Get the size of the station information table.
   infoTableSize <- queryTableSize "station_information"
   let infoTableSizeText =
-        maybe ("Error: unable to determine station info table size." :: String)
-        (format "Info table uses {} of storage.")
+        fromMaybe ("Error: unable to determine station info table size." :: String)
         infoTableSize
 
-  log D $ format "Info table size: {}" infoTableSizeText
+  -- log D $ format "Info table size: {}" infoTableSizeText
 
   statusTableSize <- queryTableSize "StationStatus"
   let statusTableSizeText =
-        maybe ("Error: unable to determine station status table size." :: String)
-        (format "Status table uses {} of storage.")
+        fromMaybe ("Error: unable to determine station status table size." :: String)
         statusTableSize
 
-  log D $ format "Status table size: {}" statusTableSizeText
-  liftIO $ putStrLn $ format "Status table contains {} rows." tableSize
+
+  -- log D $ format "Status table size: {}" statusTableSizeText
+  -- liftIO $ putStrLn $ format "Status table contains {} rows." tableSize
 
   liftIO $ do
     cliOut $ formatDatabaseStats numStatusRows infoTableSize statusTableSize

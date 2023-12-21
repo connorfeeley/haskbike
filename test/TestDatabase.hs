@@ -50,8 +50,6 @@ import           Database.BikeShare.Tables.StationStatus
 import           Database.BikeShare.Tables.SystemInformation
 import           Database.BikeShare.Utils
 
-import           Fmt
-
 import           Test.Tasty.HUnit
 
 import           UnliftIO                                     ( try )
@@ -67,7 +65,7 @@ initDBWithAllTestData = do
 
   -- Insert test station status data 1-22.
   mapM_ (\i -> do
-            statusResponse <- getDecodedFileStatus $ "docs/json/2.3/station_status-"+|i|+".json"
+            statusResponse <- getDecodedFileStatus $ "docs/json/2.3/station_status-" <> show i <> ".json"
             void $ runWithAppM dbnameTest $ insertStationStatus $ statusResponse ^. respData
         ) [(1 :: Int) .. (22 :: Int)]
 

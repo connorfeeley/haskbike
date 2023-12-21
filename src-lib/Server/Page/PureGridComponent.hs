@@ -14,8 +14,6 @@ import           Data.Time.Extras
 
 import           Database.BikeShare.Tables.StationInformation
 
-import           Fmt
-
 import qualified Graphics.Vega.VegaLite                       as VL
 import           Graphics.Vega.VegaLite.Extra
 
