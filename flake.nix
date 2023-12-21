@@ -62,6 +62,7 @@
                       cp -r ${./static-files}/* $out/share/haskbike/www/static/
                     '';
                   }))
+                (pkgs.haskell.lib.enableLibraryProfiling)
 
                 # Add optparse-applicative completions to the derivation output.
                 (self.generateOptparseApplicativeCompletions [ "haskbike" ])
