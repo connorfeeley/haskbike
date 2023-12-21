@@ -153,7 +153,7 @@ systemStatusVisualizationPage startTime endTime = do
 stationListPage :: Maybe T.Text -> ServerAppM (PureSideMenu StationList)
 stationListPage selection = do
   appEnv <- asks serverAppEnv
-  logInfo $ "Rendering station list"
+  logInfo "Rendering station list"
 
   latest <- liftIO $ runAppM appEnv $ withPostgres $ runSelectReturningList $ selectWith queryLatestStatuses
 
@@ -196,7 +196,7 @@ performanceCsvPageHandler startTime endTime = do
   -- AppM actions can be lifted into ServerAppM by using a combination of liftIO and runReaderT.
   currentUtc <- liftIO getCurrentTime
 
-  logInfo $ "Rendering performance CSV page"
+  logInfo "Rendering performance CSV page"
 
   sideMenu $
     PerformanceCSV

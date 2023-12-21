@@ -11,7 +11,7 @@ import           AppEnv
 import           CLI.Options
 import           CLI.QueryFormat
 
-import           Colog                                   ( log, pattern D )
+import           Colog                                   ( log, logDebug, pattern D )
 
 import           Data.Int                                ( Int32 )
 import           Data.Maybe                              ( fromMaybe )
@@ -27,6 +27,8 @@ import           Prelude                                 hiding ( log )
 
 import           System.Console.ANSI
 
+import           TextShow                                ( showt )
+
 import           UnliftIO
 
 
@@ -41,8 +43,8 @@ dispatchDebug _options = do
 
   let tableSize = tableValuesNeeded (Proxy :: Proxy StationStatusT)
 
-  -- log D $ format "Number of rows in station_status table: {}" numStatusRows
-  -- liftIO $ putStrLn $ format "Info table contains {} rows" tableSize
+  logDebug $ "Number of rows in station_status table: " <> showt numStatusRows
+  liftIO $ putStrLn $ "Info table contains " <> show tableSize <> " rows"
 
   -- Get the size of the station information table.
   infoTableSize <- queryTableSize "station_information"
@@ -50,7 +52,7 @@ dispatchDebug _options = do
         fromMaybe ("Error: unable to determine station info table size." :: String)
         infoTableSize
 
-  -- log D $ format "Info table size: {}" infoTableSizeText
+  logDebug $ "Info table size: " <> showt infoTableSizeText
 
   statusTableSize <- queryTableSize "StationStatus"
   let statusTableSizeText =
@@ -58,8 +60,8 @@ dispatchDebug _options = do
         statusTableSize
 
 
-  -- log D $ format "Status table size: {}" statusTableSizeText
-  -- liftIO $ putStrLn $ format "Status table contains {} rows." tableSize
+  logDebug $ "Status table size: " <> showt statusTableSizeText
+  liftIO $ putStrLn $ "Status table contains " <> show tableSize <> " rows"
 
   liftIO $ do
     cliOut $ formatDatabaseStats numStatusRows infoTableSize statusTableSize

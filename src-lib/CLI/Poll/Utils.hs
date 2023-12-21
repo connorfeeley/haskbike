@@ -52,15 +52,13 @@ handleResponseWrapper ep resp pLastUpdated = do
 
 handleResponseBackwards :: EndpointQueried -> ResponseWrapper a -> Int -> Int -> Int -> AppM Int
 handleResponseBackwards ep _resp pLastUpdated lastUpdated timeElapsed = do
-  -- logDebug ((T.pack . show) ep <> " last updated went backwards: [" <> (T.pack . show) posixToUtc pLastUpdated <> "] -> ["(T.pack . show) (posixToUtc lastUpdated) <> "] | " (T.pack . show) timeElapsed <> "s")
+  logDebug $ (T.pack . show) ep <> " last updated went backwards: [" <> (T.pack . show . posixToUtc) pLastUpdated <> "] -> [" <> (T.pack . show) (posixToUtc lastUpdated) <> "] | " <> (T.pack . show) timeElapsed <> "s"
   pure (-timeElapsed)
 
 handleResponseForwards :: EndpointQueried -> ResponseWrapper a -> Int -> Int -> Int -> AppM Int
 handleResponseForwards ep _resp pLastUpdated lastUpdated timeElapsed = do
-  logDebug errorLog
+  logDebug $ "(" <> (T.pack . show) ep <> ") last updated: [" <> (T.pack . show) (posixToUtc pLastUpdated) <> "] -> [" <> (T.pack . show . posixToUtc) lastUpdated <> "] | " <> (T.pack . show) timeElapsed <> "s"
   pure (-timeElapsed)
-  where errorLog = "(" <> (T.pack . show) ep <>") last updated: [" <> (T.pack . show) (posixToUtc pLastUpdated) <> "] -> [" <> (T.pack . show) (posixToUtc lastUpdated) <> "] | " <> (T.pack . show) timeElapsed <> "s"
-
 
 
 -- * Functions for handling and inserting the appropriate query log records.

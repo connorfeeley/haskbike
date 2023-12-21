@@ -22,7 +22,7 @@ getCabalVersion :: String
 getCabalVersion = showVersion version
 
 getGitVersion :: String
-getGitVersion = tag <> " " <> (if dirty then ("(dirty)" :: String) else "") <> " " <> date
+getGitVersion = tag <> " " <> if dirty then "(dirty)" else "" <> " " <> date
   where
     tag   = giTag        gi
     date  = giCommitDate gi

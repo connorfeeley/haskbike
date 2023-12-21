@@ -7,13 +7,13 @@ import           AppEnv
 
 import qualified CLI.Poll                      as Poll
 
-import           Colog                         ( log, pattern I, pattern W )
+import           Colog                         ( logInfo, pattern W )
 
 import           Control.Exception             ( SomeException, try )
 import           Control.Monad                 ( void )
 
 import           Data.Pool
-import qualified Data.Text                     as T
+import qualified Data.Text.Lazy                as TL
 import           Data.Time                     ( getCurrentTimeZone )
 
 import           Database.Beam.Postgres        ( close, connect )
@@ -77,7 +77,8 @@ unit_poll = do
   let env = mainEnv W False False timeZone pool clientManager
 
   -- Log the database connection parameters.
-  -- runAppM env (log I $ "Connected to database using: " <> (pShowCompact connInfo))
+  runAppM env $
+    logInfo $ "Connected to database using: " <> (TL.toStrict . pShowCompact) connInfo
   runAppM env migrateDB
   runAppM env doPoll
   where

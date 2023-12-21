@@ -62,7 +62,7 @@ refreshStationData = do
     (Right info, Right status) -> do
       insInfo   <- insertStationInformation (info ^. respLastUpdated) (info ^. respData)
       insStatus <- insertStationStatus      (status ^. respData)
-      log D $ "Inserted " <> (T.pack . show) (length insInfo) <> " information records and "<> (T.pack . show) (length insStatus)<>" status records."
+      log D $ "Inserted " <> (T.pack . show) (length insInfo) <> " information records and " <> (T.pack . show) (length insStatus) <> " status records."
 
 
 -- | Concurrently request station information and status.

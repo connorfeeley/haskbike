@@ -115,9 +115,7 @@ instance ToHtml SystemStatusVisualizationPage where
       staticLink = _systemStatusVisPageStaticLink params
 
       dateHeader :: T.Text
-      dateHeader =
-                   (T.pack . show $ prettyTime (earliestTime times')) <> " ➜ " <>
-                   (T.pack . show $ prettyTime (latestTime   times'))
+      dateHeader = T.pack $ prettyTime (earliestTime times') <> " ➜ " <> prettyTime (latestTime   times')
 
       times' = enforceTimeRangeBounds (StatusDataParams (tz $ _systemStatusVisPageTimeRange params)
                                                         (currentUtcTime $ _systemStatusVisPageTimeRange params)

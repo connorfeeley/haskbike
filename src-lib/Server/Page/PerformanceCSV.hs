@@ -53,9 +53,7 @@ instance ToHtml PerformanceCSV where
 
     where
       dateHeader :: T.Text
-      dateHeader = T.pack $
-                   (prettyTime (earliestTime times')) <> " ➜ " <>
-                   (prettyTime (latestTime   times'))
+      dateHeader = T.pack $ prettyTime (earliestTime times') <> " ➜ " <> prettyTime (latestTime   times')
 
       times' = enforceTimeRangeBounds (StatusDataParams (tz $ performanceCsvPageTimeRange params)
                                                         (currentUtcTime $ performanceCsvPageTimeRange params)

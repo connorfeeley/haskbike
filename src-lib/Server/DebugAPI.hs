@@ -49,7 +49,7 @@ sleepDatabaseHandler :: Int -> ServerAppM ()
 sleepDatabaseHandler seconds = do
   env <- getAppEnvFromServer -- Get the ServerEnv within ServerAppM context
 
-  logInfo $ "Sleeping database for "<>(T.pack . show) seconds<>" seconds"
+  logInfo $ "Sleeping database for " <> (T.pack . show) seconds <> " seconds"
   -- throwString "This will print last as an error message"
   --   `finally` logInfo "This will print second"
   pool <- liftIO $ runAppM env withConnPool

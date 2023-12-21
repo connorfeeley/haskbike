@@ -14,8 +14,8 @@ import           CLI.Poll
 import           CLI.Query
 import           CLI.ServeVisualize
 
-import           Colog                     ( LogAction, Severity (..), WithLog, cmap, fmtMessage, log, logTextStdout,
-                                             pattern D, pattern E, pattern I, usingLoggerT )
+import           Colog                     ( LogAction, Severity (..), WithLog, cmap, fmtMessage, log, logInfo,
+                                             logTextStdout, pattern D, pattern E, pattern I, usingLoggerT )
 
 import           Control.Monad             ( unless, void, when )
 import           Control.Monad.IO.Class    ( MonadIO )
@@ -24,6 +24,7 @@ import           Data.Pool
 import qualified Data.Text                 as T
 import qualified Data.Text                 as Text
 import           Data.Text.Lazy            ( toStrict )
+import qualified Data.Text.Lazy            as TL
 import           Data.Time                 ( getCurrentTimeZone )
 
 import           Database.Beam.Postgres    ( ConnectInfo (connectPassword), close, connect )
@@ -65,8 +66,8 @@ main = do
 
   -- Set up database connection pool.
   connInfo <- mkDbConnectInfo (optDatabase options)
-  -- usingLoggerT logStdoutAction $
-  --   log I $ "Using database connection: "  (pShowCompact (obfuscatePassword connInfo))
+  usingLoggerT logStdoutAction $
+    logInfo $ "Using database connection: " <> (TL.toStrict . pShowCompact . obfuscatePassword) connInfo
   connPool <- newPool (defaultPoolConfig (connect connInfo) close 30 5)
 
   -- Create HTTPS client manager.
@@ -106,7 +107,7 @@ main = do
 appMain :: Options -> AppM ()
 appMain options = do
   log I $ "Starting Toronto Bikeshare CLI with verbosity '" <> Text.pack (show (logLevel options)) <> "'."
-  -- log I $ "Version: " <> getCabalVersion <> " | " <> T.pack getGitVersion
+  log I $ "Version: " <> T.pack getCabalVersion <> " | " <> T.pack getGitVersion
   -- Dispatch to appropriate command.
   case optCommand options of
     (Poll p)           -> dispatchDatabase options >> dispatchPoll p

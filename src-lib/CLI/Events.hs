@@ -22,7 +22,9 @@ import           Data.Int                                     ( Int32 )
 import           Data.List                                    ( sortOn )
 import           Data.Maybe                                   ( fromMaybe )
 import           Data.Ord                                     ( Down (Down) )
+import qualified Data.Text                                    as T
 import           Data.Text.Lazy                               ( pack, unpack )
+import qualified Data.Text.Lazy                               as TL
 import           Data.Time
 import           Data.Time.Extras
 
@@ -41,6 +43,8 @@ import           System.Console.ANSI
 import           Text.Pretty.Simple.Extras
 import qualified Text.PrettyPrint.Boxes                       as Box
 
+import           TextShow                                     ( showt )
+
 import           UnliftIO
 
 -- | Dispatch CLI arguments for debugging.
@@ -54,8 +58,8 @@ dispatchEvents (EventRange options)  = do
   let firstDay = fromMaybe yesterday (startDay options)
   let lastDay = fromMaybe today (endDay options)
 
-  -- log I $ format "Getting counts of each bike time every two hours between {} and {}." firstDay lastDay
-  -- log D $ format "Options: {}" (pShowCompact options)
+  logInfo $ "Getting counts of each bike time every two hours between " <> (T.pack . show) firstDay <> " and " <> (T.pack . show) lastDay
+  logDebug $ "Options: " <> (TL.toStrict . pShowCompact) options
 
   -- Run queries concurrently (automatic thread pool size).
   countsAtTimes <- pooledMapConcurrently (uncurry bikeCountsAtMoment) (dayTimesRange firstDay lastDay)
@@ -64,7 +68,7 @@ dispatchEvents (EventRange options)  = do
 
 dispatchEvents (EventCounts options) = do
   -- Calculate number of dockings and undockings
-  -- log D $ format "Options: {}" (pShowCompact options)
+  logDebug $ "Options: " <> (TL.toStrict . pShowCompact) options
 
   -- Determine current day and previous day.
   today <- liftIO $ utctDay <$> getCurrentTime
@@ -76,20 +80,20 @@ dispatchEvents (EventCounts options) = do
   let endDay' = fromMaybe today endDay
 
   -- Get undocking/docking counts.
-  -- log I $ format "Calculating number of event counts for (optional) station {} (limit: {})." (maybeF stationId) (optEventsCountLimit options)
+  logInfo $ "Calculating number of event counts for (optional) station " <> showt stationId <> " (limit: " <> showt (optEventsCountLimit options) <> ")."
   eventSums <- eventsForRange stationId startDay' startTime endDay' endTime
 
   let sortOrder = Undocking
   liftIO $ do
-    -- putStrLn $ format "\nSorted by differentials ({}):" (sortedMessage sortOrder)
+    putStrLn $ "\nSorted by differentials (" <> sortedMessage sortOrder <> "):"
     formatDockingEventsDifferential $ takeMaybe limit $ sortOnVariation sortOrder (sortedEventsBoth eventSums)
 
     putStrLn ""
     formatDockingEventsCount $ takeMaybe limit $ sortDockingEventsCount sortOrder (sortOnVariationTotal Undocking eventSums)
   where
     sortedMessage :: AvailabilityCountVariation -> String
-    sortedMessage Docking   = (showLower Docking) <> " >> " <> (showLower Undocking)
-    sortedMessage Undocking = (showLower Undocking) <> " >> " <> (showLower Docking)
+    sortedMessage Docking   = showLower Docking   <> " >> " <> showLower Undocking
+    sortedMessage Undocking = showLower Undocking <> " >> " <> showLower Docking
 
     limit :: Maybe Int
     limit = optEventsCountLimit options
@@ -141,7 +145,7 @@ takeMaybe Nothing xs      = xs
 
 bikeCountsAtMoment :: Day -> TimeOfDay -> AppM (Day, TimeOfDay, Int32, Int32, Int32, Int32)
 bikeCountsAtMoment day timeOfDay = do
-  -- log I $ format "Getting number of bikes by type in the system on {} at {}" day timeOfDay
+  logInfo $ "Getting number of bikes by type in the system on " <> (T.pack . show) day <> " at " <> (T.pack . show) timeOfDay
   statusForMoment <- withPostgres $ runSelectReturningList $ select $
     queryLatestStatusBetweenExpr earliestTime latestTime
   pure ( day

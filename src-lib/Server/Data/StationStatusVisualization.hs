@@ -108,7 +108,7 @@ generateJsonDataSource Nothing startTime endTime = do
   let end = localTimeToUTC tz (latestTime rangeBounded)
   let rangeIncrement = secondsPerIntervalForRange start end (serverMaxIntervals env)
 
-  logDebug $ "Start: " <> (T.pack . show) start <> ", end: " <> (T.pack . show) end <> ", increment: " <> (T.pack . show) rangeIncrement <> "s "
+  logDebug $ "Start: " <> (T.pack . show) start <> ", end: " <> (T.pack . show) end <> ", increment: " <> (T.pack . show) rangeIncrement <> "s"
   statusAtRange <- liftIO $ runAppM appEnv $ withPostgres $ runSelectReturningList $ selectWith $
     querySystemStatusAtRangeExpr start end (div rangeIncrement 60)
   (pure . map toVisualization) statusAtRange
