@@ -91,7 +91,7 @@ class APIPersistable apiType dbType | apiType -> dbType where
       WentBackwards extendByMs -> liftIO (delaySecs extendByMs)
       Success (resp, inserted) -> do
         liftIO $ atomically $ writeTVar lastUpdatedVar (utcToPosix (_respLastUpdated resp) + timeToLiveS resp)
-        logInfo $ "[" <> (T.pack . show) ep <> "] Inserted " <> (showt . length) inserted <> "records - sleeping for " <> showt (timeToLiveS resp) <> "s"
+        logInfo $ "[" <> (T.pack . show) ep <> "] Inserted " <> (showt . length) inserted <> " records - sleeping for " <> showt (timeToLiveS resp) <> "s"
         -- Sleep for requisite TTL.
         liftIO $ threadDelay (timeToLiveS resp * msPerS)
     pure ()

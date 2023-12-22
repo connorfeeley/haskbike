@@ -55,13 +55,11 @@ import qualified Data.Map                                     as Map
 import           Data.Maybe                                   ( listToMaybe )
 import           Data.String                                  ( IsString (fromString) )
 import qualified Data.Text                                    as T
-import qualified Data.Text                                    as Text
 import           Data.Time
 
 import           Database.Beam
 import           Database.Beam.Backend                        ( BeamBackend, HasSqlValueSyntax (sqlValueSyntax),
                                                                 IsSql92DataTypeSyntax (..) )
-import           Database.Beam.Backend.SQL                    ( SqlSerial )
 import           Database.Beam.Migrate
 import           Database.Beam.Postgres                       ( Postgres )
 import qualified Database.Beam.Postgres                       as Pg
@@ -87,7 +85,7 @@ data StationStatusT f where
                    , _statusIsInstalled           :: Columnar f Bool
                    , _statusIsRenting             :: Columnar f Bool
                    , _statusIsReturning           :: Columnar f Bool
-                   , _statusTraffic               :: Columnar f (Maybe Text.Text) -- PBSC doesn't seem to set this field
+                   , _statusTraffic               :: Columnar f (Maybe T.Text) -- PBSC doesn't seem to set this field
                    , _statusVehicleDocksAvailable :: Columnar f Int32
                    , _statusVehicleTypesAvailable :: VehicleTypeMixin f
                    } -> StationStatusT f
@@ -161,7 +159,7 @@ statusStatus                :: Lens' (StationStatusT f) (C f BeamStationStatusSt
 statusIsInstalled           :: Lens' (StationStatusT f) (C f Bool)
 statusIsRenting             :: Lens' (StationStatusT f) (C f Bool)
 statusIsReturning           :: Lens' (StationStatusT f) (C f Bool)
-statusTraffic               :: Lens' (StationStatusT f) (C f (Maybe Text.Text))
+statusTraffic               :: Lens' (StationStatusT f) (C f (Maybe T.Text))
 statusVehicleDocksAvailable :: Lens' (StationStatusT f) (C f Int32)
 vehicleTypesAvailableBoost  :: Lens' (StationStatusT f) (C f Int32)
 vehicleTypesAvailableIconic :: Lens' (StationStatusT f) (C f Int32)
@@ -193,16 +191,16 @@ newtype BeamStationStatusString where
   BeamStationStatusString :: AT.StationStatusString -> BeamStationStatusString
   deriving (Eq, Generic, Show, Read) via AT.StationStatusString
 
-instance (BeamBackend be, FromBackendRow be Text.Text) => FromBackendRow be BeamStationStatusString where
+instance (BeamBackend be, FromBackendRow be T.Text) => FromBackendRow be BeamStationStatusString where
   fromBackendRow = do
     val <- fromBackendRow
     -- TODO: tie this in with 'AT.StationStatusString' so that they can't get out of sync.
-    case val :: Text.Text of
+    case val :: T.Text of
       "IN_SERVICE"  -> pure $ BeamStationStatusString AT.InService
       "MAINTENANCE" -> pure $ BeamStationStatusString AT.Maintenance
       "PLANNED"     -> pure $ BeamStationStatusString AT.Planned
       "END_OF_LIFE" -> pure $ BeamStationStatusString AT.EndOfLife
-      _             -> fail ("Invalid value for BeamStationStatusString: " ++ Text.unpack val)
+      _             -> fail ("Invalid value for BeamStationStatusString: " ++ T.unpack val)
 
 instance (HasSqlValueSyntax be String, Show BeamStationStatusString) => HasSqlValueSyntax be BeamStationStatusString where
   sqlValueSyntax = sqlValueSyntax . show
@@ -225,10 +223,10 @@ stationStatusType :: DataType Postgres BeamStationStatusString
 stationStatusType = DataType pgTextType
 
 -- | Convert from the JSON StationStatus to the Beam StationStatus type
-fromJSONToBeamStationStatus :: SqlSerial Int32 -> AT.StationStatus -> Maybe (StationStatusT (QExpr Postgres s))
+fromJSONToBeamStationStatus :: StationInformationId -> AT.StationStatus -> Maybe (StationStatusT (QExpr Postgres s))
 fromJSONToBeamStationStatus infId status
   | Just lastReported <- status ^. AT.statusLastReported = Just $
-  StationStatus { _statusInfoId                = val_ (StationInformationId infId)
+  StationStatus { _statusInfoId                = val_ infId
                 , _statusStationId             = val_ (fromIntegral $ status ^. AT.statusStationId)
                 , _statusLastReported          = val_ (coerce lastReported)
                 , _statusNumBikesAvailable     = fromIntegral $ status ^. AT.statusNumBikesAvailable
@@ -240,7 +238,7 @@ fromJSONToBeamStationStatus infId status
                 , _statusIsInstalled           = val_ $ status ^. AT.statusIsInstalled
                 , _statusIsRenting             = val_ $ status ^. AT.statusIsRenting
                 , _statusIsReturning           = val_ $ status ^. AT.statusIsReturning
-                , _statusTraffic               = val_ $ fmap Text.pack $ status ^. AT.statusTraffic
+                , _statusTraffic               = val_ $ fmap T.pack $ status ^. AT.statusTraffic
                 , _statusVehicleDocksAvailable = maybe 0 (fromIntegral . AT.dock_count) $ listToMaybe $ status ^. AT.statusVehicleDocksAvailable
                 , _statusVehicleTypesAvailable = val_ $ VehicleType num_boost num_iconic num_efit num_efit_g5
                 }
@@ -268,7 +266,7 @@ fromBeamStationStatusToJSON status =
                    , AT._statusIsInstalled           = status ^. statusIsInstalled
                    , AT._statusIsRenting             = status ^. statusIsRenting
                    , AT._statusIsReturning           = status ^. statusIsReturning
-                   , AT._statusTraffic               = fmap Text.unpack $ status ^. statusTraffic
+                   , AT._statusTraffic               = fmap T.unpack $ status ^. statusTraffic
                    , AT._statusVehicleDocksAvailable = [ AT.VehicleDock (map show [AT.Boost, AT.Iconic, AT.EFit, AT.EFitG5]) (fromIntegral $ status ^. statusVehicleDocksAvailable) ]
                    , AT._statusVehicleTypesAvailable =
                      AT.listToMap [ AT.VehicleType AT.Boost  (fromIntegral (status ^. vehicleTypesAvailableBoost))
@@ -284,7 +282,7 @@ fromBeamStationStatusToJSON status =
 stationStatusModification :: EntityModification (DatabaseEntity be db) be (TableEntity StationStatusT)
 stationStatusModification =
   setEntityName "station_status" <> modifyTableFields tableModification
-  { _statusInfoId                = StationInformationId "info_id"
+  { _statusInfoId                = StationInformationId "info_station_id" "info_reported"
   , _statusStationId             = "station_id"
   , _statusLastReported          = "last_reported"
   , _statusNumBikesAvailable     = "num_bikes_available"
@@ -305,7 +303,9 @@ stationStatusModification =
 createStationStatus :: Migration Postgres (CheckedDatabaseEntity Postgres db (TableEntity StationStatusT))
 createStationStatus =
   createTable "station_status" $ StationStatus
-  { _statusInfoId                = StationInformationId (field "info_id" Pg.serial notNull (referenceInformationTable ["id"]))
+  { _statusInfoId                = StationInformationId
+                                  (field "info_station_id" int notNull)
+                                  (field "info_reported" (DataType (timestampType Nothing True)) notNull)
   , _statusStationId             = field "station_id"              int notNull
   , _statusLastReported          = field "last_reported"           (DataType (timestampType Nothing True)) notNull
   , _statusNumBikesAvailable     = field "num_bikes_available"     int notNull
@@ -324,10 +324,3 @@ createStationStatus =
                                                (field "vehicle_types_available_efit"    int notNull)
                                                (field "vehicle_types_available_efit_g5" int notNull)
   }
-
-referenceInformationTable :: BeamMigrateSqlBackend be => [T.Text] -> Constraint be
-referenceInformationTable fields =
-  Constraint $ referencesConstraintSyntax "station_information" fields
-  Nothing
-  (Just referentialActionCascadeSyntax)
-  Nothing
