@@ -8,6 +8,12 @@ set positional-arguments := true
 
 export CABAL := "cabal --with-gcc=clang --with-ld=clang"
 
+export OLD_STATUS_COLS := "station_id, last_reported, num_bikes_available, num_bikes_disabled, num_docks_available, num_docks_disabled, is_charging_station, status, is_installed, is_renting, is_returning, traffic, vehicle_docks_available, vehicle_types_available_boost, vehicle_types_available_iconic, vehicle_types_available_efit, vehicle_types_available_efit_g5"
+export OLD_INFO_COLS := "id, station_id, name, physical_configuration, lat, lon, altitude, address, capacity, is_charging_station, rental_methods, is_valet_station, is_virtual_station, groups, obcn, nearby_distance, bluetooth_id, ride_code_support, rental_uris, active"
+
+export NEW_STATUS_COLS := ""
+export NEW_INFO_COLS := "id, station_id, name, physical_configuration, lat, lon, altitude, address, capacity, is_charging_station, rental_methods, is_valet_station, is_virtual_station, groups, obcn, nearby_distance, bluetooth_id, ride_code_support, rental_uris, active, reported"
+
 export ENDPOINT := "http://localhost:8081"
 # export ENDPOINT := "https://bikes.cfeeley.org"
 
@@ -63,7 +69,7 @@ export-rds-table TABLE:
     PGPASSWORD=$HASKBIKE_PASSWORD psql -h "$HASKBIKE_PGDBHOST" -p "$HASKBIKE_PGDBPORT" -U "$HASKBIKE_USERNAME" \
         -d haskbike \
         -c "SELECT * FROM public.{{TABLE}}" \
-        --csv -P csv_fieldsep="^" > "./scripts/database-dumps/{{TABLE}}-$(date '+%Y-%m-%d-%H-%M').csv"
+        --csv -P csv_fieldsep="^" > "./scripts/database-dumps/rds/{{TABLE}}-$(date '+%Y-%m-%d-%H-%M').csv"
 
 export-local-table TABLE:
     PGPASSWORD=$HASKBIKE_PASSWORD psql -h "$HASKBIKE_PGDBHOST" -p "$HASKBIKE_PGDBPORT" -U "$HASKBIKE_USERNAME" \
@@ -96,16 +102,19 @@ import-local-table TABLE CSVFILE:
         -d haskbike \
         -c "COPY {{TABLE}} FROM '{{CSVFILE}}' WITH (FORMAT csv, DELIMITER '^', HEADER true)"
 
+# import-local-station-info CSVFILE:
+#     #!/usr/bin/env bash
+#     source ./.env.local
+#     PGPASSWORD=$HASKBIKE_PASSWORD psql -h "$HASKBIKE_PGDBHOST" -p "$HASKBIKE_PGDBPORT" -U "$HASKBIKE_USERNAME" \
+#         -d haskbike \
+#         -c "COPY station_information (id, station_id, name, physical_configuration, lat, lon, altitude, address, capacity, is_charging_station, rental_methods, is_valet_station, is_virtual_station, groups, obcn, nearby_distance, bluetooth_id, ride_code_support, rental_uris, active) FROM '{{CSVFILE}}' WITH (FORMAT csv, DELIMITER '^', HEADER true)"
+
 import-local-station-info CSVFILE:
     #!/usr/bin/env bash
     source ./.env.local
     PGPASSWORD=$HASKBIKE_PASSWORD psql -h "$HASKBIKE_PGDBHOST" -p "$HASKBIKE_PGDBPORT" -U "$HASKBIKE_USERNAME" \
         -d haskbike \
-        -c "COPY station_information (id, station_id, name, physical_configuration, lat, lon, altitude, address, capacity, is_charging_station, rental_methods, is_valet_station, is_virtual_station, groups, obcn, nearby_distance, bluetooth_id, ride_code_support, rental_uris, active) FROM '{{CSVFILE}}' WITH (FORMAT csv, DELIMITER '^', HEADER true)"
+        -c "COPY station_information ({{NEW_INFO_COLS}}) FROM '{{CSVFILE}}' WITH (FORMAT csv, DELIMITER '^', HEADER true)"
 
-import-local-station-status CSVFILE:
-    #!/usr/bin/env bash
-    source ./.env.local
-    PGPASSWORD=$HASKBIKE_PASSWORD psql -h "$HASKBIKE_PGDBHOST" -p "$HASKBIKE_PGDBPORT" -U "$HASKBIKE_USERNAME" \
-        -d haskbike \
-        -c "COPY station_status (station_id, last_reported, num_bikes_available, num_bikes_disabled, num_docks_available, num_docks_disabled, is_charging_station, status, is_installed, is_renting, is_returning, traffic, vehicle_docks_available, vehicle_types_available_boost, vehicle_types_available_iconic, vehicle_types_available_efit, vehicle_types_available_efit_g5) FROM '{{CSVFILE}}' WITH (FORMAT csv, DELIMITER '^', HEADER true)"
+profile:
+    {{CABAL}} v2-run --enable-profiling exes -- poll -v +RTS -p

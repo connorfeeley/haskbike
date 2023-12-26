@@ -107,8 +107,8 @@ WHERE id IN (
 );
 
 -- Step 1: Add the new UNIQUE constraint to the `station_information` table
-ALTER TABLE public.station_information
-ADD CONSTRAINT station_information_id_key UNIQUE (id);
+-- ALTER TABLE public.station_information
+-- ADD CONSTRAINT station_information_id_key UNIQUE (id);
 
 -- Step 2: Create temporary column to hold `station_id` during transition
 ALTER TABLE public.station_status
