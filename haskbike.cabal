@@ -236,7 +236,7 @@ library
                     , CLI.Poll.Utils
                     , CLI.Query
                     , CLI.Debug
-                    , CLI.Events
+                    -- , CLI.Events
                     , CLI.ServeVisualize
                     , CLI.QueryFormat
                     , CLI.Database

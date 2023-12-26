@@ -8,7 +8,6 @@ import           AppEnv
 
 import           CLI.Database
 import           CLI.Debug
-import           CLI.Events
 import           CLI.Options
 import           CLI.Poll
 import           CLI.Query
@@ -68,7 +67,7 @@ main = do
   connInfo <- mkDbConnectInfo (optDatabase options)
   usingLoggerT logStdoutAction $
     logInfo $ "Using database connection: " <> (TL.toStrict . pShowCompact . obfuscatePassword) connInfo
-  connPool <- newPool (defaultPoolConfig (connect connInfo) close 30 5)
+  connPool <- newPool (setNumStripes Nothing $ defaultPoolConfig (connect connInfo) close 30 8)
 
   -- Create HTTPS client manager.
   clientManager <- liftIO $ newManager tlsManagerSettings
@@ -113,7 +112,7 @@ appMain options = do
     (Poll p)           -> dispatchDatabase options >> dispatchPoll p
     (Query q)          -> dispatchDatabase options >> dispatchQuery q
     QueryApi           -> log E "Not implemented."
-    (Events e)         -> dispatchDatabase options >> dispatchEvents (optEventsSubcommand e)
+    -- (Events e)         -> dispatchDatabase options >> dispatchEvents (optEventsSubcommand e)
     (ServeVisualize s) -> dispatchDatabase options >> dispatchVisualize s
     (DebugMisc d)      -> dispatchDatabase options >> dispatchDebug d
     (Reset _)          -> void (dispatchDatabase options)

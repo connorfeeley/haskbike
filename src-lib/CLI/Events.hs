@@ -107,7 +107,7 @@ dispatchEvents (EventCounts options) = do
     endTime   = fromMaybe (TimeOfDay 00 00 00) (optEventsCountEndTime options)
 
 
-sortOnVariation :: AvailabilityCountVariation -> [(StationInformation, Int)] -> [(StationInformation, Int)]
+sortOnVariation :: AvailabilityCountVariation -> [(Int, Int)] -> [(Int, Int)]
 sortOnVariation eventType = case eventType of
   Docking   -> sortOn (Down . view _2)
   Undocking -> sortOn (view _2)
@@ -131,7 +131,7 @@ showLower :: (Show a) => a -> String
 showLower = map Char.toLower . show
 
 -- | Add the undockings and dockings for each station together, and sort the resulting list.
-sortedEventsBoth :: [DockingEventsCount] -> [(StationInformation, Int)]
+sortedEventsBoth :: [DockingEventsCount] -> [(Int, Int)]
 sortedEventsBoth = map (\counts -> (counts ^. eventsStation , (counts ^. eventsIconicCount . eventsCountUndockings ) + (counts ^. eventsIconicCount . eventsCountDockings)))
 
 -- | Given a 'Day', get the previous 'Day'.
