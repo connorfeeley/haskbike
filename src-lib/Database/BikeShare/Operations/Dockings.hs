@@ -25,6 +25,7 @@ import           Control.Lens                                 hiding ( reuse, (.
 import           Data.Int                                     ( Int32 )
 
 import           Database.Beam
+import qualified Database.Beam.Postgres                       as Pg
 import           Database.BikeShare
 import           Database.BikeShare.EventCounts
 import           Database.BikeShare.StatusVariationQuery
@@ -35,7 +36,7 @@ import           Database.BikeShare.Tables.StationStatus
 -- | Query the number of dockings and undockings for a station.
 queryDockingEventsCount :: StatusVariationQuery -> AppM [DockingEventsCount]
 queryDockingEventsCount variation =  do
-  counts <- queryDockingEventsCountExpr variation
+  counts <- queryDockingEventsCountExpr' variation
 
   pure $ map (\( station
                , (iconicUndockingsCount, iconicDockingsCount)
@@ -48,7 +49,6 @@ queryDockingEventsCount variation =  do
                  (EventsCountResult EFit   (fromIntegral   efitUndockingsCount) (fromIntegral   efitDockingsCount))
                  (EventsCountResult EFitG5 (fromIntegral efitG5UndockingsCount) (fromIntegral efitG5DockingsCount))
              ) counts
-
 
 -- | Query the number of dockings and undockings for a station (returning tuples of each count for each bike type).
 queryDockingEventsCountExpr :: StatusVariationQuery -> AppM [(StationInformation, (Int32, Int32), (Int32, Int32), (Int32, Int32))]
@@ -64,16 +64,14 @@ queryDockingEventsCountExpr variation = withPostgres $ runSelectReturningList $ 
                                 ))
                      statusForStation
   rankedInfo <- selecting $ do
-    withWindow_ (\row -> frame_ (partitionBy_ (_infoStationId row)) (orderPartitionBy_ (desc_ $ _infoId row)) noBounds_)
+    withWindow_ (\row -> frame_ (partitionBy_ (_infoStationId row)) (orderPartitionBy_ (desc_ (_infoId row))) noBounds_)
                 (\row w -> ( row
                            , rank_ `over_` w
                            )
                 ) (all_ (bikeshareDb ^. bikeshareStationInformation))
   pure $ do
-    info <- reuse rankedInfo
-    guard_ (info ^. _2 ==. 1) -- Is max rank (latest record in partition)
-
     -- Join the station information with the dockings and undockings.
+    status <- reuse cte
     events' <-
       aggregate_ (\(row, pIconic, pEFit, pEFitG5) ->
                     let
@@ -95,10 +93,24 @@ queryDockingEventsCountExpr variation = withPostgres $ runSelectReturningList $ 
                      ))
       (reuse cte)
 
-    guard_' ( (events' ^. _1) ==?. _infoStationId (info ^. _1) &&?. _infoActive (info ^. _1) ==?. val_ True)
+    -- info' <- leftJoin_ (reuse rankedInfo)
+    --                    (\info -> _statusInfoId (events' ^. _1) `references_` info)
+    info' <- reuse rankedInfo
+    guard_' ( (events' ^. _1)           ==?. _infoStationId (info' ^. _1) &&?.
+              -- _infoActive (info' ^. _1) ==?. val_ True &&?.
+              -- info' ^. _2 ==?. val_ 1 &&?.
+              _statusInfoId (status ^. _1) `references_'` (info' ^. _1)
+            )
+    maxInfos <-
+      withWindow_ (\row -> frame_ (partitionBy_ (_infoStationId row)) (orderPartitionBy_ (desc_ (_infoId row))) noBounds_)
+                  (\row w -> ( row
+                             , rank_ `over_` w
+                             )
+                  ) (all_ (bikeshareDb ^. bikeshareStationInformation))
+
 
     -- Return tuples of station information and the dockings and undockings.
-    pure ( info ^. _1
+    pure ( info' ^. _1
          -- , (events' ^. _2 . _1, events' ^. _3 . _1) -- Boost
          --      Undockings   |     Dockings
          , (events' ^. _2 . _1, events' ^. _3 . _1) -- Iconic
@@ -108,60 +120,87 @@ queryDockingEventsCountExpr variation = withPostgres $ runSelectReturningList $ 
 
 
 -- | Query the number of dockings and undockings for a station (returning tuples of each count for each bike type).
-queryDockingEventsCountExpr' :: StatusVariationQuery -> AppM [(Int32, (Int32, Int32), (Int32, Int32), (Int32, Int32))]
+queryDockingEventsCountExpr' :: StatusVariationQuery -> AppM [(StationInformation, (Int32, Int32), (Int32, Int32), (Int32, Int32))]
 queryDockingEventsCountExpr' variation = withPostgres $ runSelectReturningList $ selectWith $ do
   cte <- selecting $ do
     let statusForStation = filter_ (filterFor_ variation)
                                    (all_ (bikeshareDb ^. bikeshareStationStatus))
-      in withWindow_ (\row -> frame_ (partitionBy_ (_statusStationId row)) noOrder_ noBounds_)
+      in withWindow_ (\row -> frame_ (partitionBy_ (_statusStationId row)) (orderPartitionBy_ (asc_ (_statusLastReported row))) noBounds_)
                      (\row w -> ( row
                                 , lagWithDefault_ (row ^. vehicleTypesAvailableIconic) (val_ 1) (row ^. vehicleTypesAvailableIconic) `over_` w
                                 , lagWithDefault_ (row ^. vehicleTypesAvailableEfit  ) (val_ 1) (row ^. vehicleTypesAvailableEfit  ) `over_` w
                                 , lagWithDefault_ (row ^. vehicleTypesAvailableEfitG5) (val_ 1) (row ^. vehicleTypesAvailableEfitG5) `over_` w
                                 ))
                      statusForStation
-  -- rankedInfo <- selecting $ do
-  --   withWindow_ (\row -> frame_ (partitionBy_ (_infoStationId row)) (orderPartitionBy_ (desc_ $ _infoId row)) noBounds_)
-  --               (\row w -> ( row
-  --                          , rank_ `over_` w
-  --                          )
-  --               ) (all_ (bikeshareDb ^. bikeshareStationInformation))
   pure $ do
-    -- info <- reuse rankedInfo
-    -- guard_ (info ^. _2 ==. 1) -- Is max rank (latest record in partition)
-
     -- Join the station information with the dockings and undockings.
-    events' <-
-      aggregate_ (\(row, pIconic, pEFit, pEFitG5) ->
-                    let
-                        dIconic = row ^. vehicleTypesAvailableIconic - pIconic
-                        dEFit   = row ^. vehicleTypesAvailableEfit   - pEFit
-                        dEFitG5 = row ^. vehicleTypesAvailableEfitG5 - pEFitG5
-                    in
-                     ( group_ (_statusStationId row)
-                     -- Undockings
-                     , ( fromMaybe_ 0 $ sum_ dIconic `filterWhere_` (dIconic  <. 0)
-                       , fromMaybe_ 0 $ sum_ dEFit   `filterWhere_` (dEFit    <. 0)
-                       , fromMaybe_ 0 $ sum_ dEFitG5 `filterWhere_` (dEFitG5  <. 0)
-                       )
-                     -- Dockings
-                     , ( fromMaybe_ 0 $ sum_ dIconic `filterWhere_` (dIconic  >. 0)
-                       , fromMaybe_ 0 $ sum_ dEFit   `filterWhere_` (dEFit    >. 0)
-                       , fromMaybe_ 0 $ sum_ dEFitG5 `filterWhere_` (dEFitG5  >. 0)
-                       )
-                     ))
-      (reuse cte)
+    -- status <- reuse cte
+    result <- do -- Pg.pgNubBy_ (_infoStationId . (^. _1 . _1)) $ lateral_ status $ \status' -> do
+      statusSums <-
+        aggregate_ (\(row, pIconic, pEFit, pEFitG5) ->
+                      let
+                          dIconic = row ^. vehicleTypesAvailableIconic - pIconic
+                          dEFit   = row ^. vehicleTypesAvailableEfit   - pEFit
+                          dEFitG5 = row ^. vehicleTypesAvailableEfitG5 - pEFitG5
+                      in
+                       ( group_ (_statusStationId row)
+                       -- Undockings
+                       , ( fromMaybe_ 0 $ sum_ dIconic `filterWhere_` (dIconic  <. 0)
+                         , fromMaybe_ 0 $ sum_ dEFit   `filterWhere_` (dEFit    <. 0)
+                         , fromMaybe_ 0 $ sum_ dEFitG5 `filterWhere_` (dEFitG5  <. 0)
+                         )
+                       -- Dockings
+                       , ( fromMaybe_ 0 $ sum_ dIconic `filterWhere_` (dIconic  >. 0)
+                         , fromMaybe_ 0 $ sum_ dEFit   `filterWhere_` (dEFit    >. 0)
+                         , fromMaybe_ 0 $ sum_ dEFitG5 `filterWhere_` (dEFitG5  >. 0)
+                         )
+                       ))
+        (reuse cte)
+      rankedInfo <- do
+        Pg.pgNubBy_ (_infoStationId . (^. _1)) $
+          withWindow_ (\row -> frame_ (partitionBy_ (_infoStationId row)) (orderPartitionBy_ (desc_ (_infoId row))) noBounds_)
+                      (\row w -> ( row
+                                 , rank_ `over_` w
+                                 )
+                      ) (all_ (bikeshareDb ^. bikeshareStationInformation))
 
-    -- guard_' ( (events' ^. _1) ==?. _infoStationId (info ^. _1) &&?. _infoActive (info ^. _1) ==?. val_ True)
+      guard_' (      -- _statusInfoId      (status ^. _1) `references_'` (rankedInfo ^. _1)
+                -- &&?. _statusStationId   (status ^. _1) ==?. (statusSums ^. _1)
+                -- &&?. _infoStationId (rankedInfo ^. _1) ==?. _statusStationId (status ^. _1)
+                -- &&?.
+        _infoStationId (rankedInfo ^. _1) ==?. (statusSums ^. _1)
+                -- &&?. (statusSums ^. _1)                ==?. _statusStationId (status ^. _1)
+                &&?. (statusSums ^. _1)                ==?. _infoStationId (rankedInfo ^. _1)
+                -- &&?.  rankedInfo ^. _2                 ==?. val_ 1
+              )
+      -- guard_' ((events' ^. _1) ==?. _infoStationId (rankedInfo ^. _1))
+      pure ( rankedInfo ^. _1
+           -- , (events' ^. _2 . _1, events' ^. _3 . _1) -- Boost
+           --      Undockings   |     Dockings
+           , (statusSums ^. _2 . _1, statusSums ^. _3 . _1) -- Iconic
+           , (statusSums ^. _2 . _2, statusSums ^. _3 . _2) -- E-Fit
+           , (statusSums ^. _2 . _3, statusSums ^. _3 . _3) -- E-Fit G5
+           )
+      -- pure (rankedInfo, statusSums)
+    pure result
 
-    -- Return tuples of station information and the dockings and undockings.
-    pure ( events' ^. _1
-         -- , (events' ^. _2 . _1, events' ^. _3 . _1) -- Boost
-         --      Undockings   |     Dockings
-         , (events' ^. _2 . _1, events' ^. _3 . _1) -- Iconic
-         , (events' ^. _2 . _2, events' ^. _3 . _2) -- E-Fit
-         , (events' ^. _2 . _3, events' ^. _3 . _3) -- E-Fit G5
-         )
+    -- guard_' (      _statusInfoId      (status ^. _1) `references_'` (info' ^. _1)
+    --           &&?. _statusStationId   (status ^. _1) ==?. (events' ^. _1)
+    --           &&?. _infoStationId (info' ^. _1)      ==?. (events' ^. _1)
+    --           &&?. _infoStationId (info' ^. _1)      ==?. _statusStationId (status ^. _1)
+    --           &&?. (events' ^. _1)                   ==?. _statusStationId (status ^. _1)
+    --           &&?. (events' ^. _1)                   ==?. _infoStationId (info' ^. _1)
+    --           &&?. info' ^. _2 ==?. val_ 1
+    --         )
+
+    -- -- Return tuples of station information and the dockings and undockings.
+    -- pure ( result ^. _1 . _1
+    --      -- , (events' ^. _2 . _1, events' ^. _3 . _1) -- Boost
+    --      --      Undockings   |     Dockings
+    --      , (result ^. _2 . _2 . _1, result ^. _2 . _3 . _1) -- Iconic
+    --      , (result ^. _2 . _2 . _2, result ^. _2 . _3 . _2) -- E-Fit
+    --      , (result ^. _2 . _2 . _3, result ^. _2 . _3 . _3) -- E-Fit G5
+    --      )
 
 
 ---------------------------------
