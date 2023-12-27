@@ -20,6 +20,7 @@ import           Colog
 import           Control.Lens
 
 import           Data.Maybe                                   ( mapMaybe )
+import qualified Data.Text                                    as T
 import           Data.Time.Extras
 
 import           Database.Beam
@@ -32,11 +33,11 @@ import qualified Database.BikeShare.Tables.StationInformation as DB
 import qualified Database.BikeShare.Tables.StationStatus      as DB
 import qualified Database.BikeShare.Tables.SystemInformation  as DB
 
-import           Fmt
-
 import           Servant.Client                               ( ClientError, ClientM )
 
 import           System.Directory.Internal.Prelude            ( exitFailure )
+
+import           TextShow                                     ( showt )
 
 import           UnliftIO
 import           UnliftIO.Concurrent
@@ -90,7 +91,7 @@ class APIPersistable apiType dbType | apiType -> dbType where
       WentBackwards extendByMs -> liftIO (delaySecs extendByMs)
       Success (resp, inserted) -> do
         liftIO $ atomically $ writeTVar lastUpdatedVar (utcToPosix (_respLastUpdated resp) + timeToLiveS resp)
-        logInfo (format "[{}] Inserted {} records - sleeping for {}s" (show ep) (length inserted) (timeToLiveS resp))
+        logInfo $ "[" <> (T.pack . show) ep <> "] Inserted " <> (showt . length) inserted <> " records - sleeping for " <> showt (timeToLiveS resp) <> "s"
         -- Sleep for requisite TTL.
         liftIO $ threadDelay (timeToLiveS resp * msPerS)
     pure ()

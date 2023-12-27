@@ -12,11 +12,10 @@ import           Colog
 
 import           Data.Pool
 import           Data.String                ( fromString )
+import qualified Data.Text                  as T
 
 import           Database.Beam
 import           Database.PostgreSQL.Simple
-
-import           Fmt
 
 import           Servant
 import           Servant.Server.Generic     ( AsServerT )
@@ -50,7 +49,7 @@ sleepDatabaseHandler :: Int -> ServerAppM ()
 sleepDatabaseHandler seconds = do
   env <- getAppEnvFromServer -- Get the ServerEnv within ServerAppM context
 
-  logInfo $ format "Sleeping database for {} seconds" seconds
+  logInfo $ "Sleeping database for " <> (T.pack . show) seconds <> " seconds"
   -- throwString "This will print last as an error message"
   --   `finally` logInfo "This will print second"
   pool <- liftIO $ runAppM env withConnPool

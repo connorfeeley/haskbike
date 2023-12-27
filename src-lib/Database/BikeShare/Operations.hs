@@ -194,12 +194,14 @@ insertStationStatus apiStatus =
               )
       (all_ (bikeshareDb ^. bikeshareStationInformation))
 
-    let infoMap          = Map.fromList (map (\inf -> ((fromIntegral . _infoStationId) inf, _infoId inf)) info)
-    let statusWithInfoId = mapMaybe (lookupInfoId infoMap) apiStatus
+    let infoMap        :: Map.Map Int StationInformation        = Map.fromList
+                                                                (map (\inf -> ((fromIntegral . _infoStationId) inf, inf)) info)
+    let statusWithInfo :: [(StationInformation, AT.StationStatus)] = mapMaybe (lookupInfoId infoMap) apiStatus
 
     runInsertReturningList $
       insertOnConflict (bikeshareDb ^. bikeshareStationStatus)
-      (insertExpressions (mapMaybe (uncurry fromJSONToBeamStationStatus) statusWithInfoId)
+      (insertExpressions $
+       mapMaybe (\(inf, sta) -> fromJSONToBeamStationStatus (StationInformationId (_infoStationId inf) (_infoReported inf)) sta) statusWithInfo
       ) (conflictingFields primaryKey) onConflictDoNothing
 
 lookupInfoId infoMap status =

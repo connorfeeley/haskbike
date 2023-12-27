@@ -16,6 +16,7 @@ import           Control.Lens                            hiding ( (.=) )
 import           Control.Monad.Except
 
 import           Data.Aeson
+import qualified Data.Text                               as T
 import           Data.Time
 import           Data.Time.Extras
 
@@ -24,8 +25,6 @@ import           Database.BikeShare.Expressions
 import           Database.BikeShare.Operations.Factors
 import           Database.BikeShare.StatusVariationQuery
 import           Database.BikeShare.Tables.StationStatus
-
-import           Fmt                                     ( format )
 
 import           Server.StatusDataParams
 
@@ -109,7 +108,7 @@ generateJsonDataSource Nothing startTime endTime = do
   let end = localTimeToUTC tz (latestTime rangeBounded)
   let rangeIncrement = secondsPerIntervalForRange start end (serverMaxIntervals env)
 
-  logDebug $ format "Start: {}, end: {}, increment: {}s " start end rangeIncrement
+  logDebug $ "Start: " <> (T.pack . show) start <> ", end: " <> (T.pack . show) end <> ", increment: " <> (T.pack . show) rangeIncrement <> "s"
   statusAtRange <- liftIO $ runAppM appEnv $ withPostgres $ runSelectReturningList $ selectWith $
     querySystemStatusAtRangeExpr start end (div rangeIncrement 60)
   (pure . map toVisualization) statusAtRange

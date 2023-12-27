@@ -19,7 +19,9 @@ module Database.BikeShare.Tables.StationInformation
      , fromJSONToBeamStationInformation
      , physicalConfiguration
      , stationInformationModification
+     , unInformationReported
        -- Lenses
+     , extraInfoMigrations
      , infoActive
      , infoAddress
      , infoAltitude
@@ -41,7 +43,7 @@ module Database.BikeShare.Tables.StationInformation
      , infoReported
      , infoRideCodeSupport
      , infoStationId
-     , unInformationId
+     , unInformationStationId
      ) where
 
 import qualified API.StationInformation                     as AT
@@ -51,6 +53,7 @@ import           Control.Lens
 import qualified Data.ByteString.Char8                      as B
 import           Data.Coerce                                ( coerce )
 import           Data.Int
+import           Data.String                                ( IsString )
 import qualified Data.Text                                  as T
 import qualified Data.Text                                  as Text
 import           Data.Time
@@ -108,15 +111,20 @@ deriving instance Eq StationInformation
 
 -- | Inform Beam about the table.
 instance Table StationInformationT where
-  data PrimaryKey StationInformationT f = StationInformationId { _unInformationId :: C f (SqlSerial Int32) }
+  data PrimaryKey StationInformationT f = StationInformationId { _unInformationStationId :: C f Int32
+                                                               , _unInformationReported  :: C f UTCTime
+                                                               }
     deriving (Generic, Beamable)
-  primaryKey = StationInformationId <$> _infoId
+  primaryKey = StationInformationId <$> _infoStationId <*> _infoReported
 
--- | Lenses (technically, Iso)
--- Lens' always works with part of a data structure (can set or view), while an Iso can swap between two different types bi-directionally.
-unInformationId :: Iso (PrimaryKey StationInformationT f1) (PrimaryKey StationInformationT f2) (C f1 (SqlSerial Int32)) (C f2 (SqlSerial Int32))
-unInformationId = iso (\ (StationInformationId key) -> key) StationInformationId
-{-# INLINE unInformationId #-}
+-- | Lenses
+unInformationReported :: Lens' (PrimaryKey StationInformationT f) (Columnar f UTCTime)
+unInformationReported key (StationInformationId stationId lastReported) = fmap (StationInformationId stationId) (key lastReported)
+{-# INLINE unInformationReported #-}
+
+unInformationStationId :: Lens' (PrimaryKey StationInformationT f) (Columnar f Int32)
+unInformationStationId key (StationInformationId stationId lastReported) = fmap (`StationInformationId` lastReported) (key stationId)
+{-# INLINE unInformationStationId #-}
 
 
 -- | StationInformation Lenses
@@ -395,9 +403,12 @@ createStationInformation =
   , _infoReported              = field "reported"               (DataType (timestampType Nothing True)) (defaultTo_ currentTimestampUtc_) notNull
   }
 
+extraInfoMigrations :: IsString a => [a]
+extraInfoMigrations = ["ALTER TABLE public.station_status ADD CONSTRAINT fk_station_information FOREIGN KEY (info_station_id, info_reported) REFERENCES public.station_information (station_id, reported) ON UPDATE CASCADE"]
+
 -- | Postgres @NOW()@ function. Returns the server's timestamp in UTC.
-nowUtc_ :: QExpr Postgres s UTCTime
-nowUtc_ = QExpr (\_ -> PgExpressionSyntax (emit "NOW() at time zone 'UTC'"))
+-- nowUtc_ :: QExpr Postgres s UTCTime
+-- nowUtc_ = QExpr (\_ -> PgExpressionSyntax (emit "NOW() at time zone 'UTC'"))
 
 currentTimestampUtc_ :: QExpr Postgres s UTCTime
 currentTimestampUtc_ = QExpr (\_ -> PgExpressionSyntax (emit "CURRENT_TIMESTAMP"))

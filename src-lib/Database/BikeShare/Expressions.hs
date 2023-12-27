@@ -13,6 +13,7 @@ module Database.BikeShare.Expressions
      , insertStationInformationExpr
      , integrateColumns
      , latestQueryLogsToMap
+     , queryLatestInfoBefore
      , queryLatestQueryLogs
      , queryLatestStatusBetweenExpr
      , queryLatestStatuses
@@ -382,9 +383,9 @@ latestQueryLogsToMap tz = LatestQueries . queryMap
 
 -- | Get the latest query logs for each endpoint.
 queryLatestInfoBefore :: be ~ Postgres
-                     => With be BikeshareDb
-                     (Q be BikeshareDb s
-                      (StationInformationT (QExpr be s)))
+                      => With be BikeshareDb
+                      (Q be BikeshareDb s
+                       (StationInformationT (QExpr be s)))
 queryLatestInfoBefore = do
   ranked <- selecting $ do
     withWindow_ (\row -> frame_ (partitionBy_ (_infoStationId row)) (orderPartitionBy_ (desc_ $ _infoId row)) noBounds_)

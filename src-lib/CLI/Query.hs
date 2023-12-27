@@ -23,11 +23,10 @@ import           Control.Monad.Reader          ( when )
 
 import qualified Data.List                     as List
 import           Data.Maybe                    ( fromMaybe )
+import qualified Data.Text                     as T
 import           Data.Text.Lazy                ( Text, pack, toStrict, unlines, unpack )
 
 import           Database.BikeShare.Operations
-
-import           Fmt
 
 import           Prelude                       hiding ( log, unlines )
 
@@ -63,7 +62,7 @@ refreshStationData = do
     (Right info, Right status) -> do
       insInfo   <- insertStationInformation (info ^. respLastUpdated) (info ^. respData)
       insStatus <- insertStationStatus      (status ^. respData)
-      log D $ format "Inserted {} information records and {} status records." (length insInfo) (length insStatus)
+      log D $ "Inserted " <> (T.pack . show) (length insInfo) <> " information records and " <> (T.pack . show) (length insStatus) <> " status records."
 
 
 -- | Concurrently request station information and status.

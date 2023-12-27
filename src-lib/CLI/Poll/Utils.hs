@@ -13,7 +13,6 @@ module CLI.Poll.Utils
      , maybeDecodeFailure
      ) where
 
-
 import           API.ResponseWrapper
 
 import           AppEnv
@@ -31,8 +30,6 @@ import           Data.Time.Extras
 import           Database.BikeShare.EndpointQueried
 import           Database.BikeShare.Operations       ( insertQueryLog )
 import           Database.BikeShare.Tables.QueryLogs
-
-import           Fmt
 
 import           Servant.Client
 
@@ -55,16 +52,13 @@ handleResponseWrapper ep resp pLastUpdated = do
 
 handleResponseBackwards :: EndpointQueried -> ResponseWrapper a -> Int -> Int -> Int -> AppM Int
 handleResponseBackwards ep _resp pLastUpdated lastUpdated timeElapsed = do
-  logDebug (errorLog (show ep) (posixToUtc pLastUpdated) (posixToUtc lastUpdated) timeElapsed)
+  logDebug $ (T.pack . show) ep <> " last updated went backwards: [" <> (T.pack . show . posixToUtc) pLastUpdated <> "] -> [" <> (T.pack . show) (posixToUtc lastUpdated) <> "] | " <> (T.pack . show) timeElapsed <> "s"
   pure (-timeElapsed)
-  where errorLog = format "({}) last updated went backwards: [{}] -> [{}] | {}s"
 
 handleResponseForwards :: EndpointQueried -> ResponseWrapper a -> Int -> Int -> Int -> AppM Int
 handleResponseForwards ep _resp pLastUpdated lastUpdated timeElapsed = do
-  logDebug (errorLog (show ep) (posixToUtc pLastUpdated) (posixToUtc lastUpdated) timeElapsed)
+  logDebug $ "(" <> (T.pack . show) ep <> ") last updated: [" <> (T.pack . show) (posixToUtc pLastUpdated) <> "] -> [" <> (T.pack . show . posixToUtc) lastUpdated <> "] | " <> (T.pack . show) timeElapsed <> "s"
   pure (-timeElapsed)
-  where errorLog = format "({}) last updated: [{}] -> [{}] | {}s"
-
 
 
 -- * Functions for handling and inserting the appropriate query log records.

@@ -32,6 +32,15 @@
           projectRoot = ./.;
 
           settings = {
+            # fmt = { self, super, ... }: {
+            #   custom = _pkg: pkgs.lib.pipe pkgs.haskellPackages.fmt [
+            #     # Replace Version.hs with a generated one, since it requires access to the git directory
+            #     # to determine the version.
+            #     (pkgs.haskell.lib.compose.overrideCabal (o: {
+            #         # extraLibraries = [pkgs.stdenv.cc.libcxx];
+            #       }))
+            #   ];
+            # };
             haskbike = { self, super, ... }: {
               custom = _pkg: pkgs.lib.pipe super.haskbike [
                 # Replace Version.hs with a generated one, since it requires access to the git directory
@@ -44,6 +53,8 @@
                     };
                   in
                   {
+                    extraLibraries = [pkgs.stdenv.cc.libcxx];
+
                     postPatch = o.postPatch or "" + "cp ${versionFile} src-lib/Version.hs";
                     doCheck = false;
                     postInstall = o.postInstall or "" + ''
@@ -51,6 +62,7 @@
                       cp -r ${./static-files}/* $out/share/haskbike/www/static/
                     '';
                   }))
+                (pkgs.haskell.lib.enableLibraryProfiling)
 
                 # Add optparse-applicative completions to the derivation output.
                 (self.generateOptparseApplicativeCompletions [ "haskbike" ])
@@ -143,11 +155,13 @@
 
                   timescaledb-tune
                   timescaledb-parallel-copy
+
+                  ghostscript
                   ;
-                inherit (pkgs.llvmPackages) bintools;
                 inherit (pkgs.nodePackages) prettier;
                 # PostgreSQL with extensions
                 inherit postgres;
+                # inherit (pkgs.haskellPackages) cabal-plan;
 
                 treefmt = config.treefmt.build.wrapper;
               } // config.treefmt.build.programs;

@@ -13,8 +13,6 @@ import           Data.Time.Extras
 
 import           Database.BikeShare.Tables.StationInformation
 
-import           Fmt
-
 import           Graphics.Vega.VegaLite.Extra
 
 import           Lucid
@@ -82,12 +80,12 @@ instance ToHtml StationStatusVisualizationPage where
       staticLink = _statusVisPageStaticLink params
 
       pageTitle :: Int -> T.Text -> T.Text
-      pageTitle = format "Station #{}: {}"
+      pageTitle a b = "Station #"<>(T.pack . show) a<>": "<>b
 
       dateHeader :: T.Text
-      dateHeader = format "{} ➜ {}"
-                   (prettyTime (earliestTime times'))
-                   (prettyTime (latestTime   times'))
+      dateHeader =
+                   (T.pack . show $ prettyTime (earliestTime times')) <> " ➜ " <>
+                   (T.pack . show $ prettyTime (latestTime   times'))
 
       capacityHeader :: Monad m => HtmlT m ()
       capacityHeader = div_ $ do

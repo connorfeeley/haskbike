@@ -11,14 +11,13 @@ module Server.ComponentsAPI
 
 import           Colog
 
+import qualified Data.Text                               as T
 import           Data.Time
 import           Data.Time.Extras
 
 import           Database.BikeShare.Operations.Dockings
 import           Database.BikeShare.Operations.Factors
 import           Database.BikeShare.StatusVariationQuery ( StatusThreshold (..), StatusVariationQuery (..) )
-
-import           Fmt
 
 import           GHC.Generics                            ( Generic )
 
@@ -92,7 +91,7 @@ dockingsHeader stationId startTime endTime = do
   let times' = enforceTimeRangeBounds (StatusDataParams tz currentUtc (TimePair startTime endTime tz currentUtc))
   let (earliest, latest) = (earliestTime times', latestTime times')
 
-  logInfo $ format "Rendering page for {station ID: {}, start time: {}, end time: {}} " stationId earliest latest
+  logInfo $ "Rendering page for {station ID: " <> (T.pack . show) stationId <> ", start time: " <> (T.pack . show) earliest <> ", end time: " <> (T.pack . show) latest
 
   let variation = StatusVariationQuery (fromIntegral <$> stationId) [ EarliestTime (localTimeToUTC tz earliest)
                                                                     , LatestTime   (localTimeToUTC tz latest)
@@ -112,7 +111,7 @@ chargingsHeader stationId startTime endTime = do
   let times' = enforceTimeRangeBounds (StatusDataParams tz currentUtc (TimePair startTime endTime tz currentUtc))
   let (earliest, latest) = (earliestTime times', latestTime times')
 
-  logInfo $ format "Rendering page for {station ID: {}, start time: {}, end time: {}} " stationId earliest latest
+  logInfo $ "Rendering page for {station ID: " <> (T.pack . show) stationId <> ", start time: " <> (T.pack . show) earliest <> ", end time: " <> (T.pack . show) latest
 
   let variation = StatusVariationQuery (fromIntegral <$> stationId) [ EarliestTime (localTimeToUTC tz earliest)
                                                                     , LatestTime   (localTimeToUTC tz latest)

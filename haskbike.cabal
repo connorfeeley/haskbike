@@ -78,14 +78,6 @@ common common-extensions
 
 -- Common dependencies shared by all targets.
 common common-depends
-    -- Linking to the C++ standard library
-    if impl(ghc >= 9.4)
-      build-depends: system-cxx-std-lib == 1.0
-    elif os(linux)
-      extra-libraries: stdc++
-    elif os(darwin)
-      extra-libraries: c++
-
     build-depends:    base
                     , bytestring
                     , pretty-simple
@@ -95,7 +87,6 @@ common common-depends
                     , mtl
                     , unliftio
                     , async
-                    , fmt
                     , co-log-core
                     , monad-control
                     , co-log
@@ -245,7 +236,7 @@ library
                     , CLI.Poll.Utils
                     , CLI.Query
                     , CLI.Debug
-                    , CLI.Events
+                    -- , CLI.Events
                     , CLI.ServeVisualize
                     , CLI.QueryFormat
                     , CLI.Database
@@ -277,7 +268,6 @@ library
                     , Database.BikeShare.Tables.SystemInformation
                     , Database.BikeShare.Tables.StationInformation
                     , Database.BikeShare.Tables.StationStatus
-                    , Database.BikeShare.Tables.StationStatusDelta
                     , Database.BikeShare.Tables.QueryLogs
                     , Database.BikeShare.Tables.Diagnostics
                     , Database.BikeShare.EndpointQueried

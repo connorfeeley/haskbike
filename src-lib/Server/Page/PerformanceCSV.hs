@@ -6,8 +6,6 @@ import qualified Data.Text                       as T
 import           Data.Time
 import           Data.Time.Extras
 
-import           Fmt
-
 import           Lucid
 
 import           Servant
@@ -55,9 +53,7 @@ instance ToHtml PerformanceCSV where
 
     where
       dateHeader :: T.Text
-      dateHeader = format "{} ➜ {}"
-                   (prettyTime (earliestTime times'))
-                   (prettyTime (latestTime   times'))
+      dateHeader = T.pack $ prettyTime (earliestTime times') <> " ➜ " <> prettyTime (latestTime   times')
 
       times' = enforceTimeRangeBounds (StatusDataParams (tz $ performanceCsvPageTimeRange params)
                                                         (currentUtcTime $ performanceCsvPageTimeRange params)
