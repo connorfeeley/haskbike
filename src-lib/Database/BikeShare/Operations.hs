@@ -122,9 +122,11 @@ insertStationInformation reported stations = do
   (_, _, inserted) <- insertStationInformation' reported stations
   pure inserted
 
--- insertStationInformation' :: UTCTime
---                          -> [AT.StationInformation]             -- ^ List of 'StationInformation' from the API response.
---                          -> AppM [StationInformationT Identity] -- ^ List of 'StationInformation' that where inserted.
+insertStationInformation' :: UTCTime
+                         -> [AT.StationInformation]
+                         -- ^ List of 'StationInformation' from the API response.
+                         -> AppM ([StationInformation], [StationInformation], [StationInformation])
+                         -- ^ List of 'StationInformation' that were: (active, updated, inserted).
 insertStationInformation' reported stations =
   -- Use a transaction to ensure that the database is not left in an inconsistent state.
   withPostgresTransaction $ do
