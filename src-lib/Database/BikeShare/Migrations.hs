@@ -68,10 +68,10 @@ migrateDB = do
     PG.migrationBackend
     initialSetupStep
 
-  pool <- withConnPool
-  void . liftIO . withResource pool $ \conn -> do
-    forM_ extraInfoMigrations $ \migration -> do
-      execute_ conn migration
+  -- pool <- withConnPool
+  -- void . liftIO . withResource pool $ \conn -> do
+  --   forM_ extraInfoMigrations $ \migration -> do
+  --     execute_ conn migration
   pure db
 
 enumSetupStep :: MigrationSteps Postgres () (CheckedDatabaseEntity Postgres db (PgType EndpointQueried))
@@ -81,4 +81,3 @@ enumSetupStep = migrationStep
 
 enumSetup :: Migration Postgres (CheckedDatabaseEntity Postgres db (PgType EndpointQueried))
 enumSetup = createEndpointQueriedEnum
-
