@@ -97,6 +97,7 @@ common common-depends
                     , exceptions
                     , cassava
                     , resource-pool >= 0.4.0.0
+                    , timeit
 
 -- Dependencies needed by targets exercising the API client.
 common api-client-depends
