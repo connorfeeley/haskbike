@@ -13,11 +13,10 @@ import           CLI.Poll
 import           CLI.Query
 import           CLI.ServeVisualize
 
-import           Colog                     ( LogAction, Severity (..), WithLog, cmap, fmtMessage, log, logInfo,
-                                             logTextStdout, pattern D, pattern E, pattern I, usingLoggerT )
+import           Colog                     ( LogAction, Severity (..), cmap, fmtMessage, log, logInfo, logTextStdout,
+                                             pattern D, pattern E, pattern I, usingLoggerT )
 
 import           Control.Monad             ( unless, void, when )
-import           Control.Monad.IO.Class    ( MonadIO )
 
 import           Data.Pool
 import qualified Data.Text                 as T
@@ -41,7 +40,7 @@ import           System.IO
 
 import           Text.Pretty.Simple.Extras
 
-import           UnliftIO                  ( MonadUnliftIO, liftIO )
+import           UnliftIO                  ( liftIO )
 
 import           Version
 
@@ -112,6 +111,7 @@ appMain options = do
     (Poll p)           -> dispatchDatabase options >> dispatchPoll p
     (Query q)          -> dispatchDatabase options >> dispatchQuery q
     QueryApi           -> log E "Not implemented."
+    -- FIXME
     -- (Events e)         -> dispatchDatabase options >> dispatchEvents (optEventsSubcommand e)
     (ServeVisualize s) -> dispatchDatabase options >> dispatchVisualize s
     (DebugMisc d)      -> dispatchDatabase options >> dispatchDebug d

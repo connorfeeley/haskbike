@@ -13,10 +13,6 @@ module Database.BikeShare.Migrations where
 
 import           AppEnv
 
-import           Control.Monad                                ( forM_, void )
-
-import           Data.Pool
-
 import           Database.Beam.Migrate
 import           Database.Beam.Migrate.Simple
 import           Database.Beam.Postgres
@@ -28,9 +24,6 @@ import           Database.BikeShare.Tables.QueryLogs
 import           Database.BikeShare.Tables.StationInformation
 import           Database.BikeShare.Tables.StationStatus
 import           Database.BikeShare.Tables.SystemInformation
-import           Database.PostgreSQL.Simple                   ( execute_ )
-
-import           UnliftIO
 
 
 {- Set up entire database.
@@ -63,7 +56,7 @@ allowDestructive = defaultUpToDateHooks
 
 migrateDB :: AppM (Maybe (CheckedDatabaseSettings Postgres BikeshareDb))
 migrateDB = do
-  db <- withPostgres $ bringUpToDateWithHooks
+  withPostgres $ bringUpToDateWithHooks
     allowDestructive
     PG.migrationBackend
     initialSetupStep
@@ -72,7 +65,7 @@ migrateDB = do
   -- void . liftIO . withResource pool $ \conn -> do
   --   forM_ extraInfoMigrations $ \migration -> do
   --     execute_ conn migration
-  pure db
+  -- pure db
 
 enumSetupStep :: MigrationSteps Postgres () (CheckedDatabaseEntity Postgres db (PgType EndpointQueried))
 enumSetupStep = migrationStep
