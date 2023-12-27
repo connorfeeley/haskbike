@@ -53,7 +53,7 @@
                     };
                   in
                   {
-                    extraLibraries = [pkgs.stdenv.cc.libcxx];
+                    extraLibraries = [ pkgs.stdenv.cc.libcxx ];
 
                     postPatch = o.postPatch or "" + "cp ${versionFile} src-lib/Version.hs";
                     doCheck = false;
