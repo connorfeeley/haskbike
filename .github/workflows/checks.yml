@@ -16,15 +16,6 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build-package:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: DeterminateSystems/nix-installer-action@main
-      - uses: DeterminateSystems/magic-nix-cache-action@main
-      - name: Build goatcounter package
-        run: nix build --show-trace --print-build-logs .#goatcounter
-
   build-example:
     runs-on: ubuntu-latest
     steps:
@@ -33,5 +24,12 @@ jobs:
       - uses: DeterminateSystems/magic-nix-cache-action@main
       - name: Build package
         run: nix --show-trace --print-build-logs build .#packages.x86_64-linux.default
+
+  check-formatting:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
       - name: Build formatting check
         run: nix --show-trace --print-build-logs build .#checks.x86_64-linux.treefmt
