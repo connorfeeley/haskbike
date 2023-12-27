@@ -31,5 +31,6 @@ dispatchVisualize options = do
                             , serverTimeoutSeconds = 5 * 60
                             , serverLogAction      = adaptLogAction (envLogAction env)
                             , serverMaxIntervals   = 20
+                            , serverContactEmail   = "bikes@cfeeley.org"
                             }
   liftIO $ runServerAppM serverEnv serveVisualization

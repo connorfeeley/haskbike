@@ -72,6 +72,7 @@ data ServerEnv m where
                , serverTimeoutSeconds :: !Int                   -- ^ Timeout in seconds for the server.
                , serverLogAction      :: !(LogAction m Message) -- ^ Maximum number of intervals to query for
                , serverMaxIntervals   :: Pico
+               , serverContactEmail   :: String
                } -> ServerEnv m
 
 -- Implement logging for the application environment.
@@ -144,6 +145,7 @@ runWithServerAppM dbname action = do
                             , serverTimeoutSeconds = 5 * 60
                             , serverLogAction      = simpleMessageAction
                             , serverMaxIntervals   = 20
+                            , serverContactEmail   = "bikes@cfeeley.org"
                             }
   liftIO $ runServerAppM serverEnv action
 
@@ -160,6 +162,7 @@ runWithServerAppMSuppressLog dbname action = do
                             , serverTimeoutSeconds = 5 * 60
                             , serverLogAction      = mempty
                             , serverMaxIntervals   = 20
+                            , serverContactEmail   = "bikes@cfeeley.org"
                             }
   liftIO $ runServerAppM serverEnv action
 
@@ -176,6 +179,7 @@ runWithServerAppMDebug dbname action = do
                             , serverTimeoutSeconds = 5 * 60
                             , serverLogAction      = simpleMessageAction
                             , serverMaxIntervals   = 20
+                            , serverContactEmail   = "bikes@cfeeley.org"
                             }
   liftIO $ runServerAppM serverEnv action
 

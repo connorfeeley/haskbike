@@ -68,6 +68,8 @@ server = API { debugApi         = debugApiHandler
 homePageHandler :: ServerAppM (PureSideMenu IndexPage)
 homePageHandler = do
   _appEnv <- asks serverAppEnv
+  contactEmail <- asks serverContactEmail
   sideMenu $
-    IndexPage { _stationStatusLink = fieldLink pageForStation }
-
+    IndexPage { _stationStatusLink = fieldLink pageForStation
+              , _contactEmail      = contactEmail
+              }
