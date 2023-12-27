@@ -30,6 +30,8 @@ import           Server.StatusDataParams
 
 import           ServerEnv
 
+import           TextShow                                ( showt )
+
 import           TimeInterval
 
 
@@ -80,6 +82,7 @@ fromBeamStationStatusToVisJSON status =
 
 generateJsonDataSource :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM [StationStatusVisualization]
 generateJsonDataSource (Just stationId) startTime endTime = do
+  logDebug $ "Generating JSON data source for station " <> showt stationId <> ": " <> (T.pack . show) startTime <> " to " <> (T.pack . show) endTime
   -- Accessing the inner environment by using the serverEnv accessor.
   appEnv <- getAppEnvFromServer
   let tz = envTimeZone appEnv
@@ -95,6 +98,7 @@ generateJsonDataSource (Just stationId) startTime endTime = do
   pure $ map fromBeamStationStatusToVisJSON result
 
 generateJsonDataSource Nothing startTime endTime = do
+  logDebug $ "Generating JSON data source for system: " <> " " <> (T.pack . show) startTime <> " to " <> (T.pack . show) endTime
   env <- ask
   -- Accessing the inner environment by using the serverEnv accessor.
   appEnv <- getAppEnvFromServer
