@@ -327,7 +327,7 @@ queryLatestStatuses :: be ~ Postgres
                     -- (Q be BikeshareDb s (StationStatusT (QGenExpr QValueContext be s)))
                     (Q be BikeshareDb s (StationInformationT (QExpr be s), StationStatusT (QGenExpr QValueContext be s)))
 queryLatestStatuses = do
-  infoCte <- selecting $ all_ (bikeshareDb ^. bikeshareStationInformation)
+  infoCte <- queryLatestInfoBefore
   statusCte <- selecting $
     pgNubBy_ _statusStationId $
     orderBy_ (asc_ . _statusLastReported) $
@@ -335,10 +335,10 @@ queryLatestStatuses = do
     (all_ (bikeshareDb ^. bikeshareStationStatus))
 
   pure $ do
-    info <- reuse infoCte
+    info <- infoCte
     status <- reuse statusCte
 
-    guard_' (_statusStationId status ==?. _infoStationId info)
+    guard_' (_statusInfoId status `references_'` info)
 
     pure (info, status)
 
