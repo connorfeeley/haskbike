@@ -21,27 +21,26 @@ module Database.BikeShare.Schema.V001.BikeShare
      , bikeshareSystemInformationCount
      ) where
 
-import           Control.Lens                                 ( Lens' )
+import           Control.Lens                                      ( Lens' )
 
 import           Database.Beam
 import           Database.Beam.Postgres
 import           Database.Beam.Postgres.CustomTypes
 import           Database.BikeShare.EndpointQueried
-import           Database.BikeShare.Tables.QueryLogs
-import           Database.BikeShare.Tables.StationInformation
-import           Database.BikeShare.Tables.StationStatus
-import           Database.BikeShare.Tables.SystemInformation
-
+import           Database.BikeShare.Schema.V001.QueryLogs          as V001
+import           Database.BikeShare.Schema.V001.StationInformation as V001
+import           Database.BikeShare.Schema.V001.StationStatus      as V001
+import           Database.BikeShare.Schema.V001.SystemInformation  as V001
 
 
 data BikeshareDb f where
   BikeshareDb :: { _bikeshareEndpointQueriedType    :: f (PgType EndpointQueried)
                  -- ^ Custom Postgres enum type for the different endpoints that are queried.
-                 , _bikeshareStationInformation     :: f (TableEntity StationInformationT)
-                 , _bikeshareStationStatus          :: f (TableEntity StationStatusT)
-                 , _bikeshareSystemInformation      :: f (TableEntity SystemInformationT)
-                 , _bikeshareSystemInformationCount :: f (TableEntity SystemInformationCountT)
-                 , _bikeshareQueryLog               :: f (TableEntity QueryLogT)
+                 , _bikeshareStationInformation     :: f (TableEntity V001.StationInformationT)
+                 , _bikeshareStationStatus          :: f (TableEntity V001.StationStatusT)
+                 , _bikeshareSystemInformation      :: f (TableEntity V001.SystemInformationT)
+                 , _bikeshareSystemInformationCount :: f (TableEntity V001.SystemInformationCountT)
+                 , _bikeshareQueryLog               :: f (TableEntity V001.QueryLogT)
                  } -> BikeshareDb f
   deriving (Generic, Database Postgres)
 
@@ -49,20 +48,20 @@ data BikeshareDb f where
 bikeshareDb :: DatabaseSettings Postgres BikeshareDb
 bikeshareDb = defaultDbSettings `withDbModification`
   dbModification
-  { _bikeshareStationInformation     = stationInformationModification
-  , _bikeshareStationStatus          = stationStatusModification
-  , _bikeshareSystemInformation      = systemInformationModification
-  , _bikeshareSystemInformationCount = systemInformationCountModification
-  , _bikeshareQueryLog               = queryLogModification
+  { _bikeshareStationInformation     = V001.stationInformationModification
+  , _bikeshareStationStatus          = V001.stationStatusModification
+  , _bikeshareSystemInformation      = V001.systemInformationModification
+  , _bikeshareSystemInformationCount = V001.systemInformationCountModification
+  , _bikeshareQueryLog               = V001.queryLogModification
   }
 
 -- * Lenses
 -- NOTE: no lens for _bikeshareEndpointQueriedType.
-bikeshareStationInformation     :: Lens' (BikeshareDb f) (f (TableEntity StationInformationT))
-bikeshareStationStatus          :: Lens' (BikeshareDb f) (f (TableEntity StationStatusT))
-bikeshareSystemInformation      :: Lens' (BikeshareDb f) (f (TableEntity SystemInformationT))
-bikeshareSystemInformationCount :: Lens' (BikeshareDb f) (f (TableEntity SystemInformationCountT))
-bikeshareQueryLog               :: Lens' (BikeshareDb f) (f (TableEntity QueryLogT))
+bikeshareStationInformation     :: Lens' (BikeshareDb f) (f (TableEntity V001.StationInformationT))
+bikeshareStationStatus          :: Lens' (BikeshareDb f) (f (TableEntity V001.StationStatusT))
+bikeshareSystemInformation      :: Lens' (BikeshareDb f) (f (TableEntity V001.SystemInformationT))
+bikeshareSystemInformationCount :: Lens' (BikeshareDb f) (f (TableEntity V001.SystemInformationCountT))
+bikeshareQueryLog               :: Lens' (BikeshareDb f) (f (TableEntity V001.QueryLogT))
 BikeshareDb _ (TableLens bikeshareStationInformation)     _ _ _ _ = dbLenses
 BikeshareDb _ _ (TableLens bikeshareStationStatus)          _ _ _ = dbLenses
 BikeshareDb _ _ _ (TableLens bikeshareSystemInformation)      _ _ = dbLenses
