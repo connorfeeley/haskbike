@@ -38,3 +38,7 @@
 ## 2.1.2 -- 2023-12-20
 
 * Track nixos-unstable; fix build failures with latest nixpkgs.
+
+## 3.0.0 -- 2023-12-28
+
+* Add station status lookup table.
