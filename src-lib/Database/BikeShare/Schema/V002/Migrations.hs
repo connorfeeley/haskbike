@@ -1,15 +1,26 @@
 -- |
 
-module Database.BikeShare.Schema.V002.Migrations where
+module Database.BikeShare.Schema.V002.Migrations
+     ( migrateDB
+     ) where
+
+import           AppEnv
+
+import           Control.Arrow                                ( (>>>) )
 
 import           Database.Beam.Migrate
+import           Database.Beam.Migrate.Simple
 import           Database.Beam.Postgres
-import           Database.BikeShare.Schema.V001.BikeShare as V001
-import           Database.BikeShare.Schema.V002.BikeShare as V002
+import qualified Database.Beam.Postgres.Migrate               as Pg
+import qualified Database.BikeShare.Schema.V001.BikeShare     as V001
+import           Database.BikeShare.Schema.V001.Migrations    ( allowDestructive )
+import qualified Database.BikeShare.Schema.V001.Migrations    as V001
+import qualified Database.BikeShare.Schema.V002.BikeShare     as V002
+import qualified Database.BikeShare.Schema.V002.StationLookup as V002
 
-migration :: CheckedDatabaseSettings Postgres V001.BikeshareDb
-          -> Migration Postgres (CheckedDatabaseSettings Postgres V002.BikeshareDb)
-migration oldDb =
+migrationStationLookup :: CheckedDatabaseSettings Postgres V001.BikeshareDb
+                       -> Migration Postgres (CheckedDatabaseSettings Postgres V002.BikeshareDb)
+migrationStationLookup oldDb =
   V002.BikeshareDb
     <$> preserve (V001._bikeshareEndpointQueriedType oldDb)
     <*> preserve (V001._bikeshareStationInformation oldDb)
@@ -17,7 +28,14 @@ migration oldDb =
     <*> preserve (V001._bikeshareSystemInformation oldDb)
     <*> preserve (V001._bikeshareSystemInformationCount oldDb)
     <*> preserve (V001._bikeshareQueryLog oldDb)
-    -- <*> createTable "film_actor"
-    --       (FilmActorT (V0001.FilmId (field "film_id" smallint notNull))
-    --                                 (V0001.ActorId (field "actor_id" smallint notNull))
-    --                                 V0001.lastUpdateField)
+    <*> V002.createStationLookup
+
+migration :: MigrationSteps Postgres () (CheckedDatabaseSettings Postgres V002.BikeshareDb)
+migration = V001.initialSetupStep >>> migrationStep "Add station lookup table" migrationStationLookup
+
+migrateDB :: AppM (Maybe (CheckedDatabaseSettings Postgres V002.BikeshareDb))
+migrateDB = do
+  withPostgres $ bringUpToDateWithHooks
+    allowDestructive
+    Pg.migrationBackend
+    migration

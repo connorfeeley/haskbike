@@ -28,8 +28,8 @@ import qualified Data.ByteString.Lazy                         as BL
 import           Data.FileEmbed                               ( embedDir )
 import           Data.Time
 
+import           Database.BikeShare
 import           Database.BikeShare.ImportExport
-import           Database.BikeShare.Migrations
 import qualified Database.BikeShare.Tables.StationInformation as DB
 import qualified Database.BikeShare.Tables.StationStatus      as DB
 import           Database.BikeShare.Utils

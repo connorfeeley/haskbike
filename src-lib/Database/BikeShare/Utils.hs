@@ -37,6 +37,7 @@ dropTables = do
   pool <- withConnPool
   void . liftIO . withResource pool $ \conn -> do
   -- Drop all tables.
+    execute_ conn $ dropCascade "station_lookup"
     execute_ conn $ dropCascade "queries"
     execute_ conn $ dropCascade "station_status"
     execute_ conn $ dropCascade "station_information"

@@ -25,8 +25,7 @@ import           Control.Monad                 ( unless )
 import           Data.Foldable                 ( for_ )
 import qualified Data.Text                     as Text
 
-import           Database.BikeShare            ( bikeshareStationInformation, bikeshareStationStatus )
-import           Database.BikeShare.Migrations
+import           Database.BikeShare
 import           Database.BikeShare.Operations
 import           Database.BikeShare.Utils
 

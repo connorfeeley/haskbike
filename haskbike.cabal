@@ -255,7 +255,6 @@ library
                     , Database.BikeShare
                     , Database.BikeShare.BeamConvertable
                     , Database.BikeShare.ImportExport
-                    , Database.BikeShare.Migrations
                     , Database.BikeShare.StatusVariationQuery
                     , Database.BikeShare.Utils
                     , Database.BikeShare.EventCounts

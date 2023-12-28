@@ -4,7 +4,7 @@
 {-# LANGUAGE TypeFamilies              #-}
 {-# LANGUAGE UndecidableInstances      #-}
 
--- | Table to lookup latest station records.
+-- | Table to lookup latest station status records.
 
 module Database.BikeShare.Schema.V002.StationLookup
      ( PrimaryKey (..)
