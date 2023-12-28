@@ -12,11 +12,14 @@ module Database.BikeShare.Schema.V002.StationLookup
      , StationLookupId
      , StationLookupT (..)
      , createStationLookup
+     , extraLookupMigrations
      , stnLookup
      , stnLookupModification
      ) where
 
 import           Control.Lens
+
+import           Data.String                                       ( IsString )
 
 import           Database.Beam
 import           Database.Beam.Backend                             ( IsSql92DataTypeSyntax (..) )
@@ -66,3 +69,7 @@ createStationLookup =
                                                      )
                                 (field "status_last_reported" (DataType (timestampType Nothing True)) notNull)
   }
+
+
+extraLookupMigrations :: IsString a => [a]
+extraLookupMigrations = ["ALTER TABLE public.station_lookup ADD CONSTRAINT fk_station_lookup FOREIGN KEY (info_station_id, info_reported, status_last_reported) REFERENCES public.station_status (info_station_id, info_reported, last_reported) ON UPDATE CASCADE"]

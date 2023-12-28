@@ -92,7 +92,9 @@ data StationStatusT f where
 type StationStatus   = StationStatusT Identity
 type StationStatusId = PrimaryKey StationStatusT Identity
 deriving instance Show StationStatusId
+deriving instance Eq   StationStatusId
 deriving instance Show StationStatus
+deriving instance Eq   StationStatus
 
 -- | Inform Beam about the table.
 instance Table StationStatusT where

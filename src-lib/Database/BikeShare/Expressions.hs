@@ -16,6 +16,7 @@ module Database.BikeShare.Expressions
      , queryLatestInfoBefore
      , queryLatestQueryLogs
      , queryLatestStatusBetweenExpr
+     , queryLatestStatusLookup
      , queryLatestStatuses
      , queryLatestSystemInfo
      , queryStationIdExpr
@@ -59,6 +60,7 @@ import           Database.BikeShare.EndpointQueried
 import           Database.BikeShare.StatusVariationQuery
 import           Database.BikeShare.Tables.QueryLogs
 import           Database.BikeShare.Tables.StationInformation
+import           Database.BikeShare.Tables.StationLookup
 import           Database.BikeShare.Tables.StationStatus
 import           Database.BikeShare.Tables.SystemInformation
 
@@ -396,3 +398,13 @@ queryLatestInfoBefore = do
     partitioned <- reuse ranked
     guard_ (partitioned ^. _2 ==. 1) -- Is max rank (latest record in partition)
     pure (partitioned ^. _1)
+
+queryLatestStatusLookup :: With Postgres BikeshareDb (Q Postgres BikeshareDb s (StationStatusT (QGenExpr QValueContext Postgres s)))
+queryLatestStatusLookup = do
+  status <- selecting $ all_ (bikeshareDb ^. bikeshareStationStatus)
+  statusLookup <- selecting $ all_ (bikeshareDb ^. bikeshareStationLookup)
+  pure $ do
+    status' <- reuse status
+    statusLookup' <- reuse statusLookup
+    guard_' (_stnLookup statusLookup' `references_'` status')
+    pure status'
