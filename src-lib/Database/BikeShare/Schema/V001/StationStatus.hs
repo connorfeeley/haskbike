@@ -89,7 +89,7 @@ data StationStatusT f where
   deriving (Generic, Beamable)
 
 -- | Synonym for the table type.
-type StationStatus = StationStatusT Identity
+type StationStatus   = StationStatusT Identity
 type StationStatusId = PrimaryKey StationStatusT Identity
 deriving instance Show StationStatusId
 deriving instance Show StationStatus
