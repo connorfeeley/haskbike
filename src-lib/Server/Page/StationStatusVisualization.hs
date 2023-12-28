@@ -45,7 +45,7 @@ instance ToHtml StationStatusVisualizationPage where
     -- Injected into 'SideMenu'
     div_ [class_ "header"] $ do
       h1_ [] (toHtml (pageTitle (_statusVisPageStationId params) (_infoName inf)))
-      h2_ [] (toHtml dateHeader)
+      h2_ [] ((toHtml . dateHeader) times')
     br_ []
     div_ [class_ "content"] $ do
       -- Informational headers
@@ -81,11 +81,6 @@ instance ToHtml StationStatusVisualizationPage where
 
       pageTitle :: Int -> T.Text -> T.Text
       pageTitle a b = "Station #"<>(T.pack . show) a<>": "<>b
-
-      dateHeader :: T.Text
-      dateHeader =
-                   (T.pack . show $ prettyTime (earliestTime times')) <> " ➜ " <>
-                   (T.pack . show $ prettyTime (latestTime   times'))
 
       capacityHeader :: Monad m => HtmlT m ()
       capacityHeader = div_ $ do

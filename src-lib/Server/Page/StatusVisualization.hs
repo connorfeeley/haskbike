@@ -1,5 +1,6 @@
 module Server.Page.StatusVisualization
      ( boolToText
+     , dateHeader
      , endTimeInput
      , formatTimeHtml
      , makeInputField
@@ -25,6 +26,9 @@ import           Server.StatusDataParams
 
 import           Visualization.StationOccupancy
 
+dateHeader :: TimePair LocalTime -> T.Text
+dateHeader t = T.pack (prettyTime (earliestTime t)) <> " ➜ " <>
+               T.pack (prettyTime (latestTime   t))
 
 -- This helper creates an input field with the provided 'id' and 'type' attributes.
 makeInputField :: Monad m => HtmlT m () -> T.Text -> T.Text -> T.Text -> HtmlT m ()

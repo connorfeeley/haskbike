@@ -33,7 +33,7 @@ instance ToHtml PerformanceCSV where
     -- Injected into 'SideMenu'
     div_ [class_ "header"] $ do
       h1_ [] "System Performance Indicators"
-      h2_ [] (toHtml dateHeader)
+      h2_ [] ((toHtml . dateHeader) times')
     br_ []
     div_ [class_ "content"] $ do
       -- Informational headers
@@ -52,9 +52,6 @@ instance ToHtml PerformanceCSV where
           div_ [class_ "pure-u-1 pure-u-md-1-3"] (makeInputField (i_ "Download CSV") "submit" "download" "Download")
 
     where
-      dateHeader :: T.Text
-      dateHeader = T.pack $ prettyTime (earliestTime times') <> " ➜ " <> prettyTime (latestTime   times')
-
       times' = enforceTimeRangeBounds (StatusDataParams (tz $ performanceCsvPageTimeRange params)
                                                         (currentUtcTime $ performanceCsvPageTimeRange params)
                                                         (performanceCsvPageTimeRange params)

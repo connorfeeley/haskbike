@@ -87,7 +87,7 @@ instance ToHtml SystemStatusVisualizationPage where
     -- Injected into 'SideMenu'
     div_ [class_ "header"] $ do
       h1_ [] "System Status"
-      h2_ [] (toHtml dateHeader)
+      h2_ [] ((toHtml . dateHeader) times')
     br_ []
     div_ [class_ "content"] $ do
       -- Informational headers
@@ -113,9 +113,6 @@ instance ToHtml SystemStatusVisualizationPage where
 
     where
       staticLink = _systemStatusVisPageStaticLink params
-
-      dateHeader :: T.Text
-      dateHeader = T.pack $ prettyTime (earliestTime times') <> " ➜ " <> prettyTime (latestTime   times')
 
       times' = enforceTimeRangeBounds (StatusDataParams (tz $ _systemStatusVisPageTimeRange params)
                                                         (currentUtcTime $ _systemStatusVisPageTimeRange params)
