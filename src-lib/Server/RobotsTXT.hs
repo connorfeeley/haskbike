@@ -77,14 +77,3 @@ disallowTxt path = "Disallow: /" <> path <> "/"
 
 crawlDelayTxt :: Maybe Int -> Maybe String
 crawlDelayTxt = fmap (("Crawl-delay: " <>) . show )
-
-excludedRoutes' :: [String]
-excludedRoutes' = [ "User-agent: *"
-                 , "Disallow: "
-                 , "Crawl-delay: 1"
-                 , "Disallow: /debug/"
-                 , "Disallow: /data/"
-                 , "Disallow: /visualization/"
-                 , "Disallow: /components/"
-                 , "Disallow: /static/"
-                 ]
