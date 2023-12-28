@@ -271,7 +271,8 @@ library
                     , Database.BikeShare.Tables.StationStatus
                     , Database.BikeShare.Tables.QueryLogs
                     , Database.BikeShare.Tables.Diagnostics
-                    , Database.BikeShare.Schema.V001
+                    , Database.BikeShare.Schema.V001.Migrations
+                    , Database.BikeShare.Schema.V001.BikeShare
                     , Database.BikeShare.Schema.V001.SystemInformation
                     , Database.BikeShare.Schema.V001.StationInformation
                     , Database.BikeShare.Schema.V001.StationStatus

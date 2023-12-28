@@ -9,7 +9,7 @@
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE UndecidableInstances  #-}
 
-module Database.BikeShare.Schema.V001 where
+module Database.BikeShare.Schema.V001.Migrations where
 
 import           AppEnv
 
