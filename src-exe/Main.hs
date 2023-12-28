@@ -8,6 +8,7 @@ import           AppEnv
 
 import           CLI.Database
 import           CLI.Debug
+import           CLI.Events
 import           CLI.Options
 import           CLI.Poll
 import           CLI.Query
@@ -111,8 +112,7 @@ appMain options = do
     (Poll p)           -> dispatchDatabase options >> dispatchPoll p
     (Query q)          -> dispatchDatabase options >> dispatchQuery q
     QueryApi           -> log E "Not implemented."
-    -- FIXME
-    -- (Events e)         -> dispatchDatabase options >> dispatchEvents (optEventsSubcommand e)
+    (Events e)         -> dispatchDatabase options >> dispatchEvents (optEventsSubcommand e)
     (ServeVisualize s) -> dispatchDatabase options >> dispatchVisualize s
     (DebugMisc d)      -> dispatchDatabase options >> dispatchDebug d
     (Reset _)          -> void (dispatchDatabase options)

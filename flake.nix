@@ -32,15 +32,6 @@
           projectRoot = ./.;
 
           settings = {
-            # fmt = { self, super, ... }: {
-            #   custom = _pkg: pkgs.lib.pipe pkgs.haskellPackages.fmt [
-            #     # Replace Version.hs with a generated one, since it requires access to the git directory
-            #     # to determine the version.
-            #     (pkgs.haskell.lib.compose.overrideCabal (o: {
-            #         # extraLibraries = [pkgs.stdenv.cc.libcxx];
-            #       }))
-            #   ];
-            # };
             haskbike = { self, super, ... }: {
               custom = _pkg: pkgs.lib.pipe super.haskbike [
                 # Replace Version.hs with a generated one, since it requires access to the git directory
