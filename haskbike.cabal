@@ -278,6 +278,8 @@ library
                     , Database.BikeShare.Schema.V001.StationStatus
                     , Database.BikeShare.Schema.V001.QueryLogs
                     , Database.BikeShare.Schema.V001.Diagnostics
+                    , Database.BikeShare.Schema.V002.BikeShare
+                    , Database.BikeShare.Schema.V002.Migrations
                     , Database.BikeShare.EndpointQueried
                     , Visualization.StationOccupancy
                     , Visualization.SystemInformation
