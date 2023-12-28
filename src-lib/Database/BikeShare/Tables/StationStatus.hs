@@ -1,6 +1,3 @@
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-{-# HLINT ignore "Use camelCase" #-}
-
 {-# LANGUAGE DeriveAnyClass            #-}
 {-# LANGUAGE DerivingVia               #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
