@@ -60,6 +60,7 @@ import           Database.BikeShare.Expressions
 import           Database.BikeShare.Operations.Dockings
 import           Database.BikeShare.Tables.QueryLogs
 import           Database.BikeShare.Tables.StationInformation
+import           Database.BikeShare.Tables.StationLookup
 import           Database.BikeShare.Tables.StationStatus
 import           Database.BikeShare.Tables.SystemInformation
 import           Database.PostgreSQL.Simple                   ( Only (..), query_ )
@@ -200,11 +201,19 @@ insertStationStatus apiStatus =
                                                                 (map (\inf -> ((fromIntegral . _infoStationId) inf, inf)) info)
     let statusWithInfo :: [(StationInformation, AT.StationStatus)] = mapMaybe (lookupInfoId infoMap) apiStatus
 
-    runInsertReturningList $
+    status <- runInsertReturningList $
       insertOnConflict (bikeshareDb ^. bikeshareStationStatus)
       (insertExpressions $
        mapMaybe (\(inf, sta) -> fromJSONToBeamStationStatus (StationInformationId (_infoStationId inf) (_infoReported inf)) sta) statusWithInfo
       ) (conflictingFields primaryKey) onConflictDoNothing
+
+    _statusLookup <- runInsertReturningList $
+      insertOnConflict (bikeshareDb ^. bikeshareStationLookup)
+      (insertExpressions $
+       map (\ss -> StationLookup (val_ $ StationStatusId (_statusInfoId ss) (_statusLastReported ss))) status
+      ) (conflictingFields primaryKey) onConflictUpdateAll
+
+    pure status
 
 lookupInfoId infoMap status =
   case Map.lookup (AT._statusStationId status) infoMap of

@@ -1,5 +1,5 @@
-{-# OPTIONS_GHC -fno-warn-unused-binds -fno-warn-name-shadowing #-}
-{-# LANGUAGE CPP                   #-}
+-- |
+
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE GADTs                 #-}
@@ -9,7 +9,7 @@
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE UndecidableInstances  #-}
 
-module Database.BikeShare.Migrations where
+module Database.BikeShare.Schema.V001.Migrations where
 
 import           AppEnv
 
@@ -17,13 +17,13 @@ import           Database.Beam.Migrate
 import           Database.Beam.Migrate.Simple
 import           Database.Beam.Postgres
 import           Database.Beam.Postgres.CustomTypes
-import qualified Database.Beam.Postgres.Migrate               as PG
-import           Database.BikeShare
+import qualified Database.Beam.Postgres.Migrate                    as PG
 import           Database.BikeShare.EndpointQueried
-import           Database.BikeShare.Tables.QueryLogs
-import           Database.BikeShare.Tables.StationInformation
-import           Database.BikeShare.Tables.StationStatus
-import           Database.BikeShare.Tables.SystemInformation
+import           Database.BikeShare.Schema.V001.BikeShare
+import           Database.BikeShare.Schema.V001.QueryLogs
+import           Database.BikeShare.Schema.V001.StationInformation
+import           Database.BikeShare.Schema.V001.StationStatus
+import           Database.BikeShare.Schema.V001.SystemInformation
 
 
 {- Set up entire database.

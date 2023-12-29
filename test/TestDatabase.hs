@@ -19,6 +19,7 @@ module TestDatabase
      , unit_insertStationApi
      , unit_insertStationInformation
      , unit_insertStationInformationApi
+     , unit_insertStationLookup
      , unit_insertStationStatus
      , unit_insertStationStatusApi
      , unit_insertSystemInformation
@@ -33,7 +34,7 @@ import qualified API.SystemInformation                        as AT
 
 import           AppEnv
 
-import           Control.Lens
+import           Control.Lens                                 hiding ( reuse )
 import           Control.Monad                                ( unless )
 
 import           Data.Functor                                 ( void )
@@ -42,10 +43,12 @@ import           Data.Time
 
 import           Database.Beam
 import           Database.Beam.Postgres
+import           Database.BikeShare
 import           Database.BikeShare.EventCounts
 import           Database.BikeShare.Operations
 import           Database.BikeShare.StatusVariationQuery
 import           Database.BikeShare.Tables.StationInformation
+import           Database.BikeShare.Tables.StationLookup
 import           Database.BikeShare.Tables.StationStatus
 import           Database.BikeShare.Tables.SystemInformation
 import           Database.BikeShare.Utils
@@ -411,3 +414,29 @@ checkConditions stationId thresholds expectDockings expectUndockings = do
 
 findInList :: Int32 -> [DockingEventsCount] -> Maybe DockingEventsCount
 findInList key tuples = tuples ^? folded . filtered (\k -> k ^. eventsStation . infoStationId == key)
+
+-- | HUnit test for inserting station status and asserting that the lookup table is accurate.
+unit_insertStationLookup :: IO ()
+unit_insertStationLookup = do
+  -- Connect to the database.
+  runWithAppMSuppressLog dbnameTest setupTestDatabase
+
+  info    <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
+  status  <- getDecodedFileStatus      "test/json/station_status.json"
+
+  -- Insert test data.
+  _insertedInfo  <- runWithAppM dbnameTest $ insertStationInformation (_respLastUpdated info) (_respData info)
+  insertedStatus <- runWithAppM dbnameTest $ insertStationStatus $ status ^. respData
+
+  -- statusLookup <- runWithAppM dbnameTest $ withPostgres $ runSelectReturningList $ queryLatestStatusLookup
+  statusLookup <- liftIO $ runWithAppM dbnameTest $ withPostgres $ do
+    runSelectReturningList $ selectWith $ do
+      statusQ <- selecting $ all_ (bikeshareDb ^. bikeshareStationStatus)
+      statusLookup <- selecting $ all_ (bikeshareDb ^. bikeshareStationLookup)
+      pure $ do
+        status' <- reuse statusQ
+        statusLookup' <- reuse statusLookup
+        guard_' (_stnLookup statusLookup' `references_'` status')
+        pure status'
+
+  assertEqual "Inserted station status" insertedStatus statusLookup
