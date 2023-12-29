@@ -14,6 +14,7 @@ module Database.BikeShare.Expressions
      , integrateColumns
      , latestQueryLogsToMap
      , queryLatestInfoBefore
+     , queryLatestInfoLookup
      , queryLatestQueryLogs
      , queryLatestStatusBetweenExpr
      , queryLatestStatusLookup
@@ -408,3 +409,16 @@ queryLatestStatusLookup = do
     statusLookup' <- reuse statusLookup
     guard_' (_stnLookup statusLookup' `references_'` status')
     pure status'
+
+queryLatestInfoLookup :: With Postgres BikeshareDb (Q Postgres BikeshareDb s (StationInformationT (QGenExpr QValueContext Postgres s)))
+queryLatestInfoLookup = do
+  info         <- selecting $ all_ (bikeshareDb ^. bikeshareStationInformation)
+  status       <- selecting $ all_ (bikeshareDb ^. bikeshareStationStatus)
+  -- statusLookup <- selecting $ all_ (bikeshareDb ^. bikeshareStationLookup)
+  pure $ do
+    status' <- reuse status
+    info' <- reuse info
+    -- statusLookup' <- reuse statusLookup
+    -- guard_' (_stnLookup statusLookup' `references_'` status')
+    guard_' (_statusInfoId status' `references_'` info')
+    pure info'
