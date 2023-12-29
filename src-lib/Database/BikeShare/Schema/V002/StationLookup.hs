@@ -64,7 +64,7 @@ createStationLookup :: Migration Postgres (CheckedDatabaseEntity Postgres db (Ta
 createStationLookup =
   createTable "station_lookup" $ StationLookup
   { _stnLookup                = V001.StationStatusId ( V001.StationInformationId
-                                                      (field "info_station_id" int notNull)
+                                                      (field "info_station_id" int notNull unique)
                                                       (field "info_reported" (DataType (timestampType Nothing True)) notNull)
                                                      )
                                 (field "status_last_reported" (DataType (timestampType Nothing True)) notNull)

@@ -10,6 +10,7 @@
 -- Sometimes it is straight up impossible to write the types down because of ambiguous types.
 {-# OPTIONS_GHC -fno-warn-partial-type-signatures -fno-warn-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-type-defaults #-}
+{-# LANGUAGE OverloadedRecordDot       #-}
 
 -- | This module contains the operations that can be performed on the database.
 
@@ -45,6 +46,7 @@ import           AppEnv
 import           Control.Lens                                 hiding ( reuse, (<.) )
 
 import           Data.Int                                     ( Int32 )
+import           Data.List                                    ( nubBy )
 import qualified Data.Map                                     as Map
 import           Data.Maybe                                   ( catMaybes, mapMaybe )
 import           Data.Pool                                    ( withResource )
@@ -210,10 +212,12 @@ insertStationStatus apiStatus =
     _statusLookup <- runInsertReturningList $
       insertOnConflict (bikeshareDb ^. bikeshareStationLookup)
       (insertExpressions $
-       map (\ss -> StationLookup (val_ $ StationStatusId (_statusInfoId ss) (_statusLastReported ss))) status
-      ) (conflictingFields primaryKey) onConflictUpdateAll
+       map (\ss -> StationLookup (val_ $ StationStatusId (_statusInfoId ss) (_statusLastReported ss)))
+       (uniqueStatus status)
+      ) (conflictingFields (_unInformationStationId . _unStatusStationId . _stnLookup)) onConflictUpdateAll
 
     pure status
+  where uniqueStatus = nubBy (\s1 s2 -> s1._statusStationId == s2._statusStationId)
 
 lookupInfoId infoMap status =
   case Map.lookup (AT._statusStationId status) infoMap of

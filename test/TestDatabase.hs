@@ -439,4 +439,5 @@ unit_insertStationLookup = do
         guard_' (_stnLookup statusLookup' `references_'` status')
         pure status'
 
-  assertEqual "Inserted station status" insertedStatus statusLookup
+  assertEqual "Inserted station status is same as latest status" insertedStatus statusLookup
+  assertEqual "Status lookup length" (length insertedStatus) (length statusLookup)
