@@ -54,7 +54,7 @@ instance ToHtml IndexPage where
         p_ [style_ "font-style: italic"] ("This is a work-in-progress; see " <> a_ [href_ "https://cfeeley.org/posts/city-stuff/freedom-of-information/"] "my blog" <> " for a series of articles on this.")
 
         br_ []
-        p_ "I'd be happy send a copy of the database to anyone who's interested - " <> a_ [href_ ("mailto:" <> (T.pack . _contactEmail) params)] "send me an email" <> " and we'll work out the best way to do that."
+        p_ ("I'd be happy send a copy of the database to anyone who's interested - " <> a_ [href_ ("mailto:" <> (T.pack . _contactEmail) params)] "send me an email" <> " and we'll work out the best way to do that.")
 
         contentSubhead "Source Code"
         p_ $ "GitHub: " <> a_ [href_ "https://github.com/connorfeeley/haskbike"] "connorfeeley/haskbike"
