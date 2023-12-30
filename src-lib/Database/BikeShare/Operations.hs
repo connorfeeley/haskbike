@@ -242,7 +242,7 @@ Query the station name given a station ID.
 queryStationName :: Int                 -- ^ Station ID.
                  -> AppM (Maybe String) -- ^ Station name assosicated with the given station ID.
 queryStationName stationId = do
-  info <- withPostgres $ runSelectReturningOne $ select $ infoByIdExpr [fromIntegral stationId]
+  info <- withPostgres $ runSelectReturningOne $ selectWith $ infoByIdExpr [fromIntegral stationId]
 
   let station_name = info ^. _Just . infoName
 

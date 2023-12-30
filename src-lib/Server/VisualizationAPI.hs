@@ -96,11 +96,11 @@ stationStatusVisualizationPage (Just stationId) startTime endTime = do
   let tz = envTimeZone appEnv
   currentUtc <- liftIO getCurrentTime
 
-  info <- liftIO $ runAppM appEnv (withPostgres $ runSelectReturningOne $ select $ infoByIdExpr [fromIntegral stationId])
+  info <- liftIO $ runAppM appEnv $ withPostgres $ runSelectReturningList $ selectWith $ infoByIdExpr [fromIntegral stationId]
 
   case info of
-    Just info' -> do
-      logInfo $ "Matched station information: " <> info' ^. infoName
+    [info'] -> do
+      logInfo $ "Matched station information: " <> _infoName info'
       logInfo $ "Static path: " <> toUrlPiece (fieldLink staticApi)
       sideMenu $
         StationStatusVisualizationPage { _statusVisPageStationInfo    = info'

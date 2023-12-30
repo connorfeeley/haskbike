@@ -96,10 +96,19 @@ statusBetweenExpr station_id start_time end_time =
     pure status
 
 -- | Expression to query information for stations by their IDs.
-infoByIdExpr :: [Int32] -> Q Postgres BikeshareDb s (StationInformationT (QExpr Postgres s))
-infoByIdExpr stationIds =
-    filter_ (\info -> _infoStationId info `in_` map val_ stationIds)
-    (all_ (bikeshareDb ^. bikeshareStationInformation))
+infoByIdExpr :: [Int32] -> With Postgres BikeshareDb (Q Postgres BikeshareDb s (StationInformationT (QGenExpr QValueContext Postgres s)))
+infoByIdExpr stationIds = do
+  info         <- selecting $ all_ (bikeshareDb ^. bikeshareStationInformation)
+  status       <- selecting $ all_ (bikeshareDb ^. bikeshareStationStatus)
+  statusLookup <- selecting $ all_ (bikeshareDb ^. bikeshareStationLookup)
+  pure $ do
+    status' <- reuse status
+    info' <- reuse info
+    statusLookup' <- reuse statusLookup
+    guard_' (_stnLookup statusLookup' `references_'` status')
+    guard_' (_statusInfoId status' `references_'` info')
+    guard_ (_infoStationId info' `in_` map val_ stationIds)
+    pure info'
 
 -- | Insert station information into the database.
 insertStationInformationExpr :: UTCTime -> [AT.StationInformation] -> SqlInsert Postgres StationInformationT
