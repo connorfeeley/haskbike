@@ -85,15 +85,12 @@ systemStatusBetweenExpr start_time end_time =
 
 -- | Expression to query the statuses for a station between two times.
 statusBetweenExpr :: Int32 -> UTCTime -> UTCTime -> Q Postgres BikeshareDb s (StationStatusT (QGenExpr QValueContext Postgres s))
-statusBetweenExpr station_id start_time end_time =
-  do
-    info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
-    status <- orderBy_ (asc_ . _statusLastReported)
-              (all_ (bikeshareDb ^. bikeshareStationStatus))
-    guard_ (_statusStationId status ==. _infoStationId info &&.
-            (info   ^. infoStationId) ==. val_ (fromIntegral station_id) &&.
-            between_ (status ^. statusLastReported) (val_ start_time) (val_ end_time))
-    pure status
+statusBetweenExpr stationId startTime endTime = do
+  status <- orderBy_ (asc_ . _statusLastReported)
+            (all_ (bikeshareDb ^. bikeshareStationStatus))
+  guard_ (_statusStationId status ==. val_ stationId &&.
+          between_ (status ^. statusLastReported) (val_ startTime) (val_ endTime))
+  pure status
 
 -- | Expression to query information for stations by their IDs.
 infoByIdExpr :: [Int32] -> With Postgres BikeshareDb (Q Postgres BikeshareDb s (StationInformationT (QGenExpr QValueContext Postgres s)))
