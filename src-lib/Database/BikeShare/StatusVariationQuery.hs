@@ -4,6 +4,7 @@ module Database.BikeShare.StatusVariationQuery
      ( StatusThreshold (..)
      , StatusVariationQuery (..)
      , filterFor_
+     , infoFilterForLatest_
      , infoFilterFor_
      , stationIdCondition
      , thresholdCondition
@@ -65,7 +66,18 @@ infoThresholdCondition (EarliestTime threshold) status = status ^. infoReported 
 infoThresholdCondition (LatestTime threshold) status   = status ^. infoReported <=. val_ threshold
 
 
+
 -- | Construct a filter expression corresponding to the station ID.
 infoStationIdCondition :: Maybe Int32 -> StationInformationT (QExpr Postgres s) -> QExpr Postgres s Bool
 infoStationIdCondition (Just stationId) status = _infoStationId status ==. val_ stationId
 infoStationIdCondition Nothing _               = val_ True
+
+-- | Construct a filter expression for a 'StatusQuery'.
+infoFilterForLatest_ :: StatusVariationQuery -> StationInformationT (QExpr Postgres s) -> QExpr Postgres s Bool
+infoFilterForLatest_ (StatusVariationQuery stationId thresholds) status =
+  let thresholdConditions = map (`infoThresholdConditionLatest` status) thresholds
+  in foldr (&&.) (infoStationIdCondition stationId status) thresholdConditions
+
+infoThresholdConditionLatest :: StatusThreshold -> StationInformationT (QExpr Postgres s) -> QExpr Postgres s Bool
+infoThresholdConditionLatest (EarliestTime _threshold) _status = val_ True
+infoThresholdConditionLatest (LatestTime threshold) status     = status ^. infoReported <=. val_ threshold
