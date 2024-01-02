@@ -13,6 +13,8 @@ module Database.BikeShare.Expressions
      , insertStationInformationExpr
      , integrateColumns
      , latestQueryLogsToMap
+     , queryChargingInfrastructure
+     , queryLatestInfo
      , queryLatestInfoBefore
      , queryLatestInfoLookup
      , queryLatestQueryLogs
@@ -395,11 +397,11 @@ latestQueryLogsToMap tz = LatestQueries . queryMap
     utcToLocal = utcToLocalTime tz
 
 -- | Get the latest query logs for each endpoint.
-queryLatestInfoBefore :: be ~ Postgres
+queryLatestInfo :: be ~ Postgres
                       => With be BikeshareDb
                       (Q be BikeshareDb s
                        (StationInformationT (QExpr be s)))
-queryLatestInfoBefore = do
+queryLatestInfo = do
   ranked <- selecting $ do
     withWindow_ (\row -> frame_ (partitionBy_ (_infoStationId row)) (orderPartitionBy_ (desc_ $ _infoId row)) noBounds_)
                 (\row w -> ( row
@@ -410,6 +412,23 @@ queryLatestInfoBefore = do
     partitioned <- reuse ranked
     guard_ (partitioned ^. _2 ==. 1) -- Is max rank (latest record in partition)
     pure (partitioned ^. _1)
+
+queryLatestInfoBefore :: (be ~ Postgres, ctx ~ QValueContext, db ~ BikeshareDb, expr ~ QGenExpr)
+                      => UTCTime
+                      -> With be db (Q Postgres BikeshareDb s (StationInformationT (QGenExpr QValueContext Postgres s)))
+queryLatestInfoBefore t = do
+  ranked <- selecting $ do
+    withWindow_ (\row -> frame_ (partitionBy_ (_infoStationId row)) (orderPartitionBy_ (desc_ $ _infoId row)) noBounds_)
+                (\row w -> ( row
+                           , rank_ `over_` w
+                           )
+                ) $
+      filter_' (\inf -> sqlBool_ (_infoReported inf  <=. val_ t) &&?.
+                        (_infoIsChargingStation inf ==?. val_ True)
+               ) (all_ (bikeshareDb ^. bikeshareStationInformation))
+  pure $ do
+    info <- filter_ (\inf -> inf ^. _2 ==. val_ 1) (reuse ranked)
+    pure (info ^. _1)
 
 queryLatestStatusLookup :: With Postgres BikeshareDb (Q Postgres BikeshareDb s (StationStatusT (QGenExpr QValueContext Postgres s)))
 queryLatestStatusLookup = do
@@ -433,3 +452,26 @@ queryLatestInfoLookup = do
     -- guard_' (_stnLookup statusLookup' `references_'` status')
     guard_' (_statusInfoId status' `references_'` info')
     pure info'
+
+
+-- | Query charging infrastructure at given time.
+queryChargingInfrastructure :: (be ~ Postgres, ctx ~ QValueContext, db ~ BikeshareDb, expr ~ QGenExpr)
+                            => UTCTime
+                            -> With be db (Q be db s (expr ctx be s Int32, expr ctx be s Int32))
+                            -- ^ (Maybe) a tuple of (number of charging stations, number of charging docks)
+queryChargingInfrastructure t = do
+  ranked <- selecting $ do
+    withWindow_ (\row -> frame_ (partitionBy_ (_infoStationId row)) (orderPartitionBy_ (desc_ $ _infoId row)) noBounds_)
+                (\row w -> ( row
+                           , rank_ `over_` w
+                           )
+                ) $
+      filter_' (\inf -> sqlBool_ (_infoReported inf  <=. val_ t) &&?.
+                        (_infoIsChargingStation inf ==?. val_ True)
+               ) (all_ (bikeshareDb ^. bikeshareStationInformation))
+  pure $
+    aggregate_ (\(inf, _rank) -> ( as_ @Int32 countAll_
+                                 , fromMaybe_ 0 (sum_ (_infoCapacity inf))
+                                 )
+               ) $
+    filter_ (\inf -> inf ^. _2 ==. val_ 1) (reuse ranked)

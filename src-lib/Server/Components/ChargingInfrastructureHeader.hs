@@ -4,9 +4,6 @@ module Server.Components.ChargingInfrastructureHeader
      ( ChargingInfrastructureHeader (..)
      ) where
 
-import           Data.Function     ( (&) )
-import qualified Data.Text         as T
-
 import           Lucid
 
 import           Server.Page.Utils
@@ -21,18 +18,14 @@ data ChargingInfrastructureHeader where
 
 instance ToHtml ChargingInfrastructureHeader where
   toHtmlRaw = toHtml
+
   toHtml params = div_ $ do
-    div_ [class_ "tooltip"] $ do
-      label_ [for_ "charging-infrastructure"] (h3_ "Charging Infrastructure")
-      div_ [id_ "charging-infrastructure"] $ do
-        div_ [class_ "charging-infrastructure"] $ do
-          div_ $ do -- Tooltip content
-            p_ [class_ "pure-g"] $
-              b_ [class_ "pure-u-3-4"] $
-              "Charging Stations: " <> span_ [class_ "pure-u-1-4"] stationCount
-            p_ [class_ "pure-g"] $
-              b_ [class_ "pure-u-3-4"] $
-              "Charging Docks: "    <> span_ [class_ "pure-u-1-4"] dockCount
+    label_ [for_ "charging-infrastructure"] (h3_ "Charging Infrastructure")
+    div_ [id_ "charging-infrastructure", class_ "charging-infrastructure"] $ do
+      p_ [class_ "pure-g"] $ b_ [class_ "pure-u-3-4"] "Charging Stations: " <>
+        span_ [class_ "pure-u-1-4"] stationCount
+      p_ [class_ "pure-g"] $ b_ [class_ "pure-u-3-4"] "Charging Docks: " <>
+        span_ [class_ "pure-u-1-4"] dockCount
 
     where
       stationCount = showth . chargingStationCount $ params

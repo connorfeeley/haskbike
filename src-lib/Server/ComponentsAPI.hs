@@ -15,6 +15,8 @@ import qualified Data.Text                                      as T
 import           Data.Time
 import           Data.Time.Extras
 
+import           Database.Beam                                  ( runSelectReturningOne, selectWith )
+import           Database.BikeShare.Expressions                 ( queryChargingInfrastructure, queryLatestInfoBefore )
 import           Database.BikeShare.Operations.Dockings
 import           Database.BikeShare.Operations.Factors
 import           Database.BikeShare.StatusVariationQuery        ( StatusThreshold (..), StatusVariationQuery (..) )
@@ -128,15 +130,21 @@ chargingsHeader stationId startTime endTime = do
   pure $ ChargingHeader chargings
 
 chargingInfrastructureHeaderHandler :: Maybe LocalTime -> ServerAppM ChargingInfrastructureHeader
-chargingInfrastructureHeaderHandler time = do
-  -- Accessing the inner environment by using the serverEnv accessor.
+chargingInfrastructureHeaderHandler t = do
   appEnv <- asks serverAppEnv
-  let tz = envTimeZone appEnv
-  -- AppM actions can be lifted into ServerAppM by using a combination of liftIO and runReaderT.
+  tz     <- asks (envTimeZone . serverAppEnv)
   currentUtc <- liftIO getCurrentTime
-  pure $ ChargingInfrastructureHeader  { chargingStationCount = 0
-                                       , chargingDockCount    = 0
-                                       }
+
+  -- Query charging infrastructure at given time.
+  events <- liftIO $ runAppM appEnv $ withPostgres $ runSelectReturningOne $ selectWith $
+    queryChargingInfrastructure (maybe currentUtc (localTimeToUTC tz) t)
+
+  case events of
+    Just (eStationCnt, eDockCnt) ->
+      pure $ ChargingInfrastructureHeader  { chargingStationCount = fromIntegral eStationCnt
+                                           , chargingDockCount    = fromIntegral eDockCnt
+                                           }
+    _ ->  throwError err500 { errBody = "Unable to calculate charging infrastructure counts." }
 
 performanceHeaderHandler :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM PerformanceData
 performanceHeaderHandler stationId startTime endTime = do

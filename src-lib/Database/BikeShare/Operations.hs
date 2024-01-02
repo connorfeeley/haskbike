@@ -48,7 +48,7 @@ import           Control.Lens                                 hiding ( reuse, (<
 import           Data.Int                                     ( Int32 )
 import           Data.List                                    ( nubBy )
 import qualified Data.Map                                     as Map
-import           Data.Maybe                                   ( catMaybes, fromJust, fromMaybe, mapMaybe )
+import           Data.Maybe                                   ( catMaybes, mapMaybe )
 import           Data.Pool                                    ( withResource )
 import qualified Data.Text                                    as Text
 import           Data.Time
