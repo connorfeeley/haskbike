@@ -423,8 +423,7 @@ queryLatestInfoBefore t = do
                            , rank_ `over_` w
                            )
                 ) $
-      filter_' (\inf -> sqlBool_ (_infoReported inf  <=. val_ t) &&?.
-                        (_infoIsChargingStation inf ==?. val_ True)
+      filter_' (\inf -> sqlBool_ (_infoReported inf  <=. val_ t)
                ) (all_ (bikeshareDb ^. bikeshareStationInformation))
   pure $ do
     info <- filter_ (\inf -> inf ^. _2 ==. val_ 1) (reuse ranked)
