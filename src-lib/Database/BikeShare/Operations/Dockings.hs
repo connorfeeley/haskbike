@@ -56,7 +56,7 @@ queryDockingEventsCountExpr' variation = withPostgres $ runSelectReturningList $
   cte <- selecting $ do
     let statusForStation = filter_ (filterFor_ variation)
                                    (all_ (bikeshareDb ^. bikeshareStationStatus))
-      in withWindow_ (\row -> frame_ (partitionBy_ (_statusStationId row)) (orderPartitionBy_ (asc_ (_statusLastReported row))) noBounds_)
+      in withWindow_ (\row -> frame_ (partitionBy_ ((_unInformationStationId  . _statusInfoId) row)) (orderPartitionBy_ (asc_ (_statusLastReported row))) noBounds_)
                      (\row w -> ( row
                                 , lagWithDefault_ (row ^. vehicleTypesAvailableIconic) (val_ 1) (row ^. vehicleTypesAvailableIconic) `over_` w
                                 , lagWithDefault_ (row ^. vehicleTypesAvailableEfit  ) (val_ 1) (row ^. vehicleTypesAvailableEfit  ) `over_` w
@@ -74,7 +74,7 @@ queryDockingEventsCountExpr' variation = withPostgres $ runSelectReturningList $
                           dEFit   = row ^. vehicleTypesAvailableEfit   - pEFit
                           dEFitG5 = row ^. vehicleTypesAvailableEfitG5 - pEFitG5
                       in
-                       ( group_ (_statusStationId row)
+                       ( group_ ((_unInformationStationId  . _statusInfoId) row)
                        -- Undockings
                        , ( fromMaybe_ 0 $ sum_ dIconic `filterWhere_` (dIconic  <. 0)
                          , fromMaybe_ 0 $ sum_ dEFit   `filterWhere_` (dEFit    <. 0)
@@ -144,7 +144,7 @@ queryChargingEventsCount variation = withPostgres $ runSelectReturningList $ sel
   cte <- selecting $ do
     let statusForStation = filter_ (filterFor_ variation)
                                    (all_ (bikeshareDb ^. bikeshareStationStatus))
-      in withWindow_ (\row -> frame_ (partitionBy_ (_statusStationId row)) (orderPartitionBy_ (asc_ $ _statusLastReported row)) noBounds_)
+      in withWindow_ (\row -> frame_ (partitionBy_ ((_unInformationStationId  . _statusInfoId) row)) (orderPartitionBy_ (asc_ $ _statusLastReported row)) noBounds_)
                      (\row w -> ( row
                                 , lagWithDefault_ (row ^. statusNumBikesDisabled     ) (val_ 1) (row ^. statusNumBikesDisabled     ) `over_` w
                                 , lagWithDefault_ (row ^. vehicleTypesAvailableEfit  ) (val_ 1) (row ^. vehicleTypesAvailableEfit  ) `over_` w
@@ -161,7 +161,7 @@ queryChargingEventsCount variation = withPostgres $ runSelectReturningList $ sel
                         dEFit          = row ^. vehicleTypesAvailableEfit   - pEFit
                         dEFitG5        = row ^. vehicleTypesAvailableEfitG5 - pEFitG5
                     in
-                     ( group_ (_statusStationId row)
+                     ( group_ ((_unInformationStationId  . _statusInfoId) row)
                      -- Sum of all instances where an e-bike was disabled, then enabled.
                      , fromMaybe_ 0 $ sum_ dBikesDisabled  `filterWhere_` (dBikesDisabled  <. 0 &&. (dEFit >. 0 ||. dEFitG5 >. 0))
                      -- Sum of all instances where an E-Fit bike was disabled, then enabled.
