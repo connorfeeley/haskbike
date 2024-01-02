@@ -48,7 +48,7 @@ import           Control.Lens                                 hiding ( reuse, (<
 import           Data.Int                                     ( Int32 )
 import           Data.List                                    ( nubBy )
 import qualified Data.Map                                     as Map
-import           Data.Maybe                                   ( catMaybes, mapMaybe )
+import           Data.Maybe                                   ( catMaybes, fromJust, fromMaybe, mapMaybe )
 import           Data.Pool                                    ( withResource )
 import qualified Data.Text                                    as Text
 import           Data.Time
@@ -179,6 +179,7 @@ stationInfoMostlyEq apiInfo dbInfo =
   && isEq AT.infoGroups a b
   && isEq AT.infoObcn a b
   && isEq AT.infoNearbyDistance a b
+  -- TODO: Bluetooth ID is changing randomly for ~150 stations.
   && isEq AT.infoBluetoothId a b
   && isEq AT.infoRideCodeSupport a b
   && isEq AT.infoRentalUris a b

@@ -11,21 +11,22 @@ module Server.ComponentsAPI
 
 import           Colog
 
-import qualified Data.Text                               as T
+import qualified Data.Text                                      as T
 import           Data.Time
 import           Data.Time.Extras
 
 import           Database.BikeShare.Operations.Dockings
 import           Database.BikeShare.Operations.Factors
-import           Database.BikeShare.StatusVariationQuery ( StatusThreshold (..), StatusVariationQuery (..) )
+import           Database.BikeShare.StatusVariationQuery        ( StatusThreshold (..), StatusVariationQuery (..) )
 
-import           GHC.Generics                            ( Generic )
+import           GHC.Generics                                   ( Generic )
 
 import           Servant
 import           Servant.HTML.Lucid
-import           Servant.Server.Generic                  ( AsServerT )
+import           Servant.Server.Generic                         ( AsServerT )
 
 import           Server.Components.ChargingHeader
+import           Server.Components.ChargingInfrastructureHeader
 import           Server.Components.DockingHeader
 import           Server.Components.PerformanceData
 import           Server.StatusDataParams
@@ -62,6 +63,11 @@ data EventsComponentAPI mode where
           :> QueryParam "start-time" LocalTime
           :> QueryParam "end-time" LocalTime
           :> Get '[HTML] ChargingHeader
+    , chargingInfrastructureHeader :: mode :-
+      "system-status"
+        :> "charging-infrastructure"
+          :> QueryParam "time" LocalTime
+          :> Get '[HTML] ChargingInfrastructureHeader
     , performanceHeader :: mode :-
       "station-status"
         :> "performance"
@@ -74,9 +80,10 @@ data EventsComponentAPI mode where
 
 eventsComponentHandler :: EventsComponentAPI (AsServerT ServerAppM)
 eventsComponentHandler = EventsComponentAPI
-  { dockingEventsHeader  = dockingsHeader
-  , chargingEventsHeader = chargingsHeader
-  , performanceHeader    = performanceHeaderHandler
+  { dockingEventsHeader          = dockingsHeader
+  , chargingEventsHeader         = chargingsHeader
+  , chargingInfrastructureHeader = chargingInfrastructureHeaderHandler
+  , performanceHeader            = performanceHeaderHandler
   }
 
 dockingsHeader :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM DockingHeader
@@ -119,6 +126,17 @@ chargingsHeader stationId startTime endTime = do
   chargings <- liftIO $ runAppM appEnv $ queryChargingEventsCount variation
 
   pure $ ChargingHeader chargings
+
+chargingInfrastructureHeaderHandler :: Maybe LocalTime -> ServerAppM ChargingInfrastructureHeader
+chargingInfrastructureHeaderHandler time = do
+  -- Accessing the inner environment by using the serverEnv accessor.
+  appEnv <- asks serverAppEnv
+  let tz = envTimeZone appEnv
+  -- AppM actions can be lifted into ServerAppM by using a combination of liftIO and runReaderT.
+  currentUtc <- liftIO getCurrentTime
+  pure $ ChargingInfrastructureHeader  { chargingStationCount = 0
+                                       , chargingDockCount    = 0
+                                       }
 
 performanceHeaderHandler :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM PerformanceData
 performanceHeaderHandler stationId startTime endTime = do
