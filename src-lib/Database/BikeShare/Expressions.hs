@@ -35,6 +35,7 @@ import qualified API.SystemInformation                        as AT
 
 import           AppEnv
 
+import           Control.Arrow                                ( (&&&) )
 import           Control.Lens                                 hiding ( reuse, (<.) )
 
 import           Data.Containers.ListUtils
@@ -51,7 +52,8 @@ import           Database.Beam.Backend                        ( timestampType )
 import           Database.Beam.Backend.SQL                    ( BeamSqlBackend )
 import           Database.Beam.Backend.SQL.BeamExtensions     ( BeamHasInsertOnConflict (anyConflict, onConflictDoNothing),
                                                                 insertOnConflict )
-import           Database.Beam.Postgres
+import           Database.Beam.Postgres                       ( Postgres )
+import qualified Database.Beam.Postgres                       as Pg
 import           Database.Beam.Postgres.Full                  hiding ( insert )
 import           Database.Beam.Postgres.Syntax
 import qualified Database.Beam.Query.Adhoc                    as Adhoc
@@ -86,7 +88,10 @@ systemStatusBetweenExpr start_time end_time =
 -- | Expression to query the statuses for a station between two times.
 statusBetweenExpr :: Int32 -> UTCTime -> UTCTime -> Q Postgres BikeshareDb s (StationStatusT (QGenExpr QValueContext Postgres s))
 statusBetweenExpr stationId startTime endTime = do
-  status <- orderBy_ (asc_ . _statusLastReported)
+  -- Never return two statuses for the same (_statusLastReported, _statusStationId) - this breaks the graph rendering.
+  -- This can happen if the station information changes (reported) without the status changing.
+  status <- Pg.pgNubBy_ (_statusLastReported &&& _statusStationId) $
+            orderBy_ (asc_ . _statusLastReported)
             (all_ (bikeshareDb ^. bikeshareStationStatus))
   guard_ (_statusStationId status ==. val_ stationId &&.
           between_ (status ^. statusLastReported) (val_ startTime) (val_ endTime))
@@ -275,7 +280,7 @@ integrateColumns variation = do
   -- Difference between row values and lagged values
   withDeltas <- selecting $ do
     -- as seconds:
-    let timeDelta column column' = cast_ (extract_ epoch_ column - extract_ epoch_ column') int
+    let timeDelta column column' = cast_ (extract_ Pg.epoch_ column - extract_ Pg.epoch_ column') int
     -- Calculate delta between current and previous availability.
       in withWindow_ (\(row, _) -> frame_ (partitionBy_ (_statusStationId row)) noOrder_ noBounds_)
          (\(row, pLastReported) _w ->
@@ -337,7 +342,7 @@ queryLatestStatuses :: be ~ Postgres
                     (Q be BikeshareDb s (StationInformationT (QExpr be s), StationStatusT (QGenExpr QValueContext be s)))
 queryLatestStatuses = do
   statusCte <- selecting $
-    pgNubBy_ _statusStationId $
+    Pg.pgNubBy_ _statusStationId $
     orderBy_ (asc_ . _statusLastReported) $
     filter_ (\s -> s ^. statusLastReported >=. daysAgo_ 1)
     (all_ (bikeshareDb ^. bikeshareStationStatus))
@@ -360,7 +365,7 @@ queryLatestSystemInfo :: be ~ Postgres
                        (SystemInformationCountT (QGenExpr QValueContext Postgres s)))
 queryLatestSystemInfo = do
   sysInfoCte <- selecting $
-    pgNubBy_ (\cnt -> (_sysInfCntStationCount cnt, _sysInfCntMechanicalCount cnt, _sysInfCntEbikeCount cnt)) $
+    Pg.pgNubBy_ (\cnt -> (_sysInfCntStationCount cnt, _sysInfCntMechanicalCount cnt, _sysInfCntEbikeCount cnt)) $
     orderBy_ (asc_ . (_sysInfKeyReported . _sysInfCntKey))
     (all_ (bikeshareDb ^. bikeshareSystemInformationCount))
 
