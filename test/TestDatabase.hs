@@ -19,6 +19,7 @@ module TestDatabase
      , unit_insertStationApi
      , unit_insertStationInformation
      , unit_insertStationInformationApi
+     , unit_insertStationInformationDuplicate
      , unit_insertStationLookupLatest
      , unit_insertStationStatus
      , unit_insertStationStatusApi
@@ -30,6 +31,7 @@ module TestDatabase
      ) where
 
 import           API.ResponseWrapper
+import qualified API.StationInformation                       as AT
 import qualified API.SystemInformation                        as AT
 
 import           AppEnv
@@ -117,6 +119,52 @@ unit_insertStationInformation = do
   inserted_info <- runWithAppM dbnameTest $ insertStationInformation (_respLastUpdated info) (_respData info)
 
   assertEqual "Inserted station information" 7 (length inserted_info)
+
+
+-- | HUnit test for inserting station information where only the reported time has changed.
+unit_insertStationInformationDuplicate :: IO ()
+unit_insertStationInformationDuplicate = do
+  -- Connect to the database.
+  runWithAppMSuppressLog dbnameTest setupTestDatabase
+
+  -- Insert first record. Should insert.
+  insertedInfo <- runWithAppM dbnameTest $ insertStationInformation firstTime [testInfo]
+  assertEqual "Inserted station information" 1 (length insertedInfo)
+
+  -- Insert first record again with same reported time (no other changes). Should not insert.
+  insertedInfo' <- runWithAppM dbnameTest $ insertStationInformation firstTime [testInfo]
+  assertEqual "Inserted station information" 0 (length insertedInfo')
+
+  -- Insert first record again with different reported time (no other changes). Should not insert.
+  insertedInfo'' <- runWithAppM dbnameTest $ insertStationInformation secondTime [testInfo]
+  assertEqual "Inserted station information" 0 (length insertedInfo'')
+
+  -- TODO: bluetooth_id is flapping.
+
+  where
+    firstTime  = UTCTime (fromGregorian 2023 01 01) (timeOfDayToTime midnight)
+    secondTime = UTCTime (fromGregorian 2023 01 01) (timeOfDayToTime midday)
+    testInfo =
+      AT.StationInformation { AT.infoStationId             = 6000
+                            , AT.infoName                  = "Test Station"
+                            , AT.infoPhysicalConfiguration = AT.Regular
+                            , AT.infoLat                   = 0.0
+                            , AT.infoLon                   = 0.0
+                            , AT.infoAltitude              = Just 0
+                            , AT.infoAddress               = Just "Nowhere"
+                            , AT.infoCapacity              = 1
+                            , AT.infoIsChargingStation     = True
+                            , AT.infoRentalMethods         = []
+                            , AT.infoIsValetStation        = False
+                            , AT.infoIsVirtualStation      = False
+                            , AT.infoGroups                = []
+                            , AT.infoObcn                  = ""
+                            , AT.infoNearbyDistance        = 0
+                            , AT.infoBluetoothId           = ""
+                            , AT.infoRideCodeSupport       = True
+                            , AT.infoRentalUris            = AT.RentalURIs "" "" ""
+                            }
+
 
 
 -- | HUnit test for inserting station status.
