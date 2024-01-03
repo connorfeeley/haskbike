@@ -16,7 +16,7 @@ import           Data.Time
 import           Data.Time.Extras
 
 import           Database.Beam                                  ( runSelectReturningOne, selectWith )
-import           Database.BikeShare.Expressions                 ( queryChargingInfrastructure, queryLatestInfoBefore )
+import           Database.BikeShare.Expressions                 ( queryChargingInfrastructure )
 import           Database.BikeShare.Operations.Dockings
 import           Database.BikeShare.Operations.Factors
 import           Database.BikeShare.StatusVariationQuery        ( StatusThreshold (..), StatusVariationQuery (..) )
