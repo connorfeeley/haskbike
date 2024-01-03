@@ -33,7 +33,7 @@
 
           settings = {
             haskbike = { self, super, ... }: {
-              custom = _pkg: pkgs.lib.pipe super.haskbike [
+              custom = pkg: pkgs.lib.pipe super.haskbike [
                 # Replace Version.hs with a generated one, since it requires access to the git directory
                 # to determine the version.
                 (pkgs.haskell.lib.compose.overrideCabal (o:
@@ -46,8 +46,24 @@
                   {
                     extraLibraries = [ pkgs.stdenv.cc.libcxx ];
 
+                    testToolDepends = pkg.testToolDepends or [ ] ++ [
+                      pkgs.postgresql
+                      pkgs.postgresqlTestHook
+                      pkgs.cabal-install
+                    ];
+
                     postPatch = o.postPatch or "" + "cp ${versionFile} src-lib/Version.hs";
-                    doCheck = false;
+
+                    preCheck = pkg.preCheck or "" + ''
+                      export PGDATABASE=haskbike-test
+
+                      export HASKBIKE_USERNAME=$PGUSER
+                      export HASKBIKE_PASSWORD=""
+                      export HASKBIKE_DATABASE=$PGDATABASE
+                      export HASKBIKE_PGDBHOST=$PGHOST
+                      export HASKBIKE_PGDBPORT=$PGPORT
+                    '';
+
                     postInstall = o.postInstall or "" + ''
                       mkdir -p $out/share/haskbike/www/static
                       cp -r ${./static-files}/* $out/share/haskbike/www/static/
@@ -61,7 +77,7 @@
 
               extraBuildTools = [ pkgs.git ];
 
-              check = false; # Don't run cabal tests as part of build.
+              check = true;
 
               # Profiling options.
               # libraryProfiling     = false;   # Disable profiling for libraries.
