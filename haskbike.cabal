@@ -212,7 +212,6 @@ library
                     , Server.DataAPI
                     , Server.StaticAPI
                     , Server.VisualizationAPI
-                    , Server.ComponentsAPI
                     , Server.DebugAPI
                     , Server.StatusDataParams
                     , Server.Page.PerformanceCSV
@@ -228,10 +227,12 @@ library
                     , Server.Classes
                     , Server.Data.StationStatusVisualization
                     , Server.Data.SystemInformationVisualization
+                    , Server.ComponentsAPI
                     , Server.Components.ChargingHeader
                     , Server.Components.PerformanceData
                     , Server.Components.DockingHeader
                     , Server.Components.LatestQueries
+                    , Server.Components.ChargingInfrastructureHeader
                     , CLI.Utils
                     , CLI.Poll
                     , CLI.Poll.Utils

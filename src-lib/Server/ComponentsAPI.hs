@@ -11,21 +11,24 @@ module Server.ComponentsAPI
 
 import           Colog
 
-import qualified Data.Text                               as T
+import qualified Data.Text                                      as T
 import           Data.Time
 import           Data.Time.Extras
 
+import           Database.Beam                                  ( runSelectReturningOne, selectWith )
+import           Database.BikeShare.Expressions                 ( queryChargingInfrastructure )
 import           Database.BikeShare.Operations.Dockings
 import           Database.BikeShare.Operations.Factors
-import           Database.BikeShare.StatusVariationQuery ( StatusThreshold (..), StatusVariationQuery (..) )
+import           Database.BikeShare.StatusVariationQuery        ( StatusThreshold (..), StatusVariationQuery (..) )
 
-import           GHC.Generics                            ( Generic )
+import           GHC.Generics                                   ( Generic )
 
 import           Servant
 import           Servant.HTML.Lucid
-import           Servant.Server.Generic                  ( AsServerT )
+import           Servant.Server.Generic                         ( AsServerT )
 
 import           Server.Components.ChargingHeader
+import           Server.Components.ChargingInfrastructureHeader
 import           Server.Components.DockingHeader
 import           Server.Components.PerformanceData
 import           Server.StatusDataParams
@@ -62,6 +65,11 @@ data EventsComponentAPI mode where
           :> QueryParam "start-time" LocalTime
           :> QueryParam "end-time" LocalTime
           :> Get '[HTML] ChargingHeader
+    , chargingInfrastructureHeader :: mode :-
+      "system-status"
+        :> "charging-infrastructure"
+          :> QueryParam "time" LocalTime
+          :> Get '[HTML] ChargingInfrastructureHeader
     , performanceHeader :: mode :-
       "station-status"
         :> "performance"
@@ -74,9 +82,10 @@ data EventsComponentAPI mode where
 
 eventsComponentHandler :: EventsComponentAPI (AsServerT ServerAppM)
 eventsComponentHandler = EventsComponentAPI
-  { dockingEventsHeader  = dockingsHeader
-  , chargingEventsHeader = chargingsHeader
-  , performanceHeader    = performanceHeaderHandler
+  { dockingEventsHeader          = dockingsHeader
+  , chargingEventsHeader         = chargingsHeader
+  , chargingInfrastructureHeader = chargingInfrastructureHeaderHandler
+  , performanceHeader            = performanceHeaderHandler
   }
 
 dockingsHeader :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM DockingHeader
@@ -119,6 +128,23 @@ chargingsHeader stationId startTime endTime = do
   chargings <- liftIO $ runAppM appEnv $ queryChargingEventsCount variation
 
   pure $ ChargingHeader chargings
+
+chargingInfrastructureHeaderHandler :: Maybe LocalTime -> ServerAppM ChargingInfrastructureHeader
+chargingInfrastructureHeaderHandler t = do
+  appEnv <- asks serverAppEnv
+  tz     <- asks (envTimeZone . serverAppEnv)
+  currentUtc <- liftIO getCurrentTime
+
+  -- Query charging infrastructure at given time.
+  events <- liftIO $ runAppM appEnv $ withPostgres $ runSelectReturningOne $ selectWith $
+    queryChargingInfrastructure (maybe currentUtc (localTimeToUTC tz) t)
+
+  case events of
+    Just (eStationCnt, eDockCnt) ->
+      pure $ ChargingInfrastructureHeader  { chargingStationCount = fromIntegral eStationCnt
+                                           , chargingDockCount    = fromIntegral eDockCnt
+                                           }
+    _ ->  throwError err500 { errBody = "Unable to calculate charging infrastructure counts." }
 
 performanceHeaderHandler :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM PerformanceData
 performanceHeaderHandler stationId startTime endTime = do

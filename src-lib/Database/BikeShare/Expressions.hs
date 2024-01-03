@@ -13,6 +13,8 @@ module Database.BikeShare.Expressions
      , insertStationInformationExpr
      , integrateColumns
      , latestQueryLogsToMap
+     , queryChargingInfrastructure
+     , queryLatestInfo
      , queryLatestInfoBefore
      , queryLatestInfoLookup
      , queryLatestQueryLogs
@@ -80,7 +82,7 @@ systemStatusBetweenExpr start_time end_time =
   do
     info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
     status <- all_ (bikeshareDb ^. bikeshareStationStatus)
-    guard_ (_statusStationId status ==. _infoStationId info &&.
+    guard_ ((_unInformationStationId  . _statusInfoId) status ==. _infoStationId info &&.
             between_  (status ^. statusLastReported) (val_ start_time) (val_ end_time)
            )
     pure status
@@ -88,12 +90,12 @@ systemStatusBetweenExpr start_time end_time =
 -- | Expression to query the statuses for a station between two times.
 statusBetweenExpr :: Int32 -> UTCTime -> UTCTime -> Q Postgres BikeshareDb s (StationStatusT (QGenExpr QValueContext Postgres s))
 statusBetweenExpr stationId startTime endTime = do
-  -- Never return two statuses for the same (_statusLastReported, _statusStationId) - this breaks the graph rendering.
+  -- Never return two statuses for the same (_statusLastReported, (_unInformationStationId  . _statusInfoId)) - this breaks the graph rendering.
   -- This can happen if the station information changes (reported) without the status changing.
-  status <- Pg.pgNubBy_ (_statusLastReported &&& _statusStationId) $
+  status <- Pg.pgNubBy_ (_statusLastReported &&& (_unInformationStationId  . _statusInfoId)) $
             orderBy_ (asc_ . _statusLastReported)
             (all_ (bikeshareDb ^. bikeshareStationStatus))
-  guard_ (_statusStationId status ==. val_ stationId &&.
+  guard_ ((_unInformationStationId  . _statusInfoId) status ==. val_ stationId &&.
           between_ (status ^. statusLastReported) (val_ startTime) (val_ endTime))
   pure status
 
@@ -131,7 +133,7 @@ disabledDocksExpr :: Q Postgres BikeshareDb s (QGenExpr QValueContext Postgres s
 disabledDocksExpr = do
   info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
   status <- all_ (bikeshareDb ^. bikeshareStationStatus)
-  guard_ (_statusStationId status ==. _infoStationId info &&. status ^. statusNumDocksDisabled >. 0)
+  guard_ ((_unInformationStationId  . _statusInfoId) status ==. _infoStationId info &&. status ^. statusNumDocksDisabled >. 0)
   pure ( info   ^. infoName
        , status ^. statusNumDocksDisabled
        )
@@ -142,7 +144,7 @@ queryStationStatusExpr limit = do
   status <- case limit of
     Just limit' -> limit_ limit' $ all_ (bikeshareDb ^. bikeshareStationStatus)
     Nothing     ->                 all_ (bikeshareDb ^. bikeshareStationStatus)
-  guard_ (_statusStationId status ==. _infoStationId info)
+  guard_ ((_unInformationStationId  . _statusInfoId) status ==. _infoStationId info)
   pure (info, status)
 
 queryStationIdExpr :: String -> Q Postgres BikeshareDb s (StationInformationT (QExpr Postgres s))
@@ -162,7 +164,7 @@ queryStationIdLikeExpr station_name = do
 queryLatestStatusBetweenExpr :: UTCTime -> UTCTime -> Q Postgres BikeshareDb s (StationStatusT (QExpr Postgres s))
 queryLatestStatusBetweenExpr earliestTime latestTime = do
   (stationId, maxTime) <-
-    aggregate_ (\s -> ( group_ (_statusStationId    s)
+    aggregate_ (\s -> ( group_ ((_unInformationStationId  . _statusInfoId)    s)
                       , max_   (_statusLastReported s)
                       )
                ) $
@@ -172,7 +174,7 @@ queryLatestStatusBetweenExpr earliestTime latestTime = do
   join_'
     (bikeshareDb ^. bikeshareStationStatus)
     (\status ->
-       (stationId ==?. _statusStationId status            ) &&?.
+       (stationId ==?. (_unInformationStationId  . _statusInfoId) status            ) &&?.
        (maxTime ==?. just_ (_statusLastReported status))
     )
 
@@ -220,7 +222,7 @@ querySystemStatusAtRangeExpr earliestTime latestTime interval = do
     intervals' <- reuse timeIntervals
     latestStatusKeys <-
       aggregate_ (\(i, s) -> ( group_ (snd i)
-                             , group_ (_statusStationId s)
+                             , group_ ((_unInformationStationId  . _statusInfoId) s)
                              , maxOver_   distinctInGroup_ (_statusLastReported s) `filterWhere_` uncurry (between_ (_statusLastReported s)) i
                              )
                  ) $ do
@@ -231,11 +233,11 @@ querySystemStatusAtRangeExpr earliestTime latestTime interval = do
       pure (intervals, statuses')
 
     latestStatuses <- join_' (bikeshareDb ^. bikeshareStationStatus)
-                      (\status -> _statusStationId status ==?. (latestStatusKeys ^. _2) &&?. just_ (_statusLastReported status) ==?. (latestStatusKeys ^. _3))
+                      (\status -> (_unInformationStationId  . _statusInfoId) status ==?. (latestStatusKeys ^. _2) &&?. just_ (_statusLastReported status) ==?. (latestStatusKeys ^. _3))
     intervals <- reuse timeIntervals
 
     guard_ (latestStatusKeys ^. _1 ==. snd intervals' &&.
-            _statusStationId latestStatuses ==. latestStatusKeys ^. _2 &&.
+            (_unInformationStationId  . _statusInfoId) latestStatuses ==. latestStatusKeys ^. _2 &&.
             uncurry (between_ (_statusLastReported latestStatuses)) intervals)
     pure (snd intervals, latestStatuses)
 
@@ -271,7 +273,7 @@ integrateColumns variation = do
   lagged <- selecting $ do
     let statusForStation = filter_ (filterFor_ variation)
                                    (all_ (bikeshareDb ^. bikeshareStationStatus))
-      in withWindow_ (\row -> frame_ (partitionBy_ (_statusStationId row)) (orderPartitionBy_ (asc_ $ _statusLastReported row)) noBounds_)
+      in withWindow_ (\row -> frame_ (partitionBy_ ((_unInformationStationId  . _statusInfoId) row)) (orderPartitionBy_ (asc_ $ _statusLastReported row)) noBounds_)
                      (\row w -> ( row
                                 , lagWithDefault_ (row ^. statusLastReported) (val_ (1 :: Integer)) (row ^. statusLastReported) `over_` w
                                 )
@@ -282,7 +284,7 @@ integrateColumns variation = do
     -- as seconds:
     let timeDelta column column' = cast_ (extract_ Pg.epoch_ column - extract_ Pg.epoch_ column') int
     -- Calculate delta between current and previous availability.
-      in withWindow_ (\(row, _) -> frame_ (partitionBy_ (_statusStationId row)) noOrder_ noBounds_)
+      in withWindow_ (\(row, _) -> frame_ (partitionBy_ ((_unInformationStationId  . _statusInfoId) row)) noOrder_ noBounds_)
          (\(row, pLastReported) _w ->
              ( row                                                                                  -- _1
              , as_ @Int32 (timeDelta (row ^. statusLastReported) pLastReported)                     -- _2
@@ -310,7 +312,7 @@ integrateColumns variation = do
                    , ( secondsIconicAvailable
                      , secondsEfitAvailable
                      , secondsEfitG5Available)
-                   ) -> ( group_       (_statusStationId status)
+                   ) -> ( group_       ((_unInformationStationId  . _statusInfoId) status)
                         , fromMaybe_ 0 (sum_ dLastReported)
                         , ( fromMaybe_ 0 (sum_ secondsBikesAvailable)
                           , fromMaybe_ 0 (sum_ secondsBikesDisabled)
@@ -342,7 +344,7 @@ queryLatestStatuses :: be ~ Postgres
                     (Q be BikeshareDb s (StationInformationT (QExpr be s), StationStatusT (QGenExpr QValueContext be s)))
 queryLatestStatuses = do
   statusCte <- selecting $
-    Pg.pgNubBy_ _statusStationId $
+    Pg.pgNubBy_ (_unInformationStationId  . _statusInfoId) $
     orderBy_ (asc_ . _statusLastReported) $
     filter_ (\s -> s ^. statusLastReported >=. daysAgo_ 1)
     (all_ (bikeshareDb ^. bikeshareStationStatus))
@@ -395,11 +397,11 @@ latestQueryLogsToMap tz = LatestQueries . queryMap
     utcToLocal = utcToLocalTime tz
 
 -- | Get the latest query logs for each endpoint.
-queryLatestInfoBefore :: be ~ Postgres
+queryLatestInfo :: be ~ Postgres
                       => With be BikeshareDb
                       (Q be BikeshareDb s
                        (StationInformationT (QExpr be s)))
-queryLatestInfoBefore = do
+queryLatestInfo = do
   ranked <- selecting $ do
     withWindow_ (\row -> frame_ (partitionBy_ (_infoStationId row)) (orderPartitionBy_ (desc_ $ _infoId row)) noBounds_)
                 (\row w -> ( row
@@ -410,6 +412,22 @@ queryLatestInfoBefore = do
     partitioned <- reuse ranked
     guard_ (partitioned ^. _2 ==. 1) -- Is max rank (latest record in partition)
     pure (partitioned ^. _1)
+
+queryLatestInfoBefore :: (be ~ Postgres, ctx ~ QValueContext, db ~ BikeshareDb, expr ~ QGenExpr)
+                      => UTCTime
+                      -> With be db (Q Postgres BikeshareDb s (StationInformationT (QGenExpr QValueContext Postgres s)))
+queryLatestInfoBefore t = do
+  ranked <- selecting $ do
+    withWindow_ (\row -> frame_ (partitionBy_ (_infoStationId row)) (orderPartitionBy_ (desc_ $ _infoId row)) noBounds_)
+                (\row w -> ( row
+                           , rank_ `over_` w
+                           )
+                ) $
+      filter_' (\inf -> sqlBool_ (_infoReported inf  <=. val_ t)
+               ) (all_ (bikeshareDb ^. bikeshareStationInformation))
+  pure $ do
+    info <- filter_ (\inf -> inf ^. _2 ==. val_ 1) (reuse ranked)
+    pure (info ^. _1)
 
 queryLatestStatusLookup :: With Postgres BikeshareDb (Q Postgres BikeshareDb s (StationStatusT (QGenExpr QValueContext Postgres s)))
 queryLatestStatusLookup = do
@@ -433,3 +451,26 @@ queryLatestInfoLookup = do
     -- guard_' (_stnLookup statusLookup' `references_'` status')
     guard_' (_statusInfoId status' `references_'` info')
     pure info'
+
+
+-- | Query charging infrastructure at given time.
+queryChargingInfrastructure :: (be ~ Postgres, ctx ~ QValueContext, db ~ BikeshareDb, expr ~ QGenExpr)
+                            => UTCTime
+                            -> With be db (Q be db s (expr ctx be s Int32, expr ctx be s Int32))
+                            -- ^ (Maybe) a tuple of (number of charging stations, number of charging docks)
+queryChargingInfrastructure t = do
+  ranked <- selecting $ do
+    withWindow_ (\row -> frame_ (partitionBy_ (_infoStationId row)) (orderPartitionBy_ (desc_ $ _infoId row)) noBounds_)
+                (\row w -> ( row
+                           , rank_ `over_` w
+                           )
+                ) $
+      filter_' (\inf -> sqlBool_ (_infoReported inf  <=. val_ t) &&?.
+                        (_infoIsChargingStation inf ==?. val_ True)
+               ) (all_ (bikeshareDb ^. bikeshareStationInformation))
+  pure $
+    aggregate_ (\(inf, _rank) -> ( as_ @Int32 countAll_
+                                 , fromMaybe_ 0 (sum_ (_infoCapacity inf))
+                                 )
+               ) $
+    filter_ (\inf -> inf ^. _2 ==. val_ 1) (reuse ranked)

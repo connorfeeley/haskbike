@@ -74,7 +74,8 @@ unit_queryChargingsManual :: IO ()
 unit_queryChargingsManual = do
   runWithAppMSuppressLog dbnameTest setupTestDatabase
 
-  ct <- getCurrentTime
+  let ct = UTCTime (fromGregorian 2023 01 01) (timeOfDayToTime midnight)
+
   runWithAppM dbnameTest $ do
     -- Insert the single manually constructed station information.
     void $ insertStationInformation ct [manualStationInformation]
@@ -116,7 +117,7 @@ unit_queryDockingsManual :: IO ()
 unit_queryDockingsManual = do
   runWithAppMSuppressLog dbnameTest setupTestDatabase
 
-  ct <- getCurrentTime
+  let ct = UTCTime (fromGregorian 2023 01 01) (timeOfDayToTime midnight)
 
   runWithAppM dbnameTest $ do
     -- Insert the single manually constructed station information.

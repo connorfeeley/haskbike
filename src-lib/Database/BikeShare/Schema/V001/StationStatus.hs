@@ -254,12 +254,12 @@ fromJSONToBeamStationStatus infId status
 -- | Convert from the Beam StationStatus type to the JSON StationStatus
 fromBeamStationStatusToJSON :: StationStatus -> AT.StationStatus
 fromBeamStationStatusToJSON status =
-  AT.StationStatus { AT._statusStationId             = fromIntegral $ status ^. statusStationId
+  AT.StationStatus { AT._statusStationId             = fromIntegral $ status ^. statusInfoId . unInformationStationId
                    , AT._statusNumBikesAvailable     = fromIntegral $ status ^. statusNumBikesAvailable
                    , AT._statusNumBikesDisabled      = fromIntegral $ status ^. statusNumBikesDisabled
                    , AT._statusNumDocksAvailable     = fromIntegral $ status ^. statusNumDocksAvailable
                    , AT._statusNumDocksDisabled      = fromIntegral $ status ^. statusNumDocksDisabled
-                   , AT._statusLastReported          = coerce (Just (status ^. statusLastReported))
+                   , AT._statusLastReported          = coerce (Just  (status ^. statusLastReported))
                    , AT._statusIsChargingStation     = status ^. statusIsChargingStation
                    , AT._statusStatus                = coerce (status ^. statusStatus)
                    , AT._statusIsInstalled           = status ^. statusIsInstalled
