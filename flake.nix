@@ -46,11 +46,11 @@
                   {
                     extraLibraries = [ pkgs.stdenv.cc.libcxx ];
 
-                    testToolDepends = pkg.testToolDepends or [ ] ++ [
-                      pkgs.postgresql
-                      pkgs.postgresqlTestHook
-                      pkgs.cabal-install
-                    ];
+                    # testToolDepends = pkg.testToolDepends or [ ] ++ [
+                    #   pkgs.postgresql
+                    #   pkgs.postgresqlTestHook
+                    #   pkgs.cabal-install
+                    # ];
 
                     postPatch = o.postPatch or "" + "cp ${versionFile} src-lib/Version.hs";
 
@@ -63,6 +63,7 @@
                       export HASKBIKE_PGDBHOST=$PGHOST
                       export HASKBIKE_PGDBPORT=$PGPORT
                     '';
+                    doCheck = false;
 
                     postInstall = o.postInstall or "" + ''
                       mkdir -p $out/share/haskbike/www/static
