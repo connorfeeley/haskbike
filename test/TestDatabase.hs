@@ -275,10 +275,10 @@ unit_insertNewerStatusRecords = do
   assertEqual "No API status records newer than database entries" 302 (length inserted)
 
   -- Station 7000 should be in the list of API records that would trigger a database update, but not in the list of unchanged records.
-  assertBool "Station 7000 record is newer"          (has (traverse . statusStationId . only 7000) inserted)
+  assertBool "Station 7000 record is newer"          (has (traverse . statusInfoId . unInformationStationId . only 7000) inserted)
 
   -- Station 7001 should be in the list of API records that would /not/ trigger a database update, but not in the list of newer records.
-  assertBool "Station 7001 record is unchanged" (not (has (traverse . statusStationId . only 7001) inserted))
+  assertBool "Station 7001 record is unchanged" (not (has (traverse . statusInfoId . unInformationStationId . only 7001) inserted))
 
 doInsertNewerStatusRecords :: IO [StationStatus]
 doInsertNewerStatusRecords = do
