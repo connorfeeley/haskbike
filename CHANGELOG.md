@@ -42,3 +42,8 @@
 ## 3.0.0 -- 2023-12-28
 
 * Add station status lookup table.
+
+## 3.1.0 -- 2024-01-03
+
+* Optimize various database operations.
+* Add charging infrastructure statistics to system status page.
