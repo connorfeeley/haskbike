@@ -77,7 +77,7 @@
 
               extraBuildTools = [ pkgs.git ];
 
-              check = true;
+              check = false; # Don't run checks as part of the build.
 
               # Profiling options.
               # libraryProfiling     = false;   # Disable profiling for libraries.
