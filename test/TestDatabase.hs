@@ -475,8 +475,8 @@ unit_insertStationLookupLatest = do
   insertedInfo   <- runWithAppM dbnameTest $ insertStationInformation (_respLastUpdated info) (_respData info)
   insertedStatus <- runWithAppM dbnameTest $ insertStationStatus (status ^. respData)
 
-  statusLookup <- runWithAppM dbnameTest $ withPostgres $ runSelectReturningList $ selectWith queryLatestStatusLookup
-  infoLookup   <- runWithAppM dbnameTest $ withPostgres $ runSelectReturningList $ selectWith queryLatestInfoLookup
+  statusLookup <- runWithAppM dbnameTest $ withPostgres $ runSelectReturningList $ selectWith $ queryLatestStatusLookup Nothing
+  infoLookup   <- runWithAppM dbnameTest $ withPostgres $ runSelectReturningList $ selectWith $ queryLatestInfoLookup   Nothing
 
   assertEqual "Status lookup length" (length insertedStatus) (length statusLookup)
   assertEqual "Inserted station status is same as latest status" insertedStatus statusLookup

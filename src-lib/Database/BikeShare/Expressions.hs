@@ -43,6 +43,7 @@ import           Control.Lens                                 hiding ( reuse, (<
 import           Data.Containers.ListUtils
 import           Data.Int                                     ( Int32 )
 import qualified Data.Map                                     as Map
+import           Data.Maybe                                   ( fromMaybe )
 import           Data.String                                  ( IsString )
 import qualified Data.Text                                    as T
 import qualified Data.Text                                    as Text
@@ -340,22 +341,19 @@ integrateColumns variation = do
 -- | Get the latest status records for each station.
 queryLatestStatuses :: be ~ Postgres
                     => With be BikeshareDb
-                    -- (Q be BikeshareDb s (StationStatusT (QGenExpr QValueContext be s)))
                     (Q be BikeshareDb s (StationInformationT (QExpr be s), StationStatusT (QGenExpr QValueContext be s)))
 queryLatestStatuses = do
-  statusCte <- selecting $
-    Pg.pgNubBy_ (_unInformationStationId  . _statusInfoId) $
-    orderBy_ (asc_ . _statusLastReported) $
-    filter_ (\s -> s ^. statusLastReported >=. daysAgo_ 1)
-    (all_ (bikeshareDb ^. bikeshareStationStatus))
-
+  info    <- selecting $ all_ (bikeshareDb ^. bikeshareStationInformation)
+  status  <- selecting $ filter_ (\s -> s ^. statusLastReported >=. daysAgo_ 1) $ all_ (bikeshareDb ^. bikeshareStationStatus)
+  station <- selecting $ all_ (bikeshareDb ^. bikeshareStationLookup)
   pure $ do
-    info <- all_ (bikeshareDb ^. bikeshareStationInformation)
-    status <- reuse statusCte
-
-    guard_' (_statusInfoId status `references_'` info)
-
-    pure (info, status)
+    status' <- reuse status
+    info' <- reuse info
+    station' <- reuse station
+    guard_' ( _stnLookup station'                       `references_'` status' &&?.
+             (_unStatusStationId . _stnLookup) station' `references_'` info'
+            )
+    pure (info', status')
 
 daysAgo_ :: QGenExpr ctxt Postgres s Int32 -> QGenExpr ctxt Postgres s UTCTime
 daysAgo_ = customExpr_ (\offs -> "(NOW() - INTERVAL '" <> offs <> " DAYS')")
@@ -429,9 +427,9 @@ queryLatestInfoBefore t = do
     info <- filter_ (\inf -> inf ^. _2 ==. val_ 1) (reuse ranked)
     pure (info ^. _1)
 
-queryLatestStatusLookup :: With Postgres BikeshareDb (Q Postgres BikeshareDb s (StationStatusT (QGenExpr QValueContext Postgres s)))
-queryLatestStatusLookup = do
-  status <- selecting $ all_ (bikeshareDb ^. bikeshareStationStatus)
+queryLatestStatusLookup :: Maybe Int32 -> With Postgres BikeshareDb (Q Postgres BikeshareDb s (StationStatusT (QGenExpr QValueContext Postgres s)))
+queryLatestStatusLookup days = do
+  status <- selecting $ maybeFilterDaysAgo statusLastReported days $ all_ (bikeshareDb ^. bikeshareStationStatus)
   statusLookup <- selecting $ all_ (bikeshareDb ^. bikeshareStationLookup)
   pure $ do
     status' <- reuse status
@@ -439,19 +437,23 @@ queryLatestStatusLookup = do
     guard_' (_stnLookup statusLookup' `references_'` status')
     pure status'
 
-queryLatestInfoLookup :: With Postgres BikeshareDb (Q Postgres BikeshareDb s (StationInformationT (QGenExpr QValueContext Postgres s)))
-queryLatestInfoLookup = do
-  info         <- selecting $ all_ (bikeshareDb ^. bikeshareStationInformation)
-  status       <- selecting $ all_ (bikeshareDb ^. bikeshareStationStatus)
-  -- statusLookup <- selecting $ all_ (bikeshareDb ^. bikeshareStationLookup)
+queryLatestInfoLookup :: Maybe Int32 -> With Postgres BikeshareDb (Q Postgres BikeshareDb s (StationInformationT (QGenExpr QValueContext Postgres s)))
+queryLatestInfoLookup days = do
+  info    <- selecting $ all_ (bikeshareDb ^. bikeshareStationInformation)
+  status  <- selecting $ maybeFilterDaysAgo statusLastReported days $ all_ (bikeshareDb ^. bikeshareStationStatus)
+  station <- selecting $ all_ (bikeshareDb ^. bikeshareStationLookup)
   pure $ do
     status' <- reuse status
     info' <- reuse info
-    -- statusLookup' <- reuse statusLookup
-    -- guard_' (_stnLookup statusLookup' `references_'` status')
-    guard_' (_statusInfoId status' `references_'` info')
+    station' <- reuse station
+    guard_' (_stnLookup station' `references_'` status')
+    guard_' ((_unStatusStationId . _stnLookup) station' `references_'` info')
     pure info'
 
+-- | If 'days' is Nothing, don't filter. Otherwise, filter such that 'reportedField' is as recent as 'days' ago.
+maybeFilterDaysAgo :: Getting (QGenExpr QValueContext Postgres s1 UTCTime) s2 (QGenExpr QValueContext Postgres s1 UTCTime) -> Maybe Int32 -> Q Postgres db s1 s2 -> Q Postgres db s1 s2
+maybeFilterDaysAgo reportedField (Just days) = filter_ (\s -> s ^. reportedField >=. (daysAgo_ . val_) days)
+maybeFilterDaysAgo _ Nothing                 = id
 
 -- | Query charging infrastructure at given time.
 queryChargingInfrastructure :: (be ~ Postgres, ctx ~ QValueContext, db ~ BikeshareDb, expr ~ QGenExpr)
