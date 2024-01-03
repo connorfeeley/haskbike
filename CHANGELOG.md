@@ -47,3 +47,7 @@
 
 * Optimize various database operations.
 * Add charging infrastructure statistics to system status page.
+
+## 3.1.1 -- 2024-01-03
+
+* Optimize query used for station list rendering.
