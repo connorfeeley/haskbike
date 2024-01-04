@@ -162,8 +162,10 @@ performanceCsvHandler stationId startTime endTime = do
   let fileContent = encodeIntegrals integrals
 
   let stationIdString :: String = maybe "system" show stationId
-  let filename :: String = show stationIdString <> "-performance-" <> show (earliestTime range) <> "-" <> show (latestTime range)
-  pure $ addHeader ("attachment; filename=\"" <> (T.pack . show) (replaceSpaces filename) <> "\"") (fileContent :: BL.ByteString)
+  let filename :: String = stationIdString <> "-performance-" <> show (earliestTime range) <> "-" <> show (latestTime range) <> ".csv"
+  let header = "attachment; filename=\"" <> (T.pack . replaceSpaces) filename <> "\""
+  logDebug $ "Added file header: " <> header
+  pure $ addHeader header (fileContent :: BL.ByteString)
   where
     encodeIntegrals = encodeDefaultOrderedByName . map (PerformanceDataCSV . integralToPerformanceData)
 
