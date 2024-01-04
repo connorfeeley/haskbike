@@ -92,7 +92,7 @@ generateJsonDataSource (Just stationId) startTime endTime = do
   let params = StatusDataParams tz currentUtc (TimePair startTime endTime tz currentUtc)
   let range = enforceTimeRangeBounds params
   result <- liftIO $ runAppM appEnv $ withPostgres $
-    runSelectReturningList $ select $ limit_ 10000 $
+    runSelectReturningList $ select $ -- limit_ 10000 $
     statusBetweenExpr (fromIntegral stationId) (localTimeToUTC tz (earliestTime  range)) (localTimeToUTC tz (latestTime range))
 
   pure $ map fromBeamStationStatusToVisJSON result
