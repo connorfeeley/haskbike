@@ -265,6 +265,7 @@ library
                     , Database.BikeShare.Operations.Dockings
                     , Database.BikeShare.Operations.Factors
                     , Database.BikeShare.Operations.FactorsCSV
+                    , Database.BikeShare.Operations.StationEmpty
                     , Database.BikeShare.Expressions
                     , Database.BikeShare.StatusDeltaFields
                     , Database.BikeShare.Tables.SystemInformation
