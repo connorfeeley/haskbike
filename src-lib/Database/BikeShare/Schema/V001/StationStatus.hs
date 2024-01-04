@@ -323,3 +323,6 @@ createStationStatus =
                                                (field "vehicle_types_available_efit"    int notNull)
                                                (field "vehicle_types_available_efit_g5" int notNull)
   }
+
+extraStatusMigrations :: IsString a => [a]
+extraStatusMigrations = ["CREATE INDEX IF NOT EXISTS station_status_info_station_id_last_reported_idx ON station_status (info_station_id, last_reported);"]
