@@ -465,7 +465,6 @@ findInList key tuples = tuples ^? folded . filtered (\k -> k ^. eventsStation . 
 -- | HUnit test for inserting station status and asserting that the lookup table is accurate.
 unit_insertStationLookupLatest :: IO ()
 unit_insertStationLookupLatest = do
-  -- Connect to the database.
   runWithAppMSuppressLog dbnameTest setupTestDatabase
 
   info    <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"

@@ -16,8 +16,9 @@ import           Server.Page.Utils
 
 -- | Combination of status integrals and factors.
 data PerformanceData where
-  PerformanceData :: { performanceIntegrals :: StatusIntegral, performanceFactors :: StatusFactor }
-                 -> PerformanceData
+  PerformanceData :: { performanceIntegrals :: StatusIntegral
+                     , performanceFactors :: StatusFactor
+                     } -> PerformanceData
   deriving (Generic, Show, Eq)
 
 integralToPerformanceData :: StatusIntegral -> PerformanceData

@@ -117,8 +117,6 @@ unit_queryDockingsManual :: IO ()
 unit_queryDockingsManual = do
   runWithAppMSuppressLog dbnameTest setupTestDatabase
 
-  let ct = UTCTime (fromGregorian 2023 01 01) (timeOfDayToTime midnight)
-
   runWithAppM dbnameTest $ do
     -- Insert the single manually constructed station information.
     void $ insertStationInformation ct [manualStationInformation]
@@ -145,6 +143,7 @@ unit_queryDockingsManual = do
     assertBetween   (7, 1, 4, 2) (5, 0, 4, 1) (0, 15)
 
   where
+    ct = UTCTime (fromGregorian 2023 01 01) (timeOfDayToTime midnight)
     assertBetween
       (expectedDockingAll, expectedDockingIconic, expectedDockingEfit, expectedDockingEfitG5)
       (expectedUndockingAll, expectedUndockingIconic, expectedUndockingEfit, expectedUndockingEfitG5)

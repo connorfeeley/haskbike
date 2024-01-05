@@ -13,21 +13,30 @@
 module TestOperations
      ( unit_queryFieldIntegrals
      , unit_queryStatusFactors
+     , unit_stationEmptyTime
      ) where
+
+import qualified API.StationStatus                          as AT
+import           API.Utils
 
 import           AppEnv
 
+import           Control.Monad                              ( void )
+
+import           Data.Fixed                                 ( Pico )
 import           Data.Time
 
+import           Database.Beam
+import           Database.BikeShare.Expressions
+import           Database.BikeShare.Operations
 import           Database.BikeShare.Operations.Factors
+import           Database.BikeShare.Operations.StationEmpty
 import           Database.BikeShare.StatusVariationQuery
 import           Database.BikeShare.Utils
 
 import           Test.Tasty.HUnit
 
 import           TestDatabase
-
-import           UnliftIO
 
 import           Utils
 
@@ -97,3 +106,64 @@ unit_queryStatusFactors = do
   assertEqual "Expected sum of status factors equals 1.0" 1.0 (sumStatusFactors expected7001)
 
   assertEqual "Expected sum of normalized bike status factors equals 1.0" 1.0 (sumBikeStatusFactors expected7001)
+
+
+-- | Test station empty query.
+unit_stationEmptyTime :: IO ()
+unit_stationEmptyTime = do
+  runWithAppMSuppressLog dbnameTest $ void $ do
+    setupTestDatabase
+
+    insertStationInformation ct [manualStationInformation]
+    insertStationStatus statusInsert
+
+  check 1 (calendarTimeTime nominalDay)
+  check 2 (calendarTimeTime (nominalDay / 2))
+  check 3 (calendarTimeTime 0)
+  check 4 (calendarTimeTime nominalDay)
+  check 5 (calendarTimeTime (nominalDay / 4))
+  check 6 (calendarTimeTime (60*5))
+  check 7 (calendarTimeTime (60*5))
+
+  where
+    ct = UTCTime (fromGregorian 2023 01 01) (timeOfDayToTime (TimeOfDay 0 0 0))
+
+    statusInsert :: [AT.StationStatus]
+    statusInsert = map (stationStatusFromSimple baseStatus) simpleStatus
+
+    simpleStatus :: [StationStatusSimple]
+    simpleStatus =
+      map (\(d, t, (bikesAv, docksAv)) ->
+             StationStatusSimple 7001 (UTCTime d (timeOfDayToTime t)) 0 bikesAv 0 docksAv 0 bikesAv 0 0
+          )
+      [ (fromGregorian 2023 01 01, TimeOfDay  0 0 0,  (0, 0))
+
+      , (fromGregorian 2023 01 02, TimeOfDay  0 0 0,  (0, 0))
+      , (fromGregorian 2023 01 02, TimeOfDay 12 0 0,  (1, 0))
+
+      -- No data for day 3 intentionally.
+
+      , (fromGregorian 2023 01 04, TimeOfDay 00 00 00, (0, 0))
+
+      , (fromGregorian 2023 01 05, TimeOfDay 00 00 00, (1, 0))
+      , (fromGregorian 2023 01 05, TimeOfDay 06 00 00, (1, 0))
+      , (fromGregorian 2023 01 05, TimeOfDay 12 00 00, (0, 0))
+      , (fromGregorian 2023 01 05, TimeOfDay 18 00 00, (1, 0))
+
+      , (fromGregorian 2023 01 06, TimeOfDay 00 00 00, (1, 0))
+      , (fromGregorian 2023 01 06, TimeOfDay 23 55 00, (0, 0))
+
+      , (fromGregorian 2023 01 07, TimeOfDay 00 05 00, (1, 0))
+      ]
+
+toDuration :: Pico -> CalendarDiffTime
+toDuration = calendarTimeTime . secondsToNominalDiffTime
+
+check :: DayOfMonth -> CalendarDiffTime -> IO ()
+check d expected = do
+  empty <- runWithAppMSuppressLog dbnameTest $ withPostgres $ do
+    runSelectReturningList $ selectWith $
+      queryStationEmptyTime
+      (UTCTime (fromGregorian 2023 01 d)      (timeOfDayToTime (TimeOfDay 0 0 0)))
+      (UTCTime (fromGregorian 2023 01 (d +1)) (timeOfDayToTime (TimeOfDay 0 0 0)))
+  assertEqual ("Station empty time " <> show d) expected ((toDuration . fromIntegral . snd . head) empty)
