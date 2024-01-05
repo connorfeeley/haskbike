@@ -43,6 +43,7 @@ module Database.BikeShare.Schema.V001.StationInformation
      , infoReported
      , infoRideCodeSupport
      , infoStationId
+     , physicalConfigurationLabel
      , unInformationStationId
      ) where
 
@@ -213,6 +214,14 @@ rentalMethodType = DataType pgTextType
 newtype BeamPhysicalConfiguration where
   BeamPhysicalConfiguration :: AT.PhysicalConfiguration -> BeamPhysicalConfiguration
   deriving (Eq, Generic, Show, Read) via AT.PhysicalConfiguration
+
+physicalConfigurationLabel :: BeamPhysicalConfiguration -> Text.Text
+physicalConfigurationLabel (BeamPhysicalConfiguration AT.ElectricBikeStation) = "Electric Bike Station"
+physicalConfigurationLabel (BeamPhysicalConfiguration AT.Regular)             = "Regular"
+physicalConfigurationLabel (BeamPhysicalConfiguration AT.RegularLitMapFrame)  = "Regular Lit Map Frame"
+physicalConfigurationLabel (BeamPhysicalConfiguration AT.SmartLitMapFrame)    = "Smart Lit Map Frame"
+physicalConfigurationLabel (BeamPhysicalConfiguration AT.SmartMapFrame)       = "Smart Map Frame"
+physicalConfigurationLabel (BeamPhysicalConfiguration AT.Vault)               = "Vault"
 
 instance (BeamBackend be, FromBackendRow be Text.Text) => FromBackendRow be BeamPhysicalConfiguration where
   fromBackendRow = do

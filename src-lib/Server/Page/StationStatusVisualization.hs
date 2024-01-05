@@ -6,7 +6,9 @@ module Server.Page.StationStatusVisualization
      ) where
 
 
-import           Data.Maybe                                   ( catMaybes )
+import           Control.Monad                                ( when )
+
+import           Data.Maybe                                   ( catMaybes, isJust )
 import qualified Data.Text                                    as T
 import           Data.Time
 import           Data.Time.Extras
@@ -54,7 +56,9 @@ instance ToHtml StationStatusVisualizationPage where
       div_ [class_ "pure-g", style_ "text-align: center"] $ do
         let headers = catMaybes [ Just capacityHeader
                                 , Just $ hxSpinner_ staticLink (fieldLink dockingEventsHeader  (Just (_statusVisPageStationId params)) (earliestTime (_statusVisPageTimeRange params)) (latestTime (_statusVisPageTimeRange params)))
-                                , Just $ hxSpinner_ staticLink (fieldLink chargingEventsHeader (Just (_statusVisPageStationId params)) (earliestTime (_statusVisPageTimeRange params)) (latestTime (_statusVisPageTimeRange params)))
+                                , if _infoIsChargingStation inf
+                                  then Just $ hxSpinner_ staticLink (fieldLink chargingEventsHeader (Just (_statusVisPageStationId params)) (earliestTime (_statusVisPageTimeRange params)) (latestTime (_statusVisPageTimeRange params)))
+                                  else Nothing
                                 , Just $ hxSpinner_ staticLink (fieldLink performanceHeader    (Just (_statusVisPageStationId params)) (earliestTime (_statusVisPageTimeRange params)) (latestTime (_statusVisPageTimeRange params)))
                                 , valetHeader
                                 , virtualHeader
@@ -80,12 +84,18 @@ instance ToHtml StationStatusVisualizationPage where
       staticLink = _statusVisPageStaticLink params
 
       pageTitle :: Int -> T.Text -> T.Text
-      pageTitle a b = "Station #"<>(T.pack . show) a<>": "<>b
+      pageTitle a b = "Station #" <> (T.pack . show) a <> ": "<>b
 
       capacityHeader :: Monad m => HtmlT m ()
       capacityHeader = div_ $ do
         label_ [for_ "capacity"] (h3_ "Capacity")
         div_ [id_ "capacity"] (showth (_infoCapacity inf) <> " docks")
+
+        label_ [for_ "station-type"] (h3_ "Station Type")
+        div_ [id_ "station-type"] (toHtml ((physicalConfigurationLabel . _infoPhysicalConfiguration) inf) <> chargingLabel)
+        where chargingLabel = if _infoIsChargingStation inf
+                              then " (charging)"
+                              else mempty
 
       virtualHeader :: Monad m => Maybe (HtmlT m ())
       virtualHeader = maybeHeader (_infoIsVirtualStation inf) $
