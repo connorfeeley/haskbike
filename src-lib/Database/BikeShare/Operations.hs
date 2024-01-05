@@ -10,13 +10,11 @@
 -- Sometimes it is straight up impossible to write the types down because of ambiguous types.
 {-# OPTIONS_GHC -fno-warn-partial-type-signatures -fno-warn-missing-signatures #-}
 {-# OPTIONS_GHC -Wno-type-defaults #-}
-{-# LANGUAGE OverloadedRecordDot       #-}
 
 -- | This module contains the operations that can be performed on the database.
 
 module Database.BikeShare.Operations
      ( module Database.BikeShare.Operations.Dockings
-     , insertQueryLog
      , insertStationInformation
      , insertStationInformation'
      , insertStationStatus
@@ -57,10 +55,8 @@ import           Database.Beam
 import           Database.Beam.Backend.SQL.BeamExtensions
 import           Database.Beam.Postgres
 import           Database.BikeShare
-import           Database.BikeShare.BeamConvertable
 import           Database.BikeShare.Expressions
 import           Database.BikeShare.Operations.Dockings
-import           Database.BikeShare.Tables.QueryLogs
 import           Database.BikeShare.Tables.StationInformation
 import           Database.BikeShare.Tables.StationLookup
 import           Database.BikeShare.Tables.StationStatus
@@ -365,10 +361,3 @@ insertSystemInformation reported inf = do
     insert (bikeshareDb ^. bikeshareSystemInformationCount)
     (insertExpressions [fromJSONToBeamSystemInformationCount reported inf])
   pure (insertedInfo, insertedInfoCount)
-
-
-insertQueryLog :: BeamConvertable QueryResult (QueryLogT (QExpr Postgres s)) => QueryResult -> AppM [QueryLog]
-insertQueryLog query =
-  withPostgres $ runInsertReturningList $
-  insert (bikeshareDb ^. bikeshareQueryLog)
-  (insertExpressions [convertToBeam query])
