@@ -7,7 +7,8 @@
 -- | This module contains expressions for querying the database.
 
 module Database.BikeShare.Expressions
-     ( daysAgo_
+     ( DaysAgo (..)
+     , daysAgo_
      , disabledDocksExpr
      , infoByIdExpr
      , insertStationInformationExpr
@@ -51,8 +52,8 @@ import           Data.Time
 import           Data.Time.Extras
 
 import           Database.Beam
-import           Database.Beam.Backend                        ( timestampType )
-import           Database.Beam.Backend.SQL                    ( BeamSqlBackend )
+import           Database.Beam.Backend                        ( HasSqlValueSyntax, timestampType )
+import           Database.Beam.Backend.SQL                    ( BeamSqlBackend, HasSqlValueSyntax (..) )
 import           Database.Beam.Backend.SQL.BeamExtensions     ( BeamHasInsertOnConflict (anyConflict, onConflictDoNothing),
                                                                 insertOnConflict )
 import           Database.Beam.Postgres                       ( Postgres )
@@ -344,7 +345,7 @@ queryLatestStatuses :: be ~ Postgres
                     (Q be BikeshareDb s (StationInformationT (QExpr be s), StationStatusT (QGenExpr QValueContext be s)))
 queryLatestStatuses = do
   info    <- selecting $ all_ (bikeshareDb ^. bikeshareStationInformation)
-  status  <- selecting $ filter_ (\s -> s ^. statusLastReported >=. daysAgo_ 1) $ all_ (bikeshareDb ^. bikeshareStationStatus)
+  status  <- selecting $ filter_ (\s -> s ^. statusLastReported >=. (daysAgo_ . val_ . DaysAgo) 1) $ all_ (bikeshareDb ^. bikeshareStationStatus)
   station <- selecting $ all_ (bikeshareDb ^. bikeshareStationLookup)
   pure $ do
     status' <- reuse status
@@ -355,7 +356,13 @@ queryLatestStatuses = do
             )
     pure (info', status')
 
-daysAgo_ :: QGenExpr ctxt Postgres s Int32 -> QGenExpr ctxt Postgres s UTCTime
+data DaysAgo where
+  DaysAgo :: (Num a, HasSqlValueSyntax PgValueSyntax a) => a -> DaysAgo
+
+instance HasSqlValueSyntax PgValueSyntax DaysAgo where
+  sqlValueSyntax (DaysAgo d) = sqlValueSyntax d
+
+daysAgo_ :: QGenExpr ctxt Postgres s DaysAgo -> QGenExpr ctxt Postgres s UTCTime
 daysAgo_ = customExpr_ (\offs -> "(NOW() - INTERVAL '" <> offs <> " DAYS')")
 
 -- | Get the latest status records for each station.
@@ -427,7 +434,7 @@ queryLatestInfoBefore t = do
     info <- filter_ (\inf -> inf ^. _2 ==. val_ 1) (reuse ranked)
     pure (info ^. _1)
 
-queryLatestStatusLookup :: Maybe Int32 -> With Postgres BikeshareDb (Q Postgres BikeshareDb s (StationStatusT (QGenExpr QValueContext Postgres s)))
+queryLatestStatusLookup :: Maybe DaysAgo -> With Postgres BikeshareDb (Q Postgres BikeshareDb s (StationStatusT (QGenExpr QValueContext Postgres s)))
 queryLatestStatusLookup days = do
   status <- selecting $ maybeFilterDaysAgo statusLastReported days $ all_ (bikeshareDb ^. bikeshareStationStatus)
   statusLookup <- selecting $ all_ (bikeshareDb ^. bikeshareStationLookup)
@@ -437,7 +444,7 @@ queryLatestStatusLookup days = do
     guard_' (_stnLookup statusLookup' `references_'` status')
     pure status'
 
-queryLatestInfoLookup :: Maybe Int32 -> With Postgres BikeshareDb (Q Postgres BikeshareDb s (StationInformationT (QGenExpr QValueContext Postgres s)))
+queryLatestInfoLookup :: Maybe DaysAgo -> With Postgres BikeshareDb (Q Postgres BikeshareDb s (StationInformationT (QGenExpr QValueContext Postgres s)))
 queryLatestInfoLookup days = do
   info    <- selecting $ all_ (bikeshareDb ^. bikeshareStationInformation)
   status  <- selecting $ maybeFilterDaysAgo statusLastReported days $ all_ (bikeshareDb ^. bikeshareStationStatus)
@@ -451,7 +458,7 @@ queryLatestInfoLookup days = do
     pure info'
 
 -- | If 'days' is Nothing, don't filter. Otherwise, filter such that 'reportedField' is as recent as 'days' ago.
-maybeFilterDaysAgo :: Getting (QGenExpr QValueContext Postgres s1 UTCTime) s2 (QGenExpr QValueContext Postgres s1 UTCTime) -> Maybe Int32 -> Q Postgres db s1 s2 -> Q Postgres db s1 s2
+maybeFilterDaysAgo :: Getting (QGenExpr QValueContext Postgres s1 UTCTime) s2 (QGenExpr QValueContext Postgres s1 UTCTime) -> Maybe DaysAgo -> Q Postgres db s1 s2 -> Q Postgres db s1 s2
 maybeFilterDaysAgo reportedField (Just days) = filter_ (\s -> s ^. reportedField >=. (daysAgo_ . val_) days)
 maybeFilterDaysAgo _ Nothing                 = id
 
