@@ -51,3 +51,8 @@
 ## 3.1.1 -- 2024-01-03
 
 * Optimize query used for station list rendering.
+
+## 3.2.0 -- 2024-01-05
+
+* Add query to query how much time a station spends empty.
+* Show more station information on station status visualization page.
