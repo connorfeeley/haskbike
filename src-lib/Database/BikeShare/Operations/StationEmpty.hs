@@ -8,7 +8,6 @@ module Database.BikeShare.Operations.StationEmpty
 
 import           Control.Lens                                 hiding ( reuse, (<.) )
 
-import qualified Data.Map                                     as Map
 import           Data.Time
 
 import           Database.Beam
@@ -17,8 +16,6 @@ import qualified Database.Beam.Postgres                       as Pg
 import           Database.BikeShare
 import           Database.BikeShare.Tables.StationInformation
 import           Database.BikeShare.Tables.StationStatus
-
-toMap xs = Map.fromList xs
 
 -- | PostgreSQL GREATEST and LEAST.
 greatest_, least_ :: QGenExpr ctxt Postgres s a -> QGenExpr ctxt Postgres s a -> QGenExpr ctxt Postgres s a
@@ -32,16 +29,20 @@ timeDelta a b = cast_ (extract_ Pg.epoch_ a - extract_ Pg.epoch_ b) int
 
 
 -- | Query how long each station has been empty for.
-queryStationEmptyTime :: UTCTime -> UTCTime -> _ -- Q Postgres BikeshareDb s (StationInformationT (QGenExpr QValueContext Postgres s), Int32)
+queryStationEmptyTime :: UTCTime -> UTCTime -> With Postgres BikeshareDb (Q Postgres BikeshareDb s (StationInformationT (QGenExpr QValueContext Postgres s), QGenExpr QValueContext Postgres s Integer))
 queryStationEmptyTime startTime endTime = do
+  status' <- selecting $
+            filter_ (\row -> between_ (row ^. statusLastReported) (val_ (addUTCTime (-60 * 60 * 24) startTime)) (val_ (addUTCTime (60 * 60 * 24) endTime))) $
+            all_ (bikeshareDb ^. bikeshareStationStatus)
+
   ranked <- selecting $
     withWindow_ (\row -> frame_ (partitionBy_ ((_unInformationStationId  . _statusInfoId) row)) (orderPartitionBy_ ((asc_ . _statusLastReported) row)) noBounds_)
                    (\row w -> ( row
                               , leadWithDefault_ (row ^. statusLastReported) (val_ 1) (val_ endTime) `over_` w
                               , lagWithDefault_  (row ^. statusLastReported) (val_ 1) (val_ endTime) `over_` w
                               )
-                   ) $ filter_ (\row -> between_ (row ^. statusLastReported) (val_ (addUTCTime (-60 * 60 * 24) startTime)) (val_ (addUTCTime (60 * 60 * 24) endTime))) $
-       all_ (bikeshareDb ^. bikeshareStationStatus)
+                   ) $
+    reuse status'
 
   emptyIntervals <- selecting $
     aggregate_ (\(row, nReported, _pReported) ->
@@ -60,4 +61,14 @@ queryStationEmptyTime startTime endTime = do
         reuse ranked
 
   pure $ do
-    reuse emptyIntervals
+    status <- reuse status'
+
+    info <- Pg.pgNubBy_ _infoStationId $
+            orderBy_ (desc_ . _infoReported) $
+            all_ (bikeshareDb ^. bikeshareStationInformation)
+    guard_' (_statusInfoId status `references_'` info)
+
+    empty <- reuse emptyIntervals
+    guard_' (empty ^. _1 ==?. _infoStationId info)
+
+    pure (info, empty ^. _2)
