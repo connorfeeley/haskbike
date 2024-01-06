@@ -261,6 +261,7 @@ library
                     , Database.BikeShare.Utils
                     , Database.BikeShare.EventCounts
                     , Database.BikeShare.Connection
+                    , Database.BikeShare.DaysAgo
                     , Database.BikeShare.Operations
                     , Database.BikeShare.Operations.Dockings
                     , Database.BikeShare.Operations.Factors

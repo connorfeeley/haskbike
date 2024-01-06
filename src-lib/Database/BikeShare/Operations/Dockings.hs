@@ -23,14 +23,45 @@ import           AppEnv
 import           Control.Lens                                 hiding ( reuse, (.=), (<.) )
 
 import           Data.Int                                     ( Int32 )
+import           Data.List                                    ( sortOn )
+import           Data.Ord                                     ( Down (..) )
+import           Data.Time
 
 import           Database.Beam
 import           Database.BikeShare
 import           Database.BikeShare.EventCounts
+import           Database.BikeShare.Operations.StationEmpty
 import           Database.BikeShare.StatusVariationQuery
 import           Database.BikeShare.Tables.StationInformation
 import           Database.BikeShare.Tables.StationStatus
 
+import           Text.Pretty.Simple.Extras
+
+eventsDeltas = do
+  events <- (runWithAppMDebug "haskbike" . queryDockingEventsCount) $
+    StatusVariationQuery Nothing
+    [ EarliestTime (UTCTime (fromGregorian 2023 12 01) (timeOfDayToTime (TimeOfDay 0 0 0)))
+    , LatestTime   (UTCTime (fromGregorian 2024 01 06) (timeOfDayToTime (TimeOfDay 0 0 0)))
+    ]
+  -- let undocking = sumEvents Undocking (iconicEvents events)
+  -- let docking   = map (\e -> (_eventsCountDockings e, _eventsCountUndockings e)) . iconicEvents $ events
+  pPrintCompact (perStationEventsDeltas events)
+  -- pPrintCompact docking
+  -- pPrintCompact undocking
+  pure events
+
+perStationEventsDeltas = sortOn (Down . abs . (^. _4))
+                         . map ((\(s, e) -> (_infoName s, _eventsCountDockings e, _eventsCountUndockings e, _eventsCountDockings e + _eventsCountUndockings e))
+                                . (\e -> (_eventsStation e, _eventsIconicCount e)))
+
+check d1 d2 = do
+  runWithAppMDebug "haskbike" $ withPostgres $ do
+    runSelectReturningList $ selectWith $
+      queryStationEmptyTime
+      (UTCTime (fromGregorian 2023 12 d1) (timeOfDayToTime (TimeOfDay 0 0 0)))
+      (UTCTime (fromGregorian 2023 12 d2) (timeOfDayToTime (TimeOfDay 0 0 0)))
+
+check' res = pPrintCompact $ map (\(s, e) -> (_infoName s, e)) res
 
 -- | Query the number of dockings and undockings for a station.
 queryDockingEventsCount :: StatusVariationQuery -> AppM [DockingEventsCount]

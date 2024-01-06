@@ -7,9 +7,7 @@
 -- | This module contains expressions for querying the database.
 
 module Database.BikeShare.Expressions
-     ( DaysAgo (..)
-     , daysAgo_
-     , disabledDocksExpr
+     ( disabledDocksExpr
      , infoByIdExpr
      , insertStationInformationExpr
      , integrateColumns
@@ -63,6 +61,7 @@ import           Database.Beam.Postgres.Syntax
 import qualified Database.Beam.Query.Adhoc                    as Adhoc
 import           Database.Beam.Query.CTE                      ( QAnyScope )
 import           Database.BikeShare
+import           Database.BikeShare.DaysAgo
 import           Database.BikeShare.EndpointQueried
 import           Database.BikeShare.StatusVariationQuery
 import           Database.BikeShare.Tables.QueryLogs
@@ -355,15 +354,6 @@ queryLatestStatuses = do
              (_unStatusStationId . _stnLookup) station' `references_'` info'
             )
     pure (info', status')
-
-data DaysAgo where
-  DaysAgo :: (Num a, HasSqlValueSyntax PgValueSyntax a) => a -> DaysAgo
-
-instance HasSqlValueSyntax PgValueSyntax DaysAgo where
-  sqlValueSyntax (DaysAgo d) = sqlValueSyntax d
-
-daysAgo_ :: QGenExpr ctxt Postgres s DaysAgo -> QGenExpr ctxt Postgres s UTCTime
-daysAgo_ = customExpr_ (\offs -> "(NOW() - INTERVAL '" <> offs <> " DAYS')")
 
 -- | Get the latest status records for each station.
 queryLatestSystemInfo :: be ~ Postgres
