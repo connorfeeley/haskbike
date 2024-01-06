@@ -19,16 +19,16 @@ import           AppEnv
 
 import           Colog
 
-import           Control.Exception                   ( throw )
+import           Control.Exception                       ( throw )
 
 import           Data.Aeson
-import           Data.Maybe                          ( fromMaybe )
-import qualified Data.Text                           as T
+import           Data.Maybe                              ( fromMaybe )
+import qualified Data.Text                               as T
 import           Data.Time
 import           Data.Time.Extras
 
 import           Database.BikeShare.EndpointQueried
-import           Database.BikeShare.Operations       ( insertQueryLog )
+import           Database.BikeShare.Operations.QueryLogs ( insertQueryLog )
 import           Database.BikeShare.Tables.QueryLogs
 
 import           Servant.Client
