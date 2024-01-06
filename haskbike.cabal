@@ -354,3 +354,21 @@ test-suite haskbike-test
     build-depends:    haskbike
                     , time
                     , extra
+
+benchmark bench-haskbike
+    -- The entrypoint to the benchmark suite.
+    main-is:          Main.hs
+
+    type:             exitcode-stdio-1.0
+
+    build-depends:    base
+                    , tasty-bench
+    ghc-options:      "-with-rtsopts=-A32m"
+    if impl(ghc >= 8.6)
+      ghc-options:    -fproc-alignment=64
+
+    -- Directories containing source files.
+    hs-source-dirs:   src-bench
+
+    -- Base language which the package is written in.
+    default-language: GHC2021
