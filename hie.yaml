@@ -8,3 +8,6 @@ cradle:
 
     - path: "test"
       component: "haskbike:test:haskbike-test"
+
+    - path: "src-bench"
+      component: "haskbike:bench:bench-haskbike"

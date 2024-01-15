@@ -61,19 +61,6 @@ import           UnliftIO                                     ( try )
 import           Utils
 
 
--- | Initialize empty database from the test station information response and all 22 station status responses.
-initDBWithAllTestData :: IO ()
-initDBWithAllTestData = do
-  info <- getDecodedFileInformation  "docs/json/2.3/station_information-1.json"
-  void $ runWithAppM dbnameTest $ insertStationInformation (_respLastUpdated info) (_respData info)
-
-  -- Insert test station status data 1-22.
-  mapM_ (\i -> do
-            statusResponse <- getDecodedFileStatus $ "docs/json/2.3/station_status-" <> show i <> ".json"
-            void $ runWithAppM dbnameTest $ insertStationStatus $ statusResponse ^. respData
-        ) [(1 :: Int) .. (22 :: Int)]
-
-
 -- | HUnit test for inserting system information.
 unit_insertSystemInformation :: IO ()
 unit_insertSystemInformation = do
