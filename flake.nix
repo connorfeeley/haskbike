@@ -123,7 +123,7 @@
 
           devShell =
             let
-              postgres = pkgs.postgresql_15.withPackages (ps: with ps; [ pg_partman postgis timescaledb ]);
+              postgres = pkgs.postgresql_16.withPackages (ps: with ps; [ pg_partman postgis timescaledb ]);
             in
             {
               # Enabled by default
