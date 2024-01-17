@@ -54,7 +54,7 @@ dispatchDebug _options = do
 
   logDebug $ "Info table size: " <> showt infoTableSizeText
 
-  statusTableSize <- queryTableSize "StationStatus"
+  statusTableSize <- queryTableSize "station_status"
   let statusTableSizeText =
         fromMaybe ("Error: unable to determine station status table size." :: String)
         statusTableSize
