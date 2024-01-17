@@ -26,6 +26,9 @@ info STATION_ID='7001':
 integrals STATION_ID='7001':
     curl --location "{{ENDPOINT}}/data/station-status/integral?station-id={{STATION_ID}}" | jq .
 
+errors-latest AMOUNT='1':
+    curl --location "{{ENDPOINT}}/debug/errors/latest/{{AMOUNT}}" | jq .
+
 version:
     curl --location "{{ENDPOINT}}/version" | jq .
 
