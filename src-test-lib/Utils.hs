@@ -20,6 +20,7 @@ import           API.Utils
 
 import           AppEnv
 
+import           Control.Lens
 import           Control.Monad                                ( void )
 
 import           Data.Aeson
@@ -30,6 +31,7 @@ import           Data.Time
 
 import           Database.BikeShare
 import           Database.BikeShare.ImportExport
+import           Database.BikeShare.Operations
 import qualified Database.BikeShare.Tables.StationInformation as DB
 import qualified Database.BikeShare.Tables.StationStatus      as DB
 import           Database.BikeShare.Utils
@@ -43,6 +45,20 @@ import           Test.Tasty.HUnit
 initDBWithExportedData :: IO ([DB.StationInformation], [DB.StationStatus])
 initDBWithExportedData = do
   importDbTestData "test/dumps/" "station_information_2023-10-30.json" "station_status_2023-10-30_2023-10-30.json"
+
+
+-- | Initialize empty database from the test station information response and all 22 station status responses.
+initDBWithAllTestData :: IO ()
+initDBWithAllTestData = do
+  info <- getDecodedFileInformation  "docs/json/2.3/station_information-1.json"
+  void $ runWithAppM dbnameTest $ insertStationInformation (_respLastUpdated info) (_respData info)
+
+  -- Insert test station status data 1-22.
+  mapM_ (\i -> do
+            statusResponse <- getDecodedFileStatus $ "docs/json/2.3/station_status-" <> show i <> ".json"
+            void $ runWithAppM dbnameTest $ insertStationStatus $ statusResponse ^. respData
+        ) [(1 :: Int) .. (22 :: Int)]
+
 
 
 -- * Manually-created test data.

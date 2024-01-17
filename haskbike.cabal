@@ -54,8 +54,8 @@ build-type:         Simple
 extra-doc-files:    CHANGELOG.md
 
 -- Extra source files to be distributed with the package, such as examples, or a tutorial module.
-extra-source-files: test/json/*.json
-                  , docs/json/2.3/*.json
+extra-source-files: docs/json/2.3/*.json
+                  , test/json/*.json
                   , test/dumps/*.json
 
 -- Linker (use gold) common warning flags.
@@ -315,6 +315,52 @@ library
     -- Base language which the package is written in.
     default-language: GHC2021
 
+-- Library target.
+library haskbike-test-lib
+    import:           compile-flags
+                    , common-extensions
+                    , common-depends
+                    , api-client-depends
+                    , api-server-depends
+                    , database-depends
+                    , test-depends
+
+    -- Modules exported by the library.
+    exposed-modules:  Utils
+                    , TestDecoding
+                    , TestEncoding
+                    , TestClient
+                    , TestDatabase
+                    , TestOperations
+                    , TestChargings
+                    , TestMisc
+                    , TestDeltas
+
+    -- Modules included in this library but not exported.
+    -- other-modules:
+
+
+    -- LANGUAGE extensions used by modules in this package.
+    -- other-extensions:
+
+    -- Other library packages from which modules are imported.
+    build-depends:    haskbike
+                    , vector
+                    , colour
+                    , text-show
+                    , attoparsec
+                    , hvega
+                    , unordered-containers
+                    , aeson-pretty
+                    , data-default-class
+                    , githash
+
+    -- Directories containing source files.
+    hs-source-dirs:   src-test-lib
+
+    -- Base language which the package is written in.
+    default-language: GHC2021
+
 -- Testing target.
 test-suite haskbike-test
     import:           compile-flags
@@ -328,15 +374,7 @@ test-suite haskbike-test
     default-language: GHC2021
 
     -- Modules included in this test suite, other than Main.
-    other-modules:    TestDecoding
-                    , TestEncoding
-                    , TestClient
-                    , TestDatabase
-                    , TestOperations
-                    , TestChargings
-                    , TestMisc
-                    , TestDeltas
-                    , Utils
+    -- other-modules:
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
@@ -354,3 +392,34 @@ test-suite haskbike-test
     build-depends:    haskbike
                     , time
                     , extra
+                    , haskbike-test-lib
+
+benchmark bench-haskbike
+    import:           compile-flags
+                    , common-extensions
+                    , common-depends
+                    , api-client-depends
+                    , database-depends
+                    , test-depends
+
+    -- The entrypoint to the benchmark suite.
+    main-is:          Main.hs
+
+    type:             exitcode-stdio-1.0
+
+    build-depends:    base
+                    , tasty-bench
+                    , haskbike
+                    , haskbike-test-lib
+                    , time
+                    , extra
+
+    ghc-options:      "-with-rtsopts=-A32m"
+    if impl(ghc >= 8.6)
+      ghc-options:    -fproc-alignment=64
+
+    -- Directories containing source files.
+    hs-source-dirs:   src-bench
+
+    -- Base language which the package is written in.
+    default-language: GHC2021
