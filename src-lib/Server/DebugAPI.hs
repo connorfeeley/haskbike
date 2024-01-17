@@ -32,11 +32,9 @@ import           Version
 
 data DebugAPI mode where
   DebugAPI ::
-    { serverVersion :: mode :- "debug"
-      :> "version" :> Get '[JSON] Version
-    , errorsApi :: mode :- "debug" :> "errors" :> NamedRoutes ErrorsAPI
-    , sleepDatabase :: mode :- "debug"
-      :> "sleep-database" :> Capture "seconds" Int :> Get '[JSON] ()
+    { serverVersion :: mode :- "debug" :> "version"        :> Get '[JSON] Version
+    , errorsApi     :: mode :- "debug" :> "errors"         :> NamedRoutes ErrorsAPI
+    , sleepDatabase :: mode :- "debug" :> "sleep-database" :> Capture "seconds" Int :> Get '[JSON] ()
     } -> DebugAPI mode
   deriving stock Generic
 

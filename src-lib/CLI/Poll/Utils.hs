@@ -81,7 +81,7 @@ handleResponseError ep err = do
 
 errToQueryLog :: ClientError -> String
 errToQueryLog (FailureResponse req resp)              = "Failure response: "          <> show req <> " " <> show resp
-errToQueryLog (DecodeFailure txt resp)                = "Decode failure: "            <> show txt <> " " <> show resp
+errToQueryLog (DecodeFailure txt resp)                = "Decode failure: "            <> show txt
 errToQueryLog (UnsupportedContentType mediaType resp) = "Unsupported content type: "  <> show mediaType <> " " <> show resp
 errToQueryLog (InvalidContentTypeHeader resp)         = "Invalid content type header" <> show resp
 errToQueryLog (ConnectionError exep)                  = "Connection error: "          <> show exep
