@@ -101,7 +101,6 @@ stationStatusVisualizationPage (Just stationId) startTime endTime = do
   case info of
     [info'] -> do
       logInfo $ "Matched station information: " <> _infoName info'
-      logInfo $ "Static path: " <> toUrlPiece (fieldLink staticApi)
       sideMenu $
         StationStatusVisualizationPage { _statusVisPageStationInfo    = info'
                                        , _statusVisPageStationId      = stationId
