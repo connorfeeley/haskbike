@@ -13,6 +13,7 @@ import           Data.Time
 import           Database.Beam
 import           Database.Beam.Postgres                       ( Postgres )
 import qualified Database.Beam.Postgres                       as Pg
+import           Database.Beam.Postgres.Full                  ( lateral_ )
 import           Database.BikeShare
 import           Database.BikeShare.Tables.StationInformation
 import           Database.BikeShare.Tables.StationStatus
@@ -31,6 +32,10 @@ timeDelta a b = cast_ (extract_ Pg.epoch_ a - extract_ Pg.epoch_ b) int
 -- | Query how long each station has been empty for.
 queryStationEmptyTime :: UTCTime -> UTCTime -> With Postgres BikeshareDb (Q Postgres BikeshareDb s (StationInformationT (QGenExpr QValueContext Postgres s), QGenExpr QValueContext Postgres s Integer))
 queryStationEmptyTime startTime endTime = do
+  statusCte <- selecting $
+            filter_ (\row -> between_ (row ^. statusLastReported) (val_ (addUTCTime (-60 * 60 * 24) startTime)) (val_ (addUTCTime (60 * 60 * 24) endTime))) $
+            all_ (bikeshareDb ^. bikeshareStationStatus)
+
   emptyIntervals <- selecting $
     aggregate_ (\(row, nReported, _pReported) ->
                   let period_start = greatest_ (row ^. statusLastReported) (val_ startTime)
@@ -51,16 +56,35 @@ queryStationEmptyTime startTime endTime = do
                                , lagWithDefault_  (row ^. statusLastReported) (val_ 1) (val_ endTime) `over_` w
                                )
                     ) $
-            filter_ (\row -> between_ (row ^. statusLastReported) (val_ (addUTCTime (-60 * 60 * 24) startTime)) (val_ (addUTCTime (60 * 60 * 24) endTime))) $
-            all_ (bikeshareDb ^. bikeshareStationStatus)
+        reuse statusCte
 
   pure $ do
     empty <- reuse emptyIntervals
+    status <- reuse statusCte
 
-    info <- Pg.pgNubBy_ _infoStationId $
-            -- filter_ (\inf -> empty ^. _1 ==. _infoStationId inf) $
+    info <- do
+      -- info' <- reuse infoCte
+      info' <- lateral_ status $ \status' -> do
+        filter_ (\inf -> _statusInfoId status' `references_` (inf ^. _1) &&. inf ^. _2 ==. val_ 1) $
+          withWindow_ (\row -> frame_ (partitionBy_ (_infoStationId row)) (orderPartitionBy_ ((desc_ . _infoReported) row)) noBounds_)
+                         (\row w -> ( row
+                                    , rank_ `over_` w
+                                    )
+                         ) $
+          all_ (bikeshareDb ^. bikeshareStationInformation)
+      pure (info' ^. _1)
+
+    info <- -- Pg.pgNubBy_ _infoStationId $
+      lateral_ (status, empty) $ \(status', empty') -> do
+      Pg.pgNubBy_ _infoStationId $
+        filter_ (\inf -> _statusInfoId status' `references_` inf) $
+            filter_ (\inf -> empty' ^. _1 ==. _infoStationId inf) $
             orderBy_ (desc_ . _infoReported) $
             all_ (bikeshareDb ^. bikeshareStationInformation)
+
+    -- Empty -> Info
     guard_ (empty ^. _1 ==. _infoStationId info)
+    -- Status -> Info && Empty -> Status
+    guard_ (_statusInfoId status `references_` info &&. empty ^. _1 ==. _statusStationId status &&. empty ^. _1 ==. _infoStationId info)
 
     pure (info, empty ^. _2)
