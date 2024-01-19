@@ -63,7 +63,6 @@ queryStationEmptyTime startTime endTime = do
     status <- reuse statusCte
 
     info <- do
-      -- info' <- reuse infoCte
       info' <- lateral_ status $ \status' -> do
         filter_ (\inf -> _statusInfoId status' `references_` (inf ^. _1) &&. inf ^. _2 ==. val_ 1) $
           withWindow_ (\row -> frame_ (partitionBy_ (_infoStationId row)) (orderPartitionBy_ ((desc_ . _infoReported) row)) noBounds_)
@@ -74,17 +73,6 @@ queryStationEmptyTime startTime endTime = do
           all_ (bikeshareDb ^. bikeshareStationInformation)
       pure (info' ^. _1)
 
-    info <- -- Pg.pgNubBy_ _infoStationId $
-      lateral_ (status, empty) $ \(status', empty') -> do
-      Pg.pgNubBy_ _infoStationId $
-        filter_ (\inf -> _statusInfoId status' `references_` inf) $
-            filter_ (\inf -> empty' ^. _1 ==. _infoStationId inf) $
-            orderBy_ (desc_ . _infoReported) $
-            all_ (bikeshareDb ^. bikeshareStationInformation)
-
-    -- Empty -> Info
-    guard_ (empty ^. _1 ==. _infoStationId info)
-    -- Status -> Info && Empty -> Status
     guard_ (_statusInfoId status `references_` info &&. empty ^. _1 ==. _statusStationId status &&. empty ^. _1 ==. _infoStationId info)
 
     pure (info, empty ^. _2)
