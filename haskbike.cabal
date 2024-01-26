@@ -356,7 +356,7 @@ library haskbike-test-lib
                     , githash
 
     -- Directories containing source files.
-    hs-source-dirs:   src-test-lib
+    hs-source-dirs:   test
 
     -- Base language which the package is written in.
     default-language: GHC2021
@@ -375,6 +375,16 @@ test-suite haskbike-test
 
     -- Modules included in this test suite, other than Main.
     -- other-modules:
+    -- Modules exported by the library.
+    other-modules:  Utils
+                  , TestDecoding
+                  , TestEncoding
+                  , TestClient
+                  , TestDatabase
+                  , TestOperations
+                  , TestChargings
+                  , TestMisc
+                  , TestDeltas
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
