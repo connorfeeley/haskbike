@@ -8,12 +8,14 @@ module Database.BikeShare.Operations.StationEmpty
 
 import           Control.Lens                                 hiding ( reuse, (<.) )
 
+import           Data.Int                                     ( Int32 )
 import           Data.Time
 
 import           Database.Beam
+import           Database.Beam.Backend
 import           Database.Beam.Postgres                       ( Postgres )
 import qualified Database.Beam.Postgres                       as Pg
-import           Database.Beam.Postgres.Full                  ( lateral_ )
+import           Database.Beam.Postgres.Syntax                ( PgValueSyntax )
 import           Database.BikeShare
 import           Database.BikeShare.Tables.StationInformation
 import           Database.BikeShare.Tables.StationStatus
@@ -30,9 +32,10 @@ timeDelta a b = cast_ (extract_ Pg.epoch_ a - extract_ Pg.epoch_ b) int
 
 
 -- | Query how long each station has been empty for.
-queryStationEmptyTime :: UTCTime -> UTCTime -> With Postgres BikeshareDb (Q Postgres BikeshareDb s (StationInformationT (QGenExpr QValueContext Postgres s), QGenExpr QValueContext Postgres s Integer))
-queryStationEmptyTime startTime endTime = do
+queryStationEmptyTime :: (HasSqlValueSyntax PgValueSyntax a, Integral a) => Maybe Int -> UTCTime -> UTCTime -> With Postgres BikeshareDb (Q Postgres BikeshareDb s (QGenExpr QValueContext Postgres s Int32, QGenExpr QValueContext Postgres s a))
+queryStationEmptyTime stationId startTime endTime = do
   statusCte <- selecting $
+            filter_ (stationIdCond stationId) $
             filter_ (\row -> between_ (row ^. statusLastReported) (val_ (addUTCTime (-60 * 60 * 24) startTime)) (val_ (addUTCTime (60 * 60 * 24) endTime))) $
             all_ (bikeshareDb ^. bikeshareStationStatus)
 
@@ -59,20 +62,9 @@ queryStationEmptyTime startTime endTime = do
         reuse statusCte
 
   pure $ do
-    empty <- reuse emptyIntervals
-    status <- reuse statusCte
+    reuse emptyIntervals
 
-    info <- do
-      info' <- lateral_ status $ \status' -> do
-        filter_ (\inf -> _statusInfoId status' `references_` (inf ^. _1) &&. inf ^. _2 ==. val_ 1) $
-          withWindow_ (\row -> frame_ (partitionBy_ (_infoStationId row)) (orderPartitionBy_ ((desc_ . _infoReported) row)) noBounds_)
-                         (\row w -> ( row
-                                    , rank_ `over_` w
-                                    )
-                         ) $
-          all_ (bikeshareDb ^. bikeshareStationInformation)
-      pure (info' ^. _1)
-
-    guard_ (_statusInfoId status `references_` info &&. empty ^. _1 ==. _statusStationId status &&. empty ^. _1 ==. _infoStationId info)
-
-    pure (info, empty ^. _2)
+-- | Possible filter condition for station ID.
+stationIdCond :: (HaskellLiteralForQExpr (expr Bool) ~ Bool, SqlEq expr (Columnar f Int32), Integral a, SqlValable (expr Bool), SqlValable (Columnar f Int32), Num (HaskellLiteralForQExpr (Columnar f Int32))) => Maybe a -> StationStatusT f -> expr Bool
+stationIdCond (Just stationId') row = (_unInformationStationId  . _statusInfoId) row ==. val_ (fromIntegral stationId')
+stationIdCond Nothing           _   = val_ True
