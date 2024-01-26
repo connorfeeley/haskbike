@@ -4,6 +4,8 @@ module Main where
 
 import           AppEnv
 
+import           Control.Monad                              ( void )
+
 import           Data.Time
 
 import           Database.Beam
@@ -38,5 +40,4 @@ main = defaultMain
 
 benchStationEmptyTime :: IO ()
 benchStationEmptyTime = do
-  _ <- runWithAppMDebug "haskbike" $ withPostgres $ runSelectReturningList $ selectWith $ queryStationEmptyTime (UTCTime (fromGregorian 2024 01 01) (timeOfDayToTime midnight)) (UTCTime (fromGregorian 2024 01 12) (timeOfDayToTime midnight))
-  pure ()
+  void $ runWithAppMDebug "haskbike" $ withPostgres $ runSelectReturningList $ selectWith $ queryStationEmptyTime (Just 7001) (UTCTime (fromGregorian 2024 01 01) (timeOfDayToTime midnight)) (UTCTime (fromGregorian 2024 01 12) (timeOfDayToTime midnight))

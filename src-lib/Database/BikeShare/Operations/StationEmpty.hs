@@ -32,7 +32,7 @@ timeDelta a b = cast_ (extract_ Pg.epoch_ a - extract_ Pg.epoch_ b) int
 
 
 -- | Query how long each station has been empty for.
-queryStationEmptyTime :: (HasSqlValueSyntax PgValueSyntax a, Integral a) => Maybe Int -> UTCTime -> UTCTime -> With Postgres BikeshareDb (Q Postgres BikeshareDb s (QGenExpr QValueContext Postgres s Int32, QGenExpr QValueContext Postgres s a))
+queryStationEmptyTime :: (HasSqlValueSyntax PgValueSyntax a, Integral a, Integral b) => Maybe b -> UTCTime -> UTCTime -> With Postgres BikeshareDb (Q Postgres BikeshareDb s (QGenExpr QValueContext Postgres s Int32, QGenExpr QValueContext Postgres s a))
 queryStationEmptyTime stationId startTime endTime = do
   statusCte <- selecting $
             filter_ (stationIdCond stationId) $
