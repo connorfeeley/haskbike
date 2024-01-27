@@ -222,7 +222,8 @@ library
                     , Server.Page.StatusVisualization
                     , Server.Page.SideMenu
                     , Server.Page.Utils
-                    , Server.Page.StationList
+                    , Server.Page.List.Common
+                    , Server.Page.List.StationList
                     , Server.Page.IndexPage
                     , Server.PureCSS
                     , Server.Classes

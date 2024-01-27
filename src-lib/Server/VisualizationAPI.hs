@@ -31,9 +31,9 @@ import           Servant.HTML.Lucid
 import           Servant.Server.Generic
 
 import           Server.DataAPI
+import           Server.Page.List.StationList
 import           Server.Page.PerformanceCSV
 import           Server.Page.SideMenu
-import           Server.Page.StationList
 import           Server.Page.StationStatusVisualization
 import           Server.Page.SystemInfoVisualization
 import           Server.Page.SystemStatusVisualization
