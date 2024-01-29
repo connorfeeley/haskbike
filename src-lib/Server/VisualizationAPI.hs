@@ -88,11 +88,12 @@ data VisualizationAPI mode where
 
 visualizationHandler :: VisualizationAPI (AsServerT ServerAppM)
 visualizationHandler = VisualizationAPI
-  { pageForStation     = stationStatusVisualizationPage
-  , systemStatus       = systemStatusVisualizationPage
-  , stationList        = stationListPage
-  , systemInfo         = systemInfoVisualizationPage
-  , performanceCsvPage = performanceCsvPageHandler
+  { pageForStation       = stationStatusVisualizationPage
+  , systemStatus         = systemStatusVisualizationPage
+  , stationList          = stationListPage
+  , stationEmptyFullList = stationEmptyFullListPage
+  , systemInfo           = systemInfoVisualizationPage
+  , performanceCsvPage   = performanceCsvPageHandler
   }
 
 -- | Create the station status visualization page record.
@@ -155,6 +156,7 @@ systemStatusVisualizationPage startTime endTime = do
                                   , _systemStatusVisPageStaticLink    = fieldLink staticApi
                                   }
 
+-- | Display a list of stations.
 stationListPage :: Maybe T.Text -> ServerAppM (PureSideMenu (StationList [(StationInformation, StationStatus)]))
 stationListPage selection = do
   appEnv <- asks serverAppEnv
@@ -172,6 +174,29 @@ stationListPage selection = do
   sideMenu $
     StationList
     { _stationList = sorted
+    , _staticLink = fieldLink staticApi
+    , _stationListSelection = selectionVal
+    , _visualizationPageLink  = fieldLink pageForStation
+    }
+
+-- | Display a list of stations with their empty/full status.
+stationEmptyFullListPage :: Maybe T.Text -> ServerAppM (PureSideMenu (StationList [(StationInformation, StationStatus, EmptyFull)]))
+stationEmptyFullListPage selection = do
+  appEnv <- asks serverAppEnv
+  logInfo "Rendering station list"
+
+  latest <- liftIO $ runAppM appEnv $ withPostgres $ runSelectReturningList $ selectWith queryLatestStatuses
+
+  -- Convert 'station-type' query-param to 'StationRadioInputSelection' value.
+  selectionVal <- case T.toLower <$> selection of
+    Just "regular"  -> logInfo "Filtering for regular stations" >> pure SelectionRegular
+    Just "charging" -> logInfo "Filtering for charging stations" >> pure SelectionCharging
+    Just "all"      -> logInfo "Filtering for all stations" >> pure SelectionAll
+    _               -> logInfo "No filter applied" >> pure SelectionAll
+  let sorted = sortOn (_infoStationId . fst) latest
+  sideMenu $
+    StationList
+    { _stationList = map (\(i, s) -> (i, s, EmptyFull 0 0)) sorted
     , _staticLink = fieldLink staticApi
     , _stationListSelection = selectionVal
     , _visualizationPageLink  = fieldLink pageForStation
