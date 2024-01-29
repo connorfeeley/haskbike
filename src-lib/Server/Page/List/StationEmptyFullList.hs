@@ -1,18 +1,18 @@
 {-# OPTIONS_GHC -Wno-type-defaults #-}
 {-# OPTIONS_GHC -Wno-unused-local-binds #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 -- | This module defines the data types used to render the station status visualization page.
 
-module Server.Page.List.StationList
-     ( StationList (..)
-     , StationRadioInputSelection (..)
+module Server.Page.List.StationEmptyFullList
+     ( EmptyFull (..)
+     , StationList (..)
      ) where
 
 import           Control.Lens
 
 import           Data.Maybe                                   ( fromMaybe )
+import           Data.Time
 
 import           Database.BikeShare.Tables.StationInformation
 import           Database.BikeShare.Tables.StationStatus
@@ -29,8 +29,12 @@ import           Server.PureCSS
 
 import           TextShow
 
+data EmptyFull where
+  EmptyFull :: { _emptyTime :: NominalDiffTime
+               , _fullTime  :: NominalDiffTime
+               } -> EmptyFull
 
-instance ToHtml (StationList [(StationInformation, StationStatus)]) where
+instance ToHtml (StationList [(StationInformation, StationStatus, EmptyFull)]) where
   toHtmlRaw = toHtml
   toHtml params = do
     script_ [src_ ("/" <> toUrlPiece (_staticLink params) <> "/js/station-list.js"), async_ mempty] ""
@@ -39,11 +43,11 @@ instance ToHtml (StationList [(StationInformation, StationStatus)]) where
     div_ [class_ "content"] $ do
       contentSubhead "Select station type"
       toHtml (StationListForm { _stationListFormSelection = _stationListSelection params })
-      toHtml (toStationListTable params)
+      toHtml (toStationEmptyFullTable params)
 
 -- | Table displaying station information.
-toStationListTable :: Monad m => StationList [(StationInformation, StationStatus)] -> HtmlT m ()
-toStationListTable params = do
+toStationEmptyFullTable :: Monad m => StationList [(StationInformation, StationStatus, EmptyFull)] -> HtmlT m ()
+toStationEmptyFullTable params = do
   table_ [id_ "station-list-table", class_ "pure-table pure-table-horizontal pure-table-striped"] $ do
     thead_ [] $ tr_ $ do
       th_ [id_ "station-id-col"] "ID"
@@ -57,7 +61,7 @@ toStationListTable params = do
       th_ [id_ "station-capacity-col", style_ "text-align: center"] "# Docks Disabled"
       th_ [id_ "station-address-col"] "Address"
     tbody_ [] $ do
-      mapM_ (\(info, status) -> tr_ $ do
+      mapM_ (\(info, status, emptyFull) -> tr_ $ do
               td_ [columnId_ "station-id-col"] (stationIdLink (_visualizationPageLink params) info)
               td_ [columnId_ "station-name-col"] (toHtml (_infoName info))
               td_ [columnId_ "station-type-col", style_ "text-align: center"] (stationTypeText info)
@@ -70,5 +74,5 @@ toStationListTable params = do
               td_ [columnId_ "station-address-col"] (toHtml (fromMaybe "" (_infoAddress info)))
             ) (_stationList params)
 
-instance ToHtmlComponents (StationList [(StationInformation, StationStatus)]) where
-  toMenuHeading _ = menuHeading "#station-list" "Station List"
+instance ToHtmlComponents (StationList [(StationInformation, StationStatus, EmptyFull)]) where
+  toMenuHeading _ = menuHeading "#station-empty-full" "Station Empty/Full"

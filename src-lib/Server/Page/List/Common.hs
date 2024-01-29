@@ -3,7 +3,8 @@
 -- |
 
 module Server.Page.List.Common
-     ( StationListForm (..)
+     ( StationList (..)
+     , StationListForm (..)
      , StationRadioInputSelection (..)
      , columnId_
      , extraText
@@ -35,6 +36,12 @@ import           Server.PureCSS
 
 import           TextShow
 
+data StationList a where
+  StationList :: { _stationList :: a
+                 , _staticLink :: Link
+                 , _stationListSelection :: StationRadioInputSelection
+                 , _visualizationPageLink :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> Link
+                 } -> StationList a
 
 -- | Which radio button to pre-select.
 data StationRadioInputSelection where

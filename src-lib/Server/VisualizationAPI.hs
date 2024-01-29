@@ -25,12 +25,14 @@ import           Database.Beam
 import           Database.BikeShare.Expressions
 import           Database.BikeShare.Operations
 import           Database.BikeShare.Tables.StationInformation
+import           Database.BikeShare.Tables.StationStatus
 
 import           Servant
 import           Servant.HTML.Lucid
 import           Servant.Server.Generic
 
 import           Server.DataAPI
+import           Server.Page.List.StationEmptyFullList
 import           Server.Page.List.StationList
 import           Server.Page.PerformanceCSV
 import           Server.Page.SideMenu
@@ -61,7 +63,11 @@ data VisualizationAPI mode where
     , stationList :: mode :-
         "visualization" :>
           "station-list"
-          :> QueryParam "station-type" T.Text :> Get '[HTML] (PureSideMenu StationList)
+          :> QueryParam "station-type" T.Text :> Get '[HTML] (PureSideMenu (StationList [(StationInformation, StationStatus)]))
+    , stationEmptyFullList :: mode :-
+        "visualization" :>
+          "station-empty-full-list"
+          :> QueryParam "station-type" T.Text :> Get '[HTML] (PureSideMenu (StationList [(StationInformation, StationStatus, EmptyFull)]))
     , systemInfo :: mode :-
         "visualization" :>
           "system-information"
@@ -149,7 +155,7 @@ systemStatusVisualizationPage startTime endTime = do
                                   , _systemStatusVisPageStaticLink    = fieldLink staticApi
                                   }
 
-stationListPage :: Maybe T.Text -> ServerAppM (PureSideMenu StationList)
+stationListPage :: Maybe T.Text -> ServerAppM (PureSideMenu (StationList [(StationInformation, StationStatus)]))
 stationListPage selection = do
   appEnv <- asks serverAppEnv
   logInfo "Rendering station list"
