@@ -173,17 +173,17 @@ stationListPage selection = do
   let sorted = sortOn (_infoStationId . fst) latest
   sideMenu $
     StationList
-    { _stationList = sorted
-    , _staticLink = fieldLink staticApi
-    , _stationListSelection = selectionVal
-    , _visualizationPageLink  = fieldLink pageForStation
+    { _stationList           = sorted
+    , _staticLink            = fieldLink staticApi
+    , _stationListSelection  = selectionVal
+    , _visualizationPageLink = fieldLink pageForStation
     }
 
 -- | Display a list of stations with their empty/full status.
 stationEmptyFullListPage :: Maybe T.Text -> ServerAppM (PureSideMenu (StationList [(StationInformation, StationStatus, EmptyFull)]))
 stationEmptyFullListPage selection = do
   appEnv <- asks serverAppEnv
-  logInfo "Rendering station list"
+  logInfo "Rendering station empty/full list"
 
   latest <- liftIO $ runAppM appEnv $ withPostgres $ runSelectReturningList $ selectWith queryLatestStatuses
 
@@ -196,10 +196,10 @@ stationEmptyFullListPage selection = do
   let sorted = sortOn (_infoStationId . fst) latest
   sideMenu $
     StationList
-    { _stationList = map (\(i, s) -> (i, s, EmptyFull 0 0)) sorted
-    , _staticLink = fieldLink staticApi
-    , _stationListSelection = selectionVal
-    , _visualizationPageLink  = fieldLink pageForStation
+    { _stationList           = map (\(i, s) -> (i, s, EmptyFull 1 2)) sorted
+    , _staticLink            = fieldLink staticApi
+    , _stationListSelection  = selectionVal
+    , _visualizationPageLink = fieldLink pageForStation
     }
 
 -- | Create the system status visualization page record.
