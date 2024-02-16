@@ -15,6 +15,7 @@ import           Database.Beam
 import           Database.Beam.Backend
 import           Database.Beam.Postgres                       ( Postgres )
 import qualified Database.Beam.Postgres                       as Pg
+import           Database.Beam.Postgres.Full                  ( lateral_ )
 import           Database.Beam.Postgres.Syntax                ( PgValueSyntax )
 import           Database.BikeShare
 import           Database.BikeShare.Tables.StationInformation
@@ -32,37 +33,49 @@ timeDelta a b = cast_ (extract_ Pg.epoch_ a - extract_ Pg.epoch_ b) int
 
 
 -- | Query how long each station has been empty for.
-queryStationEmptyTime :: (HasSqlValueSyntax PgValueSyntax a, Integral a, Integral b) => Maybe b -> UTCTime -> UTCTime -> With Postgres BikeshareDb (Q Postgres BikeshareDb s (QGenExpr QValueContext Postgres s Int32, QGenExpr QValueContext Postgres s a))
+queryStationEmptyTime :: (HasSqlValueSyntax PgValueSyntax a1, Integral a1, Integral a2)
+                      => Maybe a2
+                      -> UTCTime
+                      -> UTCTime
+                      -> With Postgres BikeshareDb (Q Postgres BikeshareDb s (StationInformationT (QGenExpr QValueContext Postgres s), QGenExpr QValueContext Postgres s a1))
 queryStationEmptyTime stationId startTime endTime = do
   statusCte <- selecting $
             filter_ (stationIdCond stationId) $
             filter_ (\row -> between_ (row ^. statusLastReported) (val_ (addUTCTime (-60 * 60 * 24) startTime)) (val_ (addUTCTime (60 * 60 * 24) endTime))) $
             all_ (bikeshareDb ^. bikeshareStationStatus)
 
-  emptyIntervals <- selecting $
-    aggregate_ (\(row, nReported, _pReported) ->
-                  let period_start = greatest_ (row ^. statusLastReported) (val_ startTime)
-                      period_end = least_ nReported (val_ endTime)
-                   in ( group_ ((_unInformationStationId  . _statusInfoId) row)
-                      , fromMaybe_ 0 (sum_ (ifThenElse_ (row ^. statusNumBikesAvailable ==. val_ 0)
-                                                (timeDelta period_end period_start)
-                                                0
-                                           ) `filterWhere_` (period_start <. period_end))
-                      )) $
-        filter_ (\row -> (row ^. _1 . statusLastReported) <. val_ endTime &&.
-                          (row ^. _2) >=. val_ startTime
-                         ||. (row ^. _3 <. val_ startTime &&. (row ^. _1 . statusLastReported) >=. val_ startTime)
-                ) $
-        withWindow_ (\row -> frame_ (partitionBy_ ((_unInformationStationId  . _statusInfoId) row)) (orderPartitionBy_ ((asc_ . _statusLastReported) row)) noBounds_)
-                    (\row w -> ( row
-                               , leadWithDefault_ (row ^. statusLastReported) (val_ 1) (val_ endTime) `over_` w
-                               , lagWithDefault_  (row ^. statusLastReported) (val_ 1) (val_ endTime) `over_` w
-                               )
-                    ) $
-        reuse statusCte
-
   pure $ do
-    reuse emptyIntervals
+    status <- reuse statusCte
+    info <-
+      lateral_ status $ \status' -> do
+      Pg.pgNubBy_ _infoStationId $
+        filter_ (\inf -> _statusInfoId status' `references_` inf) $
+            orderBy_ (desc_ . _infoReported) $
+            all_ (bikeshareDb ^. bikeshareStationInformation)
+
+    emptyIntervals <-
+      aggregate_ (\(row, nReported, _pReported) ->
+                    let period_start = greatest_ (row ^. statusLastReported) (val_ startTime)
+                        period_end = least_ nReported (val_ endTime)
+                     in ( group_ ((_unInformationStationId  . _statusInfoId) row)
+                        , fromMaybe_ 0 (sum_ (ifThenElse_ (row ^. statusNumBikesAvailable ==. val_ 0)
+                                                  (timeDelta period_end period_start)
+                                                  0
+                                             ) `filterWhere_` (period_start <. period_end))
+                        )) $
+          filter_ (\row -> (row ^. _1 . statusLastReported) <. val_ endTime &&.
+                           (row ^. _2) >=. val_ startTime ||.
+                           (row ^. _3  <.  val_ startTime &&. (row ^. _1 . statusLastReported) >=. val_ startTime)
+                  ) $
+          withWindow_ (\row -> frame_ (partitionBy_ ((_unInformationStationId  . _statusInfoId) row)) (orderPartitionBy_ ((asc_ . _statusLastReported) row)) noBounds_)
+                      (\row w -> ( row
+                                 , leadWithDefault_ (row ^. statusLastReported) (val_ 1) (val_ endTime) `over_` w
+                                 , lagWithDefault_  (row ^. statusLastReported) (val_ 1) (val_ endTime) `over_` w
+                                 )
+                      ) $
+          reuse statusCte
+    guard_ (info ^. infoStationId ==. emptyIntervals ^. _1)
+    pure (info, emptyIntervals ^. _2)
 
 -- | Possible filter condition for station ID.
 stationIdCond :: (HaskellLiteralForQExpr (expr Bool) ~ Bool, SqlEq expr (Columnar f Int32), Integral a, SqlValable (expr Bool), SqlValable (Columnar f Int32), Num (HaskellLiteralForQExpr (Columnar f Int32))) => Maybe a -> StationStatusT f -> expr Bool

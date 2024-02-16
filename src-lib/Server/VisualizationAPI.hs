@@ -15,8 +15,10 @@ import           Colog
 import           Control.Lens
 
 import           Data.Default.Class                           ( def )
+import           Data.Int                                     ( Int32 )
 import           Data.List                                    ( sortOn )
-import           Data.Maybe                                   ( fromMaybe, listToMaybe )
+import qualified Data.Map                                     as Map
+import           Data.Maybe                                   ( fromMaybe, listToMaybe, mapMaybe )
 import qualified Data.Text                                    as T
 import           Data.Time
 import           Data.Time.Extras
@@ -24,6 +26,7 @@ import           Data.Time.Extras
 import           Database.Beam
 import           Database.BikeShare.Expressions
 import           Database.BikeShare.Operations
+import           Database.BikeShare.Operations.StationEmpty
 import           Database.BikeShare.Tables.StationInformation
 import           Database.BikeShare.Tables.StationStatus
 
@@ -45,6 +48,8 @@ import           Server.Utils
 import           ServerEnv
 
 import           TimeInterval
+
+import           UnliftIO                                     ( concurrently )
 
 
 -- | Visualization API handler.
@@ -183,24 +188,39 @@ stationListPage selection = do
 stationEmptyFullListPage :: Maybe T.Text -> ServerAppM (PureSideMenu (StationList [(StationInformation, StationStatus, EmptyFull)]))
 stationEmptyFullListPage selection = do
   appEnv <- asks serverAppEnv
+  currentUtc <- liftIO getCurrentTime
   logInfo "Rendering station empty/full list"
 
-  latest <- liftIO $ runAppM appEnv $ withPostgres $ runSelectReturningList $ selectWith queryLatestStatuses
+  -- (latest, empty) :: ((StationInformation, StationStatus), (StationInformation, Int32))
+  (latest, empty) <- liftIO $ concurrently (runAppM appEnv $ withPostgres $ runSelectReturningList $ selectWith queryLatestStatuses)
+                                           (runAppM appEnv $ withPostgres $ runSelectReturningList $ selectWith $
+                                             queryStationEmptyTime Nothing (addUTCTime (-24*60*60) currentUtc) currentUtc)
+
+  let combined = combineStations latest (map (\(i, e) -> (i, EmptyFull ((secondsToNominalDiffTime . fromIntegral) e) (secondsToNominalDiffTime 0))) empty)
 
   -- Convert 'station-type' query-param to 'StationRadioInputSelection' value.
   selectionVal <- case T.toLower <$> selection of
-    Just "regular"  -> logInfo "Filtering for regular stations" >> pure SelectionRegular
+    Just "regular"  -> logInfo "Filtering for regular stations"  >> pure SelectionRegular
     Just "charging" -> logInfo "Filtering for charging stations" >> pure SelectionCharging
-    Just "all"      -> logInfo "Filtering for all stations" >> pure SelectionAll
-    _               -> logInfo "No filter applied" >> pure SelectionAll
-  let sorted = sortOn (_infoStationId . fst) latest
+    Just "all"      -> logInfo "Filtering for all stations"      >> pure SelectionAll
+    _               -> logInfo "No filter applied"               >> pure SelectionAll
+  let sorted = sortOn (_infoStationId . (^. _1)) combined
   sideMenu $
     StationList
-    { _stationList           = map (\(i, s) -> (i, s, EmptyFull 1 2)) sorted
+    { _stationList           = sorted
     , _staticLink            = fieldLink staticApi
     , _stationListSelection  = selectionVal
     , _visualizationPageLink = fieldLink pageForStation
     }
+
+combineStations :: [(StationInformation, StationStatus)] -> [(StationInformation, EmptyFull)] -> [(StationInformation, StationStatus, EmptyFull)]
+combineStations latestStatuses empties = mapMaybe combine latestStatuses
+  where
+    combine (info, status) = do
+      emptyFull <- Map.lookup (_infoStationId info) (empties')
+      return (info, status, emptyFull)
+
+    empties' = Map.fromList (map (\(inf, stat) -> (_infoStationId inf, stat)) empties)
 
 -- | Create the system status visualization page record.
 systemInfoVisualizationPage :: Maybe LocalTime -> Maybe LocalTime -> ServerAppM (PureSideMenu SystemInfoVisualizationPage)
