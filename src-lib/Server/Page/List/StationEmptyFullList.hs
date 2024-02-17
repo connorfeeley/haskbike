@@ -12,6 +12,7 @@ module Server.Page.List.StationEmptyFullList
 import           Control.Lens
 
 import           Data.Maybe                                   ( fromMaybe )
+import           Data.String                                  ( IsString )
 import qualified Data.Text                                    as T
 import           Data.Time
 
@@ -77,11 +78,30 @@ toStationEmptyFullTable params = do
               td_ [columnId_ "bikes-disabled-col",       style_ "text-align: center"] (toHtml (showt (status ^. statusNumBikesDisabled)))
               td_ [columnId_ "docks-disabled-col",       style_ "text-align: center"] (toHtml (showt (status ^. statusNumDocksDisabled)))
 
-              td_ [columnId_ "empty-seconds-col",       style_ "text-align: center"] ((toHtml . T.pack . show . _emptyTime) emptyFull)
-              td_ [columnId_ "full-seconds-col",        style_ "text-align: center"] ((toHtml . T.pack . show . _fullTime) emptyFull)
+              td_ [columnId_ "empty-seconds-col",       style_ "text-align: center"] ((toHtml . formatDiffTime . _emptyTime) emptyFull)
+              td_ [columnId_ "full-seconds-col",        style_ "text-align: center"] ((toHtml . formatDiffTime . _fullTime)  emptyFull)
 
               td_ [columnId_ "station-address-col"] (toHtml (fromMaybe "" (_infoAddress info)))
             ) (_stationList params)
 
 instance ToHtmlComponents (StationList [(StationInformation, StationStatus, EmptyFull)]) where
   toMenuHeading _ = menuHeading "#station-empty-full" "Station Empty/Full"
+
+-- | Format a 'NominalDiffTime' as 'Text' with a human-readable format.
+formatDiffTime :: NominalDiffTime -> T.Text
+formatDiffTime dt = (T.pack . formatTime defaultTimeLocale (shortestFormatString dt)) dt
+
+shortestFormatString :: IsString a => NominalDiffTime -> a
+shortestFormatString dt =
+  case (days, hours, minutes, dt) of -- if dt >= nominalDay then "%dd %Hh %Mm %Ss" else "%Hh %Mm %Ss"
+    (0, 0, 0, 0) -> ""                -- empty
+    (0, 0, 0, _) -> "%Ss"             -- seconds
+    (0, 0, _, _) -> "%Mm %Ss"         -- minutes and seconds
+    (0, _, _, _) -> "%Hh %Mm %Ss"     -- hours, minutes, seconds
+    (_, _, _, _) -> "%dd %Hh %Mm %Ss" -- days, hours, minutes, seconds
+  where
+    nominalHour   = secondsToNominalDiffTime (60 * 60)
+    nominalMinute = secondsToNominalDiffTime 60
+    days    = floor (dt / nominalDay)
+    hours   = floor (dt / nominalHour)
+    minutes = floor (dt / nominalMinute)
