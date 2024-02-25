@@ -57,7 +57,7 @@ perStationEventsDeltas = sortOn (Down . abs . (^. _4))
 check d1 d2 = do
   runWithAppMDebug "haskbike" $ withPostgres $ do
     runSelectReturningList $ selectWith $
-      queryStationEmptyTime Nothing
+      queryStationEmptyFullTime Nothing
       (UTCTime (fromGregorian 2023 12 d1) (timeOfDayToTime (TimeOfDay 0 0 0)))
       (UTCTime (fromGregorian 2023 12 d2) (timeOfDayToTime (TimeOfDay 0 0 0)))
 

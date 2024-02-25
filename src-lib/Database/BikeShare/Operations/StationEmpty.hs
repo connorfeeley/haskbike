@@ -3,7 +3,7 @@
 -- | Database operations to determine how long a station is empty for.
 
 module Database.BikeShare.Operations.StationEmpty
-     ( queryStationEmptyTime
+     ( queryStationEmptyFullTime
      ) where
 
 import           Control.Lens                                 hiding ( reuse, (<.) )
@@ -32,13 +32,13 @@ timeDelta :: (HasSqlTime tgt1, HasSqlTime tgt2, Integral b) => QGenExpr ctxt1 Po
 timeDelta a b = cast_ (extract_ Pg.epoch_ a - extract_ Pg.epoch_ b) int
 
 
--- | Query how long each station has been empty for.
-queryStationEmptyTime :: (HasSqlValueSyntax PgValueSyntax a1, Integral a1, Integral a2)
-                      => Maybe a2
-                      -> UTCTime
-                      -> UTCTime
-                      -> With Postgres BikeshareDb (Q Postgres BikeshareDb s (StationInformationT (QGenExpr QValueContext Postgres s), QGenExpr QValueContext Postgres s a1))
-queryStationEmptyTime stationId startTime endTime = do
+-- | Query how long each station has been both empty and full for.
+queryStationEmptyFullTime :: (Integral a1, Integral a2, Integral a3,  HasSqlValueSyntax PgValueSyntax a2,  HasSqlValueSyntax PgValueSyntax a3)
+                          => Maybe a1
+                          -> UTCTime
+                          -> UTCTime
+                          -> With Postgres BikeshareDb (Q Postgres BikeshareDb s (StationInformationT (QGenExpr QValueContext Postgres s), (QGenExpr QValueContext Postgres s a2, QGenExpr QValueContext Postgres s a3)))
+queryStationEmptyFullTime stationId startTime endTime = do
   statusCte <- selecting $
             filter_ (stationIdCond stationId) $
             filter_ (\row -> between_ (row ^. statusLastReported) (val_ (addUTCTime (-60 * 60 * 24) startTime)) (val_ (addUTCTime (60 * 60 * 24) endTime))) $
@@ -58,7 +58,13 @@ queryStationEmptyTime stationId startTime endTime = do
                     let period_start = greatest_ (row ^. statusLastReported) (val_ startTime)
                         period_end = least_ nReported (val_ endTime)
                      in ( group_ ((_unInformationStationId  . _statusInfoId) row)
+                        -- 0 bikes available means the station is empty
                         , fromMaybe_ 0 (sum_ (ifThenElse_ (row ^. statusNumBikesAvailable ==. val_ 0)
+                                                  (timeDelta period_end period_start)
+                                                  0
+                                             ) `filterWhere_` (period_start <. period_end))
+                        -- 0 docks available means the station is full
+                        , fromMaybe_ 0 (sum_ (ifThenElse_ (row ^. statusNumDocksAvailable ==. val_ 0)
                                                   (timeDelta period_end period_start)
                                                   0
                                              ) `filterWhere_` (period_start <. period_end))
@@ -75,9 +81,18 @@ queryStationEmptyTime stationId startTime endTime = do
                       ) $
           reuse statusCte
     guard_ (info ^. infoStationId ==. emptyIntervals ^. _1)
-    pure (info, emptyIntervals ^. _2)
+    pure (info, (emptyIntervals ^. _2, emptyIntervals ^. _3))
 
 -- | Possible filter condition for station ID.
-stationIdCond :: (HaskellLiteralForQExpr (expr Bool) ~ Bool, SqlEq expr (Columnar f Int32), Integral a, SqlValable (expr Bool), SqlValable (Columnar f Int32), Num (HaskellLiteralForQExpr (Columnar f Int32))) => Maybe a -> StationStatusT f -> expr Bool
+stationIdCond :: ( HaskellLiteralForQExpr (expr Bool) ~ Bool
+                 , SqlEq expr (Columnar f Int32)
+                 , Integral a
+                 , SqlValable (expr Bool)
+                 , SqlValable (Columnar f Int32)
+                 , Num (HaskellLiteralForQExpr (Columnar f Int32))
+                 )
+              => Maybe a
+              -> StationStatusT f
+              -> expr Bool
 stationIdCond (Just stationId') row = (_unInformationStationId  . _statusInfoId) row ==. val_ (fromIntegral stationId')
 stationIdCond Nothing           _   = val_ True

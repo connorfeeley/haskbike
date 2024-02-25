@@ -14,8 +14,8 @@ import           Colog
 
 import           Control.Lens
 
+import           Data.Bifunctor                               ( first )
 import           Data.Default.Class                           ( def )
-import           Data.Int                                     ( Int32 )
 import           Data.List                                    ( sortOn )
 import qualified Data.Map                                     as Map
 import           Data.Maybe                                   ( fromMaybe, listToMaybe, mapMaybe )
@@ -192,11 +192,11 @@ stationEmptyFullListPage selection = do
   logInfo "Rendering station empty/full list"
 
   -- (latest, empty) :: ((StationInformation, StationStatus), (StationInformation, Int32))
-  (latest, empty) <- liftIO $ concurrently (runAppM appEnv $ withPostgres $ runSelectReturningList $ selectWith queryLatestStatuses)
-                                           (runAppM appEnv $ withPostgres $ runSelectReturningList $ selectWith $
-                                             queryStationEmptyTime Nothing (addUTCTime (-24*60*60) currentUtc) currentUtc)
+  (latest, emptyFull) <- liftIO $ concurrently (runAppM appEnv $ withPostgres $ runSelectReturningList $ selectWith queryLatestStatuses)
+                                               (runAppM appEnv $ withPostgres $ runSelectReturningList $ selectWith $
+                                                queryStationEmptyFullTime Nothing (addUTCTime (-24 * 60 * 60) currentUtc) currentUtc)
 
-  let combined = combineStations latest (map (\(i, e) -> (i, EmptyFull ((secondsToNominalDiffTime . fromIntegral) e) (secondsToNominalDiffTime 0))) empty)
+  let combined = combineStations latest (map (\(i, (e, f)) -> (i, EmptyFull ((secondsToNominalDiffTime . fromIntegral) e) ((secondsToNominalDiffTime . fromIntegral) f))) emptyFull)
 
   -- Convert 'station-type' query-param to 'StationRadioInputSelection' value.
   selectionVal <- case T.toLower <$> selection of
@@ -217,10 +217,10 @@ combineStations :: [(StationInformation, StationStatus)] -> [(StationInformation
 combineStations latestStatuses empties = mapMaybe combine latestStatuses
   where
     combine (info, status) = do
-      emptyFull <- Map.lookup (_infoStationId info) (empties')
+      emptyFull <- Map.lookup (_infoStationId info) empties'
       return (info, status, emptyFull)
 
-    empties' = Map.fromList (map (\(inf, stat) -> (_infoStationId inf, stat)) empties)
+    empties' = Map.fromList (map (first _infoStationId) empties)
 
 -- | Create the system status visualization page record.
 systemInfoVisualizationPage :: Maybe LocalTime -> Maybe LocalTime -> ServerAppM (PureSideMenu SystemInfoVisualizationPage)
