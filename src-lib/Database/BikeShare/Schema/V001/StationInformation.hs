@@ -213,7 +213,7 @@ rentalMethodType = DataType pgTextType
 -- Don't want to implement database-specific code for the underlying PhysicalConfiguration type.
 newtype BeamPhysicalConfiguration where
   BeamPhysicalConfiguration :: AT.PhysicalConfiguration -> BeamPhysicalConfiguration
-  deriving (Eq, Generic, Show, Read) via AT.PhysicalConfiguration
+  deriving (Eq, Generic, Show, Read, Ord) via AT.PhysicalConfiguration
 
 physicalConfigurationLabel :: BeamPhysicalConfiguration -> Text.Text
 physicalConfigurationLabel (BeamPhysicalConfiguration AT.ElectricBikeStation) = "Electric Bike Station"

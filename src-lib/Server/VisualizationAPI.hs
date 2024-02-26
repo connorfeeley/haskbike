@@ -12,13 +12,18 @@ module Server.VisualizationAPI
 
 import           Colog
 
+import           Control.Applicative                          ( (<|>) )
 import           Control.Lens
 
+import           Data.Attoparsec.Text
 import           Data.Bifunctor                               ( first )
 import           Data.Default.Class                           ( def )
+import           Data.Functor                                 ( ($>) )
+import           Data.Int                                     ( Int32 )
 import           Data.List                                    ( sortOn )
 import qualified Data.Map                                     as Map
 import           Data.Maybe                                   ( fromMaybe, listToMaybe, mapMaybe )
+import           Data.Ord
 import qualified Data.Text                                    as T
 import           Data.Time
 import           Data.Time.Extras
@@ -51,6 +56,58 @@ import           TimeInterval
 
 import           UnliftIO                                     ( concurrently )
 
+data OrderByDirection where
+  OrderByAsc  :: OrderByDirection
+  OrderByDesc :: OrderByDirection
+  deriving stock (Eq, Show)
+
+instance FromHttpApiData OrderByDirection where
+  parseUrlPiece :: T.Text -> Either T.Text OrderByDirection
+  parseUrlPiece p = case parseOnly (asciiCI "asc"  $> OrderByAsc <|>
+                                    asciiCI "desc" $> OrderByDesc) p of
+    Left e  -> Left  (T.pack e)
+    Right v -> Right v
+  parseQueryParam = parseUrlPiece
+
+instance ToHttpApiData OrderByDirection where
+  toQueryParam = toUrlPiece
+  toUrlPiece = T.pack . show
+
+
+data OrderByOption where
+  OrderByStationId           :: OrderByOption
+  OrderByStationName         :: OrderByOption
+  OrderByStationType         :: OrderByOption
+  OrderByStationCapacity     :: OrderByOption
+  OrderByMechanicalAvailable :: OrderByOption
+  OrderByEfitAvailable       :: OrderByOption
+  OrderByEfitG5Available     :: OrderByOption
+  OrderByBikesDisabled       :: OrderByOption
+  OrderBySecondsFull         :: OrderByOption
+  OrderBySecondsEmpty        :: OrderByOption
+  deriving stock (Eq, Show)
+
+instance FromHttpApiData OrderByOption where
+  parseUrlPiece :: T.Text -> Either T.Text OrderByOption
+  parseUrlPiece p = case parseOnly (asciiCI "station-id"           $> OrderByStationId           <|>
+                                    asciiCI "station-name"         $> OrderByStationName         <|>
+                                    asciiCI "station-type"         $> OrderByStationType         <|>
+                                    asciiCI "station-capacity"     $> OrderByStationCapacity     <|>
+                                    asciiCI "mechanical-available" $> OrderByMechanicalAvailable <|>
+                                    asciiCI "efit-available"       $> OrderByEfitAvailable       <|>
+                                    asciiCI "efit-g5-available"    $> OrderByEfitG5Available     <|>
+                                    asciiCI "bikes-disabled"       $> OrderByBikesDisabled       <|>
+                                    asciiCI "seconds-full"         $> OrderBySecondsFull         <|>
+                                    asciiCI "seconds-empty"        $> OrderBySecondsEmpty
+                                   ) p of
+    Left e  -> Left  (T.pack e)
+    Right v -> Right v
+  parseQueryParam = parseUrlPiece
+
+instance ToHttpApiData OrderByOption where
+  toQueryParam = toUrlPiece
+  toUrlPiece = T.pack . show
+
 
 -- | Visualization API handler.
 data VisualizationAPI mode where
@@ -72,7 +129,10 @@ data VisualizationAPI mode where
     , stationEmptyFullList :: mode :-
         "visualization" :>
           "station-empty-full-list"
-          :> QueryParam "station-type" T.Text :> Get '[HTML] (PureSideMenu (StationList [(StationInformation, StationStatus, EmptyFull)]))
+          :> QueryParam "station-type" T.Text
+          :> QueryParam "order-by-dir" OrderByDirection
+          :> QueryParam "order-by" OrderByOption
+          :> Get '[HTML] (PureSideMenu (StationList [(StationInformation, StationStatus, EmptyFull)]))
     , systemInfo :: mode :-
         "visualization" :>
           "system-information"
@@ -163,14 +223,14 @@ systemStatusVisualizationPage startTime endTime = do
 
 -- | Display a list of stations.
 stationListPage :: Maybe T.Text -> ServerAppM (PureSideMenu (StationList [(StationInformation, StationStatus)]))
-stationListPage selection = do
+stationListPage filterSelection = do
   appEnv <- asks serverAppEnv
   logInfo "Rendering station list"
 
   latest <- liftIO $ runAppM appEnv $ withPostgres $ runSelectReturningList $ selectWith queryLatestStatuses
 
   -- Convert 'station-type' query-param to 'StationRadioInputSelection' value.
-  selectionVal <- case T.toLower <$> selection of
+  selectionVal <- case T.toLower <$> filterSelection of
     Just "regular"  -> logInfo "Filtering for regular stations" >> pure SelectionRegular
     Just "charging" -> logInfo "Filtering for charging stations" >> pure SelectionCharging
     Just "all"      -> logInfo "Filtering for all stations" >> pure SelectionAll
@@ -185,21 +245,22 @@ stationListPage selection = do
     }
 
 -- | Display a list of stations with their empty/full status.
-stationEmptyFullListPage :: Maybe T.Text -> ServerAppM (PureSideMenu (StationList [(StationInformation, StationStatus, EmptyFull)]))
-stationEmptyFullListPage selection = do
+stationEmptyFullListPage :: Maybe T.Text -> Maybe OrderByDirection -> Maybe OrderByOption -> ServerAppM (PureSideMenu (StationList [(StationInformation, StationStatus, EmptyFull)]))
+stationEmptyFullListPage filterSelection orderDirSelection orderSelection = do
   appEnv <- asks serverAppEnv
   currentUtc <- liftIO getCurrentTime
-  logInfo "Rendering station empty/full list"
+  -- let currentUtc = UTCTime (fromGregorian 2024 02 15) (timeOfDayToTime midnight)
+  logInfo $ "Rendering station empty/full list for time [" <> (T.pack . show) currentUtc <> "] and order [" <> (T.pack . show) orderDirSelection <> "] of [" <> (T.pack . show) orderSelection <> "]"
 
   -- (latest, empty) :: ((StationInformation, StationStatus), (StationInformation, Int32))
   (latest, emptyFull) <- liftIO $ concurrently (runAppM appEnv $ withPostgres $ runSelectReturningList $ selectWith queryLatestStatuses)
                                                (runAppM appEnv $ withPostgres $ runSelectReturningList $ selectWith $
                                                 queryStationEmptyFullTime Nothing (addUTCTime (-24 * 60 * 60) currentUtc) currentUtc)
 
-  let combined = combineStations latest (map (\(i, (e, f)) -> (i, EmptyFull ((secondsToNominalDiffTime . fromIntegral) e) ((secondsToNominalDiffTime . fromIntegral) f))) emptyFull)
+  let combined = combineStations latest (resultToEmptyFull emptyFull)
 
   -- Convert 'station-type' query-param to 'StationRadioInputSelection' value.
-  selectionVal <- case T.toLower <$> selection of
+  selectionVal <- case T.toLower <$> filterSelection of
     Just "regular"  -> logInfo "Filtering for regular stations"  >> pure SelectionRegular
     Just "charging" -> logInfo "Filtering for charging stations" >> pure SelectionCharging
     Just "all"      -> logInfo "Filtering for all stations"      >> pure SelectionAll
@@ -212,6 +273,8 @@ stationEmptyFullListPage selection = do
     , _stationListSelection  = selectionVal
     , _visualizationPageLink = fieldLink pageForStation
     }
+  where
+    resultToEmptyFull = map (\(i, (e, f)) -> (i, EmptyFull ((secondsToNominalDiffTime . fromIntegral) e) ((secondsToNominalDiffTime . fromIntegral) f)))
 
 combineStations :: [(StationInformation, StationStatus)] -> [(StationInformation, EmptyFull)] -> [(StationInformation, StationStatus, EmptyFull)]
 combineStations latestStatuses empties = mapMaybe combine latestStatuses
