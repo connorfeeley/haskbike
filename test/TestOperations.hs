@@ -165,4 +165,4 @@ check d expected = do
       queryStationEmptyFullTime Nothing
       (UTCTime (fromGregorian 2023 01 d)      (timeOfDayToTime (TimeOfDay 0 0 0)))
       (UTCTime (fromGregorian 2023 01 (d +1)) (timeOfDayToTime (TimeOfDay 0 0 0)))
-  assertEqual ("Station empty time " <> show d) expected ((toDuration . fromIntegral . snd . head) empty)
+  assertEqual ("Station empty time " <> show d) expected ((toDuration . fromIntegral . fst . snd . head) empty)

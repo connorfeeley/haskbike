@@ -257,14 +257,13 @@ defaultOrderByOption :: Maybe OrderByOption -> OrderByOption
 defaultOrderByOption (Just order) = order
 defaultOrderByOption Nothing      = OrderByStationId
 
-stationEmptyFullListPage :: StationListFilter  -> OrderByDirection -> OrderByOption -> ServerAppM (PureSideMenu (StationList [(StationInformation, StationStatus, EmptyFull)]))
+stationEmptyFullListPage :: StationListFilter -> OrderByDirection -> OrderByOption -> ServerAppM (PureSideMenu (StationList [(StationInformation, StationStatus, EmptyFull)]))
 stationEmptyFullListPage filterSelection orderDirSelection orderSelection = do
   appEnv <- asks serverAppEnv
   currentUtc <- liftIO getCurrentTime
   -- let currentUtc = UTCTime (fromGregorian 2024 02 15) (timeOfDayToTime midnight)
   logInfo $ "Rendering station empty/full list for time [" <> (T.pack . show) currentUtc <> "] and order [" <> (T.pack . show) orderDirSelection <> "] of [" <> (T.pack . show) orderSelection <> "]"
 
-  -- (latest, empty) :: ((StationInformation, StationStatus), (StationInformation, Int32))
   (latest, emptyFull) <- liftIO $ concurrently (runAppM appEnv $ withPostgres $ runSelectReturningList $ selectWith queryLatestStatuses)
                                                (runAppM appEnv $ withPostgres $ runSelectReturningList $ selectWith $
                                                 queryStationEmptyFullTime (Nothing :: Maybe Integer) (addUTCTime (-24 * 60 * 60) currentUtc) currentUtc)
