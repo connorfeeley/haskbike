@@ -285,19 +285,19 @@ stationEmptyFullListPage filterSelection orderDirSelection orderSelection = do
 orderByOptionToSortOn :: OrderByDirection -> OrderByOption -> [(StationInformation, StationStatus, EmptyFull)] -> [(StationInformation, StationStatus, EmptyFull)]
 orderByOptionToSortOn direction opt = case direction of
   OrderByAsc  -> applySort
-  OrderByDesc -> applySort . reverse
+  OrderByDesc -> reverse . applySort
   where
     applySort = case opt of
-      OrderByStationId           -> sortOn (\(info, _, _) -> _infoStationId info)
-      OrderByStationName         -> sortOn (\(info, _, _) -> _infoName info)
-      OrderByStationType         -> sortOn (\(info, _, _) -> _infoPhysicalConfiguration info)
-      OrderByStationCapacity     -> sortOn (\(info, _, _) -> _infoCapacity info)
+      OrderByStationId           -> sortOn (\(info, _, _)   -> _infoStationId info)
+      OrderByStationName         -> sortOn (\(info, _, _)   -> _infoName info)
+      OrderByStationType         -> sortOn (\(info, _, _)   -> _infoPhysicalConfiguration info)
+      OrderByStationCapacity     -> sortOn (\(info, _, _)   -> _infoCapacity info)
       OrderByMechanicalAvailable -> sortOn (\(_, status, _) -> _statusNumBikesAvailable status)
       OrderByEfitAvailable       -> sortOn (\(_, status, _) -> _availableEfit $ _statusVehicleTypesAvailable status)
       OrderByEfitG5Available     -> sortOn (\(_, status, _) -> _availableEfitG5 $ _statusVehicleTypesAvailable status)
       OrderByBikesDisabled       -> sortOn (\(_, status, _) -> _statusNumBikesDisabled status)
-      OrderBySecondsFull         -> sortOn (\(_, _, full) -> _fullTime full)
-      OrderBySecondsEmpty        -> sortOn (\(_, _, full) -> _emptyTime full)
+      OrderBySecondsFull         -> sortOn (\(_, _, full)   -> _fullTime full)
+      OrderBySecondsEmpty        -> sortOn (\(_, _, full)   -> _emptyTime full)
 
 combineStations :: [(StationInformation, StationStatus)] -> [(StationInformation, EmptyFull)] -> [(StationInformation, StationStatus, EmptyFull)]
 combineStations latestStatuses empties = mapMaybe combine latestStatuses
