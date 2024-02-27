@@ -82,8 +82,8 @@ data OrderByOption where
   OrderByEfitAvailable       :: OrderByOption
   OrderByEfitG5Available     :: OrderByOption
   OrderByBikesDisabled       :: OrderByOption
-  OrderBySecondsFull         :: OrderByOption
-  OrderBySecondsEmpty        :: OrderByOption
+  OrderByTimeFull            :: OrderByOption
+  OrderByTimeEmpty           :: OrderByOption
   deriving stock (Eq, Show)
 
 instance FromHttpApiData OrderByOption where
@@ -96,8 +96,8 @@ instance FromHttpApiData OrderByOption where
                                     asciiCI "efit-available"       $> OrderByEfitAvailable       <|>
                                     asciiCI "efit-g5-available"    $> OrderByEfitG5Available     <|>
                                     asciiCI "bikes-disabled"       $> OrderByBikesDisabled       <|>
-                                    asciiCI "seconds-full"         $> OrderBySecondsFull         <|>
-                                    asciiCI "seconds-empty"        $> OrderBySecondsEmpty
+                                    asciiCI "time-full"            $> OrderByTimeFull            <|>
+                                    asciiCI "time-empty"           $> OrderByTimeEmpty
                                    ) p of
     Left e  -> Left  (T.pack e)
     Right v -> Right v
@@ -296,8 +296,8 @@ orderByOptionToSortOn direction opt = case direction of
       OrderByEfitAvailable       -> sortOn (\(_, status, _) -> _availableEfit $ _statusVehicleTypesAvailable status)
       OrderByEfitG5Available     -> sortOn (\(_, status, _) -> _availableEfitG5 $ _statusVehicleTypesAvailable status)
       OrderByBikesDisabled       -> sortOn (\(_, status, _) -> _statusNumBikesDisabled status)
-      OrderBySecondsFull         -> sortOn (\(_, _, full)   -> _fullTime full)
-      OrderBySecondsEmpty        -> sortOn (\(_, _, full)   -> _emptyTime full)
+      OrderByTimeFull            -> sortOn (\(_, _, full)   -> _fullTime full)
+      OrderByTimeEmpty           -> sortOn (\(_, _, full)   -> _emptyTime full)
 
 combineStations :: [(StationInformation, StationStatus)] -> [(StationInformation, EmptyFull)] -> [(StationInformation, StationStatus, EmptyFull)]
 combineStations latestStatuses empties = mapMaybe combine latestStatuses

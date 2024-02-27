@@ -85,8 +85,8 @@ stationTypeText station = stationTypeSpan <> extraSpan
     virtual   = _infoIsVirtualStation   station
     extra     = extraText [fromBool "valet" valet, fromBool "virtual" virtual]
     extraSpan       = span_ (toHtml extra)
-    chargingSpan    = span_ [style_ "font-weight: bold"] (toHtml "Charging")
-    regularSpan     = span_ (toHtml "Regular")
+    chargingSpan    = span_ [style_ "font-weight: bold"] (toHtml ("Charging" :: String))
+    regularSpan     = span_ (toHtml ("Regular" :: String))
     stationTypeSpan = if charging then chargingSpan else regularSpan
 
 extraText :: [Maybe Text] -> Text
@@ -114,15 +114,15 @@ instance ToHtml StationListForm where
         div_ [class_ "pure-u-1-2"] $ do
           label_ [for_ "station-type-radio-all", class_ "pure-radio"] $
             inputCheckedIfSelection_ AllStations
-              [id_ "station-type-radio-all", type_ "radio", name_ "station-type-radio", value_ "all", mkData_ "station-type" "All"] <> span_ "All"
+              [id_ "station-type-radio-all", type_ "radio", name_ "station-type-radio", value_ "all", mkData_ "station-type" "all"] <> span_ "All"
 
           label_ [for_ "station-type-radio-regular", class_ "pure-radio"] $
             inputCheckedIfSelection_ RegularStations
-              [id_ "station-type-radio-regular", type_ "radio", name_ "station-type-radio", value_ "regular", mkData_ "station-type" "Regular"] <> span_ "Regular"
+              [id_ "station-type-radio-regular", type_ "radio", name_ "station-type-radio", value_ "regular", mkData_ "station-type" "regular"] <> span_ "Regular"
 
           label_ [for_ "station-type-radio-charging", class_ "pure-radio"] $
             inputCheckedIfSelection_ ChargingStations
-              [id_ "station-type-radio-charging", type_ "radio", name_ "station-type-radio", value_ "charging", mkData_ "station-type" "Charging"] <> span_ "Charging"
+              [id_ "station-type-radio-charging", type_ "radio", name_ "station-type-radio", value_ "charging", mkData_ "station-type" "charging"] <> span_ "Charging"
 
         div_ [class_ "pure-u-1-2"] $ do
           label_ [for_ "station-filter-input"] "Filter"
