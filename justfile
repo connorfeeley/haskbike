@@ -64,7 +64,9 @@ reset *ARGS:
     {{CABAL}} run haskbike -- --plain reset --reset-only -v --log-database {{ARGS}}
 
 visualize:
-    {{CABAL}} run haskbike -- --plain visualize -v # --log-database
+    #!/usr/bin/env bash
+    source ./.env.awsrds.ADMIN
+    {{CABAL}} run haskbike -- --plain visualize -v --log-database
 
 export-rds-table TABLE:
     #!/usr/bin/env bash
