@@ -7,7 +7,7 @@
 
 module Server.Page.List.StationList
      ( StationList (..)
-     , StationRadioInputSelection (..)
+     , StationListFilter (..)
      ) where
 
 import           Control.Lens

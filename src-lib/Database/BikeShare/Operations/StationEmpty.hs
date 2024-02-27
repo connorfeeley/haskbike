@@ -12,11 +12,9 @@ import           Data.Int                                     ( Int32 )
 import           Data.Time
 
 import           Database.Beam
-import           Database.Beam.Backend
 import           Database.Beam.Postgres                       ( Postgres )
 import qualified Database.Beam.Postgres                       as Pg
 import           Database.Beam.Postgres.Full                  ( lateral_ )
-import           Database.Beam.Postgres.Syntax                ( PgValueSyntax )
 import           Database.BikeShare
 import           Database.BikeShare.Tables.StationInformation
 import           Database.BikeShare.Tables.StationStatus
@@ -33,11 +31,11 @@ timeDelta a b = cast_ (extract_ Pg.epoch_ a - extract_ Pg.epoch_ b) int
 
 
 -- | Query how long each station has been both empty and full for.
-queryStationEmptyFullTime :: (Integral a1, Integral a2, Integral a3,  HasSqlValueSyntax PgValueSyntax a2,  HasSqlValueSyntax PgValueSyntax a3)
-                          => Maybe a1
+queryStationEmptyFullTime :: (Integral a)
+                          => Maybe a
                           -> UTCTime
                           -> UTCTime
-                          -> With Postgres BikeshareDb (Q Postgres BikeshareDb s (StationInformationT (QGenExpr QValueContext Postgres s), (QGenExpr QValueContext Postgres s a2, QGenExpr QValueContext Postgres s a3)))
+                          -> With Postgres BikeshareDb (Q Postgres BikeshareDb s (StationInformationT (QGenExpr QValueContext Postgres s), (QGenExpr QValueContext Postgres s Int32, QGenExpr QValueContext Postgres s Int32)))
 queryStationEmptyFullTime stationId startTime endTime = do
   statusCte <- selecting $
             filter_ (stationIdCond stationId) $
