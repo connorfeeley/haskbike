@@ -1,5 +1,6 @@
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# OPTIONS_GHC -Wno-type-defaults #-}
+{-# LANGUAGE OverloadedRecordDot   #-}
 -- | Database operations to determine how long a station is empty for.
 
 module Database.BikeShare.Operations.StationEmpty
@@ -39,47 +40,60 @@ queryStationEmptyFullTime :: (Integral a)
 queryStationEmptyFullTime stationId startTime endTime = do
   statusCte <- selecting $
             filter_ (stationIdCond stationId) $
-            filter_ (\row -> between_ (row ^. statusLastReported) (val_ (addUTCTime (-60 * 60 * 24) startTime)) (val_ (addUTCTime (60 * 60 * 24) endTime))) $
+            -- filter_ (\row -> between_ (row ^. statusLastReported) (val_ (addUTCTime (-60 * 60 * 24) startTime)) (val_ (addUTCTime (60 * 60 * 24) endTime))) $
+            filter_ (\row -> between_ (row ^. statusLastReported) (val_ startTime) (val_ endTime)) $
             all_ (bikeshareDb ^. bikeshareStationStatus)
 
+  emptyIntervals <- selecting $
+    aggregate_ (\(row, nReported, _pReported) ->
+                  let period_start = greatest_ (row ^. statusLastReported) (val_ startTime)
+                      period_end = least_ nReported (val_ endTime)
+                   in ( group_ ((_unInformationStationId  . _statusInfoId) row)
+                      -- 0 bikes available means the station is empty
+                      , fromMaybe_ 0 (sum_ (ifThenElse_ (row ^. statusNumBikesAvailable ==. val_ 0)
+                                                (timeDelta period_end period_start)
+                                                0
+                                           ) `filterWhere_` (period_start <. period_end))
+                      -- 0 docks available means the station is full
+                      , fromMaybe_ 0 (sum_ (ifThenElse_ (row ^. statusNumDocksAvailable ==. val_ 0)
+                                                (timeDelta period_end period_start)
+                                                0
+                                           ) `filterWhere_` (period_start <. period_end))
+                      )) $
+        filter_ (\row -> (row ^. _1 . statusLastReported) <. val_ endTime &&.
+                         (row ^. _2) >=. val_ startTime ||.
+                         (row ^. _3  <.  val_ startTime &&. (row ^. _1 . statusLastReported) >=. val_ startTime)
+                ) $
+        withWindow_ (\row -> frame_ (partitionBy_ ((_unInformationStationId  . _statusInfoId) row)) (orderPartitionBy_ ((asc_ . _statusLastReported) row)) noBounds_)
+                    (\row w -> ( row
+                               , leadWithDefault_ (row ^. statusLastReported) (val_ 1) (val_ endTime) `over_` w
+                               , lagWithDefault_  (row ^. statusLastReported) (val_ 1) (val_ endTime) `over_` w
+                               )
+                    ) $
+        reuse statusCte
+
   pure $ do
-    status <- reuse statusCte
+    -- status <- reuse statusCte
+    -- Get latest status so that we can get only the latest reference station info
+    latestStatus <- Pg.pgNubBy_ (\inf -> cast_ (_statusStationId inf) int) $ orderBy_ (desc_ . _statusLastReported) $ reuse statusCte
+
+    empty <- reuse emptyIntervals
+    -- guard_ (status ^. statusStationId ==. empty ^. _1)
+
     info <-
-      lateral_ status $ \status' -> do
-      Pg.pgNubBy_ _infoStationId $
-        filter_ (\inf -> _statusInfoId status' `references_` inf) $
+      -- lateral_ status $ \status' -> do
+      -- Pg.pgNubBy_ (\inf -> cast_ (_infoStationId inf) int) $
+        filter_ (\inf -> _statusInfoId latestStatus `references_` inf) $
             orderBy_ (desc_ . _infoReported) $
             all_ (bikeshareDb ^. bikeshareStationInformation)
 
-    emptyIntervals <-
-      aggregate_ (\(row, nReported, _pReported) ->
-                    let period_start = greatest_ (row ^. statusLastReported) (val_ startTime)
-                        period_end = least_ nReported (val_ endTime)
-                     in ( group_ ((_unInformationStationId  . _statusInfoId) row)
-                        -- 0 bikes available means the station is empty
-                        , fromMaybe_ 0 (sum_ (ifThenElse_ (row ^. statusNumBikesAvailable ==. val_ 0)
-                                                  (timeDelta period_end period_start)
-                                                  0
-                                             ) `filterWhere_` (period_start <. period_end))
-                        -- 0 docks available means the station is full
-                        , fromMaybe_ 0 (sum_ (ifThenElse_ (row ^. statusNumDocksAvailable ==. val_ 0)
-                                                  (timeDelta period_end period_start)
-                                                  0
-                                             ) `filterWhere_` (period_start <. period_end))
-                        )) $
-          filter_ (\row -> (row ^. _1 . statusLastReported) <. val_ endTime &&.
-                           (row ^. _2) >=. val_ startTime ||.
-                           (row ^. _3  <.  val_ startTime &&. (row ^. _1 . statusLastReported) >=. val_ startTime)
-                  ) $
-          withWindow_ (\row -> frame_ (partitionBy_ ((_unInformationStationId  . _statusInfoId) row)) (orderPartitionBy_ ((asc_ . _statusLastReported) row)) noBounds_)
-                      (\row w -> ( row
-                                 , leadWithDefault_ (row ^. statusLastReported) (val_ 1) (val_ endTime) `over_` w
-                                 , lagWithDefault_  (row ^. statusLastReported) (val_ 1) (val_ endTime) `over_` w
-                                 )
-                      ) $
-          reuse statusCte
-    guard_ (info ^. infoStationId ==. emptyIntervals ^. _1)
-    pure (info, (emptyIntervals ^. _2, emptyIntervals ^. _3))
+
+    guard_ ((info ^. infoStationId ==. empty ^. _1) &&.
+            -- (status ^. statusStationId ==. empty ^. _1) &&.
+           (latestStatus ^. statusStationId ==. empty ^. _1))-- &&.
+           -- (latestStatus ^. statusStationId ==. status ^. statusStationId))
+
+    pure (info, (empty ^. _2, empty ^. _3))
 
 -- | Possible filter condition for station ID.
 stationIdCond :: ( HaskellLiteralForQExpr (expr Bool) ~ Bool
