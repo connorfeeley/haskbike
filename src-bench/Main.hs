@@ -14,6 +14,8 @@ import           Database.BikeShare.Operations.StationEmpty
 import           Database.BikeShare.StatusVariationQuery
 import           Database.BikeShare.Utils
 
+import           Server.VisualizationAPI
+
 import           Test.Tasty.Bench
 
 import           TestChargings

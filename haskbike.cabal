@@ -425,6 +425,10 @@ benchmark bench-haskbike
                     , haskbike-test-lib
                     , time
                     , extra
+                    , lucid
+                    , servant-lucid
+
+    other-modules:  BenchServer
 
     ghc-options:      "-with-rtsopts=-A32m"
     if impl(ghc >= 8.6)
