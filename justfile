@@ -57,6 +57,9 @@ test:
 test-one PATTERN:
     {{CABAL}} test --test-show-details=direct --test-options='--pattern /{{PATTERN}}/'
 
+bench:
+    {{CABAL}} bench
+
 poll *ARGS:
     {{CABAL}} run haskbike -- --plain poll -v {{ARGS}}
 
