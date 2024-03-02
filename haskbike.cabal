@@ -121,6 +121,8 @@ common api-server-depends
                     , http-conduit
                     , free
                     , wai
+                    , wai-extra
+                    , cond
                     , warp
                     , aeson
                     , lucid
