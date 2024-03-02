@@ -153,6 +153,7 @@
 
                 ### Other tools.
                 inherit (pkgs)
+                  clang # Faster to link with clang
                   stack
                   reuse
                   litecli
