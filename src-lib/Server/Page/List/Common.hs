@@ -63,6 +63,9 @@ instance FromHttpApiData StationListFilter where
     Right v -> Right v
   parseQueryParam = parseUrlPiece
 
+instance ToHttpApiData StationListFilter where
+  toQueryParam = toUrlPiece
+  toUrlPiece = T.pack . show
 
 inputCheckedIf_ :: Applicative m => Bool -> [Attribute] -> HtmlT m ()
 inputCheckedIf_ cond attrs =
