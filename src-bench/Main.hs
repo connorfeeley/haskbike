@@ -4,6 +4,8 @@ module Main where
 
 import           AppEnv
 
+import           BenchServer
+
 import           Control.Monad                              ( void )
 
 import           Data.Time
@@ -28,18 +30,9 @@ fibo n = if n < 2 then toInteger n else fibo (n - 1) + fibo (n - 2)
 
 main :: IO ()
 main = defaultMain
-  [ -- bgroup "Fibonacci numbers"
-    -- [ bench "fifth"     $ nf fibo  5
-    -- , bench "tenth"     $ nf fibo 10
-    -- , bench "twentieth" $ nf fibo 20
-    -- ],
-    bgroup "Database operations"
-      [ -- bench "Query bike chargings" $ whnfIO unit_queryChargings
-      -- ,
-        bench "Station empty time" $ whnfIO benchStationEmptyTime
-      ]
+  [ bgroup "Database operations"
+    [ bench "Query bike chargings" $ whnfIO unit_queryChargings
+    , bench "Station empty time (7001)" $ whnfIO $ benchStationEmptyTime (Just 7001)
+    , bench "Station empty time (all)"  $ whnfIO $ benchStationEmptyTime Nothing
+    ]
   ]
-
-benchStationEmptyTime :: IO ()
-benchStationEmptyTime = do
-  void $ runWithAppM "haskbike" $ withPostgres $ runSelectReturningList $ selectWith $ queryStationEmptyFullTime (Just 7001) (UTCTime (fromGregorian 2024 01 01) (timeOfDayToTime midnight)) (UTCTime (fromGregorian 2024 01 12) (timeOfDayToTime midnight))
