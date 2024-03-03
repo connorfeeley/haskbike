@@ -10,3 +10,4 @@
 /.env.*
 !/.env.template
 /.vscode/
+/scripts/
