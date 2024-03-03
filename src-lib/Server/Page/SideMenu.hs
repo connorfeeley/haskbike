@@ -26,8 +26,11 @@ data PureSideMenu a where
 instance (ToHtml a, ToHtmlComponents a) => ToHtml (PureSideMenu a) where
   toHtmlRaw = toHtml
   toHtml params = do
+    doctype_ -- Disable HTML quirks mode.
     head_ $ do
       makeHeadElements ("/" <> toUrlPiece (staticLink params)) "//stats.bikes.cfeeley.org/count.js"
+      toHead (visPageParams params)
+
       stylesheet_ ("/" <> toUrlPiece (staticLink params) <> "/css/pure/side-menu.css")
       script_ [src_ ("/" <> toUrlPiece (staticLink params) <> "/js/pure/ui.js"), async_ mempty] ""
     div_ [id_ "layout"] $ do

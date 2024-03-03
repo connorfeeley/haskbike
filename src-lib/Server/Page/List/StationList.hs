@@ -33,7 +33,9 @@ import           TextShow
 instance ToHtml (StationList [(StationInformation, StationStatus)]) where
   toHtmlRaw = toHtml
   toHtml params = do
+    -- Station list JavaScript
     script_ [src_ ("/" <> toUrlPiece (_staticLink params) <> "/js/station-list.js"), async_ mempty] ""
+
     div_ [class_ "header"] $ do
       h1_ [] (toHtml "Station List")
     div_ [class_ "content"] $ do

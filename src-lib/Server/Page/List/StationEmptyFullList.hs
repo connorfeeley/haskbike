@@ -39,7 +39,6 @@ data EmptyFull where
 instance ToHtml (StationList [(StationInformation, StationStatus, EmptyFull)]) where
   toHtmlRaw = toHtml
   toHtml params = do
-    script_ [src_ ("/" <> toUrlPiece (_staticLink params) <> "/js/station-list.js"), async_ mempty] ""
     div_ [class_ "header"] $ do
       h1_ [] (toHtml "Station Empty/Full List")
     div_ [class_ "content"] $ do
@@ -62,8 +61,8 @@ toStationEmptyFullTable params = do
       th_ [id_ "bikes-disabled-col",       style_ "text-align: center"] "# Bikes Disabled"
       th_ [id_ "docks-disabled-col",       style_ "text-align: center"] "# Docks Disabled"
 
-      th_ [id_ "empty-seconds-col",        style_ "text-align: center"] "Seconds Empty"
-      th_ [id_ "full-seconds-col",         style_ "text-align: center"] "Seconds Full"
+      th_ [id_ "empty-seconds-col",        style_ "text-align: center"] "Time Empty"
+      th_ [id_ "full-seconds-col",         style_ "text-align: center"] "Time Full"
 
       th_ [id_ "station-address-col"] "Address"
     tbody_ [] $ do
@@ -87,6 +86,10 @@ toStationEmptyFullTable params = do
 
 instance ToHtmlComponents (StationList [(StationInformation, StationStatus, EmptyFull)]) where
   toMenuHeading _ = menuHeading "#station-empty-full" "Station Empty/Full"
+  toHead params = do
+
+    -- Station list JavaScript.
+    script_ [src_ ("/" <> toUrlPiece (_staticLink params) <> "/js/station-list.js"), type_ "module"] ""
 
 -- | Format a 'NominalDiffTime' as 'Text' with a human-readable format.
 formatDiffTime :: NominalDiffTime -> T.Text

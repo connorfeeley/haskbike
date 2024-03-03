@@ -1,4 +1,3 @@
-
 const filterColumns = ['station-id-col', 'station-name-col', 'station-address-col'];
 const table = document.getElementById('station-list-table');
 const filterInput = document.getElementById('station-filter-input');

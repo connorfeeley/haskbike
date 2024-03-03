@@ -14,6 +14,9 @@ import           Lucid
 class ToHtmlComponents a where
   toMenuHeading :: Monad m => a -> HtmlT m ()
 
+  toHead        :: Monad m => a -> HtmlT m ()
+  toHead _      = mempty
+
 -- -- | @since 2.9.8
 -- instance (a ~ (), m ~ Identity) => ToHtmlComponents (HtmlT m a) where
 --   toHtml = relaxHtmlT
