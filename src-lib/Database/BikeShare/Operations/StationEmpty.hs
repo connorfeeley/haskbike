@@ -74,15 +74,17 @@ queryStationEmptyFullTime stationId startTime endTime = do
     -- Get latest status so that we can get only the latest reference station info.
     latestStatus <- Pg.pgNubBy_ (\inf -> cast_ (_statusStationId inf) int) $ orderBy_ (desc_ . _statusLastReported) $ reuse statusCte
 
-    emptyFull <- reuse emptyFullCte
-
+    -- Get latest info.
     info <- filter_ (\inf -> _statusInfoId latestStatus `references_` inf) $
             all_ (bikeshareDb ^. bikeshareStationInformation)
 
-    guard_ ((info ^. infoStationId ==. emptyFull ^. _1) &&.
-           (latestStatus ^. statusStationId ==. emptyFull ^. _1))
+    -- Get station ID and amount of seconds the station was empty and full.
+    (sId, empty, full) <- reuse emptyFullCte
 
-    pure (info, (emptyFull ^. _2, emptyFull ^. _3))
+    guard_ ((info ^. infoStationId ==. sId) &&.
+           (latestStatus ^. statusStationId ==. sId))
+
+    pure (info, (empty, full))
 
 -- | Possible filter condition for station ID.
 stationIdCond :: ( HaskellLiteralForQExpr (expr Bool) ~ Bool
