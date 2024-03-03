@@ -419,7 +419,7 @@ benchmark bench-haskbike
                     , test-depends
 
     -- The entrypoint to the benchmark suite.
-    main-is:          Main.hs
+    main-is:          Bench.hs
 
     type:             exitcode-stdio-1.0
 
