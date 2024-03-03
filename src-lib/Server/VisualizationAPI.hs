@@ -237,27 +237,16 @@ stationListPage filterSelection = do
   sideMenu $
     StationList
     { _stationList           = sorted
+    , _stationTimeRange      = (Nothing, Nothing)
     , _staticLink            = fieldLink staticApi
     , _stationListSelection  = filterSelection
     , _visualizationPageLink = fieldLink pageForStation
     }
 
-timeRangeWithDefaults :: Maybe LocalTime -> Maybe LocalTime -> ServerAppM (UTCTime, UTCTime)
-timeRangeWithDefaults startTime endTime = do
-  appEnv <- asks serverAppEnv
-  let tz = envTimeZone appEnv
-  currentUtc <- liftIO getCurrentTime
-
-  let earliest  = maybe (addUTCTime (-60 * 60 * 24) currentUtc) (localTimeToUTC tz) startTime
-  let latest    = maybe currentUtc                              (localTimeToUTC tz) endTime
-
-  pure (earliest, latest)
-
 -- | Display a list of stations with their empty/full status.
 stationEmptyFullListPageHandler :: Maybe LocalTime -> Maybe LocalTime -> Maybe StationListFilter -> Maybe OrderByDirection -> Maybe OrderByOption -> ServerAppM (PureSideMenu (StationList [(StationInformation, StationStatus, EmptyFull)]))
 stationEmptyFullListPageHandler start end stations dir order = do
-  (start', end') <- timeRangeWithDefaults start end
-  stationEmptyFullListPage start' end' (defaultStationFilter stations) (defaultOrderByDirection dir) (defaultOrderByOption order)
+  stationEmptyFullListPage start end (defaultStationFilter stations) (defaultOrderByDirection dir) (defaultOrderByOption order)
 
 defaultStationFilter :: Maybe StationListFilter -> StationListFilter
 defaultStationFilter (Just stations) = stations
@@ -270,15 +259,17 @@ defaultOrderByDirection Nothing    = OrderByAsc
 defaultOrderByOption :: Maybe OrderByOption -> OrderByOption
 defaultOrderByOption (Just order) = order
 defaultOrderByOption Nothing      = OrderByStationId
-
-stationEmptyFullListPage :: UTCTime -> UTCTime -> StationListFilter -> OrderByDirection -> OrderByOption -> ServerAppM (PureSideMenu (StationList [(StationInformation, StationStatus, EmptyFull)]))
+-- (localTimeToUTC tz)
+stationEmptyFullListPage :: Maybe LocalTime -> Maybe LocalTime -> StationListFilter -> OrderByDirection -> OrderByOption -> ServerAppM (PureSideMenu (StationList [(StationInformation, StationStatus, EmptyFull)]))
 stationEmptyFullListPage start end filterSelection orderDirSelection orderSelection = do
   appEnv <- asks serverAppEnv
+  let tz = envTimeZone appEnv
+  currentUtc <- liftIO getCurrentTime
   logInfo $ "Rendering station empty/full list for time [" <> tshow start <> " - " <> tshow end <> "] and order [" <> (T.pack . show) orderDirSelection <> "] of [" <> (T.pack . show) orderSelection <> "]"
 
   (latest, emptyFull) <- liftIO $ concurrently (runAppM appEnv $ withPostgres $ runSelectReturningList $ selectWith queryLatestStatuses)
                                                (runAppM appEnv $ withPostgres $ runSelectReturningList $ selectWith $
-                                                queryStationEmptyFullTime (Nothing :: Maybe Integer) start end)
+                                                queryStationEmptyFullTime (Nothing :: Maybe Integer) (start' currentUtc tz) (end' currentUtc tz))
 
   let combined = combineStations latest (resultToEmptyFull emptyFull)
 
@@ -286,6 +277,7 @@ stationEmptyFullListPage start end filterSelection orderDirSelection orderSelect
   sideMenu $
     StationList
     { _stationList           = sorted
+    , _stationTimeRange      = (start, end)
     , _staticLink            = fieldLink staticApi
     , _stationListSelection  = filterSelection
     , _visualizationPageLink = fieldLink pageForStation
@@ -293,6 +285,8 @@ stationEmptyFullListPage start end filterSelection orderDirSelection orderSelect
   where
     resultToEmptyFull = map (\(i, (e, f)) -> (i, EmptyFull ((secondsToNominalDiffTime . fromIntegral) e) ((secondsToNominalDiffTime . fromIntegral) f)))
     tshow = T.pack . show
+    start' cUtc tz = maybe (addUTCTime (-60 * 60 * 24) cUtc) (localTimeToUTC tz) start
+    end'   cUtc tz = maybe cUtc (localTimeToUTC tz) end
 
 orderByOptionToSortOn :: OrderByDirection -> OrderByOption -> [(StationInformation, StationStatus, EmptyFull)] -> [(StationInformation, StationStatus, EmptyFull)]
 orderByOptionToSortOn direction opt = case direction of

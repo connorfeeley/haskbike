@@ -41,6 +41,7 @@ import           TextShow
 
 data StationList a where
   StationList :: { _stationList           :: a
+                 , _stationTimeRange      :: (Maybe LocalTime, Maybe LocalTime)
                  , _staticLink            :: Link
                  , _stationListSelection  :: StationListFilter
                  , _visualizationPageLink :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> Link
