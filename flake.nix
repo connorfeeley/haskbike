@@ -145,6 +145,8 @@
                   tasty-discover
                   weeder
                   retrie
+                  ghcprofview
+                  eventlog2html
                   ;
                 inherit (self'.packages)
                   haskbike-completions;
