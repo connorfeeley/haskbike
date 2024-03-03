@@ -14,8 +14,11 @@ import           Database.BikeShare.Operations.StationEmpty
 
 benchStationEmptyTime :: Maybe Int -> IO ()
 benchStationEmptyTime station = do
+  runWithAppMSuppressLog dbnameTest setupTestDatabase
+  initDBWithAllTestData
+
   void $ runWithAppM "haskbike" $ withPostgres $ runSelectReturningList $ selectWith $ queryStationEmptyFullTime station
-    (UTCTime (fromGregorian 2024 01 01) (timeOfDayToTime midnight)) (UTCTime (fromGregorian 2024 01 02) (timeOfDayToTime midnight))
+    (UTCTime (fromGregorian 2023 11 01) (timeOfDayToTime midnight)) (UTCTime (fromGregorian 2023 11 02) (timeOfDayToTime midnight))
 
 -- Here's our Servant Client function
 -- apiClient :: Client ClientM (NamedRoutes VisualizationAPI)
