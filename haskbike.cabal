@@ -62,7 +62,7 @@ extra-source-files: docs/json/2.3/*.json
 common compile-flags
     -- ghc-options: -Wall -fwrite-ide-info -fprof-auto -threaded "-with-rtsopts=-N -p -s -h -l -i0.1"
     -- ghc-options: -Wall -fwrite-ide-info -fprof-auto "-with-rtsopts=-N -p -s -h -l -i0.1"
-    ghc-options: -Wall -fwrite-ide-info -threaded
+    ghc-options: -Wall -fwrite-ide-info -threaded "-with-rtsopts=-N"
     -- Link with gold on Linux.
     if os(linux)
       ghc-options:       -optl-fuse-ld=gold
