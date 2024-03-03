@@ -63,7 +63,7 @@ main = defaultMain
 
 benchStationEmptyTime :: IO ()
 benchStationEmptyTime = do
-  void $ runWithAppM "haskbike" $ withPostgres $ runSelectReturningList $ selectWith $ queryStationEmptyFullTime (Just 7001) (UTCTime (fromGregorian 2024 01 01) (timeOfDayToTime midnight)) (UTCTime (fromGregorian 2024 01 12) (timeOfDayToTime midnight))
+  void $ runWithAppM "haskbike" $ withPostgres $ runSelectReturningList $ selectWith $ queryStationEmptyFullTime Nothing (UTCTime (fromGregorian 2024 01 01) (timeOfDayToTime midnight)) (UTCTime (fromGregorian 2024 01 12) (timeOfDayToTime midnight))
 
 -- Here's our Servant Client function
 -- apiClient :: Client ClientM (NamedRoutes VisualizationAPI)
