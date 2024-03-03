@@ -11,3 +11,8 @@
 !/.env.template
 /.vscode/
 /scripts/
+/haskbike-test.hp
+/haskbike-test.prof
+/haskbike-test.eventlog
+/haskbike.eventlog
+/haskbike.eventlog.html
