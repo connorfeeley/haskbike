@@ -39,9 +39,10 @@ queryStationEmptyFullTime :: (Integral a)
                           -> With Postgres BikeshareDb (Q Postgres BikeshareDb s (StationInformationT (QGenExpr QValueContext Postgres s), (QGenExpr QValueContext Postgres s Int32, QGenExpr QValueContext Postgres s Int32)))
 queryStationEmptyFullTime stationId startTime endTime = do
   statusCte <- selecting $
-            filter_ (stationIdCond stationId) $
+            filter_ (\row -> _statusNumDocksAvailable row ==. val_ 0 ||. _statusNumBikesAvailable row ==. val_ 0) $
             -- filter_ (\row -> between_ (row ^. statusLastReported) (val_ (addUTCTime (-60 * 60 * 24) startTime)) (val_ (addUTCTime (60 * 60 * 24) endTime))) $
             filter_ (\row -> between_ (row ^. statusLastReported) (val_ startTime) (val_ endTime)) $
+            filter_ (stationIdCond stationId) $
             all_ (bikeshareDb ^. bikeshareStationStatus)
 
   emptyIntervals <- selecting $
@@ -50,15 +51,11 @@ queryStationEmptyFullTime stationId startTime endTime = do
                       period_end = least_ nReported (val_ endTime)
                    in ( group_ ((_unInformationStationId  . _statusInfoId) row)
                       -- 0 bikes available means the station is empty
-                      , fromMaybe_ 0 (sum_ (ifThenElse_ (row ^. statusNumBikesAvailable ==. val_ 0)
-                                                (timeDelta period_end period_start)
-                                                0
-                                           ) `filterWhere_` (period_start <. period_end))
+                      , fromMaybe_ 0 (sum_ (timeDelta period_end period_start)
+                                                `filterWhere_` (period_start <. period_end &&. (row ^. statusNumBikesAvailable ==. val_ 0)))
                       -- 0 docks available means the station is full
-                      , fromMaybe_ 0 (sum_ (ifThenElse_ (row ^. statusNumDocksAvailable ==. val_ 0)
-                                                (timeDelta period_end period_start)
-                                                0
-                                           ) `filterWhere_` (period_start <. period_end))
+                      , fromMaybe_ 0 (sum_ (timeDelta period_end period_start)
+                                                `filterWhere_` (period_start <. period_end &&. (row ^. statusNumDocksAvailable ==. val_ 0)))
                       )) $
         filter_ (\row -> (row ^. _1 . statusLastReported) <. val_ endTime &&.
                          (row ^. _2) >=. val_ startTime ||.
