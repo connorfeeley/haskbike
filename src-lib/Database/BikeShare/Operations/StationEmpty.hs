@@ -39,27 +39,28 @@ queryStationEmptyFullTime :: (Integral a)
                           -> With Postgres BikeshareDb (Q Postgres BikeshareDb s (StationInformationT (QGenExpr QValueContext Postgres s), (QGenExpr QValueContext Postgres s Int32, QGenExpr QValueContext Postgres s Int32)))
 queryStationEmptyFullTime stationId startTime endTime = do
   statusCte <- selecting $
-            filter_ (\row -> _statusNumDocksAvailable row ==. val_ 0 ||. _statusNumBikesAvailable row ==. val_ 0) $
-            -- filter_ (\row -> between_ (row ^. statusLastReported) (val_ (addUTCTime (-60 * 60 * 24) startTime)) (val_ (addUTCTime (60 * 60 * 24) endTime))) $
-            filter_ (\row -> between_ (row ^. statusLastReported) (val_ startTime) (val_ endTime)) $
             filter_ (stationIdCond stationId) $
+            -- Widen our query a bit to get the previous and next status reports.
+            filter_ (\row -> between_ (row ^. statusLastReported) (val_ (addUTCTime (-60 * 60 * 24) startTime)) (val_ (addUTCTime (60 * 60 * 24) endTime))) $
             all_ (bikeshareDb ^. bikeshareStationStatus)
 
-  emptyIntervals <- selecting $
+  emptyFullCte <- selecting $
     aggregate_ (\(row, nReported, _pReported) ->
                   let period_start = greatest_ (row ^. statusLastReported) (val_ startTime)
                       period_end = least_ nReported (val_ endTime)
                    in ( group_ ((_unInformationStationId  . _statusInfoId) row)
                       -- 0 bikes available means the station is empty
-                      , fromMaybe_ 0 (sum_ (timeDelta period_end period_start)
-                                                `filterWhere_` (period_start <. period_end &&. (row ^. statusNumBikesAvailable ==. val_ 0)))
+                      , fromMaybe_ 0 (sum_ (ifThenElse_ (row ^. statusNumBikesAvailable ==. val_ 0)
+                                             (timeDelta period_end period_start) 0
+                                           ) `filterWhere_` (period_start <. period_end))
                       -- 0 docks available means the station is full
-                      , fromMaybe_ 0 (sum_ (timeDelta period_end period_start)
-                                                `filterWhere_` (period_start <. period_end &&. (row ^. statusNumDocksAvailable ==. val_ 0)))
+                      , fromMaybe_ 0 (sum_ (ifThenElse_ (row ^. statusNumDocksAvailable ==. val_ 0)
+                                             (timeDelta period_end period_start) 0
+                                           ) `filterWhere_` (period_start <. period_end))
                       )) $
         filter_ (\row -> (row ^. _1 . statusLastReported) <. val_ endTime &&.
-                         (row ^. _2) >=. val_ startTime ||.
-                         (row ^. _3  <.  val_ startTime &&. (row ^. _1 . statusLastReported) >=. val_ startTime)
+                         (row ^. _2) >=. val_ startTime ||. -- lead > start
+                         (row ^. _3  <.  val_ startTime &&. (row ^. _1 . statusLastReported) >=. val_ startTime) -- lag < start && row > start
                 ) $
         withWindow_ (\row -> frame_ (partitionBy_ ((_unInformationStationId  . _statusInfoId) row)) (orderPartitionBy_ ((asc_ . _statusLastReported) row)) noBounds_)
                     (\row w -> ( row
@@ -70,27 +71,18 @@ queryStationEmptyFullTime stationId startTime endTime = do
         reuse statusCte
 
   pure $ do
-    -- status <- reuse statusCte
-    -- Get latest status so that we can get only the latest reference station info
+    -- Get latest status so that we can get only the latest reference station info.
     latestStatus <- Pg.pgNubBy_ (\inf -> cast_ (_statusStationId inf) int) $ orderBy_ (desc_ . _statusLastReported) $ reuse statusCte
 
-    empty <- reuse emptyIntervals
-    -- guard_ (status ^. statusStationId ==. empty ^. _1)
+    emptyFull <- reuse emptyFullCte
 
-    info <-
-      -- lateral_ status $ \status' -> do
-      -- Pg.pgNubBy_ (\inf -> cast_ (_infoStationId inf) int) $
-        filter_ (\inf -> _statusInfoId latestStatus `references_` inf) $
-            orderBy_ (desc_ . _infoReported) $
+    info <- filter_ (\inf -> _statusInfoId latestStatus `references_` inf) $
             all_ (bikeshareDb ^. bikeshareStationInformation)
 
+    guard_ ((info ^. infoStationId ==. emptyFull ^. _1) &&.
+           (latestStatus ^. statusStationId ==. emptyFull ^. _1))
 
-    guard_ ((info ^. infoStationId ==. empty ^. _1) &&.
-            -- (status ^. statusStationId ==. empty ^. _1) &&.
-           (latestStatus ^. statusStationId ==. empty ^. _1))-- &&.
-           -- (latestStatus ^. statusStationId ==. status ^. statusStationId))
-
-    pure (info, (empty ^. _2, empty ^. _3))
+    pure (info, (emptyFull ^. _2, emptyFull ^. _3))
 
 -- | Possible filter condition for station ID.
 stationIdCond :: ( HaskellLiteralForQExpr (expr Bool) ~ Bool
