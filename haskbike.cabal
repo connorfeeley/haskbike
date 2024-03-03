@@ -60,7 +60,8 @@ extra-source-files: docs/json/2.3/*.json
 
 -- Linker (use gold) common warning flags.
 common compile-flags
-    ghc-options: -Wall -fwrite-ide-info
+    -- ghc-options: -Wall -fwrite-ide-info -fprof-auto -threaded "-with-rtsopts=-N -p -s -h -l -i0.1"
+    ghc-options: -Wall -fwrite-ide-info -fprof-auto "-with-rtsopts=-N -p -s -h -l -i0.1"
     -- Link with gold on Linux.
     if os(linux)
       ghc-options:       -optl-fuse-ld=gold
