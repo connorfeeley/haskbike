@@ -67,7 +67,9 @@ main = do
   connInfo <- mkDbConnectInfo (optDatabase options)
   usingLoggerT logStdoutAction $
     logInfo $ "Using database connection: " <> (TL.toStrict . pShowCompact . obfuscatePassword) connInfo
-  connPool <- newPool (setNumStripes Nothing $ defaultPoolConfig (connect connInfo) close 30 8)
+  let resourceTimeout = 30
+  let maxResources = 8
+  connPool <- newPool (setNumStripes Nothing (defaultPoolConfig (connect connInfo) close resourceTimeout maxResources))
 
   -- Create HTTPS client manager.
   clientManager <- liftIO $ newManager tlsManagerSettings
