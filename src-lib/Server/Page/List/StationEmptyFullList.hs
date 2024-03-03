@@ -68,7 +68,7 @@ toStationEmptyFullTable params = do
       th_ [id_ "station-address-col"] "Address"
     tbody_ [] $ do
       mapM_ (\(info, status, emptyFull) -> tr_ $ do
-              td_ [columnId_ "station-id-col"] (stationIdLink (_visualizationPageLink params) info)
+              td_ [columnId_ "station-id-col"] (stationIdLink (_visualizationPageLink params) info start end)
               td_ [columnId_ "station-name-col"] (toHtml (_infoName info))
               td_ [columnId_ "station-type-col",         style_ "text-align: center"] (stationTypeText info)
               td_ [columnId_ "station-capacity-col",     style_ "text-align: center"] (toHtml (showt (_infoCapacity info)))
@@ -83,6 +83,7 @@ toStationEmptyFullTable params = do
 
               td_ [columnId_ "station-address-col"] (toHtml (fromMaybe "" (_infoAddress info)))
             ) (_stationList params)
+  where (start, end) = _stationTimeRange params
 
 instance ToHtmlComponents (StationList [(StationInformation, StationStatus, EmptyFull)]) where
   toMenuHeading _ = menuHeading "#station-empty-full" "Station Empty/Full"

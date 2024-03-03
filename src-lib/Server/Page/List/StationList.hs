@@ -58,7 +58,7 @@ toStationListTable params = do
       th_ [id_ "station-address-col"] "Address"
     tbody_ [] $ do
       mapM_ (\(info, status) -> tr_ $ do
-              td_ [columnId_ "station-id-col"] (stationIdLink (_visualizationPageLink params) info)
+              td_ [columnId_ "station-id-col"] (stationIdLink (_visualizationPageLink params) info Nothing Nothing)
               td_ [columnId_ "station-name-col"] (toHtml (_infoName info))
               td_ [columnId_ "station-type-col",         style_ "text-align: center"] (stationTypeText info)
               td_ [columnId_ "station-capacity-col",     style_ "text-align: center"] (toHtml (showt (_infoCapacity info)))

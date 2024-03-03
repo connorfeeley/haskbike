@@ -15,7 +15,6 @@ module Server.Page.List.Common
      ) where
 
 import           Control.Applicative                          ( (<|>) )
-import           Control.Lens
 
 import           Data.Attoparsec.Text
 import           Data.Functor                                 ( ($>) )
@@ -25,7 +24,6 @@ import qualified Data.Text                                    as T
 import           Data.Time
 
 import           Database.BikeShare.Tables.StationInformation
-import           Database.BikeShare.Tables.StationStatus
 
 import           Lucid
 
@@ -33,9 +31,7 @@ import           Prelude                                      hiding ( null )
 
 import           Servant
 
-import           Server.Classes
 import           Server.Page.Utils
-import           Server.PureCSS
 
 import           TextShow
 
@@ -100,9 +96,10 @@ extraText optValues =
   else " (" <> intercalated <> ")"
   where intercalated = intercalate ", " (catMaybes optValues)
 
-stationIdLink :: Monad m => (Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> Link) -> StationInformation -> HtmlT m ()
-stationIdLink baseLink params =
-  a_ [href_ ("/" <> toUrlPiece (baseLink (Just (fromIntegral (_infoStationId params) :: Int)) Nothing Nothing))] (toHtml (showt (_infoStationId params)))
+stationIdLink :: Monad m => (Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> Link) -> StationInformation -> Maybe LocalTime -> Maybe LocalTime -> HtmlT m ()
+stationIdLink baseLink params start end = a_ [href] (toHtml (showt (_infoStationId params)))
+  where link = baseLink (Just (fromIntegral (_infoStationId params) :: Int)) start end
+        href = href_ ("/" <> toUrlPiece link)
 
 -- | Form use to select station information filter parameters.
 data StationListForm where StationListForm :: { _stationListFormSelection :: StationListFilter } -> StationListForm
