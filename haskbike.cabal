@@ -208,104 +208,112 @@ library
 
     -- Modules exported by the library.
     exposed-modules:  BikeShareAPI
-                    , Version
-                    , AppEnv
-                    , API.ResponseWrapper
-                    , API.Client
+                    , API.APIEntity
+                    , API.BikeShare
                     , API.Classes
+                    , API.Client
                     , API.ClientLifted
+                    , API.Pollable
+                    , API.ResponseWrapper
+                    , API.StationInformation
+                    , API.StationStatus
+                    , API.SystemInformation
+                    , API.Utils
+                    , API.VehicleType
+                    , AppEnv
+                    , CLI.Database
+                    , CLI.Debug
                     -- , API.DebugClient
-                    , TimeInterval
-                    , Server
-                    , ServerEnv
-                    , Server.Routes
-                    , Server.RobotsTXT
-                    , Server.Utils
-                    , Server.DataAPI
-                    , Server.StaticAPI
-                    , Server.VisualizationAPI
-                    , Server.DebugAPI
-                    , Server.StatusDataParams
-                    , Server.Page.PerformanceCSV
-                    , Server.Page.StationStatusVisualization
-                    , Server.Page.SystemStatusVisualization
-                    , Server.Page.SystemInfoVisualization
-                    , Server.Page.StatusVisualization
-                    , Server.Page.SideMenu
-                    , Server.Page.Utils
-                    , Server.Page.List.Common
-                    , Server.Page.List.StationList
-                    , Server.Page.List.StationEmptyFullList
-                    , Server.Page.IndexPage
-                    , Server.PureCSS
-                    , Server.Classes
-                    , Server.Data.StationStatusVisualization
-                    , Server.Data.SystemInformationVisualization
-                    , Server.ComponentsAPI
-                    , Server.Components.ChargingHeader
-                    , Server.Components.PerformanceData
-                    , Server.Components.DockingHeader
-                    , Server.Components.LatestQueries
-                    , Server.Components.ChargingInfrastructureHeader
-                    , CLI.Utils
+                    , CLI.Events
+                    , CLI.Options
                     , CLI.Poll
                     , CLI.Poll.Utils
                     , CLI.Query
-                    , CLI.Debug
-                    , CLI.Events
-                    , CLI.ServeVisualize
                     , CLI.QueryFormat
-                    , CLI.Database
-                    , CLI.Options
-                    , API.APIEntity
-                    , API.Utils
-                    , API.Pollable
-                    , API.BikeShare
-                    , API.StationStatus
-                    , API.SystemInformation
-                    , API.StationInformation
-                    , API.VehicleType
+                    , CLI.ServeVisualize
+                    , CLI.Utils
                     , Data.Time.Extras
-                    , Text.Pretty.Simple.Extras
+
                     , Database.BikeShare
                     , Database.BikeShare.BeamConvertable
-                    , Database.BikeShare.ImportExport
-                    , Database.BikeShare.StatusVariationQuery
-                    , Database.BikeShare.Utils
-                    , Database.BikeShare.EventCounts
                     , Database.BikeShare.Connection
                     , Database.BikeShare.DaysAgo
+                    , Database.BikeShare.EndpointQueried
+                    , Database.BikeShare.EventCounts
+                    , Database.BikeShare.Expressions
+                    , Database.BikeShare.ImportExport
                     , Database.BikeShare.Operations
                     , Database.BikeShare.Operations.Dockings
                     , Database.BikeShare.Operations.Factors
                     , Database.BikeShare.Operations.FactorsCSV
-                    , Database.BikeShare.Operations.StationEmpty
                     , Database.BikeShare.Operations.QueryLogs
-                    , Database.BikeShare.Expressions
+                    , Database.BikeShare.Operations.StationEmpty
                     , Database.BikeShare.StatusDeltaFields
-                    , Database.BikeShare.Tables.SystemInformation
-                    , Database.BikeShare.Tables.StationInformation
-                    , Database.BikeShare.Tables.StationStatus
-                    , Database.BikeShare.Tables.QueryLogs
-                    , Database.BikeShare.Tables.Diagnostics
-                    , Database.BikeShare.Tables.StationLookup
+                    , Database.BikeShare.StatusVariationQuery
+                    , Database.BikeShare.Utils
+                    -- Schemas:
                     , Database.BikeShare.Schema.V001.BikeShare
+                    , Database.BikeShare.Schema.V001.Diagnostics
                     , Database.BikeShare.Schema.V001.Migrations
-                    , Database.BikeShare.Schema.V001.SystemInformation
+                    , Database.BikeShare.Schema.V001.QueryLogs
                     , Database.BikeShare.Schema.V001.StationInformation
                     , Database.BikeShare.Schema.V001.StationStatus
                     , Database.BikeShare.Schema.V001.StationStatusCommon
-                    , Database.BikeShare.Schema.V001.StationStatusChanges
+                    , Database.BikeShare.Schema.V001.SystemInformation
                     , Database.BikeShare.Schema.V001.VehicleTypeMixin
-                    , Database.BikeShare.Schema.V001.QueryLogs
-                    , Database.BikeShare.Schema.V001.Diagnostics
+                    -- , Database.BikeShare.Schema.V001.StationStatusChanges
                     , Database.BikeShare.Schema.V002.BikeShare
                     , Database.BikeShare.Schema.V002.Migrations
                     , Database.BikeShare.Schema.V002.StationLookup
-                    , Database.BikeShare.EndpointQueried
+                    , Database.BikeShare.Schema.V003.BikeShare
+                    , Database.BikeShare.Schema.V003.Migrations
+                    -- Final table definitions:
+                    , Database.BikeShare.Tables.Diagnostics
+                    , Database.BikeShare.Tables.QueryLogs
+                    , Database.BikeShare.Tables.StationInformation
+                    , Database.BikeShare.Tables.StationLookup
+                    , Database.BikeShare.Tables.StationStatus
+                    , Database.BikeShare.Tables.SystemInformation
+
+                    , Graphics.Vega.VegaLite.Extra
+
+                    , Server
+                    , Server.Classes
+                    , Server.Components.ChargingHeader
+                    , Server.Components.ChargingInfrastructureHeader
+                    , Server.Components.DockingHeader
+                    , Server.Components.LatestQueries
+                    , Server.Components.PerformanceData
+                    , Server.ComponentsAPI
+                    , Server.Data.StationStatusVisualization
+                    , Server.Data.SystemInformationVisualization
+                    , Server.DataAPI
+                    , Server.DebugAPI
+                    , Server.Page.IndexPage
+                    , Server.Page.List.Common
+                    , Server.Page.List.StationEmptyFullList
+                    , Server.Page.List.StationList
+                    , Server.Page.PerformanceCSV
+                    , Server.Page.SideMenu
+                    , Server.Page.StationStatusVisualization
+                    , Server.Page.StatusVisualization
+                    , Server.Page.SystemInfoVisualization
+                    , Server.Page.SystemStatusVisualization
+                    , Server.Page.Utils
+                    , Server.PureCSS
+                    , Server.RobotsTXT
+                    , Server.Routes
+                    , Server.StaticAPI
+                    , Server.StatusDataParams
+                    , Server.Utils
+                    , Server.VisualizationAPI
+                    , ServerEnv
+
+                    , Text.Pretty.Simple.Extras
+                    , TimeInterval
+                    , Version
                     , Visualization.StationOccupancy
                     , Visualization.SystemInformation
-                    , Graphics.Vega.VegaLite.Extra
 
     -- Modules included in this library but not exported.
     other-modules:    Paths_haskbike
