@@ -255,9 +255,9 @@ stationStatusModification =
   }
 
 -- | Migration for the StationStatus table.
-createStationStatus :: Migration Postgres (CheckedDatabaseEntity Postgres db (TableEntity StationStatusT))
-createStationStatus =
-  createTable "station_status" $ StationStatus
+createStationStatus :: T.Text -> Migration Postgres (CheckedDatabaseEntity Postgres db (TableEntity StationStatusT))
+createStationStatus tableName =
+  createTable tableName $ StationStatus
   { _statusCommon                = StationStatusCommon (StationInformationId (field "info_station_id" int notNull)
                                                                              (field "info_reported" (DataType (timestampType Nothing True)) notNull))
                                                        (field "station_id"              int notNull)

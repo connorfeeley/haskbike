@@ -19,11 +19,11 @@ import           Database.Beam.Postgres
 import           Database.Beam.Postgres.CustomTypes
 import qualified Database.Beam.Postgres.Migrate                    as PG
 import           Database.BikeShare.EndpointQueried
-import           Database.BikeShare.Schema.V001.BikeShare
-import           Database.BikeShare.Schema.V001.QueryLogs
-import           Database.BikeShare.Schema.V001.StationInformation
-import           Database.BikeShare.Schema.V001.StationStatus
-import           Database.BikeShare.Schema.V001.SystemInformation
+import           Database.BikeShare.Schema.V001.BikeShare          as V001
+import           Database.BikeShare.Schema.V001.QueryLogs          as V001
+import           Database.BikeShare.Schema.V001.StationInformation as V001
+import           Database.BikeShare.Schema.V001.StationStatus      as V001
+import           Database.BikeShare.Schema.V001.SystemInformation  as V001
 
 
 {- Set up entire database.
@@ -36,11 +36,11 @@ initialSetup :: Migration Postgres (CheckedDatabaseSettings Postgres BikeshareDb
 initialSetup = do
   BikeshareDb
   <$> enumSetup -- Create custom Postgres enum type for the different endpoints that are queried.
-  <*> createStationInformation
-  <*> createStationStatus
-  <*> createSystemInformation
-  <*> createSystemInformationCount
-  <*> createQueries
+  <*> V001.createStationInformation
+  <*> V001.createStationStatus "station_status"
+  <*> V001.createSystemInformation
+  <*> V001.createSystemInformationCount
+  <*> V001.createQueries
 
 
 initialSetupStep :: MigrationSteps Postgres () (CheckedDatabaseSettings Postgres BikeshareDb)
