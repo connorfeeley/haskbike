@@ -12,6 +12,7 @@ import           Data.Int                                     ( Int32 )
 import           Data.Time
 
 import           Database.Beam
+import           Database.Beam.Backend                        ( BeamSqlBackend )
 import           Database.Beam.Postgres                       ( Postgres )
 import qualified Database.Beam.Postgres                       as Pg
 import           Database.BikeShare
@@ -29,12 +30,12 @@ timeDelta :: (HasSqlTime tgt1, HasSqlTime tgt2, Integral b) => QGenExpr ctxt1 Po
 timeDelta a b = cast_ (extract_ Pg.epoch_ a - extract_ Pg.epoch_ b) int
 
 -- | Query how long each station has been both empty and full for.
-queryStationEmptyFullTimeOld :: (Integral a)
+_queryStationEmptyFullTimeOld :: (Integral a)
                           => Maybe a
                           -> UTCTime
                           -> UTCTime
                           -> With Postgres BikeshareDb (Q Postgres BikeshareDb s (StationInformationT (QGenExpr QValueContext Postgres s), (QGenExpr QValueContext Postgres s Int32, QGenExpr QValueContext Postgres s Int32)))
-queryStationEmptyFullTimeOld stationId startTime endTime = do
+_queryStationEmptyFullTimeOld stationId startTime endTime = do
   statusCte <- selecting $
             filter_ (stationIdCond stationId) $
             -- Widen our query a bit to get the previous and next status reports.
@@ -92,7 +93,7 @@ queryStationEmptyFullTime :: (Integral a)
                           -> UTCTime
                           -> With Postgres BikeshareDb (Q Postgres BikeshareDb s (StationInformationT (QGenExpr QValueContext Postgres s), (QGenExpr QValueContext Postgres s Int32, QGenExpr QValueContext Postgres s Int32)))
 queryStationEmptyFullTime stationId startTime endTime = do
-  statusCte <- selecting $
+  _statusCte <- selecting $
             filter_ (stationIdCond stationId) $
             -- Widen our query a bit to get the previous and next status reports.
             filter_ (\row -> between_ (row ^. statusLastReported) (val_ (addUTCTime (-60 * 60) startTime)) (val_ (addUTCTime (60 * 60) endTime))) $
@@ -179,17 +180,32 @@ queryStationEmptyFullTime stationId startTime endTime = do
 
     pure (info, (empty, full))
 
+keepRow :: ( BeamSqlBackend be, SqlValable b1, SqlValable b2, SqlValable a1,  SqlValable a2
+           , SqlEq (QGenExpr context be s) b1,  SqlEq (QGenExpr context be s) b2, SqlEq (QGenExpr context be s) a1,  SqlEq (QGenExpr context be s) a2
+           , SqlEq (QGenExpr context be s) (Columnar f Int32)
+           , Num (Columnar f Int32), Num (HaskellLiteralForQExpr b1), Num (HaskellLiteralForQExpr b2), Num (HaskellLiteralForQExpr a1), Num (HaskellLiteralForQExpr a2)
+           ) => StationStatusT f -> (t1, a1, b1) -> (t2, a2, b2) -> QGenExpr context be s Bool
 keepRow row (lead, leadBikes, leadDocks) (lag, lagBikes, lagDocks) = keepForEmpty row (lead, leadBikes, leadDocks) (lag, lagBikes, lagDocks) ||. keepForFull row (lead, leadBikes, leadDocks) (lag, lagBikes, lagDocks)
 
 -- Keep row if significant to bikes available (empty: == 0) query.
-keepForEmpty row (lead, leadBikes, leadDocks) (lag, lagBikes, lagDocks) = (isEmpty &&. nextNotEmpty) ||. (notEmpty &&. prevNotEmpty)
+keepForEmpty :: ( BeamSqlBackend be, SqlValable b1, SqlValable b2, SqlValable a1,  SqlValable a2
+                , SqlEq (QGenExpr context be s) b1,  SqlEq (QGenExpr context be s) b2, SqlEq (QGenExpr context be s) a1,  SqlEq (QGenExpr context be s) a2
+                , SqlEq (QGenExpr context be s) (Columnar f Int32)
+                , Num (Columnar f Int32), Num (HaskellLiteralForQExpr b1), Num (HaskellLiteralForQExpr b2), Num (HaskellLiteralForQExpr a1), Num (HaskellLiteralForQExpr a2)
+                ) => StationStatusT f -> (t1, a1, b1) -> (t2, a2, b2) -> QGenExpr context be s Bool
+keepForEmpty row (_lead, leadBikes, _leadDocks) (_lag, lagBikes, _lagDocks) = (isEmpty &&. nextNotEmpty) ||. (notEmpty &&. prevNotEmpty)
   where isEmpty = row ^. statusNumBikesAvailable ==. 0
         notEmpty = not_ isEmpty
         prevNotEmpty = not_ (lagBikes ==. val_ 0)
         nextNotEmpty = not_ (leadBikes ==. val_ 0)
 
 -- Keep row if significant to docks available (full: == 0) query.
-keepForFull row (lead, leadBikes, leadDocks) (lag, lagBikes, lagDocks) = (isFull &&. nextNotFull) ||. (notFull &&. prevNotFull)
+keepForFull :: ( BeamSqlBackend be, SqlValable b1, SqlValable b2, SqlValable a1,  SqlValable a2
+               , SqlEq (QGenExpr context be s) b1,  SqlEq (QGenExpr context be s) b2, SqlEq (QGenExpr context be s) a1,  SqlEq (QGenExpr context be s) a2
+               , SqlEq (QGenExpr context be s) (Columnar f Int32)
+               , Num (Columnar f Int32), Num (HaskellLiteralForQExpr b1), Num (HaskellLiteralForQExpr b2), Num (HaskellLiteralForQExpr a1), Num (HaskellLiteralForQExpr a2)
+               ) => StationStatusT f -> (t1, a1, b1) -> (t2, a2, b2) -> QGenExpr context be s Bool
+keepForFull row (_lead, _leadBikes, leadDocks) (_lag, _lagBikes, lagDocks) = (isFull &&. nextNotFull) ||. (notFull &&. prevNotFull)
   where isFull = row ^. statusNumDocksAvailable ==. 0
         notFull = not_ isFull
         prevNotFull = not_ (lagDocks ==. val_ 0)
