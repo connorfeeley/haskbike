@@ -60,13 +60,19 @@ extra-source-files: docs/json/2.3/*.json
 
 -- Linker (use gold) common warning flags.
 common compile-flags
-    -- ghc-options: -Wall -fwrite-ide-info -fprof-auto -threaded "-with-rtsopts=-N -p -s -h -l -i0.1"
-    -- ghc-options: -Wall -fwrite-ide-info -fprof-auto "-with-rtsopts=-N -p -s -h -l -i0.1"
-    ghc-options: -Wall -fwrite-ide-info -threaded "-with-rtsopts=-N"
+    -- ghc-options: -Wall -fwrite-ide-info -fprof-auto -threaded
+    -- ghc-options: -Wall -fwrite-ide-info -fprof-auto
+    ghc-options: -Wall -fwrite-ide-info -threaded
     -- Link with gold on Linux.
     if os(linux)
       ghc-options:       -optl-fuse-ld=gold
       ld-options:        -fuse-ld=gold
+
+-- Linker (use gold) common warning flags.
+common compile-flags-exe
+    -- ghc-options: "-with-rtsopts=-N -p -s -h -l -i0.1"
+    -- ghc-options: "-with-rtsopts=-N -p -s -h -l -i0.1"
+    ghc-options: "-with-rtsopts=-N"
 
 -- Common language extensions.
 common common-extensions
@@ -167,6 +173,7 @@ common test-depends
 -- Executable target.
 executable haskbike
     import:           compile-flags
+                    , compile-flags-exe
                     , common-extensions
                     , common-depends
                     , api-client-depends
@@ -371,6 +378,7 @@ library haskbike-test-lib
 -- Testing target.
 test-suite haskbike-test
     import:           compile-flags
+                    , compile-flags-exe
                     , common-extensions
                     , common-depends
                     , api-client-depends
@@ -413,6 +421,7 @@ test-suite haskbike-test
 
 benchmark bench-haskbike
     import:           compile-flags
+                    , compile-flags-exe
                     , common-extensions
                     , common-depends
                     , api-client-depends
