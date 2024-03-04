@@ -129,7 +129,7 @@ queryStationEmptyFullTime stationId startTime endTime = do
 
     -- Get latest info.
     info <- Pg.pgNubBy_ (\inf -> cast_ (_infoStationId inf) int) $
-            orderBy_ (desc_ . _infoReported) $
+            orderBy_ (\inf -> (asc_ (_infoStationId inf), desc_ (_infoReported inf))) $
             filter_ (\inf -> _infoReported inf <. val_ endTime) $
             all_ (bikeshareDb ^. bikeshareStationInformation)
 
