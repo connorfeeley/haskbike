@@ -83,7 +83,7 @@ systemStatusBetweenExpr start_time end_time =
   do
     info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
     status <- all_ (bikeshareDb ^. bikeshareStationStatus)
-    guard_ ((_unInformationStationId  . _statusInfoId) status ==. _infoStationId info &&.
+    guard_ ((_unInformationStationId . _statusInfoId . _statusCommon) status ==. _infoStationId info &&.
             between_  (status ^. statusLastReported) (val_ start_time) (val_ end_time)
            )
     pure status
@@ -91,12 +91,12 @@ systemStatusBetweenExpr start_time end_time =
 -- | Expression to query the statuses for a station between two times.
 statusBetweenExpr :: Int32 -> UTCTime -> UTCTime -> Q Postgres BikeshareDb s (StationStatusT (QGenExpr QValueContext Postgres s))
 statusBetweenExpr stationId startTime endTime = do
-  -- Never return two statuses for the same (_statusLastReported, (_unInformationStationId  . _statusInfoId)) - this breaks the graph rendering.
+  -- Never return two statuses for the same (_statusLastReported, (_unInformationStationId . _statusInfoId . _statusCommon)) - this breaks the graph rendering.
   -- This can happen if the station information changes (reported) without the status changing.
-  status <- Pg.pgNubBy_ (_statusLastReported &&& (_unInformationStationId  . _statusInfoId)) $
-            orderBy_ (asc_ . _statusLastReported)
+  status <- Pg.pgNubBy_ (_statusLastReported . _statusCommon &&& (_unInformationStationId . _statusInfoId . _statusCommon)) $
+            orderBy_ (asc_ . _statusLastReported . _statusCommon)
             (all_ (bikeshareDb ^. bikeshareStationStatus))
-  guard_ ((_unInformationStationId  . _statusInfoId) status ==. val_ stationId &&.
+  guard_ ((_unInformationStationId . _statusInfoId . _statusCommon) status ==. val_ stationId &&.
           between_ (status ^. statusLastReported) (val_ startTime) (val_ endTime))
   pure status
 
@@ -111,7 +111,7 @@ infoByIdExpr stationIds = do
     info' <- reuse info
     statusLookup' <- reuse statusLookup
     guard_' (_stnLookup statusLookup' `references_'` status')
-    guard_' (_statusInfoId status' `references_'` info')
+    guard_' ((_statusInfoId . _statusCommon) status' `references_'` info')
     guard_ (_infoStationId info' `in_` map val_ stationIds)
     pure info'
 
@@ -134,7 +134,7 @@ disabledDocksExpr :: Q Postgres BikeshareDb s (QGenExpr QValueContext Postgres s
 disabledDocksExpr = do
   info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
   status <- all_ (bikeshareDb ^. bikeshareStationStatus)
-  guard_ ((_unInformationStationId  . _statusInfoId) status ==. _infoStationId info &&. status ^. statusNumDocksDisabled >. 0)
+  guard_ ((_unInformationStationId . _statusInfoId . _statusCommon) status ==. _infoStationId info &&. status ^. statusNumDocksDisabled >. 0)
   pure ( info   ^. infoName
        , status ^. statusNumDocksDisabled
        )
@@ -145,7 +145,7 @@ queryStationStatusExpr limit = do
   status <- case limit of
     Just limit' -> limit_ limit' $ all_ (bikeshareDb ^. bikeshareStationStatus)
     Nothing     ->                 all_ (bikeshareDb ^. bikeshareStationStatus)
-  guard_ ((_unInformationStationId  . _statusInfoId) status ==. _infoStationId info)
+  guard_ ((_unInformationStationId . _statusInfoId . _statusCommon) status ==. _infoStationId info)
   pure (info, status)
 
 queryStationIdExpr :: String -> Q Postgres BikeshareDb s (StationInformationT (QExpr Postgres s))
@@ -165,18 +165,18 @@ queryStationIdLikeExpr station_name = do
 queryLatestStatusBetweenExpr :: UTCTime -> UTCTime -> Q Postgres BikeshareDb s (StationStatusT (QExpr Postgres s))
 queryLatestStatusBetweenExpr earliestTime latestTime = do
   (stationId, maxTime) <-
-    aggregate_ (\s -> ( group_ ((_unInformationStationId  . _statusInfoId)    s)
-                      , max_   (_statusLastReported s)
+    aggregate_ (\s -> ( group_ ((_unInformationStationId . _statusInfoId . _statusCommon)    s)
+                      , max_   (s ^. statusLastReported)
                       )
                ) $
-    filter_ (\ss -> between_ (_statusLastReported ss) (val_ earliestTime) (val_ latestTime)) $
+    filter_ (\ss -> between_ (ss ^. statusLastReported) (val_ earliestTime) (val_ latestTime)) $
     all_ (bikeshareDb ^. bikeshareStationStatus)
 
   join_'
     (bikeshareDb ^. bikeshareStationStatus)
     (\status ->
-       (stationId ==?. (_unInformationStationId  . _statusInfoId) status            ) &&?.
-       (maxTime ==?. just_ (_statusLastReported status))
+       (stationId ==?. (_unInformationStationId . _statusInfoId . _statusCommon) status            ) &&?.
+       (maxTime ==?. just_ (status ^. statusLastReported))
     )
 
 mkTime :: UTCTime -> QGenExpr ctxt Postgres s b
@@ -212,10 +212,10 @@ querySystemStatusAtRangeExpr earliestTime latestTime interval = do
     generateTimeRange earliestTime latestTime (fromIntegral interval)
 
   pure $ aggregate_ (\(i, s) -> ( group_ i
-                                , as_ @Int32 (fromMaybe_ 0 (sumOver_ allInGroup_ (_statusNumBikesAvailable s)))
-                                , as_ @Int32 (fromMaybe_ 0 (sumOver_ allInGroup_ (_statusNumBikesDisabled  s)))
-                                , as_ @Int32 (fromMaybe_ 0 (sumOver_ allInGroup_ (_statusNumDocksAvailable s)))
-                                , as_ @Int32 (fromMaybe_ 0 (sumOver_ allInGroup_ (_statusNumDocksDisabled  s)))
+                                , as_ @Int32 (fromMaybe_ 0 (sumOver_ allInGroup_ (s ^. statusNumBikesAvailable)))
+                                , as_ @Int32 (fromMaybe_ 0 (sumOver_ allInGroup_ (s ^. statusNumBikesDisabled )))
+                                , as_ @Int32 (fromMaybe_ 0 (sumOver_ allInGroup_ (s ^. statusNumDocksAvailable)))
+                                , as_ @Int32 (fromMaybe_ 0 (sumOver_ allInGroup_ (s ^. statusNumDocksDisabled )))
                                 , as_ @Int32 (fromMaybe_ 0 (sumOver_ allInGroup_ (s ^. vehicleTypesAvailableIconic)))
                                 , as_ @Int32 (fromMaybe_ 0 (sumOver_ allInGroup_ (s ^. vehicleTypesAvailableEfit  )))
                                 , as_ @Int32 (fromMaybe_ 0 (sumOver_ allInGroup_ (s ^. vehicleTypesAvailableEfitG5)))
@@ -223,23 +223,23 @@ querySystemStatusAtRangeExpr earliestTime latestTime interval = do
     intervals' <- reuse timeIntervals
     latestStatusKeys <-
       aggregate_ (\(i, s) -> ( group_ (snd i)
-                             , group_ ((_unInformationStationId  . _statusInfoId) s)
-                             , maxOver_   distinctInGroup_ (_statusLastReported s) `filterWhere_` uncurry (between_ (_statusLastReported s)) i
+                             , group_ ((_unInformationStationId . _statusInfoId . _statusCommon) s)
+                             , maxOver_ distinctInGroup_ (s ^. statusLastReported) `filterWhere_` uncurry (between_ (s ^. statusLastReported)) i
                              )
                  ) $ do
       intervals <- reuse timeIntervals
       statuses' <- join_ (bikeshareDb ^. bikeshareStationStatus)
-                (\status -> _statusLastReported status >=. fst intervals &&. _statusLastReported status <. snd intervals)
-      guard_ (uncurry (between_ (_statusLastReported statuses')) intervals)
+                (\status -> (status ^. statusLastReported) >=. fst intervals &&. (status ^. statusLastReported) <. snd intervals)
+      guard_ (uncurry (between_ (statuses' ^. statusLastReported)) intervals)
       pure (intervals, statuses')
 
     latestStatuses <- join_' (bikeshareDb ^. bikeshareStationStatus)
-                      (\status -> (_unInformationStationId  . _statusInfoId) status ==?. (latestStatusKeys ^. _2) &&?. just_ (_statusLastReported status) ==?. (latestStatusKeys ^. _3))
+                      (\status -> (_unInformationStationId . _statusInfoId . _statusCommon) status ==?. (latestStatusKeys ^. _2) &&?. just_ (status ^. statusLastReported) ==?. (latestStatusKeys ^. _3))
     intervals <- reuse timeIntervals
 
     guard_ (latestStatusKeys ^. _1 ==. snd intervals' &&.
-            (_unInformationStationId  . _statusInfoId) latestStatuses ==. latestStatusKeys ^. _2 &&.
-            uncurry (between_ (_statusLastReported latestStatuses)) intervals)
+            (_unInformationStationId . _statusInfoId . _statusCommon) latestStatuses ==. latestStatusKeys ^. _2 &&.
+            uncurry (between_ (latestStatuses ^. statusLastReported)) intervals)
     pure (snd intervals, latestStatuses)
 
 
@@ -274,7 +274,7 @@ integrateColumns variation = do
   lagged <- selecting $ do
     let statusForStation = filter_ (filterFor_ variation)
                                    (all_ (bikeshareDb ^. bikeshareStationStatus))
-      in withWindow_ (\row -> frame_ (partitionBy_ ((_unInformationStationId  . _statusInfoId) row)) (orderPartitionBy_ (asc_ $ _statusLastReported row)) noBounds_)
+      in withWindow_ (\row -> frame_ (partitionBy_ ((_unInformationStationId . _statusInfoId . _statusCommon) row)) (orderPartitionBy_ ((asc_ . _statusLastReported . _statusCommon) row)) noBounds_)
                      (\row w -> ( row
                                 , lagWithDefault_ (row ^. statusLastReported) (val_ (1 :: Integer)) (row ^. statusLastReported) `over_` w
                                 )
@@ -285,7 +285,7 @@ integrateColumns variation = do
     -- as seconds:
     let timeDelta column column' = cast_ (extract_ Pg.epoch_ column - extract_ Pg.epoch_ column') int
     -- Calculate delta between current and previous availability.
-      in withWindow_ (\(row, _) -> frame_ (partitionBy_ ((_unInformationStationId  . _statusInfoId) row)) noOrder_ noBounds_)
+      in withWindow_ (\(row, _) -> frame_ (partitionBy_ ((_unInformationStationId . _statusInfoId . _statusCommon) row)) noOrder_ noBounds_)
          (\(row, pLastReported) _w ->
              ( row                                                                                  -- _1
              , as_ @Int32 (timeDelta (row ^. statusLastReported) pLastReported)                     -- _2
@@ -313,7 +313,7 @@ integrateColumns variation = do
                    , ( secondsIconicAvailable
                      , secondsEfitAvailable
                      , secondsEfitG5Available)
-                   ) -> ( group_       ((_unInformationStationId  . _statusInfoId) status)
+                   ) -> ( group_       ((_unInformationStationId . _statusInfoId . _statusCommon) status)
                         , fromMaybe_ 0 (sum_ dLastReported)
                         , ( fromMaybe_ 0 (sum_ secondsBikesAvailable)
                           , fromMaybe_ 0 (sum_ secondsBikesDisabled)

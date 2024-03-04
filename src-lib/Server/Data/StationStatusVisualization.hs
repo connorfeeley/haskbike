@@ -67,7 +67,7 @@ instance ToJSON StationStatusVisualization where
 -- | Convert from the Beam StationStatus type to StationStatusVisualization
 fromBeamStationStatusToVisJSON :: StationStatus -> StationStatusVisualization
 fromBeamStationStatusToVisJSON status =
-  StationStatusVisualization { _statusVisStationId       = (Just . fromIntegral . (_unInformationStationId  . _statusInfoId)) status
+  StationStatusVisualization { _statusVisStationId       = (Just . fromIntegral . (_unInformationStationId . _statusInfoId . _statusCommon)) status
                              , _statusVisLastReported    = status ^. statusLastReported
                              , _statusVisChargingStation = status ^. statusIsChargingStation
                              , _statusVisBikesAvailable  = fromIntegral (status ^. statusNumBikesAvailable)

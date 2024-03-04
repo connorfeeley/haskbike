@@ -45,7 +45,7 @@ queryStationEmptyFullTimeOld stationId startTime endTime = do
     aggregate_ (\(row, nReported, _pReported) ->
                   let period_start = greatest_ (row ^. statusLastReported) (val_ startTime)
                       period_end = least_ nReported (val_ endTime)
-                   in ( group_ ((_unInformationStationId  . _statusInfoId . _statusCommon) row)
+                   in ( group_ ((_unInformationStationId . _statusInfoId . _statusCommon) row)
                       -- 0 bikes available means the station is empty
                       , fromMaybe_ 0 (sum_ (ifThenElse_ (row ^. statusNumBikesAvailable ==. val_ 0)
                                              (timeDelta period_end period_start) 0
@@ -59,7 +59,7 @@ queryStationEmptyFullTimeOld stationId startTime endTime = do
                          (row ^. _2) >=. val_ startTime ||. -- lead > start
                          (row ^. _3  <.  val_ startTime &&. (row ^. _1 . statusLastReported) >=. val_ startTime) -- lag < start && row > start
                 ) $
-        withWindow_ (\row -> frame_ (partitionBy_ ((_unInformationStationId  . _statusInfoId . _statusCommon) row))
+        withWindow_ (\row -> frame_ (partitionBy_ ((_unInformationStationId . _statusInfoId . _statusCommon) row))
                                     (orderPartitionBy_ ((asc_ . _statusLastReported . _statusCommon) row))
                                     noBounds_)
                     (\row w -> ( row
@@ -104,7 +104,7 @@ queryStationEmptyFullTime stationId startTime endTime = do
   --                                     lead >=. val_ startTime ||. -- lead > start
   --                                     (lag  <.  val_ startTime &&. _statusLastReported row >=. val_ startTime) -- lag < start && row > start
   --               ) $
-  --       withWindow_ (\row -> frame_ (partitionBy_ ((_unInformationStationId  . _statusInfoId) row)) (orderPartitionBy_ ((asc_ . _statusLastReported) row)) noBounds_)
+  --       withWindow_ (\row -> frame_ (partitionBy_ ((_unInformationStationId . _statusInfoId . _statusCommon) row)) (orderPartitionBy_ ((asc_ . _statusLastReported) row)) noBounds_)
   --                   (\row w -> ( row
   --                              -- , leadWithDefault_ (_statusLastReported row, _statusLastReported row) (val_ 1, val_ 1) (val_ endTime, val_ endTime) `over_` w
   --                              , ( leadWithDefault_ (_statusLastReported      row) (val_ 1) (val_ endTime) `over_` w
@@ -139,7 +139,7 @@ queryStationEmptyFullTime stationId startTime endTime = do
       aggregate_ (\(row, (nReported, _, _), _pReported) ->
                     let period_start = greatest_ (row ^. statusLastReported) (val_ startTime)
                         period_end = least_ nReported (val_ endTime)
-                     in ( group_ ((_unInformationStationId  . _statusInfoId . _statusCommon) row)
+                     in ( group_ ((_unInformationStationId . _statusInfoId . _statusCommon) row)
                         -- 0 bikes available means the station is empty
                         , fromMaybe_ 0 (sum_ (ifThenElse_ (row ^. statusNumBikesAvailable ==. val_ 0)
                                                (timeDelta period_end period_start) 0
@@ -154,7 +154,7 @@ queryStationEmptyFullTime stationId startTime endTime = do
                                       lead >=. val_ startTime ||. -- lead > start
                                       (lag  <.  val_ startTime &&. (row ^. statusLastReported) >=. val_ startTime) -- lag < start && row > start
                 ) $
-        withWindow_ (\row -> frame_ (partitionBy_ ((_unInformationStationId  . _statusInfoId . _statusCommon) row)) (orderPartitionBy_ ((asc_ . _statusLastReported . _statusCommon) row)) noBounds_)
+        withWindow_ (\row -> frame_ (partitionBy_ ((_unInformationStationId . _statusInfoId . _statusCommon) row)) (orderPartitionBy_ ((asc_ . _statusLastReported . _statusCommon) row)) noBounds_)
                     (\row w -> ( row
                                -- , leadWithDefault_ (_statusLastReported row, _statusLastReported row) (val_ 1, val_ 1) (val_ endTime, val_ endTime) `over_` w
                                , ( leadWithDefault_ (row ^. statusLastReported     ) (val_ 1) (val_ endTime) `over_` w
@@ -206,5 +206,5 @@ stationIdCond :: ( HaskellLiteralForQExpr (expr Bool) ~ Bool
               => Maybe a
               -> StationStatusT f
               -> expr Bool
-stationIdCond (Just stationId') row = (_unInformationStationId  . _statusInfoId . _statusCommon) row ==. val_ (fromIntegral stationId')
+stationIdCond (Just stationId') row = (_unInformationStationId . _statusInfoId . _statusCommon) row ==. val_ (fromIntegral stationId')
 stationIdCond Nothing           _   = val_ True

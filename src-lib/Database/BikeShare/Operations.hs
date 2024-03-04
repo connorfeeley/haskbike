@@ -88,7 +88,7 @@ queryStationStatusFields =
   withPostgres $ runSelectReturningList $ select $ do
   info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
   status <- all_ (bikeshareDb ^. bikeshareStationStatus)
-  guard_ ((_unInformationStationId  . _statusInfoId) status ==. _infoStationId info)
+  guard_ ((_unInformationStationId . _statusInfoId . _statusCommon) status ==. _infoStationId info)
   pure ( info   ^. infoName
        , status ^. statusNumBikesAvailable
        , status ^. statusNumBikesDisabled
@@ -209,12 +209,12 @@ insertStationStatus apiStatus =
     _statusLookup <- runInsertReturningList $
       insertOnConflict (bikeshareDb ^. bikeshareStationLookup)
       (insertExpressions $
-       map (\ss -> StationLookup (val_ $ StationStatusId (_statusInfoId ss) (_statusLastReported ss)))
+       map (\ss -> StationLookup (val_ $ StationStatusId (ss ^. statusInfoId) (ss ^. statusLastReported)))
        (uniqueStatus status)
       ) (conflictingFields (_unInformationStationId . _unStatusStationId . _stnLookup)) onConflictUpdateAll
 
     pure status
-  where uniqueStatus = nubBy (\s1 s2 -> (_unInformationStationId  . _statusInfoId) s1 == (_unInformationStationId  . _statusInfoId) s2)
+  where uniqueStatus = nubBy (\s1 s2 -> (_unInformationStationId . _statusInfoId . _statusCommon) s1 == (_unInformationStationId . _statusInfoId . _statusCommon) s2)
 
 lookupInfoId infoMap status =
   case Map.lookup (AT._statusStationId status) infoMap of
@@ -303,9 +303,9 @@ queryStationStatusLatest :: Int                       -- ^ Station ID.
 queryStationStatusLatest station_id = withPostgres $ runSelectReturningOne $ select $ limit_ 1 $ do
   info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
   guard_ (_infoStationId info ==. val_ ( fromIntegral station_id))
-  status <- orderBy_ (desc_ . _statusLastReported)
+  status <- orderBy_ (desc_ . _statusLastReported . _statusCommon)
             (all_ (bikeshareDb ^. bikeshareStationStatus))
-  guard_ ((_unInformationStationId  . _statusInfoId) status ==. _infoStationId info)
+  guard_ ((_unInformationStationId . _statusInfoId . _statusCommon) status ==. _infoStationId info)
   pure status
 
 -- | Count the number of rows in a given table.
