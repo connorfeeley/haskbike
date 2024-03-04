@@ -70,13 +70,11 @@ reset *ARGS:
 
 visualize:
     #!/usr/bin/env bash
-    source ./.env.awsrds.ADMIN
     # {{CABAL}} run haskbike -- --plain visualize -v --log-database
     {{CABAL}} v2-run --enable-profiling --profiling-detail all-functions exes -- --plain visualize -v # --log-database
 
 export-rds-table TABLE:
     #!/usr/bin/env bash
-    source ./.env.awsrds.ADMIN
     PGPASSWORD=$HASKBIKE_PASSWORD psql -h "$HASKBIKE_PGDBHOST" -p "$HASKBIKE_PGDBPORT" -U "$HASKBIKE_USERNAME" \
         -d haskbike \
         -c "SELECT * FROM public.{{TABLE}}" \
