@@ -11,6 +11,7 @@ module Database.BikeShare.Schema.V001.StationStatus
      , PrimaryKey (..)
      , StationStatus
      , StationStatusCommon
+     , StationStatusCommonMixin (..) -- Reexport
      , StationStatusId
      , StationStatusT (..)
      , VehicleTypeMixin (..)
@@ -23,6 +24,7 @@ module Database.BikeShare.Schema.V001.StationStatus
      , fromJSONToBeamStationStatus
      , stationStatusModification
      , stationStatusType
+     , statusCommon
      , statusInfoId
      , statusIsChargingStation
      , statusLastReported
@@ -141,7 +143,8 @@ VehicleType _ _ (LensFor availableEfit)   _ = tableLenses
 VehicleType _ _ _ (LensFor availableEfitG5) = tableLenses
 
 -- | StationStatus Lenses
-statusInfoId                :: (Profunctor p, Contravariant f1) => Optic' p f1 (StationStatusT f2) (PrimaryKey StationInformationT f2)
+statusCommon                :: Getter (StationStatusT f) (StationStatusCommonMixin f)
+statusInfoId                :: Getter (StationStatusT f) (PrimaryKey StationInformationT f)
 statusStationId             :: Lens' (StationStatusT f) (C f Int32)
 statusLastReported          :: Lens' (StationStatusT f) (C f UTCTime)
 statusNumBikesAvailable     :: Lens' (StationStatusT f) (C f Int32)
@@ -160,6 +163,7 @@ vehicleTypesAvailableIconic :: Lens' (StationStatusT f) (C f Int32)
 vehicleTypesAvailableEfit   :: Lens' (StationStatusT f) (C f Int32)
 vehicleTypesAvailableEfitG5 :: Lens' (StationStatusT f) (C f Int32)
 
+statusCommon = to _statusCommon
 statusInfoId = to (_statusInfoId . _statusCommon)
 StationStatus (StationStatusCommon _ (LensFor statusStationId)         _ _ _ _ _ _) _ _ _ _ _ _ _ = tableLenses
 StationStatus (StationStatusCommon _ _ (LensFor statusLastReported)      _ _ _ _ _) _ _ _ _ _ _ _ = tableLenses
