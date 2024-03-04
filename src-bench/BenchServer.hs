@@ -9,7 +9,10 @@ import           Control.Monad                              ( void )
 import           Data.Time
 
 import           Database.Beam
+import           Database.BikeShare.Connection
 import           Database.BikeShare.Operations.StationEmpty
+
+import           Utils
 
 
 benchStationEmptyTime :: Maybe Int -> IO ()
