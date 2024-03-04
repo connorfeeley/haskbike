@@ -1,4 +1,4 @@
--- |
+-- | *DEPRECATED*.
 
 module API.Pollable
      ( Pollable (..)
