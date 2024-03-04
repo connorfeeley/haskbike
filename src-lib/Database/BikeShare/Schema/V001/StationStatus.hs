@@ -241,9 +241,9 @@ fromBeamStationStatusToJSON status =
 -- * Table modifications and migrations.
 
 -- | Table modifications for 'StationStatus' table.
-stationStatusModification :: EntityModification (DatabaseEntity be db) be (TableEntity StationStatusT)
-stationStatusModification =
-  setEntityName "station_status" <> modifyTableFields tableModification
+stationStatusModification :: T.Text -> EntityModification (DatabaseEntity be db) be (TableEntity StationStatusT)
+stationStatusModification tableName =
+  setEntityName tableName <> modifyTableFields tableModification
   { _statusCommon                = stationStatusCommonFields "" -- ^ No prefix, to stay backwards compatible with non-mixin schema.
   , _statusStatus                = "status"
   , _statusIsInstalled           = "is_installed"

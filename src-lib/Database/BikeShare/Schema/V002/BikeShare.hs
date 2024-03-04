@@ -52,7 +52,7 @@ bikeshareDb :: DatabaseSettings Postgres BikeshareDb
 bikeshareDb = defaultDbSettings `withDbModification`
   dbModification
   { _bikeshareStationInformation     = V001.stationInformationModification
-  , _bikeshareStationStatus          = V001.stationStatusModification
+  , _bikeshareStationStatus          = V001.stationStatusModification "station_status"
   , _bikeshareSystemInformation      = V001.systemInformationModification
   , _bikeshareSystemInformationCount = V001.systemInformationCountModification
   , _bikeshareQueryLog               = V001.queryLogModification
