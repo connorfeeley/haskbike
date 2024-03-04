@@ -287,6 +287,7 @@ library
                     , Database.BikeShare.Schema.V001.SystemInformation
                     , Database.BikeShare.Schema.V001.StationInformation
                     , Database.BikeShare.Schema.V001.StationStatus
+                    , Database.BikeShare.Schema.V001.StationStatusCommon
                     , Database.BikeShare.Schema.V001.QueryLogs
                     , Database.BikeShare.Schema.V001.Diagnostics
                     , Database.BikeShare.Schema.V002.BikeShare
