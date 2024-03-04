@@ -1,8 +1,8 @@
 -- | Database schema for BikeShare.
 
 module Database.BikeShare
-     ( module Database.BikeShare.Schema.V002.BikeShare
-     , module Database.BikeShare.Schema.V002.Migrations
+     ( module Database.BikeShare.Schema.V003.BikeShare
+     , module Database.BikeShare.Schema.V003.Migrations
      , evaluateBikeShareDatabase
      , printDatabaseMigration
      ) where
@@ -10,8 +10,8 @@ module Database.BikeShare
 import           Database.Beam.Migrate                     ( CheckedDatabaseSettings, evaluateDatabase )
 import           Database.Beam.Postgres                    ( Postgres )
 import qualified Database.Beam.Postgres.Migrate            as Pg
-import           Database.BikeShare.Schema.V002.BikeShare
-import           Database.BikeShare.Schema.V002.Migrations
+import           Database.BikeShare.Schema.V003.BikeShare
+import           Database.BikeShare.Schema.V003.Migrations
 
 import           Text.Pretty.Simple                        ( pPrint )
 
