@@ -14,11 +14,6 @@ module Database.BikeShare.Schema.V001.StationStatus
      , StationStatusCommonMixin (..) -- Reexport
      , StationStatusId
      , StationStatusT (..)
-     , VehicleTypeMixin (..)
-     , availableBoost
-     , availableEfit
-     , availableEfitG5
-     , availableIconic
      , createStationStatus
      , fromBeamStationStatusToJSON
      , fromJSONToBeamStationStatus
@@ -35,8 +30,6 @@ module Database.BikeShare.Schema.V001.StationStatus
      , statusStationId
      , unStatusLastReported
      , unStatusStationId
-     , vehicleTypeFields
-     , vehicleTypesAvailable
      , vehicleTypesAvailableBoost
      , vehicleTypesAvailableEfit
      , vehicleTypesAvailableEfitG5
@@ -53,7 +46,7 @@ import           Data.Coerce                                        ( coerce )
 import           Data.Int
 import qualified Data.Map                                           as Map
 import           Data.Maybe                                         ( listToMaybe )
-import           Data.String                                        ( IsString (fromString) )
+import           Data.String                                        ( IsString )
 import qualified Data.Text                                          as T
 import           Data.Time
 
@@ -66,6 +59,7 @@ import qualified Database.Beam.Postgres                             as Pg
 import           Database.Beam.Postgres.Syntax                      ( pgTextType )
 import           Database.BikeShare.Schema.V001.StationInformation
 import           Database.BikeShare.Schema.V001.StationStatusCommon
+import           Database.BikeShare.Schema.V001.VehicleTypeMixin
 import           Database.PostgreSQL.Simple.FromField               ( Field (typeOid), FromField (..), ResultError (..),
                                                                       returnError, typoid )
 import           Database.PostgreSQL.Simple.ToField                 ( ToField (..) )
@@ -110,37 +104,6 @@ unStatusLastReported key (StationStatusId stationId lastReported) = fmap (Statio
 unStatusStationId :: Lens' (PrimaryKey StationStatusT f) (PrimaryKey StationInformationT f)
 unStatusStationId key (StationStatusId stationId lastReported) = fmap (`StationStatusId` lastReported) (key stationId)
 {-# INLINE unStatusStationId #-}
-
-data VehicleTypeMixin f =
-  VehicleType { _availableBoost  :: Columnar f Int32
-              , _availableIconic :: Columnar f Int32
-              , _availableEfit   :: Columnar f Int32
-              , _availableEfitG5 :: Columnar f Int32
-              } deriving (Generic, Beamable)
-type VehicleType = VehicleTypeMixin Identity
-deriving instance Show (VehicleTypeMixin Identity)
-deriving instance Eq (VehicleTypeMixin Identity)
-
-vehicleTypeFields :: IsString (Columnar f Int32) => String -> VehicleTypeMixin f
-vehicleTypeFields b =
-  VehicleType (fromString (b <> "boost"))
-              (fromString (b <> "iconic"))
-              (fromString (b <> "efit"))
-              (fromString (b <> "efit_g5"))
-
-vehicleTypesAvailable :: DataType Postgres VehicleType
-vehicleTypesAvailable = DataType pgTextType
-
--- | VehicleType Lenses
-availableBoost   :: Lens' VehicleType Int32
-availableIconic  :: Lens' VehicleType Int32
-availableEfit    :: Lens' VehicleType Int32
-availableEfitG5  :: Lens' VehicleType Int32
-
-VehicleType (LensFor availableBoost)  _ _ _ = tableLenses
-VehicleType _ (LensFor availableIconic) _ _ = tableLenses
-VehicleType _ _ (LensFor availableEfit)   _ = tableLenses
-VehicleType _ _ _ (LensFor availableEfitG5) = tableLenses
 
 -- | StationStatus Lenses
 statusCommon                :: Getter (StationStatusT f) (StationStatusCommonMixin f)
