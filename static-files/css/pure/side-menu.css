@@ -45,6 +45,17 @@ The content `<div>` is where all your content goes.
   /* max-width: 800px; */
   margin-bottom: 50px;
   line-height: 1.6em;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+}
+
+.content-centered {
+  justify-content: center;
+  align-items: center;
+  align-content: center;
 }
 
 .header {

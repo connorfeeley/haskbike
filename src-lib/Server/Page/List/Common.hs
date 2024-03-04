@@ -110,7 +110,7 @@ instance ToHtml StationListForm where
     -- Selection form
     form_ [class_ "pure-form pure-form-stacked"] $ fieldset_ $ do
       legend_ "Filter stations by type, name, ID, or address"
-      div_ [class_ "pure-g"] $ do
+      div_ [class_ "pure-g full-width"] $ do
         -- Station type radio inputs
         div_ [class_ "pure-u-1-2"] $ do
           label_ [for_ "station-type-radio-all", class_ "pure-radio"] $

@@ -46,7 +46,7 @@ instance ToHtml PerformanceCSV where
             , action_ ("/" <> (T.pack . show . linkURI) (performanceCsvPageDataLink params))
             ] $ fieldset_ $ do
         legend_ $ h3_ "Time Range Selection"
-        div_ [class_ "pure-g"] $ do -- Grid layout for form
+        div_ [class_ "pure-g full-width"] $ do -- Grid layout for form
           div_ [class_ "pure-u-1 pure-u-md-1-3"] (startTimeInput earliest)
           div_ [class_ "pure-u-1 pure-u-md-1-3"] (endTimeInput latest)
           div_ [class_ "pure-u-1 pure-u-md-1-3"] (makeInputField (i_ "Download CSV") "submit" "download" "Download")

@@ -93,7 +93,7 @@ instance ToHtml SystemStatusVisualizationPage where
       -- Informational headers
       h2_ [style_ "text-align: center"] "System Status & Statistics"
       br_ []
-      div_ [class_ "pure-g", style_ "text-align: center"] $ do
+      div_ [class_ "pure-g full-width", style_ "text-align: center"] $ do
         let headers = [ toHtml (_systemStatusVisPageInfo params)
                       , hxSpinner_ staticLink (fieldLink dockingEventsHeader  Nothing (earliestTime $ _systemStatusVisPageTimeRange params) (latestTime $ _systemStatusVisPageTimeRange params))
                       , hxSpinner_ staticLink (fieldLink chargingEventsHeader Nothing (earliestTime $ _systemStatusVisPageTimeRange params) (latestTime $ _systemStatusVisPageTimeRange params))
@@ -104,7 +104,7 @@ instance ToHtml SystemStatusVisualizationPage where
       -- Selection form
       form_ [class_ "pure-form pure-form-stacked", style_ "text-align: center"] $ fieldset_ $ do
         legend_ $ h3_ "Query Parameters"
-        div_ [class_ "pure-g"] $ do -- Grid layout for form
+        div_ [class_ "pure-g full-width"] $ do -- Grid layout for form
           div_ [class_ "pure-u-1 pure-u-md-1-3"] (startTimeInput earliest)
           div_ [class_ "pure-u-1 pure-u-md-1-3"] (endTimeInput latest)
           div_ [class_ "pure-u-1 pure-u-md-1-3"] submitInput

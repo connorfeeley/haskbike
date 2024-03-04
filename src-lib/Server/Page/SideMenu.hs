@@ -46,7 +46,7 @@ instance (ToHtml a, ToHtmlComponents a) => ToHtml (PureSideMenu a) where
 -- | Render the main content.
 renderMain :: (Monad m, ToHtml a, ToHtmlComponents a) => PureSideMenu a -> HtmlT m ()
 renderMain params =
-  div_ [id_ "main"] $ do
+  div_ [id_ "main", class_ "main-container"] $ do
     -- Render parameterized type
     toHtml (visPageParams params)
 

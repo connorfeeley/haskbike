@@ -50,7 +50,7 @@ instance ToHtml SystemInfoVisualizationPage where
           li_ "Mechanical (bike) count; and"
           li_ "E-bike count"
         p_ "It is not clear what these are meant to indicate. The station count appears accurate, yet the mechanical and e-bike counts don't make sense."
-        p_ ("For a theory of what these values might be, see "  <> a_ [href_ "https://cfeeley.org/city-stuff/freedom-of-information/discrepancies-in-the-api/"] "this post" <> " on my blog.")
+        p_ ("For a theory of what these values might be, see "  <> a_ [href_ "https://www.cfeeley.org/posts/city-stuff/freedom-of-information/discrepancies-in-the-api.html"] "this post" <> " on my blog.")
 
       with div_ [class_ "graph"] $ toHtmlRaw $ toHtmlWithUrls vegaSourceUrlsLocal (vegaEmbedCfg ShowActions) $
         toVegaLite $
