@@ -22,12 +22,19 @@ module Database.BikeShare.Schema.V001.StationStatus
      , statusCommon
      , statusInfoId
      , statusIsChargingStation
+     , statusIsInstalled
+     , statusIsRenting
+     , statusIsReturning
      , statusLastReported
      , statusNumBikesAvailable
      , statusNumBikesDisabled
      , statusNumDocksAvailable
      , statusNumDocksDisabled
      , statusStationId
+     , statusStatus
+     , statusTraffic
+     , statusVehicleDocksAvailable
+     , statusVehicleTypesAvailable
      , unStatusLastReported
      , unStatusStationId
      , vehicleTypesAvailableBoost
@@ -121,12 +128,14 @@ statusIsRenting             :: Lens' (StationStatusT f) (C f Bool)
 statusIsReturning           :: Lens' (StationStatusT f) (C f Bool)
 statusTraffic               :: Lens' (StationStatusT f) (C f (Maybe T.Text))
 statusVehicleDocksAvailable :: Lens' (StationStatusT f) (C f Int32)
+statusVehicleTypesAvailable :: Getter (StationStatusT f) (VehicleTypeMixin f)
 vehicleTypesAvailableBoost  :: Lens' (StationStatusT f) (C f Int32)
 vehicleTypesAvailableIconic :: Lens' (StationStatusT f) (C f Int32)
 vehicleTypesAvailableEfit   :: Lens' (StationStatusT f) (C f Int32)
 vehicleTypesAvailableEfitG5 :: Lens' (StationStatusT f) (C f Int32)
 
 statusCommon = to _statusCommon
+statusVehicleTypesAvailable = to _statusVehicleTypesAvailable
 statusInfoId = to (_statusInfoId . _statusCommon)
 StationStatus (StationStatusCommon _ (LensFor statusStationId)         _ _ _ _ _ _) _ _ _ _ _ _ _ = tableLenses
 StationStatus (StationStatusCommon _ _ (LensFor statusLastReported)      _ _ _ _ _) _ _ _ _ _ _ _ = tableLenses
@@ -151,6 +160,9 @@ StationStatus _ _ _ _ _ _ _ (VehicleType _ _ _ (LensFor vehicleTypesAvailableEfi
 newtype BeamStationStatusString where
   BeamStationStatusString :: AT.StationStatusString -> BeamStationStatusString
   deriving (Eq, Generic, Show, Read) via AT.StationStatusString
+  -- deriving (HasSqlEqualityCheck Postgres) via AT.StationStatusString
+
+instance BeamMigrateSqlBackend be => HasSqlEqualityCheck be BeamStationStatusString
 
 instance (BeamBackend be, FromBackendRow be T.Text) => FromBackendRow be BeamStationStatusString where
   fromBackendRow = do
@@ -189,7 +201,7 @@ fromJSONToBeamStationStatus infId status
   | Just lastReported <- status ^. AT.statusLastReported = Just $
   StationStatus { _statusCommon = StationStatusCommon { _statusInfoId                = val_ infId
                                                       , _statusStationId             = val_ (fromIntegral $ status ^. AT.statusStationId)
-                                                      , _statusLastReported          = val_ (coerce lastReported)
+                                                      , _statusLastReported          = as_ @UTCTime (val_ lastReported)
                                                       , _statusNumBikesAvailable     = fromIntegral $ status ^. AT.statusNumBikesAvailable
                                                       , _statusNumBikesDisabled      = fromIntegral $ status ^. AT.statusNumBikesDisabled
                                                       , _statusNumDocksAvailable     = fromIntegral $ status ^. AT.statusNumDocksAvailable
@@ -259,7 +271,8 @@ createStationStatus :: T.Text -> Migration Postgres (CheckedDatabaseEntity Postg
 createStationStatus tableName =
   createTable tableName $ StationStatus
   { _statusCommon                = StationStatusCommon (StationInformationId (field "info_station_id" int notNull)
-                                                                             (field "info_reported" (DataType (timestampType Nothing True)) notNull))
+                                                                             (field "info_reported" (DataType (timestampType Nothing True)) notNull)
+                                                       )
                                                        (field "station_id"              int notNull)
                                                        (field "last_reported"           (DataType (timestampType Nothing True)) notNull)
                                                        (field "num_bikes_available"     int notNull)

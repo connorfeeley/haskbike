@@ -213,6 +213,7 @@ library
                     , API.Classes
                     , API.Client
                     , API.ClientLifted
+                    , API.ClientUtils
                     -- , API.Pollable
                     , API.ResponseWrapper
                     , API.StationInformation

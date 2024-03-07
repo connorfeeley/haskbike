@@ -68,6 +68,11 @@ reset *ARGS:
     source ./.env.local
     {{CABAL}} run haskbike -- --plain reset --reset-only -v --log-database {{ARGS}}
 
+migrate *ARGS:
+    #!/usr/bin/env bash
+    source ./.env.local
+    {{CABAL}} run haskbike -- --plain debug --database haskbike-test --enable-migrations -v --log-database
+
 visualize:
     #!/usr/bin/env bash
     # {{CABAL}} run haskbike -- --plain visualize -v --log-database

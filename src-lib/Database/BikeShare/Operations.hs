@@ -183,6 +183,7 @@ stationInfoMostlyEq apiInfo dbInfo =
         b = fromBeamStationInformationToJSON dbInfo
         isEq f a' b' = f a' == f b'
 
+
 {- |
 Insert station statuses into the database.
 -}
@@ -201,10 +202,61 @@ insertStationStatus apiStatus =
     let statusWithInfo :: [(StationInformation, AT.StationStatus)] = mapMaybe (lookupInfoId infoMap) apiStatus
 
     status <- runInsertReturningList $
-      insertOnConflict (bikeshareDb ^. bikeshareStationStatus)
-      (insertExpressions $
-       mapMaybe (\(inf, sta) -> fromJSONToBeamStationStatus (StationInformationId (_infoStationId inf) (_infoReported inf)) sta) statusWithInfo
+              insertOnConflict (bikeshareDb ^. bikeshareStationStatus)
+              (insertExpressions
+               (mapMaybe (\(inf, sta) -> fromJSONToBeamStationStatus (StationInformationId (_infoStationId inf) (_infoReported inf)) sta) statusWithInfo)
+              ) (conflictingFields primaryKey) onConflictDoNothing
+
+    _statusChangedInserted <- runInsertReturningList $
+      insertOnConflict (bikeshareDb ^. bikeshareStationStatusChanges)
+      (insertFrom $ do
+          ( rows, (pBikesAvail, pBikesDisab, pDocksAvail, pDocksDisab), (pIsChargingStation, pStatus, pIsInstalled, pIsRenting, pIsReturning), (pVehicleDocksAvailable, pIconic, pEfit, pEfitG5)) <-
+            withWindow_ (\row ->
+                           frame_ (partitionBy_ ((_unInformationStationId . _statusInfoId . _statusCommon) row))
+                           (orderPartitionBy_ ((asc_ . _statusLastReported . _statusCommon) row))
+                           noBounds_)
+            (\row w -> ( row
+                       -- , lag_ (row ^. statusLastReported         ) (val_ 1) `over_` w
+                       , ( lag_ (row ^. statusNumBikesAvailable    ) (val_ 1) `over_` w
+                         , lag_ (row ^. statusNumBikesDisabled     ) (val_ 1) `over_` w
+                         , lag_ (row ^. statusNumDocksAvailable    ) (val_ 1) `over_` w
+                         , lag_ (row ^. statusNumDocksDisabled     ) (val_ 1) `over_` w
+                         )
+                       , ( lag_ (row ^. statusIsChargingStation    ) (val_ 1) `over_` w
+                         , lag_ (row ^. statusStatus               ) (val_ 1) `over_` w
+                         , lag_ (row ^. statusIsInstalled          ) (val_ 1) `over_` w
+                         , lag_ (row ^. statusIsRenting            ) (val_ 1) `over_` w
+                         , lag_ (row ^. statusIsReturning          ) (val_ 1) `over_` w
+                         -- Traffic is null - don't compare!
+                       )
+                       , ( lag_ (row ^. statusVehicleDocksAvailable) (val_ 1) `over_` w
+                         , lag_ (row ^. vehicleTypesAvailableIconic) (val_ 1) `over_` w
+                         , lag_ (row ^. vehicleTypesAvailableEfit  ) (val_ 1) `over_` w
+                         , lag_ (row ^. vehicleTypesAvailableEfitG5) (val_ 1) `over_` w
+                         )
+                       )
+            ) $ all_ (bikeshareDb ^. bikeshareStationStatus)
+          guard_ (not_ ( ( rows ^. statusNumBikesAvailable     ==. pBikesAvail &&.
+                           rows ^. statusNumBikesDisabled      ==. pBikesDisab &&.
+                           rows ^. statusNumDocksAvailable     ==. pDocksAvail &&.
+                           rows ^. statusNumDocksDisabled      ==. pDocksDisab
+                         ) &&.
+                         ( rows ^. statusIsChargingStation     ==. pIsChargingStation &&.
+                           rows ^. statusStatus                ==. pStatus &&.
+                           rows ^. statusIsInstalled           ==. pIsInstalled &&.
+                           rows ^. statusIsRenting             ==. pIsRenting &&.
+                           rows ^. statusIsReturning           ==. pIsReturning
+                           -- Traffic is null - don't compare!
+                         ) &&.
+                         ( rows ^. statusVehicleDocksAvailable ==. pVehicleDocksAvailable &&.
+                           rows ^. vehicleTypesAvailableIconic ==. pIconic &&.
+                           rows ^. vehicleTypesAvailableEfit   ==. pEfit &&.
+                           rows ^. vehicleTypesAvailableEfitG5 ==. pEfitG5
+                         )
+                       ))
+          pure rows
       ) (conflictingFields primaryKey) onConflictDoNothing
+    -- pure (status, statusChangedInserted)
 
     _statusLookup <- runInsertReturningList $
       insertOnConflict (bikeshareDb ^. bikeshareStationLookup)
@@ -214,12 +266,14 @@ insertStationStatus apiStatus =
       ) (conflictingFields (_unInformationStationId . _unStatusStationId . _stnLookup)) onConflictUpdateAll
 
     pure status
-  where uniqueStatus = nubBy (\s1 s2 -> (_unInformationStationId . _statusInfoId . _statusCommon) s1 == (_unInformationStationId . _statusInfoId . _statusCommon) s2)
+  where
+    uniqueStatus = nubBy (\s1 s2 -> (_unInformationStationId . _statusInfoId . _statusCommon) s1 == (_unInformationStationId . _statusInfoId . _statusCommon) s2)
+    lookupInfoId infoMap status =
+      case Map.lookup (AT._statusStationId status) infoMap of
+        Nothing  -> Nothing
+        Just iId -> Just (iId, status)
 
-lookupInfoId infoMap status =
-  case Map.lookup (AT._statusStationId status) infoMap of
-    Nothing  -> Nothing
-    Just iId -> Just (iId, status)
+
 
 
 {- |
