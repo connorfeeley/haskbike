@@ -210,51 +210,59 @@ insertStationStatus apiStatus =
     _statusChangedInserted <- runInsertReturningList $
       insertOnConflict (bikeshareDb ^. bikeshareStationStatusChanges)
       (insertFrom $ do
-          ( rows, (pBikesAvail, pBikesDisab, pDocksAvail, pDocksDisab), (pIsChargingStation, pStatus, pIsInstalled, pIsRenting, pIsReturning), (pVehicleDocksAvailable, pIconic, pEfit, pEfitG5)) <-
+          ( row, rowNum
+            , ( pBikesAvail, pBikesDisab, pDocksAvail, pDocksDisab )
+            , ( pIsChargingStation, pStatus, pIsInstalled, pIsRenting, pIsReturning )
+            , ( pVehicleDocksAvailable, pIconic, pEfit, pEfitG5)
+            ) <-
             withWindow_ (\row ->
                            frame_ (partitionBy_ ((_unInformationStationId . _statusInfoId . _statusCommon) row))
-                           (orderPartitionBy_ ((asc_ . _statusLastReported . _statusCommon) row))
+                           (orderPartitionBy_ ((desc_ . _statusLastReported . _statusCommon) row))
                            noBounds_)
             (\row w -> ( row
+                       , rowNumber_ `over_` w
                        -- , lag_ (row ^. statusLastReported         ) (val_ 1) `over_` w
-                       , ( lag_ (row ^. statusNumBikesAvailable    ) (val_ 1) `over_` w
-                         , lag_ (row ^. statusNumBikesDisabled     ) (val_ 1) `over_` w
-                         , lag_ (row ^. statusNumDocksAvailable    ) (val_ 1) `over_` w
-                         , lag_ (row ^. statusNumDocksDisabled     ) (val_ 1) `over_` w
+                       , ( lead_ (row ^. statusNumBikesAvailable    ) (val_ 1) `over_` w
+                         , lead_ (row ^. statusNumBikesDisabled     ) (val_ 1) `over_` w
+                         , lead_ (row ^. statusNumDocksAvailable    ) (val_ 1) `over_` w
+                         , lead_ (row ^. statusNumDocksDisabled     ) (val_ 1) `over_` w
                          )
-                       , ( lag_ (row ^. statusIsChargingStation    ) (val_ 1) `over_` w
-                         , lag_ (row ^. statusStatus               ) (val_ 1) `over_` w
-                         , lag_ (row ^. statusIsInstalled          ) (val_ 1) `over_` w
-                         , lag_ (row ^. statusIsRenting            ) (val_ 1) `over_` w
-                         , lag_ (row ^. statusIsReturning          ) (val_ 1) `over_` w
+                       , ( lead_ (row ^. statusIsChargingStation    ) (val_ 1) `over_` w
+                         , lead_ (row ^. statusStatus               ) (val_ 1) `over_` w
+                         , lead_ (row ^. statusIsInstalled          ) (val_ 1) `over_` w
+                         , lead_ (row ^. statusIsRenting            ) (val_ 1) `over_` w
+                         , lead_ (row ^. statusIsReturning          ) (val_ 1) `over_` w
                          -- Traffic is null - don't compare!
                        )
-                       , ( lag_ (row ^. statusVehicleDocksAvailable) (val_ 1) `over_` w
-                         , lag_ (row ^. vehicleTypesAvailableIconic) (val_ 1) `over_` w
-                         , lag_ (row ^. vehicleTypesAvailableEfit  ) (val_ 1) `over_` w
-                         , lag_ (row ^. vehicleTypesAvailableEfitG5) (val_ 1) `over_` w
+                       , ( lead_ (row ^. statusVehicleDocksAvailable) (val_ 1) `over_` w
+                         , lead_ (row ^. vehicleTypesAvailableIconic) (val_ 1) `over_` w
+                         , lead_ (row ^. vehicleTypesAvailableEfit  ) (val_ 1) `over_` w
+                         , lead_ (row ^. vehicleTypesAvailableEfitG5) (val_ 1) `over_` w
                          )
                        )
-            ) $ all_ (bikeshareDb ^. bikeshareStationStatus)
-          guard_ (not_ ( ( rows ^. statusNumBikesAvailable     ==. pBikesAvail &&.
-                           rows ^. statusNumBikesDisabled      ==. pBikesDisab &&.
-                           rows ^. statusNumDocksAvailable     ==. pDocksAvail &&.
-                           rows ^. statusNumDocksDisabled      ==. pDocksDisab
-                         ) &&.
-                         ( rows ^. statusIsChargingStation     ==. pIsChargingStation &&.
-                           rows ^. statusStatus                ==. pStatus &&.
-                           rows ^. statusIsInstalled           ==. pIsInstalled &&.
-                           rows ^. statusIsRenting             ==. pIsRenting &&.
-                           rows ^. statusIsReturning           ==. pIsReturning
-                           -- Traffic is null - don't compare!
-                         ) &&.
-                         ( rows ^. statusVehicleDocksAvailable ==. pVehicleDocksAvailable &&.
-                           rows ^. vehicleTypesAvailableIconic ==. pIconic &&.
-                           rows ^. vehicleTypesAvailableEfit   ==. pEfit &&.
-                           rows ^. vehicleTypesAvailableEfitG5 ==. pEfitG5
-                         )
-                       ))
-          pure rows
+            ) $
+            all_ (bikeshareDb ^. bikeshareStationStatus)
+
+          guard_' ( sqlBool_ (rowNum <=. val_ 1) &&?.
+                    (((row ^. statusNumBikesAvailable      ) /=?. pBikesAvail            ||?.
+                      (row ^. statusNumBikesDisabled       ) /=?. pBikesDisab            ||?.
+                      (row ^. statusNumDocksAvailable      ) /=?. pDocksAvail            ||?.
+                      (row ^. statusNumDocksDisabled       ) /=?. pDocksDisab
+                     ) ||?.
+                      ((row ^. statusIsChargingStation     ) /=?. pIsChargingStation     ||?.
+                       (row ^. statusStatus                ) /=?. pStatus                ||?.
+                       (row ^. statusIsInstalled           ) /=?. pIsInstalled           ||?.
+                       (row ^. statusIsRenting             ) /=?. pIsRenting             ||?.
+                       (row ^. statusIsReturning           ) /=?. pIsReturning
+                        -- Traffic is null - don't compare!
+                      ) ||?.
+                      ((row ^. statusVehicleDocksAvailable ) /=?. pVehicleDocksAvailable ||?.
+                       (row ^. vehicleTypesAvailableIconic ) /=?. pIconic                ||?.
+                       (row ^. vehicleTypesAvailableEfit   ) /=?. pEfit                  ||?.
+                       (row ^. vehicleTypesAvailableEfitG5 ) /=?. pEfitG5
+                      )
+                    ))
+          pure row
       ) (conflictingFields primaryKey) onConflictDoNothing
     -- pure (status, statusChangedInserted)
 
