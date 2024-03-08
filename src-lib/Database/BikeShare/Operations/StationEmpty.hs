@@ -15,8 +15,6 @@ import           Database.Beam
 import           Database.Beam.Backend                        ( BeamSqlBackend, HasSqlValueSyntax )
 import           Database.Beam.Postgres                       ( Postgres )
 import qualified Database.Beam.Postgres                       as Pg
-import qualified Database.Beam.Postgres.Full                  as Pg
-import           Database.Beam.Postgres.Syntax                ( PgValueSyntax )
 import           Database.BikeShare
 import           Database.BikeShare.Tables.StationInformation
 import           Database.BikeShare.Tables.StationStatus
