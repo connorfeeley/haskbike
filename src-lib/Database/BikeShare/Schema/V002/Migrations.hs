@@ -2,6 +2,7 @@
 
 module Database.BikeShare.Schema.V002.Migrations
      ( migrateDB
+     , migration
      ) where
 
 import           AppEnv

@@ -56,7 +56,7 @@ import           Data.Coerce                                ( coerce )
 import           Data.Int
 import           Data.String                                ( IsString )
 import qualified Data.Text                                  as T
-import qualified Data.Text                                  as Text
+import qualified Data.Text.Lazy                             as TL
 import           Data.Time
 import           Data.Vector                                ( fromList, toList )
 import qualified Data.Vector                                as Vector
@@ -79,23 +79,23 @@ import           Database.PostgreSQL.Simple.TypeInfo.Static ( text )
 data StationInformationT f where
   StationInformation :: { _infoId                    :: Columnar f (SqlSerial Int32)
                         , _infoStationId             :: Columnar f Int32
-                        , _infoName                  :: Columnar f Text.Text
+                        , _infoName                  :: Columnar f T.Text
                         , _infoPhysicalConfiguration :: Columnar f BeamPhysicalConfiguration
                         , _infoLat                   :: Columnar f Double
                         , _infoLon                   :: Columnar f Double
                         , _infoAltitude              :: Columnar f (Maybe Double)
-                        , _infoAddress               :: Columnar f (Maybe Text.Text)
+                        , _infoAddress               :: Columnar f (Maybe T.Text)
                         , _infoCapacity              :: Columnar f Int32
                         , _infoIsChargingStation     :: Columnar f Bool
                         , _infoRentalMethods         :: Columnar f (Vector.Vector BeamRentalMethod)
                         , _infoIsValetStation        :: Columnar f Bool
                         , _infoIsVirtualStation      :: Columnar f Bool
-                        , _infoGroups                :: Columnar f (Vector.Vector Text.Text)
-                        , _infoObcn                  :: Columnar f (Maybe Text.Text)
+                        , _infoGroups                :: Columnar f (Vector.Vector T.Text)
+                        , _infoObcn                  :: Columnar f (Maybe T.Text)
                         , _infoNearbyDistance        :: Columnar f Double
-                        , _infoBluetoothId           :: Columnar f (Maybe Text.Text)
+                        , _infoBluetoothId           :: Columnar f (Maybe T.Text)
                         , _infoRideCodeSupport       :: Columnar f Bool
-                        , _infoRentalUris            :: Columnar f (Vector.Vector Text.Text)
+                        , _infoRentalUris            :: Columnar f (Vector.Vector T.Text)
                         , _infoActive                :: Columnar f Bool
                         , _infoReported              :: Columnar f UTCTime
                         } -> StationInformationT f
@@ -131,23 +131,23 @@ unInformationStationId key (StationInformationId stationId lastReported) = fmap 
 -- | StationInformation Lenses
 infoId                      :: Lens' (StationInformationT f) (C f (SqlSerial Int32))
 infoStationId               :: Lens' (StationInformationT f) (C f Int32)
-infoName                    :: Lens' (StationInformationT f) (C f Text.Text)
+infoName                    :: Lens' (StationInformationT f) (C f T.Text)
 infoPhysicalConfiguration   :: Lens' (StationInformationT f) (C f BeamPhysicalConfiguration)
 infoLat                     :: Lens' (StationInformationT f) (C f Double)
 infoLon                     :: Lens' (StationInformationT f) (C f Double)
 infoAltitude                :: Lens' (StationInformationT f) (C f (Maybe Double))
-infoAddress                 :: Lens' (StationInformationT f) (C f (Maybe Text.Text))
+infoAddress                 :: Lens' (StationInformationT f) (C f (Maybe T.Text))
 infoCapacity                :: Lens' (StationInformationT f) (C f Int32)
 infoIsChargingStation       :: Lens' (StationInformationT f) (C f Bool)
 infoRentalMethods           :: Lens' (StationInformationT f) (C f (Vector.Vector BeamRentalMethod))
 infoIsValetStation          :: Lens' (StationInformationT f) (C f Bool)
 infoIsVirtualStation        :: Lens' (StationInformationT f) (C f Bool)
-infoGroups                  :: Lens' (StationInformationT f) (C f (Vector.Vector Text.Text))
-infoObcn                    :: Lens' (StationInformationT f) (C f (Maybe Text.Text))
+infoGroups                  :: Lens' (StationInformationT f) (C f (Vector.Vector T.Text))
+infoObcn                    :: Lens' (StationInformationT f) (C f (Maybe T.Text))
 infoNearbyDistance          :: Lens' (StationInformationT f) (C f Double)
-infoBluetoothId             :: Lens' (StationInformationT f) (C f (Maybe Text.Text))
+infoBluetoothId             :: Lens' (StationInformationT f) (C f (Maybe T.Text))
 infoRideCodeSupport         :: Lens' (StationInformationT f) (C f Bool)
-infoRentalUris              :: Lens' (StationInformationT f) (C f (Vector.Vector Text.Text))
+infoRentalUris              :: Lens' (StationInformationT f) (C f (Vector.Vector T.Text))
 infoActive                  :: Lens' (StationInformationT f) (C f Bool)
 infoReported                :: Lens' (StationInformationT f) (C f UTCTime)
 
@@ -179,15 +179,15 @@ newtype BeamRentalMethod where
   BeamRentalMethod :: AT.RentalMethod -> BeamRentalMethod
   deriving (Eq, Generic, Show, Read) via AT.RentalMethod
 
-instance (BeamBackend be, FromBackendRow be Text.Text) => FromBackendRow be BeamRentalMethod where
+instance (BeamBackend be, FromBackendRow be T.Text) => FromBackendRow be BeamRentalMethod where
   fromBackendRow = do
     val <- fromBackendRow
-    case val :: Text.Text of
+    case TL.fromStrict val of
       "KEY"         -> pure $ BeamRentalMethod AT.Key
       "TRANATTCARD" -> pure $ BeamRentalMethod AT.TransitCard
       "CREDITCARD"  -> pure $ BeamRentalMethod AT.CreditCard
       "PHONE"       -> pure $ BeamRentalMethod AT.Phone
-      _             -> fail ("Invalid value for BeamRentalMethod: " ++ Text.unpack val)
+      _             -> fail ("Invalid value for BeamRentalMethod: " ++ T.unpack val)
 
 instance (HasSqlValueSyntax be String, Show BeamRentalMethod) => HasSqlValueSyntax be BeamRentalMethod where
   sqlValueSyntax = sqlValueSyntax . show
@@ -213,9 +213,9 @@ rentalMethodType = DataType pgTextType
 -- Don't want to implement database-specific code for the underlying PhysicalConfiguration type.
 newtype BeamPhysicalConfiguration where
   BeamPhysicalConfiguration :: AT.PhysicalConfiguration -> BeamPhysicalConfiguration
-  deriving (Eq, Generic, Show, Read) via AT.PhysicalConfiguration
+  deriving (Eq, Generic, Show, Read, Ord) via AT.PhysicalConfiguration
 
-physicalConfigurationLabel :: BeamPhysicalConfiguration -> Text.Text
+physicalConfigurationLabel :: BeamPhysicalConfiguration -> T.Text
 physicalConfigurationLabel (BeamPhysicalConfiguration AT.ElectricBikeStation) = "Electric Bike Station"
 physicalConfigurationLabel (BeamPhysicalConfiguration AT.Regular)             = "Regular"
 physicalConfigurationLabel (BeamPhysicalConfiguration AT.RegularLitMapFrame)  = "Regular Lit Map Frame"
@@ -223,17 +223,17 @@ physicalConfigurationLabel (BeamPhysicalConfiguration AT.SmartLitMapFrame)    = 
 physicalConfigurationLabel (BeamPhysicalConfiguration AT.SmartMapFrame)       = "Smart Map Frame"
 physicalConfigurationLabel (BeamPhysicalConfiguration AT.Vault)               = "Vault"
 
-instance (BeamBackend be, FromBackendRow be Text.Text) => FromBackendRow be BeamPhysicalConfiguration where
+instance (BeamBackend be, FromBackendRow be T.Text) => FromBackendRow be BeamPhysicalConfiguration where
   fromBackendRow = do
-    val <- fromBackendRow
-    case val :: Text.Text of
+    val <- {-# SCC "BeamPhysicalConfiguration-fromBackendRow" #-} fromBackendRow
+    {-# SCC "BeamPhysicalConfiguration-case" #-} case TL.fromStrict val of
       "ELECTRICBIKESTATION" -> pure $ BeamPhysicalConfiguration AT.ElectricBikeStation
       "REGULAR"             -> pure $ BeamPhysicalConfiguration AT.Regular
       "REGULARLITMAPFRAME"  -> pure $ BeamPhysicalConfiguration AT.RegularLitMapFrame
       "SMARTLITMAPFRAME"    -> pure $ BeamPhysicalConfiguration AT.SmartLitMapFrame
       "SMARTMAPFRAME"       -> pure $ BeamPhysicalConfiguration AT.SmartMapFrame
       "VAULT"               -> pure $ BeamPhysicalConfiguration AT.Vault
-      _                     -> fail ("Invalid value for BeamPhysicalConfiguration: " ++ Text.unpack val)
+      _                     -> fail ("Invalid value for BeamPhysicalConfiguration: " ++ T.unpack val)
 
 instance (HasSqlValueSyntax be String, Show BeamPhysicalConfiguration) => HasSqlValueSyntax be BeamPhysicalConfiguration where
   sqlValueSyntax = sqlValueSyntax . show
@@ -280,19 +280,19 @@ fromJSONToBeamStationInformation
   ) =
   StationInformation { _infoId                    = default_
                      , _infoStationId             = fromIntegral station_id
-                     , _infoName                  = val_ $ Text.pack name
+                     , _infoName                  = val_ $ T.pack name
                      , _infoPhysicalConfiguration = val_ (coerce physical_configuration :: BeamPhysicalConfiguration)
                      , _infoLat                   = val_ lat
                      , _infoLon                   = val_ lon
                      , _infoAltitude              = val_ altitude
-                     , _infoAddress               = val_ $ Text.pack <$> address
+                     , _infoAddress               = val_ $ T.pack <$> address
                      , _infoCapacity              = fromIntegral capacity
                      , _infoIsChargingStation     = val_ is_charging_station
                      , _infoRentalMethods         = val_ $ fromList (coerce rental_methods :: [BeamRentalMethod])
                      , _infoIsValetStation        = val_ is_valet_station
                      , _infoIsVirtualStation      = val_ is_virtual_station
-                     , _infoGroups                = val_ $ fromList $ fmap Text.pack groups
-                     , _infoObcn                  = val_ . Just . Text.pack $ obcn
+                     , _infoGroups                = val_ $ fromList $ fmap T.pack groups
+                     , _infoObcn                  = val_ . Just . T.pack $ obcn
                      , _infoNearbyDistance        = val_ nearby_distance
                      , _infoBluetoothId           = val_ bluetoothId
                      , _infoRideCodeSupport       = val_ ride_code_support
@@ -301,10 +301,10 @@ fromJSONToBeamStationInformation
                      , _infoReported              = val_ reported
                      }
   where
-    uriAndroid = Text.pack (AT.rentalUrisAndroid rental_uris)
-    uriIos     = Text.pack (AT.rentalUrisIos rental_uris)
-    uriWeb     = Text.pack (AT.rentalUrisWeb rental_uris)
-    bluetoothId = if not (null bluetooth_id) then Just . Text.pack $ bluetooth_id else Nothing
+    uriAndroid = T.pack (AT.rentalUrisAndroid rental_uris)
+    uriIos     = T.pack (AT.rentalUrisIos rental_uris)
+    uriWeb     = T.pack (AT.rentalUrisWeb rental_uris)
+    bluetoothId = if not (null bluetooth_id) then Just . T.pack $ bluetooth_id else Nothing
 
 -- | Convert from the Beam StationInformation type to the JSON StationInformation
 fromBeamStationInformationToJSON :: StationInformation -> AT.StationInformation
@@ -337,20 +337,20 @@ fromBeamStationInformationToJSON (StationInformation
                         , AT.infoLat                     = lat
                         , AT.infoLon                     = lon
                         , AT.infoAltitude                = altitude
-                        , AT.infoAddress                 = Text.unpack <$> address
+                        , AT.infoAddress                 = T.unpack <$> address
                         , AT.infoCapacity                = fromIntegral capacity
                         , AT.infoIsChargingStation       = isChargingStation
                         , AT.infoRentalMethods           = coerce (toList rentalMethods) :: [AT.RentalMethod]
                         , AT.infoIsValetStation          = isValetStation
                         , AT.infoIsVirtualStation        = isVirtualStation
-                        , AT.infoGroups                  = Text.unpack <$> toList groups
-                        , AT.infoObcn                    = maybe "" Text.unpack obcn
+                        , AT.infoGroups                  = T.unpack <$> toList groups
+                        , AT.infoObcn                    = maybe "" T.unpack obcn
                         , AT.infoNearbyDistance          = nearbyDistance
-                        , AT.infoBluetoothId             = maybe "" Text.unpack bluetoothId
+                        , AT.infoBluetoothId             = maybe "" T.unpack bluetoothId
                         , AT.infoRideCodeSupport         = rideCodeSupport
-                        , AT.infoRentalUris              = AT.RentalURIs { AT.rentalUrisAndroid = maybe "" Text.unpack (rentalUrisList ^? element 1)
-                                                                         , AT.rentalUrisIos     = maybe "" Text.unpack (rentalUrisList ^? element 2)
-                                                                         , AT.rentalUrisWeb     = maybe "" Text.unpack (rentalUrisList ^? element 3)
+                        , AT.infoRentalUris              = AT.RentalURIs { AT.rentalUrisAndroid = maybe "" T.unpack (rentalUrisList ^? element 1)
+                                                                         , AT.rentalUrisIos     = maybe "" T.unpack (rentalUrisList ^? element 2)
+                                                                         , AT.rentalUrisWeb     = maybe "" T.unpack (rentalUrisList ^? element 3)
                                                                          }
                         }
   where

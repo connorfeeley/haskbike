@@ -7,6 +7,8 @@ set shell := ["bash", "-c"]
 set positional-arguments := true
 
 export CABAL := "cabal --with-gcc=clang --with-ld=clang"
+# To benchmark:
+# {{CABAL}} v2-run --enable-profiling exes -- --plain visualize -v --log-database +RTS -p
 
 export OLD_STATUS_COLS := "station_id, last_reported, num_bikes_available, num_bikes_disabled, num_docks_available, num_docks_disabled, is_charging_station, status, is_installed, is_renting, is_returning, traffic, vehicle_docks_available, vehicle_types_available_boost, vehicle_types_available_iconic, vehicle_types_available_efit, vehicle_types_available_efit_g5"
 export OLD_INFO_COLS := "id, station_id, name, physical_configuration, lat, lon, altitude, address, capacity, is_charging_station, rental_methods, is_valet_station, is_virtual_station, groups, obcn, nearby_distance, bluetooth_id, ride_code_support, rental_uris, active"
@@ -55,6 +57,9 @@ test:
 test-one PATTERN:
     {{CABAL}} test --test-show-details=direct --test-options='--pattern /{{PATTERN}}/'
 
+bench:
+    {{CABAL}} bench
+
 poll *ARGS:
     {{CABAL}} run haskbike -- --plain poll -v {{ARGS}}
 
@@ -63,12 +68,18 @@ reset *ARGS:
     source ./.env.local
     {{CABAL}} run haskbike -- --plain reset --reset-only -v --log-database {{ARGS}}
 
+migrate *ARGS:
+    #!/usr/bin/env bash
+    source ./.env.local
+    {{CABAL}} run haskbike -- --plain debug --database haskbike-test --enable-migrations -v --log-database
+
 visualize:
-    {{CABAL}} run haskbike -- --plain visualize -v # --log-database
+    #!/usr/bin/env bash
+    # {{CABAL}} run haskbike -- --plain visualize -v --log-database
+    {{CABAL}} v2-run --enable-profiling --profiling-detail all-functions exes -- --plain visualize -v # --log-database
 
 export-rds-table TABLE:
     #!/usr/bin/env bash
-    source ./.env.awsrds.ADMIN
     PGPASSWORD=$HASKBIKE_PASSWORD psql -h "$HASKBIKE_PGDBHOST" -p "$HASKBIKE_PGDBPORT" -U "$HASKBIKE_USERNAME" \
         -d haskbike \
         -c "SELECT * FROM public.{{TABLE}}" \

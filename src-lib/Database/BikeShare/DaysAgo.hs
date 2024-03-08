@@ -5,11 +5,8 @@ module Database.BikeShare.DaysAgo
      , daysAgo_
      ) where
 
-import           Control.Arrow
-
 import           Data.Attoparsec.Text
 import qualified Data.Text                     as T
-import qualified Data.Text.Read                as T
 import           Data.Time
 
 import           Database.Beam
@@ -18,8 +15,6 @@ import           Database.Beam.Postgres
 import           Database.Beam.Postgres.Syntax
 
 import           Servant.API
-
-import           Text.Read                     ( readEither )
 
 
 data DaysAgo where

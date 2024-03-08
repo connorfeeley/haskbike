@@ -1,4 +1,3 @@
-
 const filterColumns = ['station-id-col', 'station-name-col', 'station-address-col'];
 const table = document.getElementById('station-list-table');
 const filterInput = document.getElementById('station-filter-input');
@@ -29,7 +28,7 @@ function filterStationsTable() {
         let stationTypeCell = row.querySelector('[data-column-id="station-type-col"]');
         let stationType = stationTypeCell ? stationTypeCell.textContent : '';
 
-        if (selectedStationType !== 'All' && stationType !== selectedStationType) {
+        if (selectedStationType !== 'all' && stationType !== selectedStationType) {
             shouldShow = false;
         }
 

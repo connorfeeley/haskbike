@@ -27,7 +27,6 @@ import           Data.Fixed                                 ( Pico )
 import           Data.Time
 
 import           Database.Beam
-import           Database.BikeShare.Expressions
 import           Database.BikeShare.Operations
 import           Database.BikeShare.Operations.Factors
 import           Database.BikeShare.Operations.StationEmpty
@@ -163,7 +162,7 @@ check :: DayOfMonth -> CalendarDiffTime -> IO ()
 check d expected = do
   empty <- runWithAppMSuppressLog dbnameTest $ withPostgres $ do
     runSelectReturningList $ selectWith $
-      queryStationEmptyTime
+      queryStationEmptyFullTime Nothing
       (UTCTime (fromGregorian 2023 01 d)      (timeOfDayToTime (TimeOfDay 0 0 0)))
       (UTCTime (fromGregorian 2023 01 (d +1)) (timeOfDayToTime (TimeOfDay 0 0 0)))
-  assertEqual ("Station empty time " <> show d) expected ((toDuration . fromIntegral . snd . head) empty)
+  assertEqual ("Station empty time " <> show d) expected ((toDuration . fromIntegral . fst . snd . head) empty)

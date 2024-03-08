@@ -19,14 +19,13 @@ import           Colog                     ( LogAction, Severity (..), cmap, fmt
 
 import           Control.Monad             ( unless, void, when )
 
-import           Data.Pool
 import qualified Data.Text                 as T
 import qualified Data.Text                 as Text
 import           Data.Text.Lazy            ( toStrict )
 import qualified Data.Text.Lazy            as TL
 import           Data.Time                 ( getCurrentTimeZone )
 
-import           Database.Beam.Postgres    ( ConnectInfo (connectPassword), close, connect )
+import           Database.Beam.Postgres    ( ConnectInfo (connectPassword) )
 import           Database.BikeShare.Utils
 
 import           Network.HTTP.Client       ( newManager )
@@ -67,7 +66,7 @@ main = do
   connInfo <- mkDbConnectInfo (optDatabase options)
   usingLoggerT logStdoutAction $
     logInfo $ "Using database connection: " <> (TL.toStrict . pShowCompact . obfuscatePassword) connInfo
-  connPool <- newPool (setNumStripes Nothing $ defaultPoolConfig (connect connInfo) close 30 8)
+  connPool <- mkDatabaseConnectionPool connInfo
 
   -- Create HTTPS client manager.
   clientManager <- liftIO $ newManager tlsManagerSettings

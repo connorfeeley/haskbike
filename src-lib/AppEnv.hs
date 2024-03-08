@@ -44,6 +44,7 @@ import           Database.Beam.Postgres                 ( ConnectInfo, Connectio
 import           Database.BikeShare.Connection          ( mkDbConnectInfo )
 import           Database.PostgreSQL.Simple.Transaction ( withTransaction )
 
+import           GHC.Conc                               ( numCapabilities )
 import           GHC.Stack                              ( HasCallStack )
 
 import           Network.HTTP.Client                    ( Manager, newManager )
@@ -210,4 +211,5 @@ runWithAppMDebug dbname action = do
   runAppM env action
 
 mkDatabaseConnectionPool :: ConnectInfo -> IO (Pool Connection)
-mkDatabaseConnectionPool connInfo = newPool (defaultPoolConfig (connect connInfo) close 30 5)
+mkDatabaseConnectionPool connInfo = newPool (defaultPoolConfig (connect connInfo) close 30 numCapabilities)
+{-# INLINE mkDatabaseConnectionPool #-}

@@ -15,6 +15,7 @@
 
 module Database.BikeShare.Operations
      ( module Database.BikeShare.Operations.Dockings
+     , insertChangedStationStatus
      , insertStationInformation
      , insertStationInformation'
      , insertStationStatus
@@ -88,7 +89,7 @@ queryStationStatusFields =
   withPostgres $ runSelectReturningList $ select $ do
   info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
   status <- all_ (bikeshareDb ^. bikeshareStationStatus)
-  guard_ ((_unInformationStationId  . _statusInfoId) status ==. _infoStationId info)
+  guard_ ((_unInformationStationId . _statusInfoId . _statusCommon) status ==. _infoStationId info)
   pure ( info   ^. infoName
        , status ^. statusNumBikesAvailable
        , status ^. statusNumBikesDisabled
@@ -183,6 +184,7 @@ stationInfoMostlyEq apiInfo dbInfo =
         b = fromBeamStationInformationToJSON dbInfo
         isEq f a' b' = f a' == f b'
 
+
 {- |
 Insert station statuses into the database.
 -}
@@ -201,25 +203,94 @@ insertStationStatus apiStatus =
     let statusWithInfo :: [(StationInformation, AT.StationStatus)] = mapMaybe (lookupInfoId infoMap) apiStatus
 
     status <- runInsertReturningList $
-      insertOnConflict (bikeshareDb ^. bikeshareStationStatus)
-      (insertExpressions $
-       mapMaybe (\(inf, sta) -> fromJSONToBeamStationStatus (StationInformationId (_infoStationId inf) (_infoReported inf)) sta) statusWithInfo
-      ) (conflictingFields primaryKey) onConflictDoNothing
+              insertOnConflict (bikeshareDb ^. bikeshareStationStatus)
+              (insertExpressions
+               (mapMaybe (\(inf, sta) -> fromJSONToBeamStationStatus (StationInformationId (_infoStationId inf) (_infoReported inf)) sta) statusWithInfo)
+              ) (conflictingFields primaryKey) onConflictDoNothing
+
+    -- Insert only changed station statuses into the database.
+    _stationStatusChanged <- insertChangedStationStatus
 
     _statusLookup <- runInsertReturningList $
       insertOnConflict (bikeshareDb ^. bikeshareStationLookup)
       (insertExpressions $
-       map (\ss -> StationLookup (val_ $ StationStatusId (_statusInfoId ss) (_statusLastReported ss)))
+       map (\ss -> StationLookup (val_ $ StationStatusId (ss ^. statusInfoId) (ss ^. statusLastReported)))
        (uniqueStatus status)
       ) (conflictingFields (_unInformationStationId . _unStatusStationId . _stnLookup)) onConflictUpdateAll
 
     pure status
-  where uniqueStatus = nubBy (\s1 s2 -> (_unInformationStationId  . _statusInfoId) s1 == (_unInformationStationId  . _statusInfoId) s2)
+  where
+    uniqueStatus = nubBy (\s1 s2 -> (_unInformationStationId . _statusInfoId . _statusCommon) s1 == (_unInformationStationId . _statusInfoId . _statusCommon) s2)
+    lookupInfoId infoMap status =
+      case Map.lookup (AT._statusStationId status) infoMap of
+        Nothing  -> Nothing
+        Just iId -> Just (iId, status)
 
-lookupInfoId infoMap status =
-  case Map.lookup (AT._statusStationId status) infoMap of
-    Nothing  -> Nothing
-    Just iId -> Just (iId, status)
+
+{- |
+Insert only changed station statuses into the database.
+-}
+insertChangedStationStatus :: MonadBeamInsertReturning Postgres m => m [StationStatusT Identity]
+insertChangedStationStatus = do
+  runInsertReturningList $
+    insertOnConflict (bikeshareDb ^. bikeshareStationStatusChanges)
+    (insertFrom $ do
+        ( row, rowNum
+          , ( pBikesAvail, pBikesDisab, pDocksAvail, pDocksDisab )
+          , ( pIsChargingStation, pStatus, pIsInstalled, pIsRenting, pIsReturning )
+          , ( pVehicleDocksAvailable, pIconic, pEfit, pEfitG5)
+          ) <-
+          withWindow_ (\row ->
+                         frame_ (partitionBy_ ((_unInformationStationId . _statusInfoId . _statusCommon) row))
+                         (orderPartitionBy_ ((desc_ . _statusLastReported . _statusCommon) row))
+                         noBounds_)
+          (\row w -> ( row
+                     , rowNumber_ `over_` w
+                     -- , lag_ (row ^. statusLastReported         ) (val_ 1) `over_` w
+                     , ( lead_ (row ^. statusNumBikesAvailable    ) (val_ 1) `over_` w
+                       , lead_ (row ^. statusNumBikesDisabled     ) (val_ 1) `over_` w
+                       , lead_ (row ^. statusNumDocksAvailable    ) (val_ 1) `over_` w
+                       , lead_ (row ^. statusNumDocksDisabled     ) (val_ 1) `over_` w
+                       )
+                     , ( lead_ (row ^. statusIsChargingStation    ) (val_ 1) `over_` w
+                       , lead_ (row ^. statusStatus               ) (val_ 1) `over_` w
+                       , lead_ (row ^. statusIsInstalled          ) (val_ 1) `over_` w
+                       , lead_ (row ^. statusIsRenting            ) (val_ 1) `over_` w
+                       , lead_ (row ^. statusIsReturning          ) (val_ 1) `over_` w
+                       -- Traffic is null - don't compare!
+                     )
+                     , ( lead_ (row ^. statusVehicleDocksAvailable) (val_ 1) `over_` w
+                       , lead_ (row ^. vehicleTypesAvailableIconic) (val_ 1) `over_` w
+                       , lead_ (row ^. vehicleTypesAvailableEfit  ) (val_ 1) `over_` w
+                       , lead_ (row ^. vehicleTypesAvailableEfitG5) (val_ 1) `over_` w
+                       )
+                     )
+          ) $
+          all_ (bikeshareDb ^. bikeshareStationStatus)
+
+        guard_' ( sqlBool_ (rowNum <=. val_ 1) &&?.
+                  (((row ^. statusNumBikesAvailable      ) /=?. pBikesAvail            ||?.
+                    (row ^. statusNumBikesDisabled       ) /=?. pBikesDisab            ||?.
+                    (row ^. statusNumDocksAvailable      ) /=?. pDocksAvail            ||?.
+                    (row ^. statusNumDocksDisabled       ) /=?. pDocksDisab
+                   ) ||?.
+                    ((row ^. statusIsChargingStation     ) /=?. pIsChargingStation     ||?.
+                     (row ^. statusStatus                ) /=?. pStatus                ||?.
+                     (row ^. statusIsInstalled           ) /=?. pIsInstalled           ||?.
+                     (row ^. statusIsRenting             ) /=?. pIsRenting             ||?.
+                     (row ^. statusIsReturning           ) /=?. pIsReturning
+                      -- Traffic is null - don't compare!
+                    ) ||?.
+                    ((row ^. statusVehicleDocksAvailable ) /=?. pVehicleDocksAvailable ||?.
+                     (row ^. vehicleTypesAvailableIconic ) /=?. pIconic                ||?.
+                     (row ^. vehicleTypesAvailableEfit   ) /=?. pEfit                  ||?.
+                     (row ^. vehicleTypesAvailableEfitG5 ) /=?. pEfitG5
+                    )
+                  ))
+        pure row
+    ) (conflictingFields primaryKey) onConflictDoNothing
+
+
 
 
 {- |
@@ -303,9 +374,9 @@ queryStationStatusLatest :: Int                       -- ^ Station ID.
 queryStationStatusLatest station_id = withPostgres $ runSelectReturningOne $ select $ limit_ 1 $ do
   info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
   guard_ (_infoStationId info ==. val_ ( fromIntegral station_id))
-  status <- orderBy_ (desc_ . _statusLastReported)
+  status <- orderBy_ (desc_ . _statusLastReported . _statusCommon)
             (all_ (bikeshareDb ^. bikeshareStationStatus))
-  guard_ ((_unInformationStationId  . _statusInfoId) status ==. _infoStationId info)
+  guard_ ((_unInformationStationId . _statusInfoId . _statusCommon) status ==. _infoStationId info)
   pure status
 
 -- | Count the number of rows in a given table.

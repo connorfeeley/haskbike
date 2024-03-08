@@ -10,7 +10,7 @@
 {-# LANGUAGE TypeFamilies              #-}
 {-# LANGUAGE UndecidableInstances      #-}
 
-module Database.BikeShare.Schema.V002.BikeShare
+module Database.BikeShare.Schema.V003.BikeShare
      ( BikeshareDb (..)
      , bikeshareDb
        -- , bikeshareDiagnostics
@@ -18,6 +18,7 @@ module Database.BikeShare.Schema.V002.BikeShare
      , bikeshareStationInformation
      , bikeshareStationLookup
      , bikeshareStationStatus
+     , bikeshareStationStatusChanges
      , bikeshareSystemInformation
      , bikeshareSystemInformationCount
      ) where
@@ -40,6 +41,7 @@ data BikeshareDb f where
                  -- ^ Custom Postgres enum type for the different endpoints that are queried.
                  , _bikeshareStationInformation     :: f (TableEntity V001.StationInformationT)
                  , _bikeshareStationStatus          :: f (TableEntity V001.StationStatusT)
+                 , _bikeshareStationStatusChanges   :: f (TableEntity V001.StationStatusT)
                  , _bikeshareSystemInformation      :: f (TableEntity V001.SystemInformationT)
                  , _bikeshareSystemInformationCount :: f (TableEntity V001.SystemInformationCountT)
                  , _bikeshareQueryLog               :: f (TableEntity V001.QueryLogT)
@@ -53,6 +55,7 @@ bikeshareDb = defaultDbSettings `withDbModification`
   dbModification
   { _bikeshareStationInformation     = V001.stationInformationModification
   , _bikeshareStationStatus          = V001.stationStatusModification "station_status"
+  , _bikeshareStationStatusChanges   = V001.stationStatusModification "station_status_changes"
   , _bikeshareSystemInformation      = V001.systemInformationModification
   , _bikeshareSystemInformationCount = V001.systemInformationCountModification
   , _bikeshareQueryLog               = V001.queryLogModification
@@ -63,13 +66,15 @@ bikeshareDb = defaultDbSettings `withDbModification`
 -- NOTE: no lens for _bikeshareEndpointQueriedType.
 bikeshareStationInformation     :: Lens' (BikeshareDb f) (f (TableEntity V001.StationInformationT))
 bikeshareStationStatus          :: Lens' (BikeshareDb f) (f (TableEntity V001.StationStatusT))
+bikeshareStationStatusChanges   :: Lens' (BikeshareDb f) (f (TableEntity V001.StationStatusT))
 bikeshareSystemInformation      :: Lens' (BikeshareDb f) (f (TableEntity V001.SystemInformationT))
 bikeshareSystemInformationCount :: Lens' (BikeshareDb f) (f (TableEntity V001.SystemInformationCountT))
 bikeshareQueryLog               :: Lens' (BikeshareDb f) (f (TableEntity V001.QueryLogT))
 bikeshareStationLookup          :: Lens' (BikeshareDb f) (f (TableEntity V002.StationLookupT))
-BikeshareDb _ (TableLens bikeshareStationInformation)     _ _ _ _ _ = dbLenses
-BikeshareDb _ _ (TableLens bikeshareStationStatus)          _ _ _ _ = dbLenses
-BikeshareDb _ _ _ (TableLens bikeshareSystemInformation)      _ _ _ = dbLenses
-BikeshareDb _ _ _ _ (TableLens bikeshareSystemInformationCount) _ _ = dbLenses
-BikeshareDb _ _ _ _ _ (TableLens bikeshareQueryLog)               _ = dbLenses
-BikeshareDb _ _ _ _ _ _ (TableLens bikeshareStationLookup)          = dbLenses
+BikeshareDb _ (TableLens bikeshareStationInformation)     _ _ _ _ _ _ = dbLenses
+BikeshareDb _ _ (TableLens bikeshareStationStatus)          _ _ _ _ _ = dbLenses
+BikeshareDb _ _ _ (TableLens bikeshareStationStatusChanges)   _ _ _ _ = dbLenses
+BikeshareDb _ _ _ _ (TableLens bikeshareSystemInformation)      _ _ _ = dbLenses
+BikeshareDb _ _ _ _ _ (TableLens bikeshareSystemInformationCount) _ _ = dbLenses
+BikeshareDb _ _ _ _ _ _ (TableLens bikeshareQueryLog)               _ = dbLenses
+BikeshareDb _ _ _ _ _ _ _ (TableLens bikeshareStationLookup)          = dbLenses

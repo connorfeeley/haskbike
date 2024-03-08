@@ -53,7 +53,7 @@ instance ToHtml StationStatusVisualizationPage where
       -- Informational headers
       h2_ [style_ "text-align: center"] "Station Information & Statistics"
       br_ []
-      div_ [class_ "pure-g", style_ "text-align: center"] $ do
+      div_ [class_ "pure-g full-width", style_ "text-align: center"] $ do
         let headers = catMaybes [ Just capacityHeader
                                 , Just $ hxSpinner_ staticLink (fieldLink dockingEventsHeader  (Just (_statusVisPageStationId params)) (earliestTime (_statusVisPageTimeRange params)) (latestTime (_statusVisPageTimeRange params)))
                                 , if _infoIsChargingStation inf
@@ -68,9 +68,9 @@ instance ToHtml StationStatusVisualizationPage where
       br_ []
 
       -- Selection form
-      form_ [class_ "pure-form pure-form-stacked", style_ "text-align: center"] $ fieldset_ $ do
+      form_ [class_ "pure-form pure-form-stacked full-width", style_ "text-align: center"] $ fieldset_ $ do
         legend_ $ h3_ "Query Parameters"
-        div_ [class_ "pure-g"] $ do -- Grid layout for form
+        div_ [class_ "pure-g full-width"] $ do -- Grid layout for form
           div_ [class_ "pure-u-1 pure-u-md-1-4"] (stationIdInput params)
           div_ [class_ "pure-u-1 pure-u-md-1-4"] (startTimeInput earliest)
           div_ [class_ "pure-u-1 pure-u-md-1-4"] (endTimeInput latest)

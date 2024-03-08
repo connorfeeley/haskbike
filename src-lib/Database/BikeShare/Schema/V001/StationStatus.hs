@@ -10,74 +10,72 @@ module Database.BikeShare.Schema.V001.StationStatus
      ( BeamStationStatusString (..)
      , PrimaryKey (..)
      , StationStatus
+     , StationStatusCommon
+     , StationStatusCommonMixin (..) -- Reexport
      , StationStatusId
      , StationStatusT (..)
-     , VehicleTypeMixin (..)
-     , availableBoost
-     , availableEfit
-     , availableEfitG5
-     , availableIconic
      , createStationStatus
      , fromBeamStationStatusToJSON
      , fromJSONToBeamStationStatus
      , stationStatusModification
      , stationStatusType
+     , statusCommon
      , statusInfoId
      , statusIsChargingStation
+     , statusIsInstalled
+     , statusIsRenting
+     , statusIsReturning
      , statusLastReported
      , statusNumBikesAvailable
      , statusNumBikesDisabled
      , statusNumDocksAvailable
      , statusNumDocksDisabled
      , statusStationId
+     , statusStatus
+     , statusTraffic
+     , statusVehicleDocksAvailable
+     , statusVehicleTypesAvailable
      , unStatusLastReported
      , unStatusStationId
-     , vehicleTypeFields
-     , vehicleTypesAvailable
      , vehicleTypesAvailableBoost
      , vehicleTypesAvailableEfit
      , vehicleTypesAvailableEfitG5
      , vehicleTypesAvailableIconic
      ) where
 
-import qualified API.StationStatus                                 as AT
-import qualified API.VehicleType                                   as AT
+import qualified API.StationStatus                                  as AT
+import qualified API.VehicleType                                    as AT
 
 import           Control.Lens
 
-import qualified Data.ByteString.Char8                             as B
-import           Data.Coerce                                       ( coerce )
+import qualified Data.ByteString.Char8                              as B
+import           Data.Coerce                                        ( coerce )
 import           Data.Int
-import qualified Data.Map                                          as Map
-import           Data.Maybe                                        ( listToMaybe )
-import           Data.String                                       ( IsString (fromString) )
-import qualified Data.Text                                         as T
+import qualified Data.Map                                           as Map
+import           Data.Maybe                                         ( listToMaybe )
+import           Data.String                                        ( IsString )
+import qualified Data.Text                                          as T
 import           Data.Time
 
 import           Database.Beam
-import           Database.Beam.Backend                             ( BeamBackend, HasSqlValueSyntax (sqlValueSyntax),
-                                                                     IsSql92DataTypeSyntax (..) )
+import           Database.Beam.Backend                              ( BeamBackend, HasSqlValueSyntax (sqlValueSyntax),
+                                                                      IsSql92DataTypeSyntax (..) )
 import           Database.Beam.Migrate
-import           Database.Beam.Postgres                            ( Postgres )
-import qualified Database.Beam.Postgres                            as Pg
-import           Database.Beam.Postgres.Syntax                     ( pgTextType )
+import           Database.Beam.Postgres                             ( Postgres )
+import qualified Database.Beam.Postgres                             as Pg
+import           Database.Beam.Postgres.Syntax                      ( pgTextType )
 import           Database.BikeShare.Schema.V001.StationInformation
-import           Database.PostgreSQL.Simple.FromField              ( Field (typeOid), FromField (..), ResultError (..),
-                                                                     returnError, typoid )
-import           Database.PostgreSQL.Simple.ToField                ( ToField (..) )
-import           Database.PostgreSQL.Simple.TypeInfo.Static        ( text )
+import           Database.BikeShare.Schema.V001.StationStatusCommon
+import           Database.BikeShare.Schema.V001.VehicleTypeMixin
+import           Database.PostgreSQL.Simple.FromField               ( Field (typeOid), FromField (..), ResultError (..),
+                                                                      returnError, typoid )
+import           Database.PostgreSQL.Simple.ToField                 ( ToField (..) )
+import           Database.PostgreSQL.Simple.TypeInfo.Static         ( text )
 
 
 -- | Declare a (Beam) table for the 'StationStatus' type.
 data StationStatusT f where
-  StationStatus :: { _statusInfoId                :: PrimaryKey StationInformationT f
-                   , _statusStationId             :: Columnar f Int32
-                   , _statusLastReported          :: Columnar f UTCTime
-                   , _statusNumBikesAvailable     :: Columnar f Int32
-                   , _statusNumBikesDisabled      :: Columnar f Int32
-                   , _statusNumDocksAvailable     :: Columnar f Int32
-                   , _statusNumDocksDisabled      :: Columnar f Int32
-                   , _statusIsChargingStation     :: Columnar f Bool
+  StationStatus :: { _statusCommon                :: StationStatusCommonMixin f
                    , _statusStatus                :: Columnar f BeamStationStatusString
                    , _statusIsInstalled           :: Columnar f Bool
                    , _statusIsRenting             :: Columnar f Bool
@@ -103,7 +101,7 @@ instance Table StationStatusT where
                     , _unStatusLastReported :: Columnar f UTCTime
                     }
     deriving (Generic, Beamable)
-  primaryKey = StationStatusId <$> _statusInfoId  <*> _statusLastReported
+  primaryKey = StationStatusId <$> (_statusInfoId . _statusCommon)  <*> (_statusLastReported . _statusCommon)
 
 -- | Lenses
 unStatusLastReported :: Lens' (PrimaryKey StationStatusT f) (Columnar f UTCTime)
@@ -114,39 +112,9 @@ unStatusStationId :: Lens' (PrimaryKey StationStatusT f) (PrimaryKey StationInfo
 unStatusStationId key (StationStatusId stationId lastReported) = fmap (`StationStatusId` lastReported) (key stationId)
 {-# INLINE unStatusStationId #-}
 
-data VehicleTypeMixin f =
-  VehicleType { _availableBoost  :: Columnar f Int32
-              , _availableIconic :: Columnar f Int32
-              , _availableEfit   :: Columnar f Int32
-              , _availableEfitG5 :: Columnar f Int32
-              } deriving (Generic, Beamable)
-type VehicleType = VehicleTypeMixin Identity
-deriving instance Show (VehicleTypeMixin Identity)
-deriving instance Eq (VehicleTypeMixin Identity)
-
-vehicleTypeFields :: IsString (Columnar f Int32) => String -> VehicleTypeMixin f
-vehicleTypeFields b =
-  VehicleType (fromString (b <> "_boost"))
-              (fromString (b <> "_iconic"))
-              (fromString (b <> "_efit"))
-              (fromString (b <> "_efit_g5"))
-
-vehicleTypesAvailable :: DataType Postgres VehicleType
-vehicleTypesAvailable = DataType pgTextType
-
--- | VehicleType Lenses
-availableBoost   :: Lens' VehicleType Int32
-availableIconic  :: Lens' VehicleType Int32
-availableEfit    :: Lens' VehicleType Int32
-availableEfitG5  :: Lens' VehicleType Int32
-
-VehicleType (LensFor availableBoost)  _ _ _ = tableLenses
-VehicleType _ (LensFor availableIconic) _ _ = tableLenses
-VehicleType _ _ (LensFor availableEfit)   _ = tableLenses
-VehicleType _ _ _ (LensFor availableEfitG5) = tableLenses
-
 -- | StationStatus Lenses
-statusInfoId                :: Getter (StationStatusT Identity) (PrimaryKey StationInformationT Identity)
+statusCommon                :: Getter (StationStatusT f) (StationStatusCommonMixin f)
+statusInfoId                :: Getter (StationStatusT f) (PrimaryKey StationInformationT f)
 statusStationId             :: Lens' (StationStatusT f) (C f Int32)
 statusLastReported          :: Lens' (StationStatusT f) (C f UTCTime)
 statusNumBikesAvailable     :: Lens' (StationStatusT f) (C f Int32)
@@ -160,35 +128,41 @@ statusIsRenting             :: Lens' (StationStatusT f) (C f Bool)
 statusIsReturning           :: Lens' (StationStatusT f) (C f Bool)
 statusTraffic               :: Lens' (StationStatusT f) (C f (Maybe T.Text))
 statusVehicleDocksAvailable :: Lens' (StationStatusT f) (C f Int32)
+statusVehicleTypesAvailable :: Getter (StationStatusT f) (VehicleTypeMixin f)
 vehicleTypesAvailableBoost  :: Lens' (StationStatusT f) (C f Int32)
 vehicleTypesAvailableIconic :: Lens' (StationStatusT f) (C f Int32)
 vehicleTypesAvailableEfit   :: Lens' (StationStatusT f) (C f Int32)
 vehicleTypesAvailableEfitG5 :: Lens' (StationStatusT f) (C f Int32)
 
-statusInfoId = to _statusInfoId
-StationStatus _ (LensFor statusStationId)                                  _ _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
-StationStatus _ _ (LensFor statusLastReported)                               _ _ _ _ _ _ _ _ _ _ _ _ = tableLenses
-StationStatus _ _ _ (LensFor statusNumBikesAvailable)                          _ _ _ _ _ _ _ _ _ _ _ = tableLenses
-StationStatus _ _ _ _ (LensFor statusNumBikesDisabled)                           _ _ _ _ _ _ _ _ _ _ = tableLenses
-StationStatus _ _ _ _ _ (LensFor statusNumDocksAvailable)                          _ _ _ _ _ _ _ _ _ = tableLenses
-StationStatus _ _ _ _ _ _ (LensFor statusNumDocksDisabled)                           _ _ _ _ _ _ _ _ = tableLenses
-StationStatus _ _ _ _ _ _ _ (LensFor statusIsChargingStation)                          _ _ _ _ _ _ _ = tableLenses
-StationStatus _ _ _ _ _ _ _ _ (LensFor statusStatus)                                     _ _ _ _ _ _ = tableLenses
-StationStatus _ _ _ _ _ _ _ _ _ (LensFor statusIsInstalled)                                _ _ _ _ _ = tableLenses
-StationStatus _ _ _ _ _ _ _ _ _ _ (LensFor statusIsRenting)                                  _ _ _ _ = tableLenses
-StationStatus _ _ _ _ _ _ _ _ _ _ _ (LensFor statusIsReturning)                                _ _ _ = tableLenses
-StationStatus _ _ _ _ _ _ _ _ _ _ _ _ (LensFor statusTraffic)                                    _ _ = tableLenses
-StationStatus _ _ _ _ _ _ _ _ _ _ _ _ _ (LensFor statusVehicleDocksAvailable)                      _ = tableLenses
-StationStatus _ _ _ _ _ _ _ _ _ _ _ _ _ _ (VehicleType (LensFor vehicleTypesAvailableBoost) _ _ _)   = tableLenses
-StationStatus _ _ _ _ _ _ _ _ _ _ _ _ _ _ (VehicleType _ (LensFor vehicleTypesAvailableIconic) _ _)  = tableLenses
-StationStatus _ _ _ _ _ _ _ _ _ _ _ _ _ _ (VehicleType _ _ (LensFor vehicleTypesAvailableEfit)    _) = tableLenses
-StationStatus _ _ _ _ _ _ _ _ _ _ _ _ _ _ (VehicleType _ _ _ (LensFor vehicleTypesAvailableEfitG5))  = tableLenses
+statusCommon = to _statusCommon
+statusVehicleTypesAvailable = to _statusVehicleTypesAvailable
+statusInfoId = to (_statusInfoId . _statusCommon)
+StationStatus (StationStatusCommon _ (LensFor statusStationId)         _ _ _ _ _ _) _ _ _ _ _ _ _ = tableLenses
+StationStatus (StationStatusCommon _ _ (LensFor statusLastReported)      _ _ _ _ _) _ _ _ _ _ _ _ = tableLenses
+StationStatus (StationStatusCommon _ _ _ (LensFor statusNumBikesAvailable) _ _ _ _) _ _ _ _ _ _ _ = tableLenses
+StationStatus (StationStatusCommon _ _ _ _ (LensFor statusNumBikesDisabled)  _ _ _) _ _ _ _ _ _ _ = tableLenses
+StationStatus (StationStatusCommon _ _ _ _ _ (LensFor statusNumDocksAvailable) _ _) _ _ _ _ _ _ _ = tableLenses
+StationStatus (StationStatusCommon _ _ _ _ _ _ (LensFor statusNumDocksDisabled)  _) _ _ _ _ _ _ _ = tableLenses
+StationStatus (StationStatusCommon _ _ _ _ _ _ _ (LensFor statusIsChargingStation)) _ _ _ _ _ _ _ = tableLenses
+StationStatus _ (LensFor statusStatus)                                                _ _ _ _ _ _ = tableLenses
+StationStatus _ _ (LensFor statusIsInstalled)                                           _ _ _ _ _ = tableLenses
+StationStatus _ _ _ (LensFor statusIsRenting)                                             _ _ _ _ = tableLenses
+StationStatus _ _ _ _ (LensFor statusIsReturning)                                           _ _ _ = tableLenses
+StationStatus _ _ _ _ _ (LensFor statusTraffic)                                               _ _ = tableLenses
+StationStatus _ _ _ _ _ _ (LensFor statusVehicleDocksAvailable)                                 _ = tableLenses
+StationStatus _ _ _ _ _ _ _ (VehicleType (LensFor vehicleTypesAvailableBoost)   _ _ _)            = tableLenses
+StationStatus _ _ _ _ _ _ _ (VehicleType _ (LensFor vehicleTypesAvailableIconic)  _ _)            = tableLenses
+StationStatus _ _ _ _ _ _ _ (VehicleType _ _ (LensFor vehicleTypesAvailableEfit)    _)            = tableLenses
+StationStatus _ _ _ _ _ _ _ (VehicleType _ _ _ (LensFor vehicleTypesAvailableEfitG5) )            = tableLenses
 
 -- | Newtype wrapper for StationStatusString to allow us to define a custom FromBackendRow instance.
 -- Don't want to implement database-specific code for the underlying StationStatusString type.
 newtype BeamStationStatusString where
   BeamStationStatusString :: AT.StationStatusString -> BeamStationStatusString
   deriving (Eq, Generic, Show, Read) via AT.StationStatusString
+  -- deriving (HasSqlEqualityCheck Postgres) via AT.StationStatusString
+
+instance BeamMigrateSqlBackend be => HasSqlEqualityCheck be BeamStationStatusString
 
 instance (BeamBackend be, FromBackendRow be T.Text) => FromBackendRow be BeamStationStatusString where
   fromBackendRow = do
@@ -225,14 +199,15 @@ stationStatusType = DataType pgTextType
 fromJSONToBeamStationStatus :: StationInformationId -> AT.StationStatus -> Maybe (StationStatusT (QExpr Postgres s))
 fromJSONToBeamStationStatus infId status
   | Just lastReported <- status ^. AT.statusLastReported = Just $
-  StationStatus { _statusInfoId                = val_ infId
-                , _statusStationId             = val_ (fromIntegral $ status ^. AT.statusStationId)
-                , _statusLastReported          = val_ (coerce lastReported)
-                , _statusNumBikesAvailable     = fromIntegral $ status ^. AT.statusNumBikesAvailable
-                , _statusNumBikesDisabled      = fromIntegral $ status ^. AT.statusNumBikesDisabled
-                , _statusNumDocksAvailable     = fromIntegral $ status ^. AT.statusNumDocksAvailable
-                , _statusNumDocksDisabled      = fromIntegral $ status ^. AT.statusNumDocksDisabled
-                , _statusIsChargingStation     = val_ $ status ^. AT.statusIsChargingStation
+  StationStatus { _statusCommon = StationStatusCommon { _statusInfoId                = val_ infId
+                                                      , _statusStationId             = val_ (fromIntegral $ status ^. AT.statusStationId)
+                                                      , _statusLastReported          = as_ @UTCTime (val_ lastReported)
+                                                      , _statusNumBikesAvailable     = fromIntegral $ status ^. AT.statusNumBikesAvailable
+                                                      , _statusNumBikesDisabled      = fromIntegral $ status ^. AT.statusNumBikesDisabled
+                                                      , _statusNumDocksAvailable     = fromIntegral $ status ^. AT.statusNumDocksAvailable
+                                                      , _statusNumDocksDisabled      = fromIntegral $ status ^. AT.statusNumDocksDisabled
+                                                      , _statusIsChargingStation     = val_ $ status ^. AT.statusIsChargingStation
+                                                      }
                 , _statusStatus                = val_ (coerce $ status ^. AT.statusStatus :: BeamStationStatusString)
                 , _statusIsInstalled           = val_ $ status ^. AT.statusIsInstalled
                 , _statusIsRenting             = val_ $ status ^. AT.statusIsRenting
@@ -278,40 +253,33 @@ fromBeamStationStatusToJSON status =
 -- * Table modifications and migrations.
 
 -- | Table modifications for 'StationStatus' table.
-stationStatusModification :: EntityModification (DatabaseEntity be db) be (TableEntity StationStatusT)
-stationStatusModification =
-  setEntityName "station_status" <> modifyTableFields tableModification
-  { _statusInfoId                = StationInformationId "info_station_id" "info_reported"
-  , _statusStationId             = "station_id"
-  , _statusLastReported          = "last_reported"
-  , _statusNumBikesAvailable     = "num_bikes_available"
-  , _statusNumBikesDisabled      = "num_bikes_disabled"
-  , _statusNumDocksAvailable     = "num_docks_available"
-  , _statusNumDocksDisabled      = "num_docks_disabled"
-  , _statusIsChargingStation     = "is_charging_station"
+stationStatusModification :: T.Text -> EntityModification (DatabaseEntity be db) be (TableEntity StationStatusT)
+stationStatusModification tableName =
+  setEntityName tableName <> modifyTableFields tableModification
+  { _statusCommon                = stationStatusCommonFields "" -- ^ No prefix, to stay backwards compatible with non-mixin schema.
   , _statusStatus                = "status"
   , _statusIsInstalled           = "is_installed"
   , _statusIsRenting             = "is_renting"
   , _statusIsReturning           = "is_returning"
   , _statusTraffic               = "traffic"
   , _statusVehicleDocksAvailable = "vehicle_docks_available"
-  , _statusVehicleTypesAvailable = vehicleTypeFields "vehicle_types_available"
+  , _statusVehicleTypesAvailable = vehicleTypeFields "vehicle_types_available_"
   }
 
 -- | Migration for the StationStatus table.
-createStationStatus :: Migration Postgres (CheckedDatabaseEntity Postgres db (TableEntity StationStatusT))
-createStationStatus =
-  createTable "station_status" $ StationStatus
-  { _statusInfoId                = StationInformationId
-                                  (field "info_station_id" int notNull)
-                                  (field "info_reported" (DataType (timestampType Nothing True)) notNull)
-  , _statusStationId             = field "station_id"              int notNull
-  , _statusLastReported          = field "last_reported"           (DataType (timestampType Nothing True)) notNull
-  , _statusNumBikesAvailable     = field "num_bikes_available"     int notNull
-  , _statusNumBikesDisabled      = field "num_bikes_disabled"      int notNull
-  , _statusNumDocksAvailable     = field "num_docks_available"     int notNull
-  , _statusNumDocksDisabled      = field "num_docks_disabled"      int notNull
-  , _statusIsChargingStation     = field "is_charging_station"     boolean notNull
+createStationStatus :: T.Text -> Migration Postgres (CheckedDatabaseEntity Postgres db (TableEntity StationStatusT))
+createStationStatus tableName =
+  createTable tableName $ StationStatus
+  { _statusCommon                = StationStatusCommon (StationInformationId (field "info_station_id" int notNull)
+                                                                             (field "info_reported" (DataType (timestampType Nothing True)) notNull)
+                                                       )
+                                                       (field "station_id"              int notNull)
+                                                       (field "last_reported"           (DataType (timestampType Nothing True)) notNull)
+                                                       (field "num_bikes_available"     int notNull)
+                                                       (field "num_bikes_disabled"      int notNull)
+                                                       (field "num_docks_available"     int notNull)
+                                                       (field "num_docks_disabled"      int notNull)
+                                                       (field "is_charging_station"     boolean notNull)
   , _statusStatus                = field "status"                  stationStatusType notNull
   , _statusIsInstalled           = field "is_installed"            boolean notNull
   , _statusIsRenting             = field "is_renting"              boolean notNull
@@ -324,5 +292,5 @@ createStationStatus =
                                                (field "vehicle_types_available_efit_g5" int notNull)
   }
 
-extraStatusMigrations :: IsString a => [a]
-extraStatusMigrations = ["CREATE INDEX IF NOT EXISTS station_status_info_station_id_last_reported_idx ON station_status (info_station_id, last_reported);"]
+_extraStatusMigrations :: IsString a => [a]
+_extraStatusMigrations = ["CREATE INDEX IF NOT EXISTS station_status_info_station_id_last_reported_idx ON station_status (info_station_id, last_reported);"]

@@ -20,7 +20,7 @@ name:               haskbike
 -- PVP summary:     +-+------- breaking API changes
 --                  | | +----- non-breaking API additions
 --                  | | | +--- code changes with no API change
-version:            3.2.0
+version:            3.3.0
 
 -- A short (one-line) description of the package.
 synopsis:           Library and client API for Toronto Bike Share.
@@ -60,11 +60,19 @@ extra-source-files: docs/json/2.3/*.json
 
 -- Linker (use gold) common warning flags.
 common compile-flags
-    ghc-options: -Wall -fwrite-ide-info
+    -- ghc-options: -Wall -fwrite-ide-info -fprof-auto -threaded
+    -- ghc-options: -Wall -fwrite-ide-info -fprof-auto
+    ghc-options: -Wall -fwrite-ide-info -threaded
     -- Link with gold on Linux.
     if os(linux)
       ghc-options:       -optl-fuse-ld=gold
       ld-options:        -fuse-ld=gold
+
+-- Linker (use gold) common warning flags.
+common compile-flags-exe
+    -- ghc-options: "-with-rtsopts=-N -p -s -h -l -i0.1"
+    -- ghc-options: "-with-rtsopts=-N -p -s -h -l -i0.1"
+    ghc-options: "-with-rtsopts=-N"
 
 -- Common language extensions.
 common common-extensions
@@ -121,6 +129,8 @@ common api-server-depends
                     , http-conduit
                     , free
                     , wai
+                    , wai-extra
+                    , cond
                     , warp
                     , aeson
                     , lucid
@@ -163,6 +173,7 @@ common test-depends
 -- Executable target.
 executable haskbike
     import:           compile-flags
+                    , compile-flags-exe
                     , common-extensions
                     , common-depends
                     , api-client-depends
@@ -197,99 +208,113 @@ library
 
     -- Modules exported by the library.
     exposed-modules:  BikeShareAPI
-                    , Version
-                    , AppEnv
-                    , API.ResponseWrapper
-                    , API.Client
+                    , API.APIEntity
+                    , API.BikeShare
                     , API.Classes
+                    , API.Client
                     , API.ClientLifted
+                    , API.ClientUtils
+                    -- , API.Pollable
+                    , API.ResponseWrapper
+                    , API.StationInformation
+                    , API.StationStatus
+                    , API.SystemInformation
+                    , API.Utils
+                    , API.VehicleType
+                    , AppEnv
+                    , CLI.Database
+                    , CLI.Debug
                     -- , API.DebugClient
-                    , TimeInterval
-                    , Server
-                    , ServerEnv
-                    , Server.Routes
-                    , Server.RobotsTXT
-                    , Server.Utils
-                    , Server.DataAPI
-                    , Server.StaticAPI
-                    , Server.VisualizationAPI
-                    , Server.DebugAPI
-                    , Server.StatusDataParams
-                    , Server.Page.PerformanceCSV
-                    , Server.Page.StationStatusVisualization
-                    , Server.Page.SystemStatusVisualization
-                    , Server.Page.SystemInfoVisualization
-                    , Server.Page.StatusVisualization
-                    , Server.Page.SideMenu
-                    , Server.Page.Utils
-                    , Server.Page.StationList
-                    , Server.Page.IndexPage
-                    , Server.PureCSS
-                    , Server.Classes
-                    , Server.Data.StationStatusVisualization
-                    , Server.Data.SystemInformationVisualization
-                    , Server.ComponentsAPI
-                    , Server.Components.ChargingHeader
-                    , Server.Components.PerformanceData
-                    , Server.Components.DockingHeader
-                    , Server.Components.LatestQueries
-                    , Server.Components.ChargingInfrastructureHeader
-                    , CLI.Utils
+                    , CLI.Events
+                    , CLI.Options
                     , CLI.Poll
                     , CLI.Poll.Utils
                     , CLI.Query
-                    , CLI.Debug
-                    , CLI.Events
-                    , CLI.ServeVisualize
                     , CLI.QueryFormat
-                    , CLI.Database
-                    , CLI.Options
-                    , API.APIEntity
-                    , API.Utils
-                    , API.Pollable
-                    , API.BikeShare
-                    , API.StationStatus
-                    , API.SystemInformation
-                    , API.StationInformation
-                    , API.VehicleType
+                    , CLI.ServeVisualize
+                    , CLI.Utils
                     , Data.Time.Extras
-                    , Text.Pretty.Simple.Extras
+
                     , Database.BikeShare
                     , Database.BikeShare.BeamConvertable
-                    , Database.BikeShare.ImportExport
-                    , Database.BikeShare.StatusVariationQuery
-                    , Database.BikeShare.Utils
-                    , Database.BikeShare.EventCounts
                     , Database.BikeShare.Connection
                     , Database.BikeShare.DaysAgo
+                    , Database.BikeShare.EndpointQueried
+                    , Database.BikeShare.EventCounts
+                    , Database.BikeShare.Expressions
+                    , Database.BikeShare.ImportExport
                     , Database.BikeShare.Operations
                     , Database.BikeShare.Operations.Dockings
                     , Database.BikeShare.Operations.Factors
                     , Database.BikeShare.Operations.FactorsCSV
-                    , Database.BikeShare.Operations.StationEmpty
                     , Database.BikeShare.Operations.QueryLogs
-                    , Database.BikeShare.Expressions
+                    , Database.BikeShare.Operations.StationEmpty
                     , Database.BikeShare.StatusDeltaFields
-                    , Database.BikeShare.Tables.SystemInformation
-                    , Database.BikeShare.Tables.StationInformation
-                    , Database.BikeShare.Tables.StationStatus
-                    , Database.BikeShare.Tables.QueryLogs
-                    , Database.BikeShare.Tables.Diagnostics
-                    , Database.BikeShare.Tables.StationLookup
+                    , Database.BikeShare.StatusVariationQuery
+                    , Database.BikeShare.Utils
+                    -- Schemas:
                     , Database.BikeShare.Schema.V001.BikeShare
+                    , Database.BikeShare.Schema.V001.Diagnostics
                     , Database.BikeShare.Schema.V001.Migrations
-                    , Database.BikeShare.Schema.V001.SystemInformation
+                    , Database.BikeShare.Schema.V001.QueryLogs
                     , Database.BikeShare.Schema.V001.StationInformation
                     , Database.BikeShare.Schema.V001.StationStatus
-                    , Database.BikeShare.Schema.V001.QueryLogs
-                    , Database.BikeShare.Schema.V001.Diagnostics
+                    , Database.BikeShare.Schema.V001.StationStatusCommon
+                    , Database.BikeShare.Schema.V001.SystemInformation
+                    , Database.BikeShare.Schema.V001.VehicleTypeMixin
+                    -- , Database.BikeShare.Schema.V001.StationStatusChanges
                     , Database.BikeShare.Schema.V002.BikeShare
                     , Database.BikeShare.Schema.V002.Migrations
                     , Database.BikeShare.Schema.V002.StationLookup
-                    , Database.BikeShare.EndpointQueried
+                    , Database.BikeShare.Schema.V003.BikeShare
+                    , Database.BikeShare.Schema.V003.Migrations
+                    -- Final table definitions:
+                    , Database.BikeShare.Tables.Diagnostics
+                    , Database.BikeShare.Tables.QueryLogs
+                    , Database.BikeShare.Tables.StationInformation
+                    , Database.BikeShare.Tables.StationLookup
+                    , Database.BikeShare.Tables.StationStatus
+                    , Database.BikeShare.Tables.SystemInformation
+
+                    , Graphics.Vega.VegaLite.Extra
+
+                    , Server
+                    , Server.Classes
+                    , Server.Components.ChargingHeader
+                    , Server.Components.ChargingInfrastructureHeader
+                    , Server.Components.DockingHeader
+                    , Server.Components.LatestQueries
+                    , Server.Components.PerformanceData
+                    , Server.ComponentsAPI
+                    , Server.Data.StationStatusVisualization
+                    , Server.Data.SystemInformationVisualization
+                    , Server.DataAPI
+                    , Server.DebugAPI
+                    , Server.Page.IndexPage
+                    , Server.Page.List.Common
+                    , Server.Page.List.StationEmptyFullList
+                    , Server.Page.List.StationList
+                    , Server.Page.PerformanceCSV
+                    , Server.Page.SideMenu
+                    , Server.Page.StationStatusVisualization
+                    , Server.Page.StatusVisualization
+                    , Server.Page.SystemInfoVisualization
+                    , Server.Page.SystemStatusVisualization
+                    , Server.Page.Utils
+                    , Server.PureCSS
+                    , Server.RobotsTXT
+                    , Server.Routes
+                    , Server.StaticAPI
+                    , Server.StatusDataParams
+                    , Server.Utils
+                    , Server.VisualizationAPI
+                    , ServerEnv
+
+                    , Text.Pretty.Simple.Extras
+                    , TimeInterval
+                    , Version
                     , Visualization.StationOccupancy
                     , Visualization.SystemInformation
-                    , Graphics.Vega.VegaLite.Extra
 
     -- Modules included in this library but not exported.
     other-modules:    Paths_haskbike
@@ -356,7 +381,7 @@ library haskbike-test-lib
                     , githash
 
     -- Directories containing source files.
-    hs-source-dirs:   src-test-lib
+    hs-source-dirs:   test
 
     -- Base language which the package is written in.
     default-language: GHC2021
@@ -364,6 +389,7 @@ library haskbike-test-lib
 -- Testing target.
 test-suite haskbike-test
     import:           compile-flags
+                    , compile-flags-exe
                     , common-extensions
                     , common-depends
                     , api-client-depends
@@ -375,6 +401,16 @@ test-suite haskbike-test
 
     -- Modules included in this test suite, other than Main.
     -- other-modules:
+    -- Modules exported by the library.
+    other-modules:  Utils
+                  , TestDecoding
+                  , TestEncoding
+                  , TestClient
+                  , TestDatabase
+                  , TestOperations
+                  , TestChargings
+                  , TestMisc
+                  , TestDeltas
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
@@ -396,6 +432,7 @@ test-suite haskbike-test
 
 benchmark bench-haskbike
     import:           compile-flags
+                    , compile-flags-exe
                     , common-extensions
                     , common-depends
                     , api-client-depends
@@ -403,7 +440,7 @@ benchmark bench-haskbike
                     , test-depends
 
     -- The entrypoint to the benchmark suite.
-    main-is:          Main.hs
+    main-is:          Bench.hs
 
     type:             exitcode-stdio-1.0
 
@@ -413,6 +450,10 @@ benchmark bench-haskbike
                     , haskbike-test-lib
                     , time
                     , extra
+                    , lucid
+                    , servant-lucid
+
+    other-modules:  BenchServer
 
     ghc-options:      "-with-rtsopts=-A32m"
     if impl(ghc >= 8.6)

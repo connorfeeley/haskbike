@@ -10,17 +10,19 @@ module Server
      ( serveVisualization
      ) where
 
+import           Control.Conditional         ( condM )
 import           Control.Monad.Except
 import           Control.Monad.Reader
 
-import           Data.Function            ( (&) )
+import           Data.Function               ( (&) )
 
-import           Network.Wai.Handler.Warp as Warp
+import           Network.Wai.Handler.Warp    as Warp
+import           Network.Wai.Middleware.Gzip ( GzipSettings, def, gzip )
 
-import           Prelude                  ()
+import           Prelude                     ()
 import           Prelude.Compat
 
-import           Servant                  as S
+import           Servant                     as S
 import           Servant.Server.Generic
 
 import           Server.Routes
@@ -32,8 +34,7 @@ import           ServerEnv
 -- It uses the 'ntServerAppM' function to transform actions in the ServerAppM monad into actions in the Handler monad (which is what Servant's functions operate on).
 -- This allows us to use our own environment throughout our application while still using Servant's functionality.
 app :: ServerEnv ServerAppM -> Application
-app s =
-  genericServeT (ntServerAppM s) server
+app s = genericServeT (ntServerAppM s) server
   -- 'genericServeT' is a function from the Servant library that serves an API using a generic server.
   -- In this case, ntServerAppM is used as a natural transformation on a generic server 'record'.
 
@@ -46,8 +47,17 @@ serveVisualization = do
 
   let _appEnv = serverAppEnv env
 
+  -- Run with gzip compression if enabled.
+  gzipM <- condM
+    [ (return (serverGzipCompression env), return (gzip gzipSettings))
+    , (return True,                        return id)
+    ]
+
   -- Run Warp/Wai server using specific settings.
-  liftIO $ runSettings (serverSettings env) (app env)
+  liftIO $ runSettings (serverSettings env) (gzipM (app env))
+
+gzipSettings :: GzipSettings
+gzipSettings = def
 
 serverSettings :: ServerEnv ServerAppM -> Settings
 serverSettings env = defaultSettings
