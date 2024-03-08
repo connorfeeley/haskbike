@@ -62,3 +62,5 @@
 * Major optimizations for station empty/full query.
 * Add station empty/full list page.
 * Fix number of database connections in pool: only open same number of connections as number of capabilities (threads).
+* Open station status page using same time range as the empty/full station list.
+* Add `station_status_changes` table to store only station status records where the status is different from the preceding record (per station).
