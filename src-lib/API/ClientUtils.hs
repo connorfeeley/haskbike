@@ -1,22 +1,22 @@
--- |
+-- | Miscellanous utilities for the client API. Mostly useful for REPL testing.
 
-module API.ClientUtils where
+module API.ClientUtils
+     ( fromRight'
+     , unsafeQuery
+     ) where
 
-import           API.Client
 import           API.ClientLifted
 import           API.ResponseWrapper ( ResponseWrapper, _respData )
-import           API.StationStatus   ( StationStatus )
 
 import           AppEnv
 
-import           Servant.Client      ( ClientError )
+import           Servant.Client      ( ClientM )
 
 
-
--- | Fetch station status unsafely.
-unsafeQueryStationStatus :: AppM [StationStatus]
-unsafeQueryStationStatus = do
-  statusResponse <- runQueryM stationStatus :: AppM (Either ClientError (ResponseWrapper [StationStatus]))
+-- | Fetch from bikeshare API unsafely. Throws an error if the request fails to be decoded.
+unsafeQuery :: ClientM (ResponseWrapper b) -> AppM b
+unsafeQuery endpoint = do
+  statusResponse <- runQueryM endpoint
 
   pure $ _respData (fromRight' statusResponse)
 
