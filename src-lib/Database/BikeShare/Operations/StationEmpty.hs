@@ -150,25 +150,23 @@ queryStationEmptyFullTime stationId startTime endTime = do
           all_ (bikeshareDb ^. bikeshareStationStatus)
 
   pure $ do
-    (i, ef) <- do
-      -- Get the latest info not newer than the end time.
-      info <- Pg.pgNubBy_ (\inf -> cast_ (_infoStationId inf) int) $
-              orderBy_ (\inf -> (asc_ (_infoStationId inf), desc_ (_infoReported inf))) $
-              filter_ (\inf -> _infoReported inf <=. val_ endTime) $
-              all_ (bikeshareDb ^. bikeshareStationInformation)
+    -- Get the latest info not newer than the end time.
+    info <- Pg.pgNubBy_ (\inf -> cast_ (_infoStationId inf) int) $
+            orderBy_ (\inf -> (asc_ (_infoStationId inf), desc_ (_infoReported inf))) $
+            filter_ (\inf -> _infoReported inf <=. val_ endTime) $
+            all_ (bikeshareDb ^. bikeshareStationInformation)
 
-      -- Join the station info with the station empty/full results, always including the info rows.
-      (_sId, empty, full) <- leftJoin_'
-                          (reuse emptyFullCte)
-                          (\(sId', _, _) -> sId' ==?. (info ^. infoStationId))
+    -- Join the station info with the station empty/full results, always including the info rows.
+    (_sId, empty, full) <- leftJoin_'
+                        (reuse emptyFullCte)
+                        (\(sId', _, _) -> sId' ==?. (info ^. infoStationId))
 
-      -- If there are no status rows for a given station then the empty/full results will be NULL;
-      -- default the empty time to be the time range, and default the full time to be 0.
-      pure (info, ( fromMaybe_ nominalTimeRangeSeconds empty
-                  , fromMaybe_ 0 full
-                  )
-           )
-    pure (i, ef)
+    -- If there are no status rows for a given station then the empty/full results will be NULL;
+    -- default the empty time to be the time range, and default the full time to be 0.
+    pure (info, ( fromMaybe_ nominalTimeRangeSeconds empty
+                , fromMaybe_ 0 full
+                )
+         )
   where
     nominalTimeRangeSeconds = (fromInteger . round . nominalDiffTimeToSeconds) (diffUTCTime endTime startTime)
 
