@@ -148,6 +148,7 @@
                     retrie
                     ghcprofview
                     eventlog2html
+                    stan # Haskell STatic ANalysis tool
                     ;
                   inherit (self'.packages)
                     haskbike-completions;
