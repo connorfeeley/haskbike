@@ -12,11 +12,9 @@ import           Colog                     ( logInfo, pattern W )
 import           Control.Exception         ( SomeException, try )
 import           Control.Monad             ( void )
 
-import           Data.Pool
 import qualified Data.Text.Lazy            as TL
 import           Data.Time                 ( getCurrentTimeZone )
 
-import           Database.Beam.Postgres    ( close, connect )
 import           Database.BikeShare
 import           Database.BikeShare.Utils
 
@@ -68,13 +66,13 @@ unit_poll = do
   -- Establish a connection to the database, drop all tables, and re-initialize it.
   -- Establish a connection to the database.
   connInfo <- mkDbConnectInfo dbnameTest
-  pool <- newPool (defaultPoolConfig (connect connInfo) close 30 5)
+  connPool <- mkDatabaseConnectionPool connInfo
   runWithAppM dbnameTest dropTables
 
   clientManager <- liftIO $ newManager tlsManagerSettings
 
   -- Create the application environment.
-  let env = mainEnv W False False timeZone pool clientManager
+  let env = mainEnv W False False timeZone connPool clientManager
 
   -- Log the database connection parameters.
   runAppM env $
