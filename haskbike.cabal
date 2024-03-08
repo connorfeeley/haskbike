@@ -389,7 +389,8 @@ library haskbike-test-lib
 -- Testing target.
 test-suite haskbike-test
     import:           compile-flags
-                    , compile-flags-exe
+                    -- Don't enable '-threaded' for test suite; causes it to run in parallel.
+                    -- , compile-flags-exe
                     , common-extensions
                     , common-depends
                     , api-client-depends
