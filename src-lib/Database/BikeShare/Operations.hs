@@ -15,7 +15,7 @@
 
 module Database.BikeShare.Operations
      ( module Database.BikeShare.Operations.Dockings
-     , insertChangedStationStatus
+     , module Database.BikeShare.Operations.StatusChanges
      , insertStationInformation
      , insertStationInformation'
      , insertStationStatus
