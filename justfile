@@ -71,7 +71,7 @@ reset *ARGS:
 migrate *ARGS:
     #!/usr/bin/env bash
     source ./.env.local
-    {{CABAL}} run haskbike -- --plain debug --database haskbike-test --enable-migrations -v --log-database
+    {{CABAL}} run haskbike -- --plain debug --enable-migrations -v --log-database
 
 visualize:
     #!/usr/bin/env bash
