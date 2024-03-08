@@ -99,36 +99,7 @@ queryStationEmptyFullTime stationId startTime endTime = do
             filter_ (\row -> between_ (row ^. statusLastReported) (val_ (addUTCTime (-60 * 60) startTime)) (val_ (addUTCTime (60 * 60) endTime))) $
             all_ (bikeshareDb ^. bikeshareStationStatus)
 
-  -- statusWindow <- selecting $
-  --       filter_ (\(row, lead, lag) -> keepRow row lead lag) $
-  --       filter_ (\(row, (lead, _, _), (lag, _, _)) -> _statusLastReported row <. val_ endTime &&.
-  --                                     lead >=. val_ startTime ||. -- lead > start
-  --                                     (lag  <.  val_ startTime &&. _statusLastReported row >=. val_ startTime) -- lag < start && row > start
-  --               ) $
-  --       withWindow_ (\row -> frame_ (partitionBy_ ((_unInformationStationId . _statusInfoId . _statusCommon) row)) (orderPartitionBy_ ((asc_ . _statusLastReported) row)) noBounds_)
-  --                   (\row w -> ( row
-  --                              -- , leadWithDefault_ (_statusLastReported row, _statusLastReported row) (val_ 1, val_ 1) (val_ endTime, val_ endTime) `over_` w
-  --                              , ( leadWithDefault_ (_statusLastReported      row) (val_ 1) (val_ endTime) `over_` w
-  --                                , leadWithDefault_ (_statusNumBikesAvailable row) (val_ 1) (val_ 0) `over_` w
-  --                                , leadWithDefault_ (_statusNumDocksAvailable row) (val_ 1) (val_ 0) `over_` w
-  --                                )
-  --                              , ( lagWithDefault_ (_statusLastReported      row) (val_ 1) (val_ endTime) `over_` w
-  --                                , lagWithDefault_ (_statusNumBikesAvailable row) (val_ 1) (val_ 0) `over_` w
-  --                                , lagWithDefault_ (_statusNumDocksAvailable row) (val_ 1) (val_ 0) `over_` w
-  --                                )
-  --                              )
-  --                   ) $
-  --           filter_ (stationIdCond stationId) $
-  --           -- Widen our query a bit to get the previous and next status reports.
-  --           filter_ (\row -> between_ (row ^. statusLastReported) (val_ (addUTCTime (-60 * 60) startTime)) (val_ (addUTCTime (60 * 60) endTime))) $
-  --           all_ (bikeshareDb ^. bikeshareStationStatus)
-
   pure $ do
-    -- Get latest status so that we can get only the latest reference station info.
-    -- (latestStatus, _, _) <- Pg.pgNubBy_ (\(status, _, _) -> cast_ (_statusStationId status) int) $
-    --                         -- orderBy_ (\(status, _, _) -> desc_ (_statusLastReported status)) $
-    --                         reuse statusWindow
-
     -- Get latest info.
     info <- Pg.pgNubBy_ (\inf -> cast_ (_infoStationId inf) int) $
             orderBy_ (\inf -> (asc_ (_infoStationId inf), desc_ (_infoReported inf))) $
