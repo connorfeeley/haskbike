@@ -249,6 +249,7 @@ library
                     , Database.BikeShare.Operations.FactorsCSV
                     , Database.BikeShare.Operations.QueryLogs
                     , Database.BikeShare.Operations.StationEmpty
+                    , Database.BikeShare.Operations.StatusChanges
                     , Database.BikeShare.StatusDeltaFields
                     , Database.BikeShare.StatusVariationQuery
                     , Database.BikeShare.Utils
