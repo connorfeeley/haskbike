@@ -2,9 +2,13 @@
 
 module Database.BikeShare.Operations.StatusChanges
      ( insertChangedStationStatus
+     , insertChangedStationStatusGeneric
+     , populateChangedStationStatusTable
      ) where
 
 import           Control.Lens                                 hiding ( reuse, (<.) )
+
+import           Data.Int                                     ( Int32 )
 
 import           Database.Beam
 import           Database.Beam.Backend.SQL.BeamExtensions
@@ -13,11 +17,28 @@ import           Database.BikeShare
 import           Database.BikeShare.Tables.StationInformation
 import           Database.BikeShare.Tables.StationStatus
 
+
 {- |
 Insert only changed station statuses into the database.
 -}
 insertChangedStationStatus :: MonadBeamInsertReturning Postgres m => m [StationStatusT Identity]
-insertChangedStationStatus = do
+insertChangedStationStatus = insertChangedStationStatusGeneric (Just 1)
+
+
+{- |
+Populate the changed station statuses table from the contents of the station status table.
+-}
+populateChangedStationStatusTable :: MonadBeamInsertReturning Postgres m => m [StationStatusT Identity]
+populateChangedStationStatusTable = insertChangedStationStatusGeneric Nothing
+
+
+{- |
+Generic function to populate the changed station statuses table from the contents of the station status table.
+'Maybe' argument is the maximum row number to consider, or 'Nothing' to consider all rows.
+Use 'Just 1' to consider only the latest status row for each station.
+-}
+insertChangedStationStatusGeneric :: MonadBeamInsertReturning Postgres m => Maybe Int32 -> m [StationStatusT Identity]
+insertChangedStationStatusGeneric maxRowNumber = do
   runInsertReturningList $
     insertOnConflict (bikeshareDb ^. bikeshareStationStatusChanges)
     (insertFrom $ do
@@ -54,7 +75,7 @@ insertChangedStationStatus = do
           ) $
           all_ (bikeshareDb ^. bikeshareStationStatus)
 
-        guard_' ( sqlBool_ (rowNum <=. val_ (1 :: Integer)) &&?.
+        guard_' ( maxRowNumberCond rowNum maxRowNumber &&?.
                   (((row ^. statusNumBikesAvailable      ) /=?. pBikesAvail            ||?.
                     (row ^. statusNumBikesDisabled       ) /=?. pBikesDisab            ||?.
                     (row ^. statusNumDocksAvailable      ) /=?. pDocksAvail            ||?.
@@ -75,3 +96,9 @@ insertChangedStationStatus = do
                   ))
         pure row
     ) (conflictingFields primaryKey) onConflictDoNothing
+  where
+    -- Optionally limit the number of rows to process.
+    -- Use Nothing to process all rows (initialize status changes table from ALL status records).
+    -- Use (Just 1) to process only the latest status row for each station.
+    maxRowNumberCond rowNum (Just maxRow) = sqlBool_ (rowNum <=. val_ maxRow)
+    maxRowNumberCond _      Nothing       = sqlBool_ (val_ True)
