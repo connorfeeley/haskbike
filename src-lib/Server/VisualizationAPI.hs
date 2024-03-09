@@ -231,7 +231,7 @@ stationListPage filterSelection = do
   appEnv <- asks serverAppEnv
   logInfo "Rendering station list"
 
-  latest <- liftIO $ runAppM appEnv $ withPostgres $ runSelectReturningList $ selectWith queryLatestStatuses
+  latest <- liftIO $ runAppM appEnv $ withPostgres $ runSelectReturningList $ select queryLatestStatuses
 
   let sorted = sortOn (_infoStationId . fst) latest
   sideMenu $
@@ -267,7 +267,7 @@ stationEmptyFullListPage start end filterSelection orderDirSelection orderSelect
   currentUtc <- liftIO getCurrentTime
   logInfo $ "Rendering station empty/full list for time [" <> tshow start <> " - " <> tshow end <> "] and order [" <> (T.pack . show) orderDirSelection <> "] of [" <> (T.pack . show) orderSelection <> "]"
 
-  (latest, emptyFull) <- liftIO $ concurrently (runAppM appEnv $ withPostgres $ runSelectReturningList $ selectWith queryLatestStatuses)
+  (latest, emptyFull) <- liftIO $ concurrently (runAppM appEnv $ withPostgres $ runSelectReturningList $ select queryLatestStatuses)
                                                (runAppM appEnv $ withPostgres $ runSelectReturningList $ selectWith $
                                                 queryStationEmptyFullTime (Nothing :: Maybe Integer) (start' currentUtc tz) (end' currentUtc tz))
 

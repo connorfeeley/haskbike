@@ -339,21 +339,20 @@ integrateColumns variation = do
          )
 
 -- | Get the latest status records for each station.
-queryLatestStatuses :: be ~ Postgres
-                    => With be BikeshareDb
-                    (Q be BikeshareDb s (StationInformationT (QExpr be s), StationStatusT (QGenExpr QValueContext be s)))
+-- queryLatestStatuses :: be ~ Postgres
+--                     => With be BikeshareDb
+--                     (Q be BikeshareDb s (StationInformationT (QExpr be s), StationStatusT (QGenExpr QValueContext be s)))
+queryLatestStatuses :: Q Postgres BikeshareDb s (StationInformationT (QExpr Postgres s), StationStatusT (QExpr Postgres s))
 queryLatestStatuses = do
-  info    <- selecting $ all_ (bikeshareDb ^. bikeshareStationInformation)
-  status  <- selecting $ filter_ (\s -> s ^. statusLastReported >=. (daysAgo_ . val_ . DaysAgo) 1) $ all_ (bikeshareDb ^. bikeshareStationStatus)
-  station <- selecting $ all_ (bikeshareDb ^. bikeshareStationLookup)
-  pure $ do
-    status' <- reuse status
-    info' <- reuse info
-    station' <- reuse station
-    guard_' ( _stnLookup station'                       `references_'` status' &&?.
-             (_unStatusStationId . _stnLookup) station' `references_'` info'
-            )
-    pure (info', status')
+  info    <- all_ (bikeshareDb ^. bikeshareStationInformation)
+  status  <- -- filter_ (\s -> s ^. statusLastReported >=. (daysAgo_ . val_ . DaysAgo) 1) $
+             all_ (bikeshareDb ^. bikeshareStationStatus)
+  station <- all_ (bikeshareDb ^. bikeshareStationLookup)
+
+  guard_' ( _stnLookup station                       `references_'` status &&?.
+           (_unStatusStationId . _stnLookup) station `references_'` info
+          )
+  pure (info, status)
 
 -- | Get the latest status records for each station.
 queryLatestSystemInfo :: be ~ Postgres
