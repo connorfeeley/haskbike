@@ -73,10 +73,8 @@ migrate *ARGS:
     source ./.env.local
     {{CABAL}} run haskbike -- --plain debug --enable-migrations -v --log-database
 
-visualize:
-    #!/usr/bin/env bash
-    # {{CABAL}} run haskbike -- --plain visualize -v --log-database
-    {{CABAL}} v2-run --enable-profiling --profiling-detail all-functions exes -- --plain visualize -v # --log-database
+visualize *ARGS:
+    {{CABAL}} v2-run --enable-profiling --profiling-detail all-functions exes -- --plain visualize -v {{ARGS}}
 
 export-rds-table TABLE:
     #!/usr/bin/env bash
