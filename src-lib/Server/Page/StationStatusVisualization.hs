@@ -1,4 +1,5 @@
-{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DataKinds           #-}
 -- | This module defines the data types used to render the station status visualization page.
 
 module Server.Page.StationStatusVisualization
@@ -21,6 +22,7 @@ import           Servant
 
 import           Server.Classes
 import           Server.ComponentsAPI
+import           Server.Page.SelectionForm
 import           Server.Page.StatusVisualization
 import           Server.Page.Utils
 
@@ -56,13 +58,12 @@ instance ToHtml StationStatusVisualizationPage where
       br_ []
 
       -- Selection form
-      form_ [class_ "pure-form pure-form-stacked full-width", style_ "text-align: center"] $ fieldset_ $ do
-        legend_ $ h3_ "Query Parameters"
-        div_ [class_ "pure-g full-width"] $ do -- Grid layout for form
-          div_ [class_ "pure-u-1 pure-u-md-1-4"] (stationIdInput params)
-          div_ [class_ "pure-u-1 pure-u-md-1-4"] (startTimeInput earliest)
-          div_ [class_ "pure-u-1 pure-u-md-1-4"] (endTimeInput latest)
-          div_ [class_ "pure-u-1 pure-u-md-1-4"] submitInput
+      toHtml (SelectionForm "Query Parameters"
+              [ StationIdInput ((Just . _statusVisPageStationId) params)
+              , TimeInput (Just earliest)
+              , TimeInput (Just latest)
+              , SubmitInput "Or hit enter"
+              ])
 
       with div_ [class_ "graph"] (toHtmlRaw (toHtmlWithUrls vegaSourceUrlsLocal (vegaEmbedCfg ShowActions) (vegaChart (map T.pack) (_statusVisPageDataLink params))))
 
@@ -107,6 +108,3 @@ instance ToHtml StationStatusVisualizationPage where
       times' = times (_statusVisPageTimeZone params) (_statusVisPageCurrentUtc params) (_statusVisPageTimeRange params)
       earliest = earliestTime times'
       latest   = latestTime   times'
-
-stationIdInput :: Monad m => StationStatusVisualizationPage -> HtmlT m ()
-stationIdInput = makeInputField "Station ID" "number" "station-id" . showt . _statusVisPageStationId

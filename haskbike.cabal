@@ -301,6 +301,7 @@ library
                     , Server.Page.StatusVisualization
                     , Server.Page.SystemInfoVisualization
                     , Server.Page.SystemStatusVisualization
+                    , Server.Page.SelectionForm
                     , Server.Page.Utils
                     , Server.PureCSS
                     , Server.RobotsTXT

@@ -21,6 +21,7 @@ import           Servant
 
 import           Server.Classes
 import           Server.ComponentsAPI
+import           Server.Page.SelectionForm
 import           Server.Page.StatusVisualization
 import           Server.Page.Utils
 import           Server.StatusDataParams
@@ -102,12 +103,11 @@ instance ToHtml SystemStatusVisualizationPage where
         mconcat $ map (`with` [class_ ("pure-u-md-1-" <> showt (length headers))]) headers
 
       -- Selection form
-      form_ [class_ "pure-form pure-form-stacked", style_ "text-align: center"] $ fieldset_ $ do
-        legend_ $ h3_ "Query Parameters"
-        div_ [class_ "pure-g full-width"] $ do -- Grid layout for form
-          div_ [class_ "pure-u-1 pure-u-md-1-3"] (startTimeInput earliest)
-          div_ [class_ "pure-u-1 pure-u-md-1-3"] (endTimeInput latest)
-          div_ [class_ "pure-u-1 pure-u-md-1-3"] submitInput
+      toHtml (SelectionForm "Query Parameters"
+              [ TimeInput (Just earliest)
+              , TimeInput (Just latest)
+              , SubmitInput "Or hit Enter"
+              ])
 
       with div_ [class_ "graph"] (toHtmlRaw (toHtmlWithUrls vegaSourceUrlsLocal (vegaEmbedCfg ShowActions) (vegaChart (map T.pack . drop 2) (_systemStatusVisPageDataLink params))))
       div_ $ i_ "Note: Iconic (mechanical) bikes are not displayed on the chart above since e-bike quantities are more interesting."
