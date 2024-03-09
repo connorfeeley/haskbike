@@ -6,7 +6,7 @@ set shell := ["bash", "-c"]
 
 set positional-arguments := true
 
-export CABAL := "cabal --with-gcc=clang --with-ld=clang"
+export CABAL := "cabal --with-gcc=clang --with-ld=clang -O0"
 # To benchmark:
 # {{CABAL}} v2-run --enable-profiling exes -- --plain visualize -v --log-database +RTS -p
 
