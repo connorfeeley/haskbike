@@ -16,7 +16,6 @@ import           Control.Monad        ( forM_ )
 
 import           Data.Attoparsec.Text
 import           Data.Functor         ( ($>) )
-import           Data.String          ( IsString )
 import qualified Data.Text            as T
 import           Data.Time
 import           Data.Time.Extras
@@ -28,13 +27,6 @@ import           Servant              ( FromHttpApiData (..), ToHttpApiData (..)
 import           Server.Page.Utils    ( mkData_ )
 
 import           TextShow             ( showt )
-
-
-inputCheckedIf_ :: Applicative m => Bool -> [Attribute] -> HtmlT m ()
-inputCheckedIf_ cond attrs =
-  if cond
-  then input_ (checked_ : attrs)
-  else input_ attrs
 
 
 -- | Values used to select station list filter parameters.
@@ -59,19 +51,22 @@ instance ToHtml StationListFilter where
   toHtmlRaw = toHtml
 
   toHtml stationFilter = do
-    labelFor "station-type-radio-all" $
-      inputCheckedIfSelection_ AllStations [id_ "station-type-radio-all", type_ "radio", name_ "station-type-radio", value_ "all", mkData_ "station-type" "all"] <> span_ "All"
+    mkRadio stationFilter AllStations "station-type-radio-all" "all" "All"
+    mkRadio stationFilter RegularStations "station-type-radio-charging" "charging" "Charging"
+    mkRadio stationFilter ChargingStations "station-type-radio-charging" "charging" "Charging"
 
-    labelFor "station-type-radio-regular" $
-      inputCheckedIfSelection_ RegularStations [id_ "station-type-radio-regular", type_ "radio", name_ "station-type-radio", value_ "regular", mkData_ "station-type" "regular"] <> span_ "Regular"
+inputCheckedIf_ :: Applicative m => Bool -> [Attribute] -> HtmlT m ()
+inputCheckedIf_ cond attrs
+  | cond      = input_ (checked_ : attrs)
+  | otherwise = input_ attrs
 
-    labelFor "station-type-radio-charging" $
-      inputCheckedIfSelection_ ChargingStations [id_ "station-type-radio-charging", type_ "radio", name_ "station-type-radio", value_ "charging", mkData_ "station-type" "charging"] <> span_ "Charging"
-    where
-      labelFor forElement = label_ [for_ forElement, class_ "pure-radio"]
-      inputCheckedIfSelection_ :: Applicative m => StationListFilter -> [Attribute] -> HtmlT m ()
-      inputCheckedIfSelection_ selection =
-        inputCheckedIf_ (stationFilter == selection)
+mkRadio :: Monad m => StationListFilter -> StationListFilter -> T.Text -> T.Text -> HtmlT m () -> HtmlT m ()
+mkRadio stationFilter checkedIf rId rValue rContent = labelFor "station-type-radio-charging" $
+  inputCheckedIf_ (stationFilter == checkedIf) attrs <> span_ rContent
+  where attrs = [id_ rId, type_ "radio", name_ "station-type-radio", value_ rValue, mkData_ "station-type" rValue]
+
+labelFor :: Term [Attribute] result => T.Text -> result
+labelFor forElement = label_ [for_ forElement, class_ "pure-radio"]
 
 -- | Servant 'ToHttpData' instance.
 instance ToHttpApiData StationListFilter where
