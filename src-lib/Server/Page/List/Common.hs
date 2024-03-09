@@ -108,7 +108,7 @@ instance ToHtml StationListForm where
   toHtmlRaw = toHtml
   toHtml params = do
     -- Selection form
-    form_ [class_ "pure-form pure-form-stacked"] $ fieldset_ $ do
+    form_ [class_ "pure-form pure-form-stacked full-width"] $ fieldset_ $ do
       legend_ "Filter stations by type, name, ID, or address"
       div_ [class_ "pure-g full-width"] $ do
         -- Station type radio inputs
