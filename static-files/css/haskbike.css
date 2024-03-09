@@ -144,3 +144,14 @@ body {
 .charging-infrastructure {
   text-align: left;
 }
+
+.station-search-input-outer {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.station-search-input {
+  width: 50%;
+  margin: 0 auto; /* Overriden by Pure CSS; must set in style attribute. */
+}

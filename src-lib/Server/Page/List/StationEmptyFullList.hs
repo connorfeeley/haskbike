@@ -21,12 +21,11 @@ import           Database.BikeShare.Tables.StationStatus
 
 import           Lucid
 
-import           Prelude                                      hiding ( null )
-
 import           Servant
 
 import           Server.Classes
 import           Server.Page.List.Common
+import           Server.Page.List.StationList
 import           Server.PureCSS
 
 import           TextShow

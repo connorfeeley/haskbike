@@ -2,7 +2,6 @@
 
 module Server.Page.PerformanceCSV where
 
-import qualified Data.Text                       as T
 import           Data.Time
 import           Data.Time.Extras
 

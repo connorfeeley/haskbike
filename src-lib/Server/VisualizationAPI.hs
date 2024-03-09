@@ -39,8 +39,8 @@ import           Servant.Server.Generic
 
 import           Server.DataAPI
 import           Server.Page.List.StationEmptyFullList
-import           Server.Page.List.StationList
 import           Server.Page.PerformanceCSV
+import           Server.Page.SelectionForm                    ( StationListFilter (..) )
 import           Server.Page.SideMenu
 import           Server.Page.StationStatusVisualization
 import           Server.Page.SystemInfoVisualization
