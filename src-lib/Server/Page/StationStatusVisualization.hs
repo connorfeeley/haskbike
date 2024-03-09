@@ -6,9 +6,7 @@ module Server.Page.StationStatusVisualization
      ) where
 
 
-import           Control.Monad                                ( when )
-
-import           Data.Maybe                                   ( catMaybes, isJust )
+import           Data.Maybe                                   ( catMaybes )
 import qualified Data.Text                                    as T
 import           Data.Time
 import           Data.Time.Extras
@@ -54,17 +52,7 @@ instance ToHtml StationStatusVisualizationPage where
       h2_ [style_ "text-align: center"] "Station Information & Statistics"
       br_ []
       div_ [class_ "pure-g full-width", style_ "text-align: center"] $ do
-        let headers = catMaybes [ Just capacityHeader
-                                , Just $ hxSpinner_ staticLink (fieldLink dockingEventsHeader  (Just (_statusVisPageStationId params)) (earliestTime (_statusVisPageTimeRange params)) (latestTime (_statusVisPageTimeRange params)))
-                                , if _infoIsChargingStation inf
-                                  then Just $ hxSpinner_ staticLink (fieldLink chargingEventsHeader (Just (_statusVisPageStationId params)) (earliestTime (_statusVisPageTimeRange params)) (latestTime (_statusVisPageTimeRange params)))
-                                  else Nothing
-                                , Just $ hxSpinner_ staticLink (fieldLink performanceHeader    (Just (_statusVisPageStationId params)) (earliestTime (_statusVisPageTimeRange params)) (latestTime (_statusVisPageTimeRange params)))
-                                , valetHeader
-                                , virtualHeader
-                                ]
-        mconcat $ map (`with` [class_ ("pure-u-md-1-" <> showt (length headers))]) headers
-
+        mconcat $ map (`with` [class_ ("pure-u-md-1-" <> (showt . length) headers)]) headers
       br_ []
 
       -- Selection form
@@ -79,9 +67,16 @@ instance ToHtml StationStatusVisualizationPage where
       with div_ [class_ "graph"] (toHtmlRaw (toHtmlWithUrls vegaSourceUrlsLocal (vegaEmbedCfg ShowActions) (vegaChart (map T.pack) (_statusVisPageDataLink params))))
 
     where
-      inf = _statusVisPageStationInfo params
+      headers = catMaybes [ Just capacityHeader
+                          , Just (mkHeader params _statusVisPageStaticLink _statusVisPageTimeRange (Just (_statusVisPageStationId params)) dockingEventsHeader)
+                          , if _infoIsChargingStation inf then Just chargingHeader else Nothing
+                          , Just (mkHeader params _statusVisPageStaticLink _statusVisPageTimeRange (Just (_statusVisPageStationId params)) performanceHeader)
+                          , valetHeader
+                          , virtualHeader
+                          ]
+      chargingHeader = mkHeader params _statusVisPageStaticLink _statusVisPageTimeRange (Just (_statusVisPageStationId params)) chargingEventsHeader
 
-      staticLink = _statusVisPageStaticLink params
+      inf = _statusVisPageStationInfo params
 
       pageTitle :: Int -> T.Text -> T.Text
       pageTitle a b = "Station #" <> (T.pack . show) a <> ": "<>b

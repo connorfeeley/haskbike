@@ -5,6 +5,7 @@ module Server.Page.StatusVisualization
      , formatTimeHtml
      , makeInputField
      , maybeHeader
+     , mkHeader
      , prettyTime
      , startTimeInput
      , submitInput
@@ -22,6 +23,7 @@ import           Lucid
 
 import           Servant
 
+import           Server.Page.Utils
 import           Server.StatusDataParams
 
 import           Visualization.StationOccupancy
@@ -71,3 +73,10 @@ maybeHeader cond expr =
 
 times :: TimeZone -> UTCTime -> TimePair (Maybe LocalTime) -> TimePair LocalTime
 times tz currentUtc range  = enforceTimeRangeBounds (StatusDataParams tz currentUtc range)
+
+mkHeader params static range station headerComponent = hxSpinner_ staticPath componentLink
+  where
+    staticPath    = static params
+    earliestTimeP = (earliestTime . range) params
+    latestTimeP   = (latestTime   . range) params
+    componentLink = fieldLink headerComponent station earliestTimeP latestTimeP
