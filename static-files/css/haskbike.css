@@ -155,3 +155,7 @@ body {
   margin: 0 auto; /* Overriden by Pure CSS; must set in style attribute. */
   width: 100%;
 }
+
+.station-list-input-column {
+  text-align: left;
+}

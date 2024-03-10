@@ -53,9 +53,9 @@ instance ToHtml StationListFilter where
   toHtmlRaw = toHtml
 
   toHtml stationFilter = do
-    mkRadio stationFilter AllStations     "station-type" "station-type-radio-all"      "all"      "All"
-    mkRadio stationFilter RegularStations "station-type" "station-type-radio-regular"  "regular"  "Regular"
-    mkRadio stationFilter ChargingStations"station-type" "station-type-radio-charging" "charging" "Charging"
+    mkRadio stationFilter AllStations     "station-type" "all"      "All"
+    mkRadio stationFilter RegularStations "station-type" "regular"  "Regular"
+    mkRadio stationFilter ChargingStations"station-type" "charging" "Charging"
 
 inputCheckedIf_ :: Applicative m => Bool -> [Attribute] -> HtmlT m ()
 inputCheckedIf_ cond attrs
@@ -63,13 +63,15 @@ inputCheckedIf_ cond attrs
   | otherwise = input_ attrs
 
 -- | Make a radio input wrapped by a label.
-mkRadio :: (Monad m, Eq a) => a -> a -> T.Text -> T.Text -> T.Text -> HtmlT m () -> HtmlT m ()
-mkRadio stationFilter checkedIf rName rId rValue rContent =
+mkRadio :: (Monad m, Eq a) => a -> a -> T.Text -> T.Text -> HtmlT m () -> HtmlT m ()
+mkRadio stationFilter checkedIf rName rValue rContent =
   labelFor rId $ do
     inputCheckedIf_ (stationFilter == checkedIf) attrs
     nbsp_ <> rContent
   where attrs = [id_ rId, type_ "radio", name_ (rName <> "-radio"), value_ rValue, mkData_ rName rValue]
+        rId = rName <> "-radio-" <> rValue
 
+-- | HTML non-breaking space character.
 nbsp_ :: Monad m => HtmlT m ()
 nbsp_ = toHtmlRaw ("&nbsp" :: T.Text)
 
@@ -136,6 +138,20 @@ instance ToHttpApiData OrderByOption where
   toQueryParam = toUrlPiece
   toUrlPiece = T.pack . show
 
+instance ToHtml OrderByOption where
+  toHtmlRaw = toHtml
+
+  toHtml stationFilter = do
+    -- mkRadio stationFilter OrderByStationId           "order-by" "station-id"   "Station ID"
+    -- mkRadio stationFilter OrderByStationName         "order-by" "station-name" "Station Name"
+    -- mkRadio stationFilter OrderByStationType         "order-by" "station-type" "Station Type"
+    mkRadio stationFilter OrderByStationCapacity     "order-by" "station-capacity"     "Capacity"
+    mkRadio stationFilter OrderByMechanicalAvailable "order-by" "mechanical-available" "Mechanical"
+    mkRadio stationFilter OrderByEfitAvailable       "order-by" "efit-available"       "E-Fit"
+    mkRadio stationFilter OrderByEfitG5Available     "order-by" "efit-g5-available"    "E-Fit G5"
+    mkRadio stationFilter OrderByBikesDisabled       "order-by" "bikes-disabled"       "Bikes Disabled"
+    mkRadio stationFilter OrderByTimeFull            "order-by" "time-full"            "Time Full"
+    mkRadio stationFilter OrderByTimeEmpty           "order-by" "time-empty"           "Time Empty"
 
 -- | Various inputs used in 'SelectionForm'.
 data SelectionFormInput where
@@ -150,8 +166,11 @@ data SelectionFormInput where
 instance ToHtml SelectionFormInput where
   toHtmlRaw = toHtml
 
-  toHtml (OrderByOptionInput opt)           = toHtml ((T.pack . show) opt)
-  toHtml (OrderByDirectionInput dir)        = toHtml ((T.pack . show) dir)
+  toHtml (OrderByOptionInput opt)           = toHtml opt
+
+  toHtml (OrderByDirectionInput dir)        = do
+    mkRadio dir OrderByDesc "order-by-dir" "desc" "Descending"
+    mkRadio dir OrderByAsc  "order-by-dir" "asc"  "Ascending"
 
   toHtml (StationIdInput (Just selectedId)) = makeInputField "Station ID" "number" "station-id" (showt selectedId)
   toHtml (StationIdInput Nothing)           = makeInputField "Station ID" "number" "station-id" ""
@@ -179,14 +198,14 @@ data SelectionForm where
 instance ToHtml SelectionForm where
   toHtmlRaw = toHtml
   toHtml (SelectionForm legend inputs) = do
-    form_ [class_ "pure-form pure-form-stacked full-width", style_ "text-align: center"] $ fieldset_ $ do
+    form_ [class_ "pure-form pure-form-stacked full-width"] $ fieldset_ $ do
           _ <- legend_ $ h3_ (toHtml legend)
           -- Grid layout for form
           div_ [class_ "pure-g full-width"] $
             forM_ inputs $
                 div_ [class_ inputWrapperClass] . toHtml
     where
-      inputWrapperClass = T.pack ("pure-u-1-" <> (show . length) inputs)
+      inputWrapperClass = T.pack ("station-list-input-column pure-u-1-" <> (show . length) inputs)
 
 
 -- This helper creates an input field with the provided 'id' and 'type' attributes.

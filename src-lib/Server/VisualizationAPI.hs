@@ -128,7 +128,7 @@ stationStatusVisualizationPage (Just stationId) startTime endTime = do
                                        , _statusVisPageDataLink       = fieldLink dataForStation (Just stationId) startTime endTime
                                        , _statusVisPageStaticLink     = fieldLink staticApi
                                        }
-    _ ->  throwError err404 { errBody = "Unknown station ID." }
+    _noInfoFound ->  throwError err404 { errBody = "Unknown station ID." }
 stationStatusVisualizationPage Nothing _ _ =
   throwError err404 { errBody = "Station ID parameter is required." }
 
