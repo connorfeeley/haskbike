@@ -4,7 +4,9 @@
 -- |
 
 module Server.Page.SelectionForm
-     ( SelectionForm (..)
+     ( OrderByDirection (..)
+     , OrderByOption (..)
+     , SelectionForm (..)
      , SelectionFormInput (..)
      , StationListFilter (..)
      , formatTimeHtml
@@ -71,6 +73,61 @@ labelFor forElement = label_ [for_ forElement, class_ "pure-radio"]
 
 -- | Servant 'ToHttpData' instance.
 instance ToHttpApiData StationListFilter where
+  toQueryParam = toUrlPiece
+  toUrlPiece = T.pack . show
+
+
+-- | Options for the direction of the ordering of the station list.
+data OrderByDirection where
+  OrderByAsc  :: OrderByDirection
+  OrderByDesc :: OrderByDirection
+  deriving stock (Eq, Show)
+
+instance FromHttpApiData OrderByDirection where
+  parseUrlPiece :: T.Text -> Either T.Text OrderByDirection
+  parseUrlPiece p = case parseOnly (asciiCI "asc"  $> OrderByAsc <|>
+                                    asciiCI "desc" $> OrderByDesc) p of
+    Left e  -> Left  (T.pack e)
+    Right v -> Right v
+  parseQueryParam = parseUrlPiece
+
+instance ToHttpApiData OrderByDirection where
+  toQueryParam = toUrlPiece
+  toUrlPiece = T.pack . show
+
+
+-- | Options for ordering the station list.
+data OrderByOption where
+  OrderByStationId           :: OrderByOption
+  OrderByStationName         :: OrderByOption
+  OrderByStationType         :: OrderByOption
+  OrderByStationCapacity     :: OrderByOption
+  OrderByMechanicalAvailable :: OrderByOption
+  OrderByEfitAvailable       :: OrderByOption
+  OrderByEfitG5Available     :: OrderByOption
+  OrderByBikesDisabled       :: OrderByOption
+  OrderByTimeFull            :: OrderByOption
+  OrderByTimeEmpty           :: OrderByOption
+  deriving stock (Eq, Show)
+
+instance FromHttpApiData OrderByOption where
+  parseUrlPiece :: T.Text -> Either T.Text OrderByOption
+  parseUrlPiece p = case parseOnly (asciiCI "station-id"           $> OrderByStationId           <|>
+                                    asciiCI "station-name"         $> OrderByStationName         <|>
+                                    asciiCI "station-type"         $> OrderByStationType         <|>
+                                    asciiCI "station-capacity"     $> OrderByStationCapacity     <|>
+                                    asciiCI "mechanical-available" $> OrderByMechanicalAvailable <|>
+                                    asciiCI "efit-available"       $> OrderByEfitAvailable       <|>
+                                    asciiCI "efit-g5-available"    $> OrderByEfitG5Available     <|>
+                                    asciiCI "bikes-disabled"       $> OrderByBikesDisabled       <|>
+                                    asciiCI "time-full"            $> OrderByTimeFull            <|>
+                                    asciiCI "time-empty"           $> OrderByTimeEmpty
+                                   ) p of
+    Left e  -> Left  (T.pack e)
+    Right v -> Right v
+  parseQueryParam = parseUrlPiece
+
+instance ToHttpApiData OrderByOption where
   toQueryParam = toUrlPiece
   toUrlPiece = T.pack . show
 
