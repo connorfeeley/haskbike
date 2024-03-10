@@ -1,52 +1,120 @@
-const filterColumns = ['station-id-col', 'station-name-col', 'station-address-col'];
-const table = document.getElementById('station-list-table');
-const filterInput = document.getElementById('station-filter-input');
-const stationTypeRadios = document.getElementsByName('station-type-radio');
-const urlParams = new URLSearchParams(window.location.search);
+// This function converts a duration string into seconds.
+function parseDuration(durationString) {
+  // Define regular expressions for days, hours, minutes, and seconds.
+  const dayRegex = /(\d+)(d)/;
+  const hourRegex = /(\d+)(h)/;
+  const minuteRegex = /(\d+)(m)/;
+  const secondRegex = /(\d+)(s)/;
 
-filterInput.addEventListener('input', filterStationsTable);
-for (let radio of stationTypeRadios) {
-    radio.addEventListener('change', filterStationsTable);
+  // Extract each unit from the duration string.
+  const days =
+    durationString.match(dayRegex) != null
+      ? parseInt(durationString.match(dayRegex)[1])
+      : 0;
+  const hours =
+    durationString.match(hourRegex) != null
+      ? parseInt(durationString.match(hourRegex)[1])
+      : 0;
+  const minutes =
+    durationString.match(minuteRegex) != null
+      ? parseInt(durationString.match(minuteRegex)[1])
+      : 0;
+  const seconds =
+    durationString.match(secondRegex) != null
+      ? parseInt(durationString.match(secondRegex)[1])
+      : 0;
+
+  // Compute the total duration in seconds.
+  const totalSeconds = seconds + minutes * 60 + hours * 3600 + days * 86400;
+
+  // Return total duration in seconds.
+  return totalSeconds;
 }
 
-function filterStationsTable() {
-    const filterValue = filterInput.value.toLowerCase();
-    const selectedStationType = getSelectedStationType();
+function durationComparator(duration1, duration2) {
+  // Convert each duration string to an equivalent number of seconds.
+  const duration1InSeconds = parseDuration(duration1);
+  const duration2InSeconds = parseDuration(duration2);
 
-    for (let i = 1; i < table.rows.length; i++) {
-        let row = table.rows[i];
-        let shouldShow = false;
-
-        for (let column of filterColumns) {
-            let cell = row.querySelector(`[data-column-id="${column}"]`);
-            if (cell && cell.textContent.toLowerCase().includes(filterValue)) {
-                shouldShow = true;
-                break;
-            }
-        }
-
-        let stationTypeCell = row.querySelector('[data-column-id="station-type-col"]');
-        let stationType = stationTypeCell ? stationTypeCell.textContent.toLowerCase() : '';
-
-        if (selectedStationType !== 'all' && stationType !== selectedStationType) {
-            shouldShow = false;
-        }
-
-        row.style.display = shouldShow ? '' : 'none';
-    }
+  // Compare the two durations and return the comparison result.
+  if (duration1InSeconds < duration2InSeconds) {
+    return -1;
+  } else if (duration1InSeconds > duration2InSeconds) {
+    return 1;
+  } else {
+    return 0;
+  }
 }
 
-function getSelectedStationType() {
-    for (let radio of stationTypeRadios) {
-        if (radio.checked) {
-            // Update the URL's search params
-            urlParams.set('station-type', radio.dataset.stationType);
-            window.history.replaceState({}, '', `${window.location.pathname}?${urlParams}`);
+function constructLink(stationId) {
+    // We get the current URL of the document.
+    const currentUrl = new URL(window.location.href);
 
-            return radio.dataset.stationType;
-        }
-    }
+    // Initialized the URLSearchParams constructor with current URL's search params
+    // which can be directly modified for our new URL.
+    let urlParameters = new URLSearchParams(currentUrl.search);
+
+    // Now, we'll add the 'station-id' parameter to our new set of URL parameters.
+    urlParameters.set('station-id', stationId);
+
+    // Define our base URL.
+    const baseUrl = "/visualization/station-status";
+
+    // Construct the new URL.
+    const newUrl = `${baseUrl}?${urlParameters}`;
+
+    // Construct the anchor element.
+    const anchor = document.createElement('a');
+    anchor.href = newUrl;
+    anchor.textContent = stationId;
+
+    // Return the created anchor element.
+    return gridjs.html(anchor.outerHTML);
 }
 
-// Call the filterStationsTable function at load time
-filterStationsTable();
+const grid = new gridjs.Grid({
+  // columns: ['Name', 'Language', 'Released At', 'Artist'],
+  columns: [
+    {
+      name: "ID",
+      formatter: constructLink,
+    },
+    "Name",
+    "Type",
+    "Capacity",
+    "# Mechanical",
+    "# E-Fit",
+    "# E-Fit G5",
+    "# Bikes Disabled",
+    "# Docks Disabled",
+    { name: "Time Empty", sort: durationComparator },
+    { name: "Time Full", sort: durationComparator },
+  ],
+  sort: true,
+  search: true,
+  server: {
+    url: "http://localhost:8081/data/empty-full",
+    then: (data) =>
+      data.map((card) => [
+        card.station_information.station_id,
+        card.station_information.name,
+        card.station_information.station_type,
+        card.station_information.capacity,
+        card.station_status.vehicle_types_available[1][1],
+        card.station_status.vehicle_types_available[2][1],
+        card.station_status.vehicle_types_available[3][1],
+        card.station_status.num_bikes_disabled,
+        card.station_status.num_docks_disabled,
+        card.durations.empty,
+        card.durations.full,
+      ]),
+  },
+});
+
+document.addEventListener(
+  "DOMContentLoaded",
+  function () {
+    grid.render(document.getElementById("station-list-table"));
+  },
+  false,
+);
