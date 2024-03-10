@@ -53,8 +53,8 @@ instance ToHtml StationListFilter where
   toHtmlRaw = toHtml
 
   toHtml stationFilter = do
-    mkRadio stationFilter AllStations "station-type-radio-all" "all" "All"
-    mkRadio stationFilter RegularStations "station-type-radio-regular" "regular" "Regular"
+    mkRadio stationFilter AllStations      "station-type-radio-all"      "all"      "All"
+    mkRadio stationFilter RegularStations  "station-type-radio-regular"  "regular"  "Regular"
     mkRadio stationFilter ChargingStations "station-type-radio-charging" "charging" "Charging"
 
 inputCheckedIf_ :: Applicative m => Bool -> [Attribute] -> HtmlT m ()
@@ -64,9 +64,13 @@ inputCheckedIf_ cond attrs
 
 mkRadio :: Monad m => StationListFilter -> StationListFilter -> T.Text -> T.Text -> HtmlT m () -> HtmlT m ()
 mkRadio stationFilter checkedIf rId rValue rContent =
-  labelFor rId $
-  inputCheckedIf_ (stationFilter == checkedIf) attrs <> span_ rContent
+  labelFor rId $ do
+    inputCheckedIf_ (stationFilter == checkedIf) attrs
+    nbsp_ <> rContent
   where attrs = [id_ rId, type_ "radio", name_ "station-type-radio", value_ rValue, mkData_ "station-type" rValue]
+
+nbsp_ :: Monad m => HtmlT m ()
+nbsp_ = toHtmlRaw ("&nbsp" :: T.Text)
 
 labelFor :: Term [Attribute] result => T.Text -> result
 labelFor forElement = label_ [for_ forElement, class_ "pure-radio"]
