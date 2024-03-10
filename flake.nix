@@ -24,7 +24,10 @@
       ];
 
       perSystem = { self', config, pkgs, ... }:
-        let inherit (pkgs) lib; in {
+        let inherit (pkgs) lib;
+          fetch-pnpm-deps = pkgs.callPackage ./nix/fetch-pnpm-deps { };
+        in
+        {
           # Typically, you just want a single project named "default". But
           # multiple projects are also possible, each using different GHC version.
           haskellProjects.default = {
