@@ -138,14 +138,19 @@ instance ToHttpApiData OrderByOption where
 
 -- | Various inputs used in 'SelectionForm'.
 data SelectionFormInput where
-  StationTypeInput :: StationListFilter -> SelectionFormInput
-  StationIdInput   :: Maybe Int         -> SelectionFormInput
-  SearchInput      :: T.Text -> T.Text  -> SelectionFormInput
-  TimeInput        :: Maybe LocalTime   -> SelectionFormInput
-  SubmitInput      :: T.Text            -> SelectionFormInput
+  OrderByOptionInput    :: OrderByOption     -> SelectionFormInput
+  OrderByDirectionInput :: OrderByDirection  -> SelectionFormInput
+  StationTypeInput      :: StationListFilter -> SelectionFormInput
+  StationIdInput        :: Maybe Int         -> SelectionFormInput
+  SearchInput           :: T.Text -> T.Text  -> SelectionFormInput
+  TimeInput             :: Maybe LocalTime   -> SelectionFormInput
+  SubmitInput           :: T.Text            -> SelectionFormInput
 
 instance ToHtml SelectionFormInput where
   toHtmlRaw = toHtml
+
+  toHtml (OrderByOptionInput opt)           = toHtml ((T.pack . show) opt)
+  toHtml (OrderByDirectionInput dir)        = toHtml ((T.pack . show) dir)
 
   toHtml (StationIdInput (Just selectedId)) = makeInputField "Station ID" "number" "station-id" (showt selectedId)
   toHtml (StationIdInput Nothing)           = makeInputField "Station ID" "number" "station-id" ""

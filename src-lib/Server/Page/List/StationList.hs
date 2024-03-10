@@ -50,7 +50,9 @@ instance ToHtml (StationList [(StationInformation, StationStatus)]) where
       h1_ [] (toHtml "Station List")
     div_ [class_ "content"] $ do
       contentSubhead "Select station type"
-      toHtml (StationListForm { _stationListFormSelection = _stationListSelection params })
+      toHtml (StationListForm [ StationTypeInput (_stationListSelection params)
+                              , SearchInput "station-filter-input" "Type a station name, ID, or address"
+                              ])
       toHtml (toStationListTable params)
 
 -- | Table displaying station information.

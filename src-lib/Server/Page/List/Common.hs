@@ -59,13 +59,12 @@ stationIdLink baseLink params start end = a_ [href] (toHtml (showt (_infoStation
         href = href_ ("/" <> toUrlPiece link)
 
 -- | Form use to select station information filter parameters.
-data StationListForm where StationListForm :: { _stationListFormSelection :: StationListFilter } -> StationListForm
+data StationListForm where
+  StationListForm :: { _stationListFormInputs    :: [SelectionFormInput]
+                     } -> StationListForm
 
 instance ToHtml StationListForm where
   toHtmlRaw = toHtml
   toHtml params = do
     -- Selection form
-    toHtml (SelectionForm "Filter stations by type, name, ID, or address"
-            [ StationTypeInput (_stationListFormSelection params)
-            , SearchInput "station-filter-input" "Type a station name, ID, or address"
-            ])
+    toHtml (SelectionForm "Filter stations by type, name, ID, or address" (_stationListFormInputs params))
