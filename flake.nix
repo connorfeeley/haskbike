@@ -26,8 +26,10 @@
       perSystem = { self', config, pkgs, ... }:
         let inherit (pkgs) lib;
           fetch-pnpm-deps = pkgs.callPackage ./nix/fetch-pnpm-deps { };
+          tanstack-table = pkgs.callPackage ./nix/tanstack-table { inherit (fetch-pnpm-deps) fetchPnpmDeps pnpmConfigHook; };
         in
         {
+          packages.tanstack-table = tanstack-table;
           # Typically, you just want a single project named "default". But
           # multiple projects are also possible, each using different GHC version.
           haskellProjects.default = {
@@ -48,7 +50,12 @@
                       };
                     in
                     {
-                      extraLibraries = [ pkgs.stdenv.cc.libcxx ];
+                      extraLibraries = [
+                        # TODO: is this why I get unexpected dylib warnings on Darwin?
+                        pkgs.stdenv.cc.libcxx
+
+                        tanstack-table
+                      ];
 
                       # testToolDepends = pkg.testToolDepends or [ ] ++ [
                       #   pkgs.postgresql
