@@ -26,7 +26,6 @@ import           Servant
 import           Server.Classes
 import           Server.Page.List.Common
 import           Server.Page.List.StationList
-import           Server.PureCSS
 
 import           TextShow
 
@@ -41,7 +40,6 @@ instance ToHtml (StationList [(StationInformation, StationStatus, EmptyFull)]) w
     div_ [class_ "header"] $ do
       h1_ [] (toHtml "Station Empty/Full List")
     div_ [class_ "content"] $ do
-      contentSubhead "Select station type"
       toHtml (StationListForm (_stationListInputs params))
       toHtml (toStationEmptyFullTable params)
 

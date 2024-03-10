@@ -152,6 +152,6 @@ body {
 }
 
 .station-search-input {
-  width: 50%;
   margin: 0 auto; /* Overriden by Pure CSS; must set in style attribute. */
+  width: 100%;
 }
