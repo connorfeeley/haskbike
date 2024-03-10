@@ -14,11 +14,9 @@ import           Colog
 
 import           Control.Lens
 
-import           Data.Bifunctor                               ( first )
 import           Data.Default.Class                           ( def )
 import           Data.List                                    ( sortOn )
-import qualified Data.Map                                     as Map
-import           Data.Maybe                                   ( fromMaybe, listToMaybe, mapMaybe )
+import           Data.Maybe                                   ( fromMaybe, listToMaybe )
 import qualified Data.Text                                    as T
 import           Data.Time
 import           Data.Time.Extras
@@ -34,6 +32,7 @@ import           Servant
 import           Servant.HTML.Lucid
 import           Servant.Server.Generic
 
+import           Server.Data.EmptyFullData
 import           Server.DataAPI
 import           Server.Page.List.StationEmptyFullList
 import           Server.Page.PerformanceCSV
@@ -74,7 +73,8 @@ data VisualizationAPI mode where
     , stationEmptyFullList :: mode :-
         "visualization" :>
           "station-empty-full-list"
-          :> QueryParam "start-time" LocalTime :> QueryParam "end-time" LocalTime
+          :> QueryParam "start-time"   LocalTime
+          :> QueryParam "end-time"     LocalTime
           :> QueryParam "station-type" StationListFilter
           :> QueryParam "order-by-dir" OrderByDirection
           :> QueryParam "order-by"     OrderByOption
@@ -255,15 +255,6 @@ orderByOptionToSortOn direction opt = case direction of
       OrderByBikesDisabled       -> sortOn (\(_, status, _) -> status ^. statusNumBikesDisabled)
       OrderByTimeFull            -> sortOn (\(_, _, full)   -> _fullTime full)
       OrderByTimeEmpty           -> sortOn (\(_, _, full)   -> _emptyTime full)
-
-combineStations :: [(StationInformation, StationStatus)] -> [(StationInformation, EmptyFull)] -> [(StationInformation, StationStatus, EmptyFull)]
-combineStations latestStatuses empties = mapMaybe combine latestStatuses
-  where
-    combine (info, status) = do
-      emptyFull <- Map.lookup (_infoStationId info) empties'
-      return (info, status, emptyFull)
-
-    empties' = Map.fromList (map (first _infoStationId) empties)
 
 -- | Create the system status visualization page record.
 systemInfoVisualizationPage :: Maybe LocalTime -> Maybe LocalTime -> ServerAppM (PureSideMenu SystemInfoVisualizationPage)

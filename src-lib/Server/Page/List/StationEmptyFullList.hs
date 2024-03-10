@@ -5,11 +5,10 @@
 -- | This module defines the data types used to render the station status visualization page.
 
 module Server.Page.List.StationEmptyFullList
-     ( EmptyFull (..)
-     , StationList (..)
+     ( StationList (..)
      ) where
 
-import           Control.Lens
+import           Control.Lens                                 hiding ( (.=) )
 
 import           Data.Maybe                                   ( fromMaybe )
 import           Data.String                                  ( IsString )
@@ -24,15 +23,12 @@ import           Lucid
 import           Servant
 
 import           Server.Classes
+import           Server.Data.EmptyFullData
 import           Server.Page.List.Common
 import           Server.Page.List.StationList
+import           Server.Page.Utils
 
 import           TextShow
-
-data EmptyFull where
-  EmptyFull :: { _emptyTime :: NominalDiffTime
-               , _fullTime  :: NominalDiffTime
-               } -> EmptyFull
 
 instance ToHtml (StationList [(StationInformation, StationStatus, EmptyFull)]) where
   toHtmlRaw = toHtml
@@ -85,8 +81,14 @@ instance ToHtmlComponents (StationList [(StationInformation, StationStatus, Empt
   toMenuHeading _ = menuHeading "#station-empty-full" "Station Empty/Full"
   toHead params = do
 
+    -- GridJS
+    script_ [src_ "https://cdn.jsdelivr.net/npm/gridjs/dist/gridjs.umd.js", type_ "module"] ""
+    stylesheet_ "https://cdn.jsdelivr.net/npm/gridjs/dist/theme/mermaid.min.css"
+
     -- Station list JavaScript.
     script_ [src_ ("/" <> toUrlPiece (_staticLink params) <> "/js/station-list.js"), type_ "module"] ""
+
+
 
 -- | Format a 'NominalDiffTime' as 'Text' with a human-readable format.
 formatDiffTime :: NominalDiffTime -> T.Text
