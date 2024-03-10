@@ -35,7 +35,7 @@ data StationList a where
   StationList :: { _stationList           :: a
                  , _stationTimeRange      :: (Maybe LocalTime, Maybe LocalTime)
                  , _staticLink            :: Link
-                 , _stationListSelection  :: StationListFilter
+                 , _stationListInputs     :: [SelectionFormInput]
                  , _visualizationPageLink :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> Link
                  } -> StationList a
 
@@ -50,9 +50,7 @@ instance ToHtml (StationList [(StationInformation, StationStatus)]) where
       h1_ [] (toHtml "Station List")
     div_ [class_ "content"] $ do
       contentSubhead "Select station type"
-      toHtml (StationListForm [ StationTypeInput (_stationListSelection params)
-                              , SearchInput "station-filter-input" "Type a station name, ID, or address"
-                              ])
+      toHtml (StationListForm (_stationListInputs params))
       toHtml (toStationListTable params)
 
 -- | Table displaying station information.

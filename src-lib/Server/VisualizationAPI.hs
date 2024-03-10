@@ -38,7 +38,7 @@ import           Server.DataAPI
 import           Server.Page.List.StationEmptyFullList
 import           Server.Page.PerformanceCSV
 import           Server.Page.SelectionForm                    ( OrderByDirection (..), OrderByOption (..),
-                                                                StationListFilter (..) )
+                                                                SelectionFormInput (..), StationListFilter (..) )
 import           Server.Page.SideMenu
 import           Server.Page.StationStatusVisualization
 import           Server.Page.SystemInfoVisualization
@@ -184,7 +184,9 @@ stationListPage filterSelection = do
     { _stationList           = sorted
     , _stationTimeRange      = (Nothing, Nothing)
     , _staticLink            = fieldLink staticApi
-    , _stationListSelection  = filterSelection
+    , _stationListInputs     = [ StationTypeInput filterSelection
+                               , SearchInput "station-filter-input" "Type a station name, ID, or address"
+                               ]
     , _visualizationPageLink = fieldLink pageForStation
     }
 
@@ -224,7 +226,11 @@ stationEmptyFullListPage start end filterSelection orderDirSelection orderSelect
     { _stationList           = sorted
     , _stationTimeRange      = (start, end)
     , _staticLink            = fieldLink staticApi
-    , _stationListSelection  = filterSelection
+    , _stationListInputs     = [ StationTypeInput filterSelection
+                               , OrderByOptionInput orderSelection
+                               , OrderByDirectionInput orderDirSelection
+                               , SearchInput "station-filter-input" "Type a station name, ID, or address"
+                               ]
     , _visualizationPageLink = fieldLink pageForStation
     }
   where
