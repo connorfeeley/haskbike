@@ -26,7 +26,7 @@ function filterStationsTable() {
         }
 
         let stationTypeCell = row.querySelector('[data-column-id="station-type-col"]');
-        let stationType = stationTypeCell ? stationTypeCell.textContent : '';
+        let stationType = stationTypeCell ? stationTypeCell.textContent.toLowerCase() : '';
 
         if (selectedStationType !== 'all' && stationType !== selectedStationType) {
             shouldShow = false;
