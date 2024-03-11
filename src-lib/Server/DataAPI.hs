@@ -21,18 +21,20 @@ import qualified Data.Text                                  as T
 import           Data.Time
 import           Data.Time.Extras
 
+import           Database.Beam
 import           Database.BikeShare.EventCounts
+import           Database.BikeShare.Expressions             ( queryLatestStatuses )
 import           Database.BikeShare.Operations.Dockings
 import           Database.BikeShare.Operations.Factors
 import           Database.BikeShare.Operations.FactorsCSV
+import           Database.BikeShare.Operations.StationEmpty
 import           Database.BikeShare.StatusVariationQuery
-
-import           GHC.Generics                               ( Generic )
 
 import           Servant
 import           Servant.Server.Generic
 
 import           Server.Components.PerformanceData
+import           Server.Data.EmptyFullData
 import           Server.Data.StationStatusVisualization
 import           Server.Data.SystemInformationVisualization
 import           Server.StatusDataParams
@@ -93,6 +95,12 @@ data DataAPI mode where
           :> QueryParam "start-time" LocalTime
           :> QueryParam "end-time" LocalTime
           :> Get '[JSON] [ChargingEvent]
+    , emptyFullData :: mode :-
+      "data" :>
+        "empty-full"
+          :> QueryParam "start-time"   LocalTime
+          :> QueryParam "end-time"     LocalTime
+          :> Get '[JSON] [EmptyFullRecord]
     } -> DataAPI mode
   deriving stock Generic
 
@@ -107,6 +115,7 @@ statusHandler =  DataAPI { dataForStation       = stationStatusData
                          , performanceCsv       = performanceCsvHandler
                          , dockingEventsData    = handleDockingEventsData
                          , chargingEventsData   = handleChargingEventsData
+                         , emptyFullData        = handleEmptyFullData
                          }
 
 
@@ -187,7 +196,7 @@ handleDockingEventsData stationId startTime endTime = do
   let times' = enforceTimeRangeBounds (StatusDataParams tz currentUtc (TimePair startTime endTime tz currentUtc))
   let (earliest, latest) = (earliestTime times', latestTime times')
 
-  logInfo . T.pack $ "Rendering page for {station ID: " <> show stationId <> ", start time: " <> show earliest <> ", end time: " <> show latest <> "} "
+  logInfo . T.pack $ "Rendering data for {station ID: " <> show stationId <> ", start time: " <> show earliest <> ", end time: " <> show latest <> "} "
 
   let variation = StatusVariationQuery (fromIntegral <$> stationId) [ EarliestTime (localTimeToUTC tz earliest)
                                                                     , LatestTime   (localTimeToUTC tz latest)
@@ -206,7 +215,7 @@ handleChargingEventsData stationId startTime endTime = do
   let times' = enforceTimeRangeBounds (StatusDataParams tz currentUtc (TimePair startTime endTime tz currentUtc))
   let (earliest, latest) = (earliestTime times', latestTime times')
 
-  logInfo . T.pack $ "Rendering page for {station ID: " <> show stationId <> ", start time: " <> show earliest <> ", end time: " <> show latest <> "} "
+  logInfo . T.pack $ "Rendering data for {station ID: " <> show stationId <> ", start time: " <> show earliest <> ", end time: " <> show latest <> "} "
 
   let variation = StatusVariationQuery (fromIntegral <$> stationId) [ EarliestTime (localTimeToUTC tz earliest)
                                                                     , LatestTime   (localTimeToUTC tz latest)
@@ -218,3 +227,24 @@ handleChargingEventsData stationId startTime endTime = do
                       ])
                events
   pure $ concat result
+
+
+handleEmptyFullData :: Maybe LocalTime -> Maybe LocalTime -> ServerAppM [EmptyFullRecord]
+handleEmptyFullData start end = do
+  appEnv <- asks serverAppEnv
+  let tz = envTimeZone appEnv
+  currentUtc <- liftIO getCurrentTime
+  logInfo $ "Rendering station empty/full data for time [" <> tshow start <> " - " <> tshow end <> "]"
+
+  (latest, emptyFull) <- liftIO $ concurrently (runAppM appEnv $ withPostgres $ runSelectReturningList $ select queryLatestStatuses)
+                                               (runAppM appEnv $ withPostgres $ runSelectReturningList $ selectWith $
+                                                queryStationEmptyFullTime (Nothing :: Maybe Integer) (start' currentUtc tz) (end' currentUtc tz))
+
+  let combined = combineStations latest (resultToEmptyFull emptyFull)
+
+  pure $ map (\(i, ss, ef) -> EmptyFullRecord i ss ef) combined
+  where
+    resultToEmptyFull = map (\(i, (e, f)) -> (i, EmptyFull ((secondsToNominalDiffTime . fromIntegral) e) ((secondsToNominalDiffTime . fromIntegral) f)))
+    tshow = T.pack . show
+    start' cUtc tz = maybe (addUTCTime (-60 * 60 * 24) cUtc) (localTimeToUTC tz) start
+    end'   cUtc tz = maybe cUtc (localTimeToUTC tz) end

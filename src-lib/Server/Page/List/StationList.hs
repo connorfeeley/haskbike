@@ -26,7 +26,6 @@ import           Servant
 import           Server.Classes
 import           Server.Page.List.Common
 import           Server.Page.SelectionForm
-import           Server.PureCSS
 
 import           TextShow
 

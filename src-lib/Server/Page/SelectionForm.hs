@@ -199,12 +199,14 @@ instance ToHtml SelectionForm where
   toHtmlRaw = toHtml
   toHtml (SelectionForm legend inputs) = do
     form_ [class_ "pure-form pure-form-stacked full-width"] $ fieldset_ $ do
-          _ <- legend_ $ h3_ (toHtml legend)
+          _ <- toLegend legend
           -- Grid layout for form
           div_ [class_ "pure-g full-width"] $
             forM_ inputs $
                 div_ [class_ inputWrapperClass] . toHtml
     where
+      toLegend ""  = mempty
+      toLegend leg = legend_ $ h3_ (toHtml leg)
       inputWrapperClass = T.pack ("station-list-input-column pure-u-1-" <> (show . length) inputs)
 
 
