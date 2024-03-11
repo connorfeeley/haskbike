@@ -45,4 +45,4 @@ instance ToHtmlComponents (StationList [(StationInformation, StationStatus, Empt
     stylesheet_ "https://cdn.jsdelivr.net/npm/gridjs/dist/theme/mermaid.min.css"
 
     -- Station list JavaScript.
-    script_ [src_ ("/" <> toUrlPiece (_staticLink params) <> "/js/station-list.js")] ""
+    script_ [src_ ("/" <> toUrlPiece (_staticLink params) <> "/js/station-empty-full-list.js")] ""
