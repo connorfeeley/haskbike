@@ -51,6 +51,10 @@ sums:
         jq --raw-output '.data.stations[] | [.vehicle_types_available[].count] | @tsv' | \
         awk '{j[1]="Boost"; j[2]="Iconic"; j[3]="E-Fit"; j[4]="E-Fit G5"; for (i=1; i<=NF; i++) sum[i]+=$i} END {for (i in sum) {print j[i] ": " sum[i]}}'
 
+# Sum the number of available ebikes (v1 API)
+sum-ebike-v1:
+    curl --location "https://toronto.publicbikesystem.net/customer/ube/gbfs/v1/en/station_status" | jq '[.data.stations[].num_bikes_available_types.ebike] | add'
+
 test:
     {{CABAL}} test --test-show-details=direct
 
