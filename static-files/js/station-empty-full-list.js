@@ -37,10 +37,10 @@ function durationComparator(duration1, duration2) {
   const duration2InSeconds = parseDuration(duration2);
 
   // Compare the two durations and return the comparison result.
-  if (duration1InSeconds < duration2InSeconds) {
-    return -1;
-  } else if (duration1InSeconds > duration2InSeconds) {
+  if (duration1InSeconds > duration2InSeconds) {
     return 1;
+  } else if (duration2InSeconds > duration1InSeconds) {
+    return -1;
   } else {
     return 0;
   }
@@ -85,11 +85,12 @@ const grid = new gridjs.Grid({
     {name: 'Bikes Available', columns: ['Mechanical', 'E-Fit', 'E-Fit G5']},
     {name: 'Disabled', columns: ['Bikes', 'Docks']},
     { name: "Duration", columns: [
-      { name: "Empty", sort: durationComparator },
-      { name: "Full", sort: durationComparator },
+      { name: "Empty", sort: { compare: (a, b) => { return durationComparator(a, b) }}},
+      { name: "Full",  sort: { compare: (a, b) => { return durationComparator(a, b) }}},
     ] },
   ],
   sort: true,
+  multiColumn: false,
   search: true,
   fixedHeader: true,
   pagination: true,
