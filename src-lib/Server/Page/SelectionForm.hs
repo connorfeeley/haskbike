@@ -9,6 +9,7 @@ module Server.Page.SelectionForm
      , SelectionForm (..)
      , SelectionFormInput (..)
      , StationListFilter (..)
+     , TimeInputBound (..)
      , formatTimeHtml
      , makeInputField
      ) where
@@ -153,6 +154,11 @@ instance ToHtml OrderByOption where
     mkRadio stationFilter OrderByTimeFull            "order-by" "time-full"            "Time Full"
     mkRadio stationFilter OrderByTimeEmpty           "order-by" "time-empty"           "Time Empty"
 
+data TimeInputBound where
+  TimeInputStart :: TimeInputBound
+  TimeInputEnd   :: TimeInputBound
+  deriving stock (Eq, Show)
+
 -- | Various inputs used in 'SelectionForm'.
 data SelectionFormInput where
   OrderByOptionInput    :: OrderByOption     -> SelectionFormInput
@@ -160,7 +166,8 @@ data SelectionFormInput where
   StationTypeInput      :: StationListFilter -> SelectionFormInput
   StationIdInput        :: Maybe Int         -> SelectionFormInput
   SearchInput           :: T.Text -> T.Text  -> SelectionFormInput
-  TimeInput             :: Maybe LocalTime   -> SelectionFormInput
+  TimeInput             :: TimeInputBound
+                        -> Maybe LocalTime   -> SelectionFormInput
   SubmitInput           :: T.Text            -> SelectionFormInput
 
 instance ToHtml SelectionFormInput where
@@ -183,8 +190,10 @@ instance ToHtml SelectionFormInput where
 
   toHtml (StationTypeInput stationType)     = toHtml stationType
 
-  toHtml (TimeInput (Just selectedTime))    = makeInputField "Start Time" "datetime-local" "start-time" (formatTimeHtml selectedTime)
-  toHtml (TimeInput Nothing)                = makeInputField "Start Time" "datetime-local" "start-time" ""
+  toHtml (TimeInput TimeInputStart (Just selectedTime))    = makeInputField "Start Time" "datetime-local" "start-time" (formatTimeHtml selectedTime)
+  toHtml (TimeInput TimeInputStart Nothing)                = makeInputField "Start Time" "datetime-local" "start-time" ""
+  toHtml (TimeInput TimeInputEnd (Just selectedTime))      = makeInputField "End Time"   "datetime-local" "end-time"   (formatTimeHtml selectedTime)
+  toHtml (TimeInput TimeInputEnd Nothing)                  = makeInputField "End Time"   "datetime-local" "end-time"   ""
 
   toHtml (SubmitInput label)                = makeInputField label "submit" "" "Submit"
 

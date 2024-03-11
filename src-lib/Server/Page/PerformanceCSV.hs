@@ -43,8 +43,8 @@ instance ToHtml PerformanceCSV where
 
       -- Selection form
       toHtml (SelectionForm "Time Range Selection"
-              [ TimeInput (Just earliest)
-              , TimeInput (Just latest)
+              [ TimeInput TimeInputStart (Just earliest)
+              , TimeInput TimeInputEnd   (Just latest)
               , SubmitInput "Download CSV"
               ])
 

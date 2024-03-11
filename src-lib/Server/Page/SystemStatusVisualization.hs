@@ -104,8 +104,8 @@ instance ToHtml SystemStatusVisualizationPage where
 
       -- Selection form
       toHtml (SelectionForm "Query Parameters"
-              [ TimeInput (Just earliest)
-              , TimeInput (Just latest)
+              [ TimeInput TimeInputStart (Just earliest)
+              , TimeInput TimeInputEnd   (Just latest)
               , SubmitInput "Or hit Enter"
               ])
 
