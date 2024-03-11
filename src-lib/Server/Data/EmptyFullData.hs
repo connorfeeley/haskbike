@@ -11,7 +11,9 @@ import           Control.Arrow                                ( first )
 import           Data.Aeson                                   ( ToJSON (..), object, (.=) )
 import qualified Data.Map                                     as Map
 import           Data.Maybe                                   ( mapMaybe )
-import           Data.Time                                    ( NominalDiffTime )
+import           Data.String                                  ( IsString )
+import qualified Data.Text                                    as T
+import           Data.Time
 
 import           Database.BikeShare.Tables.StationInformation ( fromBeamStationInformationToJSON )
 import qualified Database.BikeShare.Tables.StationInformation as DB
@@ -26,8 +28,8 @@ data EmptyFull where
 
 instance ToJSON EmptyFull where
   toJSON record =
-    object [ "empty_seconds"       .= _emptyTime record
-           , "full_seconds"        .= _fullTime  record
+    object [ "empty"       .= (formatDiffTime . _emptyTime) record
+           , "full"        .= (formatDiffTime . _fullTime)  record
            ]
 
 
@@ -54,3 +56,22 @@ combineStations latestStatuses empties = mapMaybe combine latestStatuses
       return (info, status, emptyFull)
 
     empties' = Map.fromList (map (first DB._infoStationId) empties)
+
+-- | Format a 'NominalDiffTime' as 'Text' with a human-readable format.
+formatDiffTime :: NominalDiffTime -> T.Text
+formatDiffTime dt = (T.pack . formatTime defaultTimeLocale (shortestFormatString dt)) dt
+
+shortestFormatString :: IsString a => NominalDiffTime -> a
+shortestFormatString dt =
+  case (days, hours, minutes, dt) of -- if dt >= nominalDay then "%dd %Hh %Mm %Ss" else "%Hh %Mm %Ss"
+    (0 :: Integer, 0 :: Integer, 0 :: Integer, 0) -> ""                -- empty
+    (0, 0, 0, _)                                  -> "%Ss"             -- seconds
+    (0, 0, _, _)                                  -> "%Mm %Ss"         -- minutes and seconds
+    (0, _, _, _)                                  -> "%Hh %Mm %Ss"     -- hours, minutes, seconds
+    (_, _, _, _)                                  -> "%dd %Hh %Mm %Ss" -- days, hours, minutes, seconds
+  where
+    nominalHour   = secondsToNominalDiffTime (60 * 60)
+    nominalMinute = secondsToNominalDiffTime 60
+    days    = floor (dt / nominalDay)
+    hours   = floor (dt / nominalHour)
+    minutes = floor (dt / nominalMinute)
