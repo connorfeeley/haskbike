@@ -2,7 +2,6 @@
 
 module Server.Page.PerformanceCSV where
 
-import qualified Data.Text                       as T
 import           Data.Time
 import           Data.Time.Extras
 
@@ -11,6 +10,7 @@ import           Lucid
 import           Servant
 
 import           Server.Classes
+import           Server.Page.SelectionForm
 import           Server.Page.StatusVisualization
 import           Server.StatusDataParams
 
@@ -40,16 +40,13 @@ instance ToHtml PerformanceCSV where
       p_ [style_ "text-align: center"] "Download station-level performance indicators for the entire system as a CSV."
       br_ []
       div_ [class_ "pure-g", style_ "text-align: center"] mempty
+
       -- Selection form
-      form_ [ class_ "pure-form pure-form-stacked"
-            , style_ "text-align: center"
-            , action_ ("/" <> (T.pack . show . linkURI) (performanceCsvPageDataLink params))
-            ] $ fieldset_ $ do
-        legend_ $ h3_ "Time Range Selection"
-        div_ [class_ "pure-g full-width"] $ do -- Grid layout for form
-          div_ [class_ "pure-u-1 pure-u-md-1-3"] (startTimeInput earliest)
-          div_ [class_ "pure-u-1 pure-u-md-1-3"] (endTimeInput latest)
-          div_ [class_ "pure-u-1 pure-u-md-1-3"] (makeInputField (i_ "Download CSV") "submit" "download" "Download")
+      toHtml (SelectionForm "Time Range Selection"
+              [ TimeInput TimeInputStart (Just earliest)
+              , TimeInput TimeInputEnd   (Just latest)
+              , SubmitInput "Download CSV"
+              ])
 
     where
       times' = enforceTimeRangeBounds (StatusDataParams (tz $ performanceCsvPageTimeRange params)

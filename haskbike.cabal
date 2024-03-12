@@ -249,6 +249,7 @@ library
                     , Database.BikeShare.Operations.FactorsCSV
                     , Database.BikeShare.Operations.QueryLogs
                     , Database.BikeShare.Operations.StationEmpty
+                    , Database.BikeShare.Operations.StatusChanges
                     , Database.BikeShare.StatusDeltaFields
                     , Database.BikeShare.StatusVariationQuery
                     , Database.BikeShare.Utils
@@ -288,6 +289,7 @@ library
                     , Server.ComponentsAPI
                     , Server.Data.StationStatusVisualization
                     , Server.Data.SystemInformationVisualization
+                    , Server.Data.EmptyFullData
                     , Server.DataAPI
                     , Server.DebugAPI
                     , Server.Page.IndexPage
@@ -300,6 +302,7 @@ library
                     , Server.Page.StatusVisualization
                     , Server.Page.SystemInfoVisualization
                     , Server.Page.SystemStatusVisualization
+                    , Server.Page.SelectionForm
                     , Server.Page.Utils
                     , Server.PureCSS
                     , Server.RobotsTXT
@@ -389,7 +392,8 @@ library haskbike-test-lib
 -- Testing target.
 test-suite haskbike-test
     import:           compile-flags
-                    , compile-flags-exe
+                    -- Don't enable '-threaded' for test suite; causes it to run in parallel.
+                    -- , compile-flags-exe
                     , common-extensions
                     , common-depends
                     , api-client-depends

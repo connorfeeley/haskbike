@@ -40,6 +40,7 @@ dropTables = do
     execute_ conn $ dropCascade "station_lookup"
     execute_ conn $ dropCascade "queries"
     execute_ conn $ dropCascade "station_status"
+    execute_ conn $ dropCascade "station_status_changes"
     execute_ conn $ dropCascade "station_information"
     execute_ conn $ dropCascade "system_information_count"
     execute_ conn $ dropCascade "system_information"

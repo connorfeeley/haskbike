@@ -1,4 +1,5 @@
-{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DataKinds           #-}
 -- | This module defines the data types used to render the station status visualization page.
 
 module Server.Page.StationStatusVisualization
@@ -6,9 +7,7 @@ module Server.Page.StationStatusVisualization
      ) where
 
 
-import           Control.Monad                                ( when )
-
-import           Data.Maybe                                   ( catMaybes, isJust )
+import           Data.Maybe                                   ( catMaybes )
 import qualified Data.Text                                    as T
 import           Data.Time
 import           Data.Time.Extras
@@ -23,6 +22,7 @@ import           Servant
 
 import           Server.Classes
 import           Server.ComponentsAPI
+import           Server.Page.SelectionForm
 import           Server.Page.StatusVisualization
 import           Server.Page.Utils
 
@@ -54,34 +54,30 @@ instance ToHtml StationStatusVisualizationPage where
       h2_ [style_ "text-align: center"] "Station Information & Statistics"
       br_ []
       div_ [class_ "pure-g full-width", style_ "text-align: center"] $ do
-        let headers = catMaybes [ Just capacityHeader
-                                , Just $ hxSpinner_ staticLink (fieldLink dockingEventsHeader  (Just (_statusVisPageStationId params)) (earliestTime (_statusVisPageTimeRange params)) (latestTime (_statusVisPageTimeRange params)))
-                                , if _infoIsChargingStation inf
-                                  then Just $ hxSpinner_ staticLink (fieldLink chargingEventsHeader (Just (_statusVisPageStationId params)) (earliestTime (_statusVisPageTimeRange params)) (latestTime (_statusVisPageTimeRange params)))
-                                  else Nothing
-                                , Just $ hxSpinner_ staticLink (fieldLink performanceHeader    (Just (_statusVisPageStationId params)) (earliestTime (_statusVisPageTimeRange params)) (latestTime (_statusVisPageTimeRange params)))
-                                , valetHeader
-                                , virtualHeader
-                                ]
-        mconcat $ map (`with` [class_ ("pure-u-md-1-" <> showt (length headers))]) headers
-
+        mconcat $ map (`with` [class_ ("pure-u-md-1-" <> (showt . length) headers)]) headers
       br_ []
 
       -- Selection form
-      form_ [class_ "pure-form pure-form-stacked full-width", style_ "text-align: center"] $ fieldset_ $ do
-        legend_ $ h3_ "Query Parameters"
-        div_ [class_ "pure-g full-width"] $ do -- Grid layout for form
-          div_ [class_ "pure-u-1 pure-u-md-1-4"] (stationIdInput params)
-          div_ [class_ "pure-u-1 pure-u-md-1-4"] (startTimeInput earliest)
-          div_ [class_ "pure-u-1 pure-u-md-1-4"] (endTimeInput latest)
-          div_ [class_ "pure-u-1 pure-u-md-1-4"] submitInput
+      toHtml (SelectionForm "Query Parameters"
+              [ StationIdInput ((Just . _statusVisPageStationId) params)
+              , TimeInput TimeInputStart (Just earliest)
+              , TimeInput TimeInputEnd   (Just latest)
+              , SubmitInput "Or hit enter"
+              ])
 
       with div_ [class_ "graph"] (toHtmlRaw (toHtmlWithUrls vegaSourceUrlsLocal (vegaEmbedCfg ShowActions) (vegaChart (map T.pack) (_statusVisPageDataLink params))))
 
     where
-      inf = _statusVisPageStationInfo params
+      headers = catMaybes [ Just capacityHeader
+                          , Just (mkHeader params _statusVisPageStaticLink _statusVisPageTimeRange (Just (_statusVisPageStationId params)) dockingEventsHeader)
+                          , if _infoIsChargingStation inf then Just chargingHeader else Nothing
+                          , Just (mkHeader params _statusVisPageStaticLink _statusVisPageTimeRange (Just (_statusVisPageStationId params)) performanceHeader)
+                          , valetHeader
+                          , virtualHeader
+                          ]
+      chargingHeader = mkHeader params _statusVisPageStaticLink _statusVisPageTimeRange (Just (_statusVisPageStationId params)) chargingEventsHeader
 
-      staticLink = _statusVisPageStaticLink params
+      inf = _statusVisPageStationInfo params
 
       pageTitle :: Int -> T.Text -> T.Text
       pageTitle a b = "Station #" <> (T.pack . show) a <> ": "<>b
@@ -112,6 +108,3 @@ instance ToHtml StationStatusVisualizationPage where
       times' = times (_statusVisPageTimeZone params) (_statusVisPageCurrentUtc params) (_statusVisPageTimeRange params)
       earliest = earliestTime times'
       latest   = latestTime   times'
-
-stationIdInput :: Monad m => StationStatusVisualizationPage -> HtmlT m ()
-stationIdInput = makeInputField "Station ID" "number" "station-id" . showt . _statusVisPageStationId

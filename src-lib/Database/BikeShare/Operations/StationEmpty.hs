@@ -88,97 +88,72 @@ _queryStationEmptyFullTimeOld stationId startTime endTime = do
 
 -- | Query how long each station has been both empty and full for.
 queryStationEmptyFullTime :: (Integral a)
-                          => Maybe a
-                          -> UTCTime
-                          -> UTCTime
-                          -> With Postgres BikeshareDb (Q Postgres BikeshareDb s (StationInformationT (QGenExpr QValueContext Postgres s), (QGenExpr QValueContext Postgres s Int32, QGenExpr QValueContext Postgres s Int32)))
+                          => Maybe a -> UTCTime -> UTCTime
+                          -> With Postgres BikeshareDb (Q Postgres BikeshareDb s ( StationInformationT (QGenExpr QValueContext Postgres s)
+                                                                                 , (QGenExpr QValueContext Postgres s Int32, QGenExpr QValueContext Postgres s Int32)
+                                                                                 )
+                                                       )
 queryStationEmptyFullTime stationId startTime endTime = do
-  _statusCte <- selecting $
-            filter_ (stationIdCond stationId) $
-            -- Widen our query a bit to get the previous and next status reports.
-            filter_ (\row -> between_ (row ^. statusLastReported) (val_ (addUTCTime (-60 * 60) startTime)) (val_ (addUTCTime (60 * 60) endTime))) $
-            all_ (bikeshareDb ^. bikeshareStationStatus)
-
-  -- statusWindow <- selecting $
-  --       filter_ (\(row, lead, lag) -> keepRow row lead lag) $
-  --       filter_ (\(row, (lead, _, _), (lag, _, _)) -> _statusLastReported row <. val_ endTime &&.
-  --                                     lead >=. val_ startTime ||. -- lead > start
-  --                                     (lag  <.  val_ startTime &&. _statusLastReported row >=. val_ startTime) -- lag < start && row > start
-  --               ) $
-  --       withWindow_ (\row -> frame_ (partitionBy_ ((_unInformationStationId . _statusInfoId . _statusCommon) row)) (orderPartitionBy_ ((asc_ . _statusLastReported) row)) noBounds_)
-  --                   (\row w -> ( row
-  --                              -- , leadWithDefault_ (_statusLastReported row, _statusLastReported row) (val_ 1, val_ 1) (val_ endTime, val_ endTime) `over_` w
-  --                              , ( leadWithDefault_ (_statusLastReported      row) (val_ 1) (val_ endTime) `over_` w
-  --                                , leadWithDefault_ (_statusNumBikesAvailable row) (val_ 1) (val_ 0) `over_` w
-  --                                , leadWithDefault_ (_statusNumDocksAvailable row) (val_ 1) (val_ 0) `over_` w
-  --                                )
-  --                              , ( lagWithDefault_ (_statusLastReported      row) (val_ 1) (val_ endTime) `over_` w
-  --                                , lagWithDefault_ (_statusNumBikesAvailable row) (val_ 1) (val_ 0) `over_` w
-  --                                , lagWithDefault_ (_statusNumDocksAvailable row) (val_ 1) (val_ 0) `over_` w
-  --                                )
-  --                              )
-  --                   ) $
-  --           filter_ (stationIdCond stationId) $
-  --           -- Widen our query a bit to get the previous and next status reports.
-  --           filter_ (\row -> between_ (row ^. statusLastReported) (val_ (addUTCTime (-60 * 60) startTime)) (val_ (addUTCTime (60 * 60) endTime))) $
-  --           all_ (bikeshareDb ^. bikeshareStationStatus)
+  -- Get station ID and amount of seconds the station was empty and full.
+  emptyFullCte <- selecting $
+    aggregate_ (\(row, (nReported, _, _), _pReported) ->
+                  let period_start = greatest_ (row ^. statusLastReported) (val_ startTime)
+                      period_end = least_ nReported (val_ endTime)
+                   in ( group_ ((_unInformationStationId . _statusInfoId . _statusCommon) row)
+                      -- 0 bikes available means the station is empty
+                      , fromMaybe_ 0 (sum_ (ifThenElse_ (row ^. statusNumBikesAvailable ==. val_ 0)
+                                             (timeDelta period_end period_start) 0
+                                           ) `filterWhere_` (period_start <. period_end))
+                      -- 0 docks available means the station is full
+                      , fromMaybe_ 0 (sum_ (ifThenElse_ (row ^. statusNumDocksAvailable ==. val_ 0)
+                                             (timeDelta period_end period_start) 0
+                                           ) `filterWhere_` (period_start <. period_end))
+                      )) $
+      filter_ (\(row, lead, lag) -> keepRow row lead lag) $
+      filter_ (\(row, (lead, _, _), (lag, _, _)) -> (row  ^. statusLastReported) <. val_ endTime &&.
+                                    lead >=. val_ startTime ||. -- lead > start
+                                    (lag  <.  val_ startTime &&. (row ^. statusLastReported) >=. val_ startTime) -- lag < start && row > start
+              ) $
+      withWindow_ (\row -> frame_ (partitionBy_ ((_unInformationStationId . _statusInfoId . _statusCommon) row)) (orderPartitionBy_ ((asc_ . _statusLastReported . _statusCommon) row)) noBounds_)
+                  (\row w -> ( row
+                             -- , leadWithDefault_ (_statusLastReported row, _statusLastReported row) (val_ 1, val_ 1) (val_ endTime, val_ endTime) `over_` w
+                             , ( leadWithDefault_ (row ^. statusLastReported     ) (val_ 1) (val_ endTime) `over_` w
+                               , leadWithDefault_ (row ^. statusNumBikesAvailable) (val_ 1) (val_ 0) `over_` w
+                               , leadWithDefault_ (row ^. statusNumDocksAvailable) (val_ 1) (val_ 0) `over_` w
+                               )
+                             , ( lagWithDefault_ (row ^. statusLastReported     ) (val_ 1) (val_ endTime) `over_` w
+                               , lagWithDefault_ (row ^. statusNumBikesAvailable) (val_ 1) (val_ 0) `over_` w
+                               , lagWithDefault_ (row ^. statusNumDocksAvailable) (val_ 1) (val_ 0) `over_` w
+                               )
+                             )
+                  ) $
+          filter_ (stationIdCond stationId) $
+          -- Widen our query a bit to get the previous and next status reports.
+          filter_ (\row -> between_ (row ^. statusLastReported) (val_ (addUTCTime (-24 * 60 * 60) startTime)) (val_ (addUTCTime (24 * 60 * 60) endTime))) $
+          all_ (bikeshareDb ^. bikeshareStationStatus)
 
   pure $ do
-    -- Get latest status so that we can get only the latest reference station info.
-    -- (latestStatus, _, _) <- Pg.pgNubBy_ (\(status, _, _) -> cast_ (_statusStationId status) int) $
-    --                         -- orderBy_ (\(status, _, _) -> desc_ (_statusLastReported status)) $
-    --                         reuse statusWindow
-
-    -- Get latest info.
+    -- Get the latest info not newer than the end time.
     info <- Pg.pgNubBy_ (\inf -> cast_ (_infoStationId inf) int) $
             orderBy_ (\inf -> (asc_ (_infoStationId inf), desc_ (_infoReported inf))) $
-            filter_ (\inf -> _infoReported inf <. val_ endTime) $
+            filter_ (\inf -> _infoReported inf <=. val_ endTime) $
+            filter_ (infoStationIdCond stationId) $
             all_ (bikeshareDb ^. bikeshareStationInformation)
 
-    -- Get station ID and amount of seconds the station was empty and full.
-    (sId, empty, full) <-
-      aggregate_ (\(row, (nReported, _, _), _pReported) ->
-                    let period_start = greatest_ (row ^. statusLastReported) (val_ startTime)
-                        period_end = least_ nReported (val_ endTime)
-                     in ( group_ ((_unInformationStationId . _statusInfoId . _statusCommon) row)
-                        -- 0 bikes available means the station is empty
-                        , fromMaybe_ 0 (sum_ (ifThenElse_ (row ^. statusNumBikesAvailable ==. val_ 0)
-                                               (timeDelta period_end period_start) 0
-                                             ) `filterWhere_` (period_start <. period_end))
-                        -- 0 docks available means the station is full
-                        , fromMaybe_ 0 (sum_ (ifThenElse_ (row ^. statusNumDocksAvailable ==. val_ 0)
-                                               (timeDelta period_end period_start) 0
-                                             ) `filterWhere_` (period_start <. period_end))
-                        )) $
-        filter_ (\(row, lead, lag) -> keepRow row lead lag) $
-        filter_ (\(row, (lead, _, _), (lag, _, _)) -> (row  ^. statusLastReported) <. val_ endTime &&.
-                                      lead >=. val_ startTime ||. -- lead > start
-                                      (lag  <.  val_ startTime &&. (row ^. statusLastReported) >=. val_ startTime) -- lag < start && row > start
-                ) $
-        withWindow_ (\row -> frame_ (partitionBy_ ((_unInformationStationId . _statusInfoId . _statusCommon) row)) (orderPartitionBy_ ((asc_ . _statusLastReported . _statusCommon) row)) noBounds_)
-                    (\row w -> ( row
-                               -- , leadWithDefault_ (_statusLastReported row, _statusLastReported row) (val_ 1, val_ 1) (val_ endTime, val_ endTime) `over_` w
-                               , ( leadWithDefault_ (row ^. statusLastReported     ) (val_ 1) (val_ endTime) `over_` w
-                                 , leadWithDefault_ (row ^. statusNumBikesAvailable) (val_ 1) (val_ 0) `over_` w
-                                 , leadWithDefault_ (row ^. statusNumDocksAvailable) (val_ 1) (val_ 0) `over_` w
-                                 )
-                               , ( lagWithDefault_ (row ^. statusLastReported     ) (val_ 1) (val_ endTime) `over_` w
-                                 , lagWithDefault_ (row ^. statusNumBikesAvailable) (val_ 1) (val_ 0) `over_` w
-                                 , lagWithDefault_ (row ^. statusNumDocksAvailable) (val_ 1) (val_ 0) `over_` w
-                                 )
-                               )
-                    ) $
-            filter_ (stationIdCond stationId) $
-            -- Widen our query a bit to get the previous and next status reports.
-            filter_ (\row -> between_ (row ^. statusLastReported) (val_ (addUTCTime (-60 * 60) startTime)) (val_ (addUTCTime (60 * 60) endTime))) $
-            all_ (bikeshareDb ^. bikeshareStationStatus)
+    -- Join the station info with the station empty/full results, always including the info rows.
+    (_sId, empty, full) <- leftJoin_'
+                           (reuse emptyFullCte)
+                           (\(sId', _, _) -> sId' ==?. (info ^. infoStationId))
 
+    -- If there are no status rows for a given station then the empty/full results will be NULL;
+    -- default the empty time to be the time range, and default the full time to be 0.
+    pure (info, ( fromMaybe_ nominalTimeRangeSeconds empty
+                , fromMaybe_ 0 full
+                )
+         )
+  where
+    nominalTimeRangeSeconds = (fromInteger . round . nominalDiffTimeToSeconds) (diffUTCTime endTime startTime)
 
-    guard_ (info ^. infoStationId ==. sId) -- &&.
-           -- (_statusInfoId latestStatus `references_` info) &&.
-           -- (latestStatus ^. statusStationId ==. sId))
-
-    pure (info, (empty, full))
 
 keepRow :: ( BeamSqlBackend be, SqlValable b1, SqlValable b2, SqlValable a1,  SqlValable a2
            , SqlEq (QGenExpr context be s) b1,  SqlEq (QGenExpr context be s) b2, SqlEq (QGenExpr context be s) a1,  SqlEq (QGenExpr context be s) a2
@@ -224,3 +199,7 @@ stationIdCond :: ( HaskellLiteralForQExpr (expr Bool) ~ Bool
               -> expr Bool
 stationIdCond (Just stationId') row = (_unInformationStationId . _statusInfoId . _statusCommon) row ==. val_ (fromIntegral stationId')
 stationIdCond Nothing           _   = val_ True
+
+
+infoStationIdCond (Just stationId') row = _infoStationId row ==. val_ (fromIntegral stationId')
+infoStationIdCond Nothing           _   = val_ True

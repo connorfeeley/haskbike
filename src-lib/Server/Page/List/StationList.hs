@@ -7,12 +7,12 @@
 
 module Server.Page.List.StationList
      ( StationList (..)
-     , StationListFilter (..)
      ) where
 
 import           Control.Lens
 
 import           Data.Maybe                                   ( fromMaybe )
+import           Data.Time
 
 import           Database.BikeShare.Tables.StationInformation
 import           Database.BikeShare.Tables.StationStatus
@@ -25,9 +25,18 @@ import           Servant
 
 import           Server.Classes
 import           Server.Page.List.Common
-import           Server.PureCSS
+import           Server.Page.SelectionForm
 
 import           TextShow
+
+
+data StationList a where
+  StationList :: { _stationList           :: a
+                 , _stationTimeRange      :: (Maybe LocalTime, Maybe LocalTime)
+                 , _staticLink            :: Link
+                 , _stationListInputs     :: [SelectionFormInput]
+                 , _visualizationPageLink :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> Link
+                 } -> StationList a
 
 
 instance ToHtml (StationList [(StationInformation, StationStatus)]) where
@@ -39,8 +48,7 @@ instance ToHtml (StationList [(StationInformation, StationStatus)]) where
     div_ [class_ "header"] $ do
       h1_ [] (toHtml "Station List")
     div_ [class_ "content"] $ do
-      contentSubhead "Select station type"
-      toHtml (StationListForm { _stationListFormSelection = _stationListSelection params })
+      toHtml (StationListForm (_stationListInputs params))
       toHtml (toStationListTable params)
 
 -- | Table displaying station information.

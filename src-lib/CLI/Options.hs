@@ -115,21 +115,22 @@ resetOptionsParser = ResetOptions
      <> help "Run the command in test mode." )
 
 -- | Options for the 'Query' command.
-data QueryOptions =
-  QueryOptions { optRefresh :: Bool
-               , optQueryBy :: QueryMethod
-               } deriving (Show)
-
-data QueryMethod =
-    QueryByStationId Int
-  | QueryByStationName (MatchMethod String)
+data QueryOptions where
+  QueryOptions :: { optRefresh :: Bool
+                  , optQueryBy :: QueryMethod
+                  } -> QueryOptions
   deriving (Show)
 
-data MatchMethod a =
-    ExactMatch a
-  | PrefixMatch a
-  | SuffixMatch a
-  | WildcardMatch a
+data QueryMethod where
+  QueryByStationId   :: Int                  -> QueryMethod
+  QueryByStationName :: (MatchMethod String) -> QueryMethod
+  deriving (Show)
+
+data MatchMethod a where
+  ExactMatch    :: a -> MatchMethod a
+  PrefixMatch   :: a -> MatchMethod a
+  SuffixMatch   :: a -> MatchMethod a
+  WildcardMatch :: a -> MatchMethod a
   deriving (Show, Functor)
 
 -- | Unwrap a 'MatchMethod'.
@@ -217,40 +218,41 @@ debugMiscOptionsParser = DebugMiscOptions
 --   EventsRange   :: !EventRangeOptions   -> EventsOptions
 --   deriving (Show)
 
-data EventsOptions =
-  EventsOptions { optEventsSubcommand :: EventSubcommand
-                , optEventsLimit      :: Maybe Int
-                } deriving (Show)
-
-data EventSubcommand =
-    EventCounts EventCountOptions
-  | EventRange  EventRangeOptions
+data EventsOptions where
+  EventsOptions :: { optEventsSubcommand :: EventSubcommand
+                   , optEventsLimit :: Maybe Int
+                   } -> EventsOptions
   deriving (Show)
 
-data EventCountOptions =
-  EventCountOptions
-    { optEventsCountLimit     :: Maybe Int
-    , optEventsCountStationId :: Maybe Int
-    , optEventsCountStartDay  :: Maybe Day
-    , optEventsCountStartTime :: Maybe TimeOfDay
-    , optEventsCountEndDay    :: Maybe Day
-    , optEventsCountEndTime   :: Maybe TimeOfDay
-    } deriving (Show)
+data EventSubcommand where
+  EventCounts :: EventCountOptions -> EventSubcommand
+  EventRange  :: EventRangeOptions -> EventSubcommand
+  deriving (Show)
 
-data EventRangeOptions =
-  EventRangeOptions
-    { startDay  :: Maybe Day
-    , startTime :: Maybe TimeOfDay
-    , endDay    :: Maybe Day
-    , endTime   :: Maybe TimeOfDay
-    } deriving (Show)
+data EventCountOptions where
+  EventCountOptions :: { optEventsCountLimit :: Maybe Int
+                       , optEventsCountStationId :: Maybe Int
+                       , optEventsCountStartDay :: Maybe Day
+                       , optEventsCountStartTime :: Maybe TimeOfDay
+                       , optEventsCountEndDay :: Maybe Day
+                       , optEventsCountEndTime :: Maybe TimeOfDay
+                       } -> EventCountOptions
+  deriving (Show)
+
+data EventRangeOptions where
+  EventRangeOptions :: { startDay :: Maybe Day
+                       , startTime :: Maybe TimeOfDay
+                       , endDay :: Maybe Day
+                       , endTime :: Maybe TimeOfDay
+                       } -> EventRangeOptions
+  deriving (Show)
 
 -- | Parser for 'EventsOptions'.
 eventsOptionsParser :: Parser EventsOptions
 eventsOptionsParser = EventsOptions
   <$> hsubparser
     (  command "counts" (info (EventCounts <$> eventsCountOptionsParser) (progDesc "Counts of docking and undocking events."))
-    <> command "range" (info (EventRange <$> eventRangeOptionsParser) (progDesc "Docking and undocking events within a date range."))
+    <> command "range"  (info (EventRange <$> eventRangeOptionsParser)   (progDesc "Docking and undocking events within a date range."))
     )
   <*> argument auto
     ( metavar "LIMIT"

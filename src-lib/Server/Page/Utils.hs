@@ -1,3 +1,5 @@
+{-# LANGUAGE AllowAmbiguousTypes   #-}
+{-# LANGUAGE PartialTypeSignatures #-}
 -- |
 
 module Server.Page.Utils
@@ -10,7 +12,6 @@ module Server.Page.Utils
      , stylesheet_
      ) where
 
-import           Data.Text
 import qualified Data.Text  as T
 
 import           Lucid
@@ -22,22 +23,22 @@ import           TextShow
 
 
 -- | Helper function to create a stylesheet link.
-stylesheet_ :: Applicative m => Text -> HtmlT m ()
+stylesheet_ :: Applicative m => T.Text -> HtmlT m ()
 stylesheet_ url = link_ [rel_ "stylesheet", type_ "text/css", href_ url]
 
 
 -- | Make link elements for a list of pixel sizes, pointing to a given path.
-makeFavicons :: (Monad m, Num a, Show a) => Text -> [a] -> HtmlT m [()]
+makeFavicons :: (Monad m, Num a, Show a) => T.Text -> [a] -> HtmlT m [()]
 makeFavicons staticPath = mapM (link_ . linkAttrs)
   where
-    ssz :: (Num a, Show a) => a -> Text
-    ssz sz = pack (show sz) <> "x" <> pack (show sz)
+    ssz :: (Num a, Show a) => a -> T.Text
+    ssz sz = T.pack (show sz) <> "x" <> T.pack (show sz)
     hrefAttr  sz = href_ (staticPath <> "/images/favicon-" <> ssz sz <> ".png")
     linkAttrs sz = [rel_ "icon noopener noreferrer", type_ "image/png", sizes_ (ssz sz), target_ "_blank", hrefAttr sz]
 
 
 -- | Create standard <head> elements.
-makeHeadElements :: Monad m => Text -> Text -> HtmlT m ()
+makeHeadElements :: Monad m => T.Text -> T.Text -> HtmlT m ()
 makeHeadElements staticPath statsPath = do
   -- Favicons
   makeFavicons staticPath ([16, 32, 48, 96, 180, 300, 512] :: [Int])
@@ -50,18 +51,18 @@ makeHeadElements staticPath statsPath = do
   stylesheet_ (staticPath <> "/css/pure/pure-grids-responsive-min@3.0.0.css")
 
   -- HTMX
-  script_ [src_ (staticPath <> "/js/htmx/htmx.min.js"), integrity_ "sha384-QFjmbokDn2DjBjq+fM+8LUIVrAgqcNW2s0PjAxHETgRn9l4fvX31ZxDxvwQnyMOX", crossorigin_ "anonymous"] ("" :: Text)
+  script_ [src_ (staticPath <> "/js/htmx/htmx.min.js"), integrity_ "sha384-QFjmbokDn2DjBjq+fM+8LUIVrAgqcNW2s0PjAxHETgRn9l4fvX31ZxDxvwQnyMOX", crossorigin_ "anonymous"] ("" :: T.Text)
 
   -- Project stylesheet
   stylesheet_ (staticPath <> "/css/haskbike.css")
   stylesheet_ (staticPath <> "/css/tooltips.css")
 
   -- TODO: get this from the server's environment.
-  script_ [mkData_ "goatcounter" "https://stats.bikes.cfeeley.org/count", async_ mempty, src_ statsPath] ("" :: Text)
+  script_ [mkData_ "goatcounter" "https://stats.bikes.cfeeley.org/count", async_ mempty, src_ statsPath] ("" :: T.Text)
 
 
 -- | Make a "data-" attribute suffixed with the given 'Text'.
-mkData_ :: Text -> Text -> Attribute
+mkData_ :: T.Text -> T.Text -> Attribute
 mkData_ suffix = makeAttribute ("data-" <> suffix)
 
 showth :: (Monad m, TextShow a)
@@ -70,7 +71,7 @@ showth :: (Monad m, TextShow a)
 showth = toHtml . showt
 
 -- | Helper function to create an HTMX attribute.
-hx_ :: Text -> Text -> Attribute
+hx_ :: T.Text -> T.Text -> Attribute
 hx_ attr = makeAttribute ("hx-" <> attr)
 
 
