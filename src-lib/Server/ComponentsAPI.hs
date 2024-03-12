@@ -15,10 +15,12 @@ import qualified Data.Text                                      as T
 import           Data.Time
 import           Data.Time.Extras
 
-import           Database.Beam                                  ( runSelectReturningOne, selectWith )
+import           Database.Beam                                  ( runSelectReturningList, runSelectReturningOne,
+                                                                  selectWith )
 import           Database.BikeShare.Expressions                 ( queryChargingInfrastructure )
 import           Database.BikeShare.Operations.Dockings
 import           Database.BikeShare.Operations.Factors
+import           Database.BikeShare.Operations.StationEmpty     ( queryStationEmptyFullTime )
 import           Database.BikeShare.StatusVariationQuery        ( StatusThreshold (..), StatusVariationQuery (..) )
 
 import           GHC.Generics                                   ( Generic )
@@ -31,6 +33,7 @@ import           Server.Components.ChargingHeader
 import           Server.Components.ChargingInfrastructureHeader
 import           Server.Components.DockingHeader
 import           Server.Components.PerformanceData
+import           Server.Data.EmptyFullData                      ( EmptyFull (..) )
 import           Server.StatusDataParams
 
 import           ServerEnv
@@ -155,13 +158,20 @@ performanceHeaderHandler stationId startTime endTime = do
   let params = StatusDataParams tz currentUtc (TimePair startTime endTime tz currentUtc)
   let range = enforceTimeRangeBounds params
 
-  perf <- liftIO $ runAppM appEnv $
+  (perf, emptyFullTup) <- liftIO $ concurrently
+    (runAppM appEnv $
     queryIntegratedStatus
     (StatusVariationQuery (fromIntegral <$> stationId)
-      [ EarliestTime (localTimeToUTC tz (earliestTime  range))
-      , LatestTime (localTimeToUTC tz (latestTime range))
+      [ EarliestTime (localTimeToUTC tz (earliestTime range))
+      , LatestTime   (localTimeToUTC tz (latestTime   range))
       ]
+    ))
+    (runAppM appEnv $
+     withPostgres $ runSelectReturningList $ selectWith $
+     queryStationEmptyFullTime stationId (localTimeToUTC tz (earliestTime range)) (localTimeToUTC tz (latestTime range))
     )
+  let emptyFull = head $ map (\(_i, (e, f))
+                              -> EmptyFull ((secondsToNominalDiffTime . fromIntegral) e) ((secondsToNominalDiffTime . fromIntegral) f)
+                             ) emptyFullTup
 
-  pure $
-    (head . map integralToPerformanceData) perf
+  pure $ (head . map (integralToPerformanceData emptyFull)) perf

@@ -164,11 +164,19 @@ performanceCsvHandler stationId startTime endTime = do
         , LatestTime   (localTimeToUTC tz (latestTime range))
         ]
 
-  integrals <- liftIO $ runAppM appEnv $ queryIntegratedStatus variation
+  (integrals, emptyFullTup) <- liftIO $ concurrently
+    (runAppM appEnv $ queryIntegratedStatus variation)
+    (runAppM appEnv $
+     withPostgres $ runSelectReturningList $ selectWith $
+     queryStationEmptyFullTime stationId (localTimeToUTC tz (earliestTime range)) (localTimeToUTC tz (latestTime range))
+    )
+  let emptyFull = head $ map (\(_i, (e, f))
+                              -> EmptyFull ((secondsToNominalDiffTime . fromIntegral) e) ((secondsToNominalDiffTime . fromIntegral) f)
+                             ) emptyFullTup
 
   logDebug "Created performance data CSV payload"
 
-  let fileContent = encodeIntegrals integrals
+  let fileContent = encodeIntegrals emptyFull integrals
 
   let stationIdString :: String = maybe "system" show stationId
   let filename :: String = stationIdString <> "-performance-" <> show (earliestTime range) <> "-" <> show (latestTime range) <> ".csv"
@@ -176,7 +184,7 @@ performanceCsvHandler stationId startTime endTime = do
   logDebug $ "Added file header: " <> header
   pure $ addHeader header (fileContent :: BL.ByteString)
   where
-    encodeIntegrals = encodeDefaultOrderedByName . map (PerformanceDataCSV . integralToPerformanceData)
+    encodeIntegrals emptyFullTup = encodeDefaultOrderedByName . map (PerformanceDataCSV . integralToPerformanceData emptyFullTup)
 
 replaceSpaces :: String -> String
 replaceSpaces [] = []

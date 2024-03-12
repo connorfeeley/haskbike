@@ -4,6 +4,7 @@ module Server.Data.EmptyFullData
      ( EmptyFull (..)
      , EmptyFullRecord (..)
      , combineStations
+     , formatDiffTime
      ) where
 
 import           Control.Arrow                                ( first )
@@ -20,11 +21,14 @@ import qualified Database.BikeShare.Tables.StationInformation as DB
 import           Database.BikeShare.Tables.StationStatus      ( fromBeamStationStatusToJSON )
 import qualified Database.BikeShare.Tables.StationStatus      as DB
 
+import           GHC.Generics                                 ( Generic )
+
 
 data EmptyFull where
   EmptyFull :: { _emptyTime :: NominalDiffTime
                , _fullTime  :: NominalDiffTime
                } -> EmptyFull
+  deriving (Generic, Show, Eq)
 
 instance ToJSON EmptyFull where
   toJSON record =
@@ -64,7 +68,7 @@ formatDiffTime dt = (T.pack . formatTime defaultTimeLocale (shortestFormatString
 shortestFormatString :: IsString a => NominalDiffTime -> a
 shortestFormatString dt =
   case (days, hours, minutes, dt) of -- if dt >= nominalDay then "%dd %Hh %Mm %Ss" else "%Hh %Mm %Ss"
-    (0 :: Integer, 0 :: Integer, 0 :: Integer, 0) -> ""                -- empty
+    (0 :: Integer, 0 :: Integer, 0 :: Integer, 0) -> "-"               -- no value
     (0, 0, 0, _)                                  -> "%Ss"             -- seconds
     (0, 0, _, _)                                  -> "%Mm %Ss"         -- minutes and seconds
     (0, _, _, _)                                  -> "%Hh %Mm %Ss"     -- hours, minutes, seconds

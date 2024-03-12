@@ -12,7 +12,7 @@ import           Data.Int                                     ( Int32 )
 import           Data.Time
 
 import           Database.Beam
-import           Database.Beam.Backend                        ( BeamSqlBackend, HasSqlValueSyntax )
+import           Database.Beam.Backend                        ( BeamSqlBackend )
 import           Database.Beam.Postgres                       ( Postgres )
 import qualified Database.Beam.Postgres                       as Pg
 import           Database.BikeShare
@@ -87,23 +87,6 @@ _queryStationEmptyFullTimeOld stationId startTime endTime = do
     pure (info, (empty, full))
 
 -- | Query how long each station has been both empty and full for.
--- queryStationEmptyFullTime :: (Integral a)
---                           => Maybe a
---                           -> UTCTime
---                           -> UTCTime
---                           -> With Postgres BikeshareDb (Q Postgres BikeshareDb s (StationInformationT (QGenExpr QValueContext Postgres s), (QGenExpr QValueContext Postgres s Int32, QGenExpr QValueContext Postgres s Int32)))
--- queryStationEmptyFullTime :: (Integral a,  SqlJustable    (QGenExpr QValueContext Postgres s Int32)    (QGenExpr QValueContext Postgres s Int32))
---                           => Maybe a -> UTCTime -> UTCTime
---                           -> With Postgres BikeshareDb (Q Postgres BikeshareDb s (StationInformationT (QGenExpr QValueContext Postgres s), StationInformationT (Nullable (QGenExpr QValueContext Postgres s))))
--- queryStationEmptyFullTime :: (Integral a, SqlJustable (QGenExpr QValueContext Postgres s Int32) (QGenExpr QValueContext Postgres s Int32))
---                           => Maybe a -> UTCTime -> UTCTime
---                           -> With Postgres BikeshareDb (Q Postgres BikeshareDb s (StationInformationT (Nullable (QGenExpr QValueContext Postgres s))))
--- queryStationEmptyFullTime :: (HasSqlValueSyntax PgValueSyntax a1, HasSqlValueSyntax PgValueSyntax a2, Integral a1, Integral a2, Integral a3, SqlJustable (QGenExpr QValueContext Postgres s Int32) (QGenExpr QValueContext Postgres s Int32))
---                           => Maybe a3 -> UTCTime -> UTCTime
---                           -> With Postgres BikeshareDb (Q Postgres BikeshareDb s ( StationInformationT (QGenExpr QValueContext Postgres s)
---                                                                                  , (QGenExpr QValueContext Postgres s (Maybe a1), QGenExpr QValueContext Postgres s (Maybe a2))
---                                                                                  )
---                                                        )
 queryStationEmptyFullTime :: (Integral a)
                           => Maybe a -> UTCTime -> UTCTime
                           -> With Postgres BikeshareDb (Q Postgres BikeshareDb s ( StationInformationT (QGenExpr QValueContext Postgres s)
@@ -154,12 +137,13 @@ queryStationEmptyFullTime stationId startTime endTime = do
     info <- Pg.pgNubBy_ (\inf -> cast_ (_infoStationId inf) int) $
             orderBy_ (\inf -> (asc_ (_infoStationId inf), desc_ (_infoReported inf))) $
             filter_ (\inf -> _infoReported inf <=. val_ endTime) $
+            filter_ (infoStationIdCond stationId) $
             all_ (bikeshareDb ^. bikeshareStationInformation)
 
     -- Join the station info with the station empty/full results, always including the info rows.
     (_sId, empty, full) <- leftJoin_'
-                        (reuse emptyFullCte)
-                        (\(sId', _, _) -> sId' ==?. (info ^. infoStationId))
+                           (reuse emptyFullCte)
+                           (\(sId', _, _) -> sId' ==?. (info ^. infoStationId))
 
     -- If there are no status rows for a given station then the empty/full results will be NULL;
     -- default the empty time to be the time range, and default the full time to be 0.
@@ -215,3 +199,7 @@ stationIdCond :: ( HaskellLiteralForQExpr (expr Bool) ~ Bool
               -> expr Bool
 stationIdCond (Just stationId') row = (_unInformationStationId . _statusInfoId . _statusCommon) row ==. val_ (fromIntegral stationId')
 stationIdCond Nothing           _   = val_ True
+
+
+infoStationIdCond (Just stationId') row = _infoStationId row ==. val_ (fromIntegral stationId')
+infoStationIdCond Nothing           _   = val_ True
