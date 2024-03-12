@@ -5,6 +5,7 @@ import           API.Client
 
 import           AppEnv
 
+import           CLI.Options               ( PollOptions (..), PopulateStatusChangesOpt (..) )
 import qualified CLI.Poll                  as Poll
 
 import           Colog                     ( logInfo, pattern W )
@@ -80,6 +81,8 @@ unit_poll = do
   runAppM env migrateDB
   runAppM env doPoll
   where
+    pollOpts = PollOptions NeverPopulate
+
     doPoll :: AppM ()
     doPoll = void $ timeout 1000000 $ do -- Terminate after 1 second
-      void Poll.pollClient
+      (void . Poll.pollClient) pollOpts
