@@ -68,3 +68,8 @@
 * Use ADT pattern for generating form inputs.
 * Fixed query for single-station empty/full calculation.
 * Added empty/full values to performance CSV.
+
+## 3.3.1 -- 2024-03-12
+
+* Add CLI option for populating `station_status_changes` table from the existing `station_status` table.
+* Refactored `queryRowCount` to return an easier type to use.
