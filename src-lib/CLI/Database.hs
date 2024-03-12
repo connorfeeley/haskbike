@@ -73,7 +73,7 @@ handleInformation = do
   log D "Querying station information from database."
   numInfoRows <- queryRowCount bikeshareStationInformation
   log D "Queried station information from database."
-  unless (null numInfoRows) handleStationInformation
+  unless (0 == numInfoRows) handleStationInformation
 
 -- | Handle station information request.
 handleStationInformation :: AppM ()
@@ -98,7 +98,7 @@ handleStatus = do
   log D "Querying station status from database."
   numStatusRows <- queryRowCount bikeshareStationStatus
   log D "Queried station status from database."
-  unless (null numStatusRows) handleStationStatus
+  unless (0 == numStatusRows) handleStationStatus
 
 -- | Handle station status request.
 handleStationStatus :: AppM ()

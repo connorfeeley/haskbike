@@ -13,7 +13,6 @@ import           CLI.QueryFormat
 
 import           Colog                                   ( log, logDebug, pattern D )
 
-import           Data.Int                                ( Int32 )
 import           Data.Maybe                              ( fromMaybe )
 import           Data.Proxy
 import           Data.Text.Lazy                          ( Text, pack )
@@ -39,7 +38,7 @@ dispatchDebug _options = do
   -- Get the number of rows in the station status table.
   numStatusRows <-
     log D "Querying number of rows in status table."
-    >> fromMaybe (0 :: Int32) <$> queryRowCount bikeshareStationStatus
+    >> queryRowCount bikeshareStationStatus
 
   let tableSize = tableValuesNeeded (Proxy :: Proxy StationStatusT)
 
@@ -67,7 +66,7 @@ dispatchDebug _options = do
     cliOut $ formatDatabaseStats numStatusRows infoTableSize statusTableSize
 
 
-formatDatabaseStats :: Int32 -> Maybe String -> Maybe String -> [Text]
+formatDatabaseStats :: Int -> Maybe String -> Maybe String -> [Text]
 formatDatabaseStats numStatusRows infoTableSize statusTableSize =
   withHeader (pack "Database Statastics") [ statusRowsText
                                           , tableSizeText "  Info" infoTableSize

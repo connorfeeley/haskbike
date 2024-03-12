@@ -47,7 +47,7 @@ import           Control.Lens                                 hiding ( reuse, (<
 import           Data.Int                                     ( Int32 )
 import           Data.List                                    ( nubBy )
 import qualified Data.Map                                     as Map
-import           Data.Maybe                                   ( catMaybes, mapMaybe )
+import           Data.Maybe                                   ( catMaybes, fromMaybe, mapMaybe )
 import           Data.Pool                                    ( withResource )
 import qualified Data.Text                                    as Text
 import           Data.Time
@@ -316,9 +316,10 @@ queryStationStatusLatest station_id = withPostgres $ runSelectReturningOne $ sel
 queryRowCount :: (Beamable table, Database Postgres db)
               => Getting (DatabaseEntity Postgres db (TableEntity table)) (DatabaseSettings Postgres BikeshareDb) (DatabaseEntity Postgres db (TableEntity table))
               -- ^ Lens to the table in the database.
-              -> AppM (Maybe Int32)     -- ^ Count of rows in the specified table.
-queryRowCount table = withPostgres $ runSelectReturningOne $ select $
-  aggregate_ (\_ -> as_ @Int32 countAll_) (all_ (bikeshareDb ^. table))
+              -> AppM Int     -- ^ Count of rows in the specified table.
+queryRowCount table = fromIntegral . fromMaybe 0 <$> withPostgres (runSelectReturningOne $ select $
+    aggregate_ (\_ -> as_ @Int32 countAll_)
+    (all_ (bikeshareDb ^. table)))
 
 -- | Function to query the size of a table.
 queryTableSize :: String                -- ^ Name of the table.
