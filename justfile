@@ -65,7 +65,7 @@ bench:
     {{CABAL}} bench
 
 poll *ARGS:
-    {{CABAL}} run haskbike -- --plain poll -v {{ARGS}}
+    {{CABAL}} run haskbike -- --plain poll {{ARGS}} -v
 
 reset *ARGS:
     #!/usr/bin/env bash

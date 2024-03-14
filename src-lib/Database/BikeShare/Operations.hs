@@ -207,9 +207,6 @@ insertStationStatus apiStatus =
                (mapMaybe (\(inf, sta) -> fromJSONToBeamStationStatus (StationInformationId (_infoStationId inf) (_infoReported inf)) sta) statusWithInfo)
               ) (conflictingFields primaryKey) onConflictDoNothing
 
-    -- Insert only changed station statuses into the database.
-    _stationStatusChanged <- insertChangedStationStatus
-
     _statusLookup <- runInsertReturningList $
       insertOnConflict (bikeshareDb ^. bikeshareStationLookup)
       (insertExpressions $
