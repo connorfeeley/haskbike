@@ -243,6 +243,7 @@ library
                     , Database.BikeShare.EventCounts
                     , Database.BikeShare.Expressions
                     , Database.BikeShare.ImportExport
+                    , Database.BikeShare.Maintenance
                     , Database.BikeShare.Operations
                     , Database.BikeShare.Operations.Dockings
                     , Database.BikeShare.Operations.Factors
