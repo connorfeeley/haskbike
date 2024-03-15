@@ -199,9 +199,10 @@ WHERE
     OR si.reported IS NULL);
 
 ALTER TABLE public.station_status
-ADD CONSTRAINT IF NOT EXISTS fk_station_information FOREIGN KEY (info_station_id, info_reported) REFERENCES public.station_information(station_id, reported) ON UPDATE CASCADE;
+ADD CONSTRAINT fk_station_information FOREIGN KEY (info_station_id, info_reported) REFERENCES public.station_information(station_id, reported) ON UPDATE CASCADE;
 
 
 DROP TRIGGER IF EXISTS check_station_status_update ON station_status CASCADE;
+
 DROP FUNCTION IF EXISTS handle_dup_pkey CASCADE;
 DROP FUNCTION IF EXISTS public.fnc_work;
