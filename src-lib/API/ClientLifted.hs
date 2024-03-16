@@ -22,9 +22,10 @@ import           API.SystemInformation
 
 import           AppEnv
 
-import           Colog                  ( logException )
+import           Colog                  ( HasLog, logException )
 
 import           Control.Monad.Catch
+import           Control.Monad.Reader   ( MonadReader )
 
 import           Data.Aeson             ( Object )
 
@@ -35,14 +36,17 @@ import           Servant.Client
 import           UnliftIO
 
 
-runQueryM :: (m ~ AppM) => ClientM a -> m (Either ClientError a)
+runQueryM :: (WithAppMEnv (Env env) Message m)
+          => ClientM a
+          -> m (Either ClientError a)
 runQueryM query = do
   env <- ask
   let clientManager = envClientManager env
   liftIO $ runClientM query (mkClientEnv clientManager bikeshareBaseUrl)
 
 
-liftClientM :: ClientM a -> AppM a
+liftClientM :: (MonadReader (Env e) m, MonadIO m, HasLog (Env e) Message m, MonadThrow m)
+            => ClientM b -> m b
 liftClientM clientM = do
   env <- ask
   let manager = envClientManager env
@@ -54,23 +58,23 @@ liftClientM clientM = do
     Right res -> return res
 
 
-versionsM:: AppM Object
+versionsM :: (WithAppMEnv (Env env) Message m) => m Object
 versionsM = liftClientM versions
 
-vehicleTypesM :: AppM Object
+vehicleTypesM :: (WithAppMEnv (Env env) Message m) => m Object
 vehicleTypesM = liftClientM vehicleTypes
 
-stationInformationM :: AppM (ResponseWrapper [StationInformation])
+stationInformationM :: (WithAppMEnv (Env env) Message m) => m (ResponseWrapper [StationInformation])
 stationInformationM = liftClientM stationInformation
 
-stationStatusM :: AppM (ResponseWrapper [StationStatus])
+stationStatusM :: (WithAppMEnv (Env env) Message m) => m (ResponseWrapper [StationStatus])
 stationStatusM = liftClientM stationStatus
 
-systemRegionsM :: AppM Object
+systemRegionsM :: (WithAppMEnv (Env env) Message m) => m Object
 systemRegionsM = liftClientM systemRegions
 
-systemInformationM :: AppM (ResponseWrapper SystemInformation)
+systemInformationM :: (WithAppMEnv (Env env) Message m) => m (ResponseWrapper SystemInformation)
 systemInformationM = liftClientM systemInformation
 
-systemPricingPlansM :: AppM Object
+systemPricingPlansM :: (WithAppMEnv (Env env) Message m) => m Object
 systemPricingPlansM = liftClientM systemPricingPlans

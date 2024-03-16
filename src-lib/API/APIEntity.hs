@@ -15,6 +15,7 @@ import qualified API.SystemInformation                        as AT
 
 import           AppEnv
 
+import           CLI.Poll.PollClientEnv
 import           CLI.Poll.Utils
 
 import           Colog
@@ -56,26 +57,27 @@ class APIPersistable apiType dbType | apiType -> dbType where
   fromAPI :: ResponseWrapper apiType -> [dbType (QExpr Postgres s)]
   fromAPI _   = []
 
-  insertAPI :: ResponseWrapper apiType -> AppM [dbType Identity]
+  insertAPI :: (WithAppMEnv (Env env) Message m) => ResponseWrapper apiType -> m [dbType Identity]
   insertAPI _ = pure []
 
-  fetchAndPersist :: EndpointQueried
+  fetchAndPersist :: (WithAppMEnv (Env env) Message m)
+                  => EndpointQueried
                   -> ClientM (ResponseWrapper apiType)
                   -- ^ The function to fetch data from the API.
                   -> Int
                   -- ^ Last updated field of previous successful query.
                   -> TQueue (ResponseWrapper apiType)
-                  -> AppM PollResult
+                  -> m PollResult
                   -- ^ Return either an error or inserted DB items.
   fetchAndPersist ep apiFetch lastUpdated respQueue =
     runQueryM apiFetch >>= processResponse ep lastUpdated respQueue
 
-  pollThread :: EndpointQueried -> ClientM (ResponseWrapper apiType) -> TVar Int -> TQueue (ResponseWrapper apiType) -> AppM ()
+  pollThread :: (WithAppMEnv (Env env) Message m) => EndpointQueried -> ClientM (ResponseWrapper apiType) -> TVar Int -> TQueue (ResponseWrapper apiType) -> m ()
   pollThread ep apiFetch lastUpdatedVar respQueue = do
     lastUpdated <- liftIO $ readTVarIO lastUpdatedVar
     fetchAndPersist ep apiFetch lastUpdated respQueue >>= handleFetchPersistResult ep lastUpdatedVar
 
-  insertThread :: EndpointQueried -> TQueue (ResponseWrapper apiType) -> AppM [dbType Identity]
+  insertThread :: (WithAppMEnv (Env env) Message m) => EndpointQueried -> TQueue (ResponseWrapper apiType) -> m [dbType Identity]
   insertThread ep respQueue = do
     -- Read the response queue.
     resp <- (atomically . readTQueue) respQueue
@@ -114,7 +116,7 @@ handleFetchPersistResult ep lastUpdatedVar (Success resp) = do
     msPerS = 1000000
 
 -- | Process a (undecoded) response from the API.
-processResponse :: APIPersistable apiType dbType => EndpointQueried -> Int -> TQueue (ResponseWrapper apiType) -> Either ClientError (ResponseWrapper apiType) -> AppM PollResult
+processResponse :: (WithAppMEnv (Env env) Message m, APIPersistable apiType dbType) => EndpointQueried -> Int -> TQueue (ResponseWrapper apiType) -> Either ClientError (ResponseWrapper apiType) -> m PollResult
 processResponse ep _ _ (Left err) =
   handleResponse ep (Left err) >> pure (PollClientError err)
 processResponse ep lastUpdated respQueue (Right respDecoded) =
@@ -122,7 +124,7 @@ processResponse ep lastUpdated respQueue (Right respDecoded) =
 
 
 -- | Process a (decoded) response from the API.
-processValidResponse :: APIPersistable apiType dbType => EndpointQueried -> ResponseWrapper apiType -> TQueue (ResponseWrapper apiType) -> Maybe Int -> AppM PollResult
+processValidResponse :: (WithAppMEnv (Env env) Message m, APIPersistable apiType dbType) => EndpointQueried -> ResponseWrapper apiType -> TQueue (ResponseWrapper apiType) -> Maybe Int -> m PollResult
 -- Went backwards - return early with amount of time to extend poll period by.
 processValidResponse _ _ _ (Just extendByMs) = pure (WentBackwards extendByMs)
 -- Went forwards - handle response.

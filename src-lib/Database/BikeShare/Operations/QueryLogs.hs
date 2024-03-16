@@ -30,7 +30,7 @@ import           Database.BikeShare.Tables.QueryLogs
 import           Prelude                                  hiding ( log )
 
 
-insertQueryLog :: BeamConvertable QueryResult (QueryLogT (QExpr Postgres s)) => QueryResult -> AppM [QueryLog]
+insertQueryLog :: (WithAppMEnv (Env env) Message m, BeamConvertable QueryResult (QueryLogT (QExpr Postgres s))) => QueryResult -> m [QueryLog]
 insertQueryLog query =
   withPostgres $ runInsertReturningList $
   insert (bikeshareDb ^. bikeshareQueryLog)

@@ -37,7 +37,7 @@ import           UnliftIO
 
 -- * Helper functions.
 
-handleResponseWrapper :: EndpointQueried -> ResponseWrapper a -> Int -> AppM (Maybe Int)
+handleResponseWrapper :: (WithAppMEnv (Env env) Message m) => EndpointQueried -> ResponseWrapper a -> Int -> m (Maybe Int)
 handleResponseWrapper ep resp pLastUpdated = do
   if timeElapsed < 0 -- Crappy API returned stale data.
     then do
@@ -49,12 +49,12 @@ handleResponseWrapper ep resp pLastUpdated = do
         -- Time elapsed since last poll; also amount to extend poll by when negative.
         timeElapsed = lastUpdated - pLastUpdated
 
-handleResponseBackwards :: EndpointQueried -> ResponseWrapper a -> Int -> Int -> Int -> AppM Int
+handleResponseBackwards :: (WithAppMEnv (Env env) Message m) => EndpointQueried -> ResponseWrapper a -> Int -> Int -> Int -> m Int
 handleResponseBackwards ep _resp pLastUpdated lastUpdated timeElapsed = do
   logDebug $ (T.pack . show) ep <> " last updated went backwards: [" <> (T.pack . show . posixToUtc) pLastUpdated <> "] -> [" <> (T.pack . show) (posixToUtc lastUpdated) <> "] | " <> (T.pack . show) timeElapsed <> "s"
   pure (-timeElapsed)
 
-handleResponseForwards :: EndpointQueried -> ResponseWrapper a -> Int -> Int -> Int -> AppM Int
+handleResponseForwards :: (WithAppMEnv (Env env) Message m) => EndpointQueried -> ResponseWrapper a -> Int -> Int -> Int -> m Int
 handleResponseForwards ep _resp pLastUpdated lastUpdated timeElapsed = do
   logDebug $ "(" <> (T.pack . show) ep <> ") last updated: [" <> (T.pack . show) (posixToUtc pLastUpdated) <> "] -> [" <> (T.pack . show . posixToUtc) lastUpdated <> "] | " <> (T.pack . show) timeElapsed <> "s"
   pure (-timeElapsed)
@@ -63,7 +63,7 @@ handleResponseForwards ep _resp pLastUpdated lastUpdated timeElapsed = do
 -- * Functions for handling and inserting the appropriate query log records.
 
 -- | Handle the response from the API and insert the appropriate query log record.
-handleResponse :: EndpointQueried -> Either ClientError UTCTime -> AppM [QueryLog]
+handleResponse :: (WithAppMEnv (Env env) Message m) => EndpointQueried -> Either ClientError UTCTime -> m [QueryLog]
 handleResponse ep (Right timestamp) = insertQueryLog (QuerySuccess timestamp ep)
 handleResponse ep (Left err) = do
   curTime <- liftIO getCurrentTime

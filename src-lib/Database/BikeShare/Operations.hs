@@ -114,18 +114,20 @@ queryStationInformationByIds ids =
     ids' = fromIntegral <$> ids
 
 -- | Insert new station information into the database.
-insertStationInformation :: UTCTime
+insertStationInformation :: (WithAppMEnv (Env env) Message m)
+                         => UTCTime
                          -> [AT.StationInformation]             -- ^ List of 'StationInformation' from the API response.
-                         -> AppM [StationInformationT Identity] -- ^ List of 'StationInformation' that where inserted.
+                         -> m [StationInformationT Identity] -- ^ List of 'StationInformation' that where inserted.
 insertStationInformation reported stations = do
   (_, _, inserted) <- insertStationInformation' reported stations
   pure inserted
 
-insertStationInformation' :: UTCTime
-                         -> [AT.StationInformation]
-                         -- ^ List of 'StationInformation' from the API response.
-                         -> AppM ([StationInformation], [StationInformation], [StationInformation])
-                         -- ^ List of 'StationInformation' that were: (active, updated, inserted).
+insertStationInformation' :: (WithAppMEnv (Env env) Message m)
+                          => UTCTime
+                          -> [AT.StationInformation]
+                          -- ^ List of 'StationInformation' from the API response.
+                          -> m ([StationInformation], [StationInformation], [StationInformation])
+                          -- ^ List of 'StationInformation' that were: (active, updated, inserted).
 insertStationInformation' reported stations =
   -- Use a transaction to ensure that the database is not left in an inconsistent state.
   withPostgresTransaction $ do
@@ -187,8 +189,9 @@ stationInfoMostlyEq apiInfo dbInfo =
 {- |
 Insert station statuses into the database.
 -}
-insertStationStatus :: [AT.StationStatus] -- ^ List of 'AT.StationStatus' from the API response.
-                    -> AppM [StationStatus]
+insertStationStatus :: (WithAppMEnv (Env env) Message m)
+                    => [AT.StationStatus] -- ^ List of 'AT.StationStatus' from the API response.
+                    -> m [StationStatus]
 insertStationStatus apiStatus =
   withPostgresTransaction $ do
     info <- runSelectReturningList $ select $
