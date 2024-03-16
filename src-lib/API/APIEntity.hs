@@ -95,26 +95,28 @@ handleFetchPersistResult ep lastUpdatedVar (Success resp) = do
   liftIO $ threadDelay (timeToLiveS resp * msPerS)
   where
     epName = (T.pack . show) ep
-    ttlTxt = showt (timeToLiveS resp) <> "s"
+    ttlTxt = (showt . timeToLiveS) resp <> "s"
     timeToLiveS = _respTtl
     msPerS = 1000000
 
 -- | Process a (undecoded) response from the API.
 processResponse :: APIPersistable apiType dbType => EndpointQueried -> Int -> Either ClientError (ResponseWrapper apiType) -> AppM PollResult
 processResponse ep _ (Left err) =
-  handleResponseError ep err >>
-  pure (PollClientError err)
+  handleResponse ep (Left err) >> pure (PollClientError err)
 processResponse ep lastUpdated (Right respDecoded) =
-  handleResponseWrapper ep respDecoded lastUpdated >>=
-  processValidResponse ep respDecoded
-
+  handleResponseWrapper ep respDecoded lastUpdated >>= processValidResponse ep respDecoded
 -- | Process a (decoded) response from the API.
 processValidResponse :: APIPersistable apiType dbType => EndpointQueried -> ResponseWrapper apiType -> Maybe Int -> AppM PollResult
-processValidResponse _ _ (Just extendByMs) = pure (WentBackwards extendByMs) -- Went backwards - return early.
-processValidResponse ep resp Nothing = do -- Went forwards - handle response.
-  handleResponseSuccess ep (_respLastUpdated resp) -- Insert query log.
-  void (insertAPI resp) -- Insert response into database.
+-- Went backwards - return early with amount of time to extend poll period by.
+processValidResponse _ _ (Just extendByMs) = pure (WentBackwards extendByMs)
+-- Went forwards - handle response.
+processValidResponse ep resp Nothing = do
+  -- Insert query log.
+  handleResponse ep ((Right . _respLastUpdated) resp)
+  -- Insert response data into database.
+  void (insertAPI resp)
   pure (Success resp)
+
 
 -- * Instances.
 
