@@ -64,15 +64,29 @@ class APIPersistable apiType dbType | apiType -> dbType where
                   -- ^ The function to fetch data from the API.
                   -> Int
                   -- ^ Last updated field of previous successful query.
+                  -> TQueue (ResponseWrapper apiType)
                   -> AppM PollResult
                   -- ^ Return either an error or inserted DB items.
-  fetchAndPersist ep apiFetch lastUpdated =
-    runQueryM apiFetch >>= processResponse ep lastUpdated
+  fetchAndPersist ep apiFetch lastUpdated respQueue =
+    runQueryM apiFetch >>= processResponse ep lastUpdated respQueue
 
-  pollThread :: EndpointQueried -> ClientM (ResponseWrapper apiType) -> TVar Int -> AppM ()
-  pollThread ep apiFetch lastUpdatedVar = do
+  pollThread :: EndpointQueried -> ClientM (ResponseWrapper apiType) -> TVar Int -> TQueue (ResponseWrapper apiType) -> AppM ()
+  pollThread ep apiFetch lastUpdatedVar respQueue = do
     lastUpdated <- liftIO $ readTVarIO lastUpdatedVar
-    fetchAndPersist ep apiFetch lastUpdated >>= handleFetchPersistResult ep lastUpdatedVar
+    fetchAndPersist ep apiFetch lastUpdated respQueue >>= handleFetchPersistResult ep lastUpdatedVar
+
+  insertThread :: EndpointQueried -> TQueue (ResponseWrapper apiType) -> AppM [dbType Identity]
+  insertThread ep respQueue = do
+    -- Read the response queue.
+    resp <- (atomically . readTQueue) respQueue
+    -- Insert the response into the database.
+    inserted <- insertAPI resp
+    logThread logInfo (message inserted)
+    pure inserted
+    where
+      epName = (T.pack . show) ep
+      logThread logAction = logAction . (("[" <> epName <> " :: Insert] ") <>)
+      message inserted = "Inserted " <> (T.pack . show . length) inserted <> " records into database."
 
 -- | Handle the result of fetching, decoding, and processing the API response.
 handleFetchPersistResult :: (Show a, MonadIO m, MonadReader env m,  HasLog env Message m) => a -> TVar Int -> PollResult -> m ()
@@ -100,21 +114,25 @@ handleFetchPersistResult ep lastUpdatedVar (Success resp) = do
     msPerS = 1000000
 
 -- | Process a (undecoded) response from the API.
-processResponse :: APIPersistable apiType dbType => EndpointQueried -> Int -> Either ClientError (ResponseWrapper apiType) -> AppM PollResult
-processResponse ep _ (Left err) =
+processResponse :: APIPersistable apiType dbType => EndpointQueried -> Int -> TQueue (ResponseWrapper apiType) -> Either ClientError (ResponseWrapper apiType) -> AppM PollResult
+processResponse ep _ _ (Left err) =
   handleResponse ep (Left err) >> pure (PollClientError err)
-processResponse ep lastUpdated (Right respDecoded) =
-  handleResponseWrapper ep respDecoded lastUpdated >>= processValidResponse ep respDecoded
+processResponse ep lastUpdated respQueue (Right respDecoded) =
+  handleResponseWrapper ep respDecoded lastUpdated >>= processValidResponse ep respDecoded respQueue
+
+
 -- | Process a (decoded) response from the API.
-processValidResponse :: APIPersistable apiType dbType => EndpointQueried -> ResponseWrapper apiType -> Maybe Int -> AppM PollResult
+processValidResponse :: APIPersistable apiType dbType => EndpointQueried -> ResponseWrapper apiType -> TQueue (ResponseWrapper apiType) -> Maybe Int -> AppM PollResult
 -- Went backwards - return early with amount of time to extend poll period by.
-processValidResponse _ _ (Just extendByMs) = pure (WentBackwards extendByMs)
+processValidResponse _ _ _ (Just extendByMs) = pure (WentBackwards extendByMs)
 -- Went forwards - handle response.
-processValidResponse ep resp Nothing = do
+processValidResponse ep resp respQueue Nothing = do
   -- Insert query log.
   handleResponse ep ((Right . _respLastUpdated) resp)
-  -- Insert response data into database.
-  void (insertAPI resp)
+
+  -- Enqueue response data for handling by insertion thread.
+  (void . atomically) (writeTQueue respQueue resp)
+
   pure (Success resp)
 
 

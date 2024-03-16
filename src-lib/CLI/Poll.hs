@@ -23,6 +23,8 @@ import           Database.BikeShare.Operations      ( populateChangedStationStat
 
 import           Prelude                            hiding ( log )
 
+import           TextShow                           ( showt )
+
 import           UnliftIO
 
 
@@ -38,28 +40,42 @@ pollClient pollOptions = do
     (statusLastUpdated, infoLastUpdated, sysInfoLastUpdated) <- liftIO $
       (,,) <$> newTVarIO 0 <*> newTVarIO 0 <*> newTVarIO 0
 
+    infoQueue    <- liftIO newTQueueIO
+    statusQueue  <- liftIO newTQueueIO
+    sysInfoQueue <- liftIO newTQueueIO
+
     -- Populate status changes table if switch was enabled.
     void (populateStatusChanges (optPollPopulateStatusChanges pollOptions))
 
-    logInfo "Fetching from API once."
-    fetchAndPersist StationInformationEP stationInformation firstUpdate
-    fetchAndPersist StationStatusEP      stationStatus      firstUpdate
-    fetchAndPersist SystemInformationEP  systemInformation  firstUpdate
+    -- Set up insertion threads before doing initial fetch.
+    logInfo "Initializing insertion threads."
+    insertThreadInfo     <- (async . forever) (insertThread StationInformationEP infoQueue)
+    insertThreadStatus   <- (async . forever) (insertThread StationStatusEP      statusQueue)
+    insertThreadSysInfo  <- (async . forever) (insertThread SystemInformationEP  sysInfoQueue)
+    let insertThreads = [ insertThreadInfo, insertThreadStatus, insertThreadSysInfo ]
 
-    logInfo "Initializing polling and handling threads."
-    -- The polling threads.
-    infoPollingThread    <- (async . forever) (pollThread StationInformationEP stationInformation infoLastUpdated)
-    statusPollingThread  <- (async . forever) (pollThread StationStatusEP      stationStatus      statusLastUpdated)
-    sysInfoPollingThread <- (async . forever) (pollThread SystemInformationEP  systemInformation  sysInfoLastUpdated)
+    logInfo "Fetching from API once."
+    fetchAndPersist StationInformationEP stationInformation firstUpdate infoQueue
+    fetchAndPersist StationStatusEP      stationStatus      firstUpdate statusQueue
+    fetchAndPersist SystemInformationEP  systemInformation  firstUpdate sysInfoQueue
+
+    logInfo "Initializing polling threads."
+    pollThreadInfo    <- (async . forever) (pollThread StationInformationEP stationInformation infoLastUpdated    infoQueue)
+    pollThreadStatus  <- (async . forever) (pollThread StationStatusEP      stationStatus      statusLastUpdated  statusQueue)
+    pollThreadSysInfo <- (async . forever) (pollThread SystemInformationEP  systemInformation  sysInfoLastUpdated sysInfoQueue)
+    let pollThreads = [ pollThreadInfo, pollThreadStatus, pollThreadSysInfo ]
+
+    -- All threads managed by pollClient.
+    let threads = insertThreads ++ pollThreads
 
     -- Start concurrent operations and wait until any one of them finishes (which should not happen).
     -- If any thread finishes, we cancel the others as there is an implied dependency between them.
-    _ <- waitAnyCancel [ infoPollingThread,  statusPollingThread,  sysInfoPollingThread ]
+    _ <- waitAnyCancel threads
 
-    logWarning "Polling threads terminated."
+    logWarning "Polling and insertion threads terminated."
     pure ()
-
-    where firstUpdate = 0
+    where
+      firstUpdate = 0 -- Use Unix epoch for initial lastUpdated.
 
 -- | Populate the station status changes table from the content of the station status table.
 populateStatusChanges :: PopulateStatusChangesOpt -> AppM Int
@@ -77,7 +93,7 @@ populateStatusChanges AutoPopulate   = do
 
     logRowsMessage :: Int -> T.Text
     logRowsMessage 0    = "Station status changes table is empty."
-    logRowsMessage rows = "Station status changes table has " <> (T.pack . show) rows <> " rows; not populating table."
+    logRowsMessage rows = "Station status changes table has " <> showt rows <> " rows; not populating table."
 
 doPopulateStatusChanges :: AppM Int
 doPopulateStatusChanges = do
