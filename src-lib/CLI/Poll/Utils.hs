@@ -5,10 +5,9 @@
 
 module CLI.Poll.Utils
      ( errToQueryLog
+     , handleResponse
      , handleResponseBackwards
-     , handleResponseError
      , handleResponseForwards
-     , handleResponseSuccess
      , handleResponseWrapper
      , maybeDecodeFailure
      ) where
@@ -63,25 +62,21 @@ handleResponseForwards ep _resp pLastUpdated lastUpdated timeElapsed = do
 
 -- * Functions for handling and inserting the appropriate query log records.
 
-handleResponseSuccess :: EndpointQueried -> UTCTime -> AppM [QueryLog]
-handleResponseSuccess ep timestamp = do
-  insertQueryLog query
-  where query = QuerySuccess timestamp ep
-
-handleResponseError :: EndpointQueried -> ClientError -> AppM ()
-handleResponseError ep err = do
+-- | Handle the response from the API and insert the appropriate query log record.
+handleResponse :: EndpointQueried -> Either ClientError UTCTime -> AppM [QueryLog]
+handleResponse ep (Right timestamp) = insertQueryLog (QuerySuccess timestamp ep)
+handleResponse ep (Left err) = do
   curTime <- liftIO getCurrentTime
   logException err
-  insertQueryLog $ queryFailure curTime
+  insertQueryLog $ QueryFailure curTime ep (errTxt err) jsonForDecodeFailure
   pure $ throw err
   where
-    queryFailure t = QueryFailure t ep (errTxt err) jsonForDecodeFailure
     errTxt = T.pack . errToQueryLog
     jsonForDecodeFailure = maybeDecodeFailure err
 
 errToQueryLog :: ClientError -> String
 errToQueryLog (FailureResponse req resp)              = "Failure response: "          <> show req <> " " <> show resp
-errToQueryLog (DecodeFailure txt resp)                = "Decode failure: "            <> show txt
+errToQueryLog (DecodeFailure txt _resp)               = "Decode failure: "            <> show txt
 errToQueryLog (UnsupportedContentType mediaType resp) = "Unsupported content type: "  <> show mediaType <> " " <> show resp
 errToQueryLog (InvalidContentTypeHeader resp)         = "Invalid content type header" <> show resp
 errToQueryLog (ConnectionError exep)                  = "Connection error: "          <> show exep

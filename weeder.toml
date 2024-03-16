@@ -1,4 +1,5 @@
 roots = [ "^Main.main$"
         , "^Driver.main$"
+        , "^Bench.main$"
         ]
 type-class-roots = true

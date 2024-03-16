@@ -3,7 +3,9 @@
 {-# LANGUAGE StarIsType             #-}
 {-# LANGUAGE TypeFamilies           #-}
 
-module API.APIEntity where
+module API.APIEntity
+     ( APIPersistable (..)
+     ) where
 
 import           API.ClientLifted
 import           API.ResponseWrapper
@@ -18,6 +20,8 @@ import           CLI.Poll.Utils
 import           Colog
 
 import           Control.Lens
+import           Control.Monad                                ( void )
+import           Control.Monad.Reader                         ( MonadReader )
 
 import           Data.Maybe                                   ( mapMaybe )
 import qualified Data.Text                                    as T
@@ -46,59 +50,91 @@ import           UnliftIO.Concurrent
 data PollResult where
   PollClientError :: ClientError -> PollResult
   WentBackwards   :: Int -> PollResult
-  Success         :: (ResponseWrapper apiType, [dbType Identity]) -> PollResult
+  Success         :: (ResponseWrapper apiType) -> PollResult
 
 class APIPersistable apiType dbType | apiType -> dbType where
   fromAPI :: ResponseWrapper apiType -> [dbType (QExpr Postgres s)]
+  fromAPI _   = []
 
   insertAPI :: ResponseWrapper apiType -> AppM [dbType Identity]
+  insertAPI _ = pure []
 
   fetchAndPersist :: EndpointQueried
                   -> ClientM (ResponseWrapper apiType)
                   -- ^ The function to fetch data from the API.
                   -> Int
                   -- ^ Last updated field of previous successful query.
+                  -> TQueue (ResponseWrapper apiType)
                   -> AppM PollResult
                   -- ^ Return either an error or inserted DB items.
-  pollThread :: EndpointQueried -> ClientM (ResponseWrapper apiType) -> TVar Int -> AppM ()
+  fetchAndPersist ep apiFetch lastUpdated respQueue =
+    runQueryM apiFetch >>= processResponse ep lastUpdated respQueue
 
-  -- Provide default implementations that can be overridden if needed.
-  fromAPI _   = []
-
-  insertAPI _ = pure []
-
-  fetchAndPersist ep apiFetch lastUpdated =
-    runQueryM apiFetch >>= \case
-      -- Handle client errors.
-      Left err -> do handleResponseError ep err >> pure (PollClientError err)
-
-      -- Retrieved response successfully.
-      Right respUnchecked -> do
-        handleResponseWrapper ep respUnchecked lastUpdated >>= \case
-          Just extendByMs -> pure (WentBackwards extendByMs) -- Went backwards - return early.
-          Nothing -> do -- Went forwards - handle response.
-            let resp = respUnchecked -- Response has now been vetted.
-            handleResponseSuccess ep (_respLastUpdated resp) -- Insert query log.
-            inserted <- insertAPI resp -- Insert response into database.
-            pure (Success (resp, inserted))
-
-
-  pollThread ep apiFetch lastUpdatedVar = do
+  pollThread :: EndpointQueried -> ClientM (ResponseWrapper apiType) -> TVar Int -> TQueue (ResponseWrapper apiType) -> AppM ()
+  pollThread ep apiFetch lastUpdatedVar respQueue = do
     lastUpdated <- liftIO $ readTVarIO lastUpdatedVar
-    result <- fetchAndPersist ep apiFetch lastUpdated
-    case result of
-      PollClientError _err     -> liftIO delayAndExitFailure
-      WentBackwards extendByMs -> liftIO (delaySecs extendByMs)
-      Success (resp, inserted) -> do
-        liftIO $ atomically $ writeTVar lastUpdatedVar (utcToPosix (_respLastUpdated resp) + timeToLiveS resp)
-        logInfo $ "[" <> (T.pack . show) ep <> "] Inserted " <> (showt . length) inserted <> " records - sleeping for " <> showt (timeToLiveS resp) <> "s"
-        -- Sleep for requisite TTL.
-        liftIO $ threadDelay (timeToLiveS resp * msPerS)
-    pure ()
-      where timeToLiveS = _respTtl
-            msPerS = 1000000
-            delaySecs secs = threadDelay (secs * msPerS)
-            delayAndExitFailure = delaySecs 10 >> exitFailure
+    fetchAndPersist ep apiFetch lastUpdated respQueue >>= handleFetchPersistResult ep lastUpdatedVar
+
+  insertThread :: EndpointQueried -> TQueue (ResponseWrapper apiType) -> AppM [dbType Identity]
+  insertThread ep respQueue = do
+    -- Read the response queue.
+    resp <- (atomically . readTQueue) respQueue
+    -- Insert the response into the database.
+    inserted <- insertAPI resp
+    logThread logInfo (message inserted)
+    pure inserted
+    where
+      epName = (T.pack . show) ep
+      logThread logAction = logAction . (("[" <> epName <> " :: Insert] ") <>)
+      message inserted = "Inserted " <> (T.pack . show . length) inserted <> " records into database."
+
+-- | Handle the result of fetching, decoding, and processing the API response.
+handleFetchPersistResult :: (Show a, MonadIO m, MonadReader env m,  HasLog env Message m) => a -> TVar Int -> PollResult -> m ()
+-- Handle a client error.
+handleFetchPersistResult _ _ (PollClientError _err) = liftIO delayAndExitFailure
+  where
+    delayAndExitFailure = delaySecs 10 >> exitFailure
+    delaySecs secs = threadDelay (secs * msPerS)
+    msPerS = 1000000
+-- Handle the API returning stale data.
+handleFetchPersistResult _ _ (WentBackwards extendByMs) = liftIO (delaySecs extendByMs)
+  where
+    msPerS = 1000000
+    delaySecs secs = threadDelay (secs * msPerS)
+-- Handle a successfully decoded response, with a non-stale "last_reported" value.
+handleFetchPersistResult ep lastUpdatedVar (Success resp) = do
+  liftIO $ atomically $ writeTVar lastUpdatedVar (utcToPosix (_respLastUpdated resp) + timeToLiveS resp)
+  logInfo $ "[" <> epName <> "] Queued records for insertion - sleeping for " <> ttlTxt
+  -- Sleep for requisite TTL.
+  liftIO $ threadDelay (timeToLiveS resp * msPerS)
+  where
+    epName = (T.pack . show) ep
+    ttlTxt = (showt . timeToLiveS) resp <> "s"
+    timeToLiveS = _respTtl
+    msPerS = 1000000
+
+-- | Process a (undecoded) response from the API.
+processResponse :: APIPersistable apiType dbType => EndpointQueried -> Int -> TQueue (ResponseWrapper apiType) -> Either ClientError (ResponseWrapper apiType) -> AppM PollResult
+processResponse ep _ _ (Left err) =
+  handleResponse ep (Left err) >> pure (PollClientError err)
+processResponse ep lastUpdated respQueue (Right respDecoded) =
+  handleResponseWrapper ep respDecoded lastUpdated >>= processValidResponse ep respDecoded respQueue
+
+
+-- | Process a (decoded) response from the API.
+processValidResponse :: APIPersistable apiType dbType => EndpointQueried -> ResponseWrapper apiType -> TQueue (ResponseWrapper apiType) -> Maybe Int -> AppM PollResult
+-- Went backwards - return early with amount of time to extend poll period by.
+processValidResponse _ _ _ (Just extendByMs) = pure (WentBackwards extendByMs)
+-- Went forwards - handle response.
+processValidResponse ep resp respQueue Nothing = do
+  -- Insert query log.
+  handleResponse ep ((Right . _respLastUpdated) resp)
+
+  -- Enqueue response data for handling by insertion thread.
+  (void . atomically) (writeTQueue respQueue resp)
+
+  pure (Success resp)
+
 
 -- * Instances.
 
