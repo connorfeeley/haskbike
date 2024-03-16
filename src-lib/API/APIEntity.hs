@@ -86,6 +86,7 @@ class APIPersistable apiType dbType | apiType -> dbType where
             delaySecs secs = threadDelay (secs * msPerS)
             delayAndExitFailure = delaySecs 10 >> exitFailure
 
+-- | Process a (undecoded) response from the API.
 processResponse :: APIPersistable apiType dbType => EndpointQueried -> Int -> Either ClientError (ResponseWrapper apiType) -> AppM PollResult
 processResponse ep _ (Left err) =
   handleResponseError ep err >>
@@ -95,11 +96,7 @@ processResponse ep lastUpdated (Right respDecoded) =
   processValidResponse ep respDecoded
 
 -- | Process a (decoded) response from the API.
-processValidResponse :: APIPersistable apiType dbType
-                => EndpointQueried
-                -> ResponseWrapper apiType
-                -> Maybe Int
-                -> AppM PollResult
+processValidResponse :: APIPersistable apiType dbType => EndpointQueried -> ResponseWrapper apiType -> Maybe Int -> AppM PollResult
 processValidResponse _ _ (Just extendByMs) = pure (WentBackwards extendByMs) -- Went backwards - return early.
 processValidResponse ep respDecoded Nothing = do -- Went forwards - handle response.
   let resp = respDecoded -- Response has now been vetted.
