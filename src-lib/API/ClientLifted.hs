@@ -22,10 +22,9 @@ import           API.SystemInformation
 
 import           AppEnv
 
-import           Colog                  ( HasLog, logException )
+import           Colog                  ( logException )
 
 import           Control.Monad.Catch
-import           Control.Monad.Reader   ( MonadReader )
 
 import           Data.Aeson             ( Object )
 
@@ -36,21 +35,17 @@ import           Servant.Client
 import           UnliftIO
 
 
-runQueryM :: (WithAppMEnv (Env env) Message m)
-          => ClientM a
-          -> m (Either ClientError a)
+runQueryM :: (HasEnv env m, MonadIO m, MonadThrow m) => ClientM a -> m (Either ClientError a)
 runQueryM query = do
-  env <- ask
-  let clientManager = envClientManager env
+  clientManager <- getClientManager
   liftIO $ runClientM query (mkClientEnv clientManager bikeshareBaseUrl)
 
 
-liftClientM :: (MonadReader (Env e) m, MonadIO m, HasLog (Env e) Message m, MonadThrow m)
-            => ClientM b -> m b
+liftClientM :: (HasEnv env m, MonadIO m, MonadThrow m) => ClientM a -> m a
 liftClientM clientM = do
-  env <- ask
-  let manager = envClientManager env
-  eitherResult <- liftIO $ runClientM clientM (mkClientEnv manager (envBaseUrl env))
+  baseUrl <- getBaseUrl
+  manager <- getClientManager
+  eitherResult <- liftIO $ runClientM clientM (mkClientEnv manager baseUrl)
   case eitherResult of
     Left err -> do
       logException err
@@ -58,23 +53,30 @@ liftClientM clientM = do
     Right res -> return res
 
 
-versionsM :: (WithAppMEnv (Env env) Message m) => m Object
+versionsM :: (HasEnv env m, MonadIO m, MonadThrow m)
+          => m Object
 versionsM = liftClientM versions
 
-vehicleTypesM :: (WithAppMEnv (Env env) Message m) => m Object
+vehicleTypesM :: (HasEnv env m, MonadIO m, MonadThrow m)
+              => m Object
 vehicleTypesM = liftClientM vehicleTypes
 
-stationInformationM :: (WithAppMEnv (Env env) Message m) => m (ResponseWrapper [StationInformation])
+stationInformationM :: (HasEnv env m, MonadIO m, MonadThrow m)
+                    => m (ResponseWrapper [StationInformation])
 stationInformationM = liftClientM stationInformation
 
-stationStatusM :: (WithAppMEnv (Env env) Message m) => m (ResponseWrapper [StationStatus])
+stationStatusM :: (HasEnv env m, MonadIO m, MonadThrow m)
+               => m (ResponseWrapper [StationStatus])
 stationStatusM = liftClientM stationStatus
 
-systemRegionsM :: (WithAppMEnv (Env env) Message m) => m Object
+systemRegionsM :: (HasEnv env m, MonadIO m, MonadThrow m)
+               => m Object
 systemRegionsM = liftClientM systemRegions
 
-systemInformationM :: (WithAppMEnv (Env env) Message m) => m (ResponseWrapper SystemInformation)
+systemInformationM :: (HasEnv env m, MonadIO m, MonadThrow m)
+                   => m (ResponseWrapper SystemInformation)
 systemInformationM = liftClientM systemInformation
 
-systemPricingPlansM :: (WithAppMEnv (Env env) Message m) => m Object
+systemPricingPlansM :: (HasEnv env m, MonadIO m, MonadThrow m)
+                    => m Object
 systemPricingPlansM = liftClientM systemPricingPlans

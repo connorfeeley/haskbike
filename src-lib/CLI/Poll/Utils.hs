@@ -19,6 +19,8 @@ import           AppEnv
 import           Colog
 
 import           Control.Exception                       ( throw )
+import           Control.Monad.Catch                     ( MonadCatch, MonadThrow )
+import           Control.Monad.Reader                    ( MonadReader )
 
 import           Data.Aeson
 import           Data.Maybe                              ( fromMaybe )
@@ -37,7 +39,8 @@ import           UnliftIO
 
 -- * Helper functions.
 
-handleResponseWrapper :: (WithAppMEnv (Env env) Message m) => EndpointQueried -> ResponseWrapper a -> Int -> m (Maybe Int)
+handleResponseWrapper :: (HasEnv env m, MonadIO m)
+                      => EndpointQueried -> ResponseWrapper a -> Int -> m (Maybe Int)
 handleResponseWrapper ep resp pLastUpdated = do
   if timeElapsed < 0 -- Crappy API returned stale data.
     then do
@@ -49,12 +52,14 @@ handleResponseWrapper ep resp pLastUpdated = do
         -- Time elapsed since last poll; also amount to extend poll by when negative.
         timeElapsed = lastUpdated - pLastUpdated
 
-handleResponseBackwards :: (WithAppMEnv (Env env) Message m) => EndpointQueried -> ResponseWrapper a -> Int -> Int -> Int -> m Int
+handleResponseBackwards :: (HasEnv env m, MonadIO m)
+                        => EndpointQueried -> ResponseWrapper a -> Int -> Int -> Int -> m Int
 handleResponseBackwards ep _resp pLastUpdated lastUpdated timeElapsed = do
   logDebug $ (T.pack . show) ep <> " last updated went backwards: [" <> (T.pack . show . posixToUtc) pLastUpdated <> "] -> [" <> (T.pack . show) (posixToUtc lastUpdated) <> "] | " <> (T.pack . show) timeElapsed <> "s"
   pure (-timeElapsed)
 
-handleResponseForwards :: (WithAppMEnv (Env env) Message m) => EndpointQueried -> ResponseWrapper a -> Int -> Int -> Int -> m Int
+handleResponseForwards :: (HasEnv env m, MonadIO m)
+                       => EndpointQueried -> ResponseWrapper a -> Int -> Int -> Int -> m Int
 handleResponseForwards ep _resp pLastUpdated lastUpdated timeElapsed = do
   logDebug $ "(" <> (T.pack . show) ep <> ") last updated: [" <> (T.pack . show) (posixToUtc pLastUpdated) <> "] -> [" <> (T.pack . show . posixToUtc) lastUpdated <> "] | " <> (T.pack . show) timeElapsed <> "s"
   pure (-timeElapsed)
@@ -63,7 +68,8 @@ handleResponseForwards ep _resp pLastUpdated lastUpdated timeElapsed = do
 -- * Functions for handling and inserting the appropriate query log records.
 
 -- | Handle the response from the API and insert the appropriate query log record.
-handleResponse :: (WithAppMEnv (Env env) Message m) => EndpointQueried -> Either ClientError UTCTime -> m [QueryLog]
+handleResponse :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m)
+               => EndpointQueried -> Either ClientError UTCTime -> m [QueryLog]
 handleResponse ep (Right timestamp) = insertQueryLog (QuerySuccess timestamp ep)
 handleResponse ep (Left err) = do
   curTime <- liftIO getCurrentTime

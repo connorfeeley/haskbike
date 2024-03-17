@@ -29,6 +29,8 @@ import           AppEnv
 
 import           BikeShareAPI
 
+import           Control.Monad.Catch     ( MonadCatch, MonadThrow )
+
 import           Data.Aeson              ( Object )
 import           Data.Proxy
 
@@ -96,7 +98,7 @@ run = do
     runQuery clientManager systemPricingPlans >>= handleResponse "System Pricing Plans"
 
 -- | Run API query using client manager from environment monad.
-runQueryWithManager :: WithAppMEnv (Env env) Message m => ClientM a -> m (Either ClientError a)
+runQueryWithManager :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m) => ClientM a -> m (Either ClientError a)
 runQueryWithManager query = do
   clientManager <- withManager
   liftIO $ runQuery clientManager query

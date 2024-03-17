@@ -6,6 +6,7 @@
 module AppEnv
      ( AppM (..)
      , Env (..)
+     , HasEnv (..)
      , Message
      , WithAppMEnv
      , ask
@@ -70,10 +71,37 @@ data Env m where
          } -> Env m
 
 -- Application type
-newtype AppM a = AppM
-  { unAppM :: ReaderT (Env AppM) IO a
-  } deriving newtype (Functor, Applicative, Monad, MonadIO, MonadUnliftIO, MonadReader (Env AppM), MonadFail, MonadThrow, MonadCatch)
+newtype AppM a where
+  AppM :: { unAppM :: ReaderT (Env AppM) IO a
+          } -> AppM a
+  deriving newtype ( Functor
+                   , Applicative
+                   , Monad
+                   , MonadIO
+                   , MonadUnliftIO
+                   , MonadReader (Env AppM)
+                   , MonadFail
+                   , MonadThrow
+                   , MonadCatch )
 
+
+class (HasLog env Message m, MonadReader env m) => HasEnv env m where
+    getLogAction        :: m (LogAction m Message)
+    getLogDatabase      :: m Bool
+    getMinSeverity      :: m Severity
+    getTimeZone         :: m TimeZone
+    getDBConnectionPool :: m (Pool Connection)
+    getClientManager    :: m Manager
+    getBaseUrl          :: m BaseUrl
+
+instance (Monad m, MonadReader (Env m) m) => HasEnv (Env m) m where
+    getLogAction        = asks envLogAction
+    getLogDatabase      = asks envLogDatabase
+    getMinSeverity      = asks envMinSeverity
+    getTimeZone         = asks envTimeZone
+    getDBConnectionPool = asks envDBConnectionPool
+    getClientManager    = asks envClientManager
+    getBaseUrl          = asks envBaseUrl
 
 {- | Type alias for constraint for:
 
@@ -91,21 +119,21 @@ instance MonadError ServerError AppM where
   catchError action handler = AppM $ catch (unAppM action) (unAppM . handler)
 
 -- | Fetch database connection pool from environment monad.
-withConnPool :: (WithAppMEnv (Env env) Message m) => m (Pool Connection)
-withConnPool = asks envDBConnectionPool
+withConnPool :: (HasEnv env m, MonadIO m, MonadThrow m) => m (Pool Connection)
+withConnPool = getDBConnectionPool
 
 -- | Helper function to execute a given action with a database connection from a given resource pool.
 executeWithConnPool :: MonadIO m => (Connection -> p -> IO a) -> p -> Pool Connection -> m a
 executeWithConnPool dbFunction action pool = liftIO (withResource pool (`dbFunction` action))
 
 -- | Acquire a database connection from the resource pool in environment monad, and execute a given action.
-withPooledConn :: (WithAppMEnv (Env env) Message m) => (Connection -> p -> IO a) -> p -> m a
+withPooledConn :: (HasEnv env m, MonadIO m, MonadThrow m) => (Connection -> p -> IO b) -> p -> m b
 withPooledConn dbFunction action = withConnPool >>= executeWithConnPool dbFunction action
 
 -- | Run a Beam operation using database connection from the environment.
-withPostgres :: (WithAppMEnv (Env env) Message m) => Pg a -> m a
+withPostgres :: (MonadCatch m, HasEnv env m, MonadIO m) => Pg b -> m b
 withPostgres action = do
-  logDatabase <- asks envLogDatabase
+  logDatabase <- getLogDatabase
   let dbFunction = if logDatabase
         then runBeamPostgresDebug putStrLn
         else runBeamPostgres
@@ -118,9 +146,9 @@ withPostgres action = do
 {-# INLINE withPostgres #-}
 
 -- | Run a Beam operation in a transaction using database connection from the environment.
-withPostgresTransaction :: (WithAppMEnv (Env env) Message m) => Pg a -> m a
+withPostgresTransaction :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m) => Pg a -> m a
 withPostgresTransaction action = do
-  logDatabase <- asks envLogDatabase
+  logDatabase <- getLogDatabase
   pool <- withConnPool
   let dbFunction = if logDatabase
         then runBeamPostgresDebug putStrLn
@@ -134,8 +162,8 @@ withPostgresTransaction action = do
 {-# INLINE withPostgresTransaction #-}
 
 -- | Fetch client manager from the environment.
-withManager :: (WithAppMEnv (Env env) Message m) => m Manager
-withManager = asks envClientManager >>= liftIO . pure
+withManager :: (HasEnv env m, MonadIO m, MonadThrow m) => m Manager
+withManager = getClientManager >>= liftIO . pure
 
 -- Implement logging for the application environment.
 instance HasLog (Env m) Message m where

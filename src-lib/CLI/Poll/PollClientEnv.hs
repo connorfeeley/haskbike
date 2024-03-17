@@ -4,65 +4,93 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE RankNTypes            #-}
+{-# LANGUAGE UndecidableInstances  #-}
 
 -- |
 
 module CLI.Poll.PollClientEnv
-     ( PollAppM (..)
+     ( HasPollEnv (..)
+     , PollAppM (..)
      , PollEnv (..)
+     , PollReaderT (..)
+     , WithPollEnv
+     , runPollReader
      ) where
 
-import           API.BikeShare
-import           API.ResponseWrapper                    ( ResponseWrapper )
+import           API.ResponseWrapper                ( ResponseWrapper )
 
 import           AppEnv
 
-import           Colog                                  ( HasLog (..), LogAction (..), Message, Msg (msgSeverity),
-                                                          Severity (..), filterBySeverity, logException,
-                                                          richMessageAction, simpleMessageAction )
+import           Colog                              ( HasLog (..) )
 
-import           Control.Exception                      ( throw )
 import           Control.Monad.Catch
 import           Control.Monad.Except
-import           Control.Monad.Reader                   ( MonadReader, ReaderT (..), ask, asks )
+import           Control.Monad.Reader               ( MonadReader (..), ReaderT (..) )
 
-import           Data.Pool
-import           Data.Time                              ( TimeZone, getCurrentTimeZone )
+import           Database.BikeShare.EndpointQueried ( EndpointQueried )
 
-import           Database.Beam.Postgres                 ( ConnectInfo, Connection, Pg, SqlError, close, connect,
-                                                          runBeamPostgres, runBeamPostgresDebug )
-import           Database.BikeShare.Connection          ( mkDbConnectInfo )
-import           Database.BikeShare.EndpointQueried     ( EndpointQueried )
-import           Database.PostgreSQL.Simple.Transaction ( withTransaction )
+import           GHC.Stack                          ( HasCallStack )
 
-import           GHC.Conc                               ( numCapabilities )
-import           GHC.Stack                              ( HasCallStack )
+import           Prelude                            hiding ( log )
 
-import           Network.HTTP.Client                    ( Manager, newManager )
-import           Network.HTTP.Client.TLS                ( tlsManagerSettings )
+import           UnliftIO                           ( MonadUnliftIO, TQueue, TVar )
 
-import           Prelude                                hiding ( log )
 
-import           Servant                                ( ServerError )
-import           Servant.Client
+class (HasLog env Message m, MonadReader env m) => HasPollEnv env m where
+  getEndpoint :: m EndpointQueried
 
-import           UnliftIO                               ( MonadUnliftIO, TQueue, TVar )
+
+instance (Monad m, MonadReader (PollEnv m) m, HasLog (PollEnv m) Message m) => HasEnv (PollEnv m) m where
+    getLogAction        = asks (envLogAction . pollAppEnv)
+    getLogDatabase      = asks (envLogDatabase . pollAppEnv)
+    getMinSeverity      = asks (envMinSeverity . pollAppEnv)
+    getTimeZone         = asks (envTimeZone . pollAppEnv)
+    getDBConnectionPool = asks (envDBConnectionPool . pollAppEnv)
+    getClientManager    = asks (envClientManager . pollAppEnv)
+    getBaseUrl          = asks (envBaseUrl . pollAppEnv)
+
+instance (Monad m, MonadReader (PollEnv e) m, HasLog (PollEnv e) Message m) => HasPollEnv (PollEnv e) m where
+  getEndpoint = asks pollEnvEndpoint
+
 
 data PollEnv m where
-  PollEnv ::
-    { envLogAction        :: !(LogAction m Message)
-    , envLogDatabase      :: !Bool
-    , envMinSeverity      :: !Severity
-    , envTimeZone         :: !TimeZone
-    , envDBConnectionPool :: !(Pool Connection)
-    , envClientManager    :: !Manager
-    , envBaseUrl          :: !BaseUrl
-    , pollEnvEndpoint     :: !EndpointQueried
-    , pollEnvTVar         :: !(TVar Int)
-    , pollEnvTQueue       :: !(TQueue (ResponseWrapper apiType))
-    } -> PollEnv m
+  PollEnv :: { pollAppEnv      :: !(Env m)
+             , pollEnvEndpoint :: !EndpointQueried
+             , pollEnvTVar     :: !(TVar Int)
+             , pollEnvTQueue   :: !(TQueue (ResponseWrapper apiType))
+             } -> PollEnv m
+
+newtype PollReaderT r m a = PollReaderT
+  { runPollReaderT :: ReaderT r m a
+  } deriving newtype (Functor, Applicative, Monad, MonadIO, MonadTrans)
+
+instance Monad m => MonadReader (Env AppM) (PollReaderT (PollEnv AppM) m) where
+  ask = PollReaderT (asks pollAppEnv)
+  local f m = PollReaderT (local (\env -> env {pollAppEnv = f (pollAppEnv env)}) (runPollReaderT m))
+
+runPollReader :: PollReaderT r m a -> r -> m a
+runPollReader = runReaderT . runPollReaderT
+
 
 newtype PollAppM a where
   PollAppM :: { unPollAppM :: ReaderT (PollEnv PollAppM) IO a
               } -> PollAppM a
   deriving newtype (Functor, Applicative, Monad, MonadIO, MonadUnliftIO, MonadReader (PollEnv PollAppM), MonadFail, MonadThrow, MonadCatch)
+
+-- instance MonadPoll PollAppM
+
+{- | Type alias for constraint for:
+
+1. Monad @m@ have access to environment @env@.
+2. Environment @env@ contains 'LogAction' that can log messages of type @msg@.
+3. Function call stack.
+-}
+type WithPollEnv env msg m = ( MonadReader env m
+                             , HasLog env msg m
+                             , HasCallStack
+                             , MonadIO m
+                             , MonadUnliftIO m
+                             , MonadFail m
+                             , MonadThrow m
+                             , MonadCatch m
+                             )

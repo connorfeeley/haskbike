@@ -43,6 +43,7 @@ import qualified API.SystemInformation                        as AT
 import           AppEnv
 
 import           Control.Lens                                 hiding ( reuse, (<.) )
+import           Control.Monad.Catch                          ( MonadCatch, MonadThrow )
 
 import           Data.Int                                     ( Int32 )
 import           Data.List                                    ( nubBy )
@@ -68,6 +69,7 @@ import           Database.PostgreSQL.Simple                   ( Only (..), query
 import           GHC.Exts                                     ( fromString )
 
 import           Text.Pretty.Simple.Extras
+
 
 -- | Query database for disabled docks, returning tuples of (name, num_docks_disabled).
 queryDisabledDocks :: AppM [(Text.Text, Int32)] -- ^ List of tuples of (name, num_docks_disabled).
@@ -114,7 +116,7 @@ queryStationInformationByIds ids =
     ids' = fromIntegral <$> ids
 
 -- | Insert new station information into the database.
-insertStationInformation :: (WithAppMEnv (Env env) Message m)
+insertStationInformation :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m)
                          => UTCTime
                          -> [AT.StationInformation]             -- ^ List of 'StationInformation' from the API response.
                          -> m [StationInformationT Identity] -- ^ List of 'StationInformation' that where inserted.
@@ -122,7 +124,7 @@ insertStationInformation reported stations = do
   (_, _, inserted) <- insertStationInformation' reported stations
   pure inserted
 
-insertStationInformation' :: (WithAppMEnv (Env env) Message m)
+insertStationInformation' :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m)
                           => UTCTime
                           -> [AT.StationInformation]
                           -- ^ List of 'StationInformation' from the API response.
@@ -189,7 +191,7 @@ stationInfoMostlyEq apiInfo dbInfo =
 {- |
 Insert station statuses into the database.
 -}
-insertStationStatus :: (WithAppMEnv (Env env) Message m)
+insertStationStatus :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m)
                     => [AT.StationStatus] -- ^ List of 'AT.StationStatus' from the API response.
                     -> m [StationStatus]
 insertStationStatus apiStatus =

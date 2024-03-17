@@ -16,6 +16,7 @@ module Database.BikeShare.Operations.QueryLogs
 import           AppEnv
 
 import           Control.Lens                             hiding ( reuse, (<.) )
+import           Control.Monad.Catch                      ( MonadCatch, MonadThrow )
 
 import           Data.Aeson
 
@@ -30,7 +31,8 @@ import           Database.BikeShare.Tables.QueryLogs
 import           Prelude                                  hiding ( log )
 
 
-insertQueryLog :: (WithAppMEnv (Env env) Message m, BeamConvertable QueryResult (QueryLogT (QExpr Postgres s))) => QueryResult -> m [QueryLog]
+insertQueryLog :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m)
+               => QueryResult -> m [QueryLog]
 insertQueryLog query =
   withPostgres $ runInsertReturningList $
   insert (bikeshareDb ^. bikeshareQueryLog)

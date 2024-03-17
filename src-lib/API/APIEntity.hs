@@ -22,6 +22,7 @@ import           Colog
 
 import           Control.Lens
 import           Control.Monad                                ( void )
+import           Control.Monad.Catch                          ( MonadCatch, MonadThrow )
 import           Control.Monad.Reader                         ( MonadReader )
 
 import           Data.Maybe                                   ( mapMaybe )
@@ -57,10 +58,11 @@ class APIPersistable apiType dbType | apiType -> dbType where
   fromAPI :: ResponseWrapper apiType -> [dbType (QExpr Postgres s)]
   fromAPI _   = []
 
-  insertAPI :: (WithAppMEnv (Env env) Message m) => ResponseWrapper apiType -> m [dbType Identity]
+  insertAPI :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m)
+            => ResponseWrapper apiType -> m [dbType Identity]
   insertAPI _ = pure []
 
-  fetchAndPersist :: (WithAppMEnv (Env env) Message m)
+  fetchAndPersist :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m)
                   => EndpointQueried
                   -> ClientM (ResponseWrapper apiType)
                   -- ^ The function to fetch data from the API.
@@ -72,12 +74,14 @@ class APIPersistable apiType dbType | apiType -> dbType where
   fetchAndPersist ep apiFetch lastUpdated respQueue =
     runQueryM apiFetch >>= processResponse ep lastUpdated respQueue
 
-  pollThread :: (WithAppMEnv (Env env) Message m) => EndpointQueried -> ClientM (ResponseWrapper apiType) -> TVar Int -> TQueue (ResponseWrapper apiType) -> m ()
+  pollThread :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m)
+             => EndpointQueried -> ClientM (ResponseWrapper apiType) -> TVar Int -> TQueue (ResponseWrapper apiType) -> m ()
   pollThread ep apiFetch lastUpdatedVar respQueue = do
     lastUpdated <- liftIO $ readTVarIO lastUpdatedVar
     fetchAndPersist ep apiFetch lastUpdated respQueue >>= handleFetchPersistResult ep lastUpdatedVar
 
-  insertThread :: (WithAppMEnv (Env env) Message m) => EndpointQueried -> TQueue (ResponseWrapper apiType) -> m [dbType Identity]
+  insertThread :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m)
+               => EndpointQueried -> TQueue (ResponseWrapper apiType) -> m [dbType Identity]
   insertThread ep respQueue = do
     -- Read the response queue.
     resp <- (atomically . readTQueue) respQueue
@@ -91,7 +95,11 @@ class APIPersistable apiType dbType | apiType -> dbType where
       message inserted = "Inserted " <> (T.pack . show . length) inserted <> " records into database."
 
 -- | Handle the result of fetching, decoding, and processing the API response.
-handleFetchPersistResult :: (Show a, MonadIO m, MonadReader env m,  HasLog env Message m) => a -> TVar Int -> PollResult -> m ()
+handleFetchPersistResult :: (HasEnv env m, MonadIO m, MonadThrow m, Show a)
+                         => a
+                         -> TVar Int
+                         -> PollResult
+                         -> m ()
 -- Handle a client error.
 handleFetchPersistResult _ _ (PollClientError _err) = liftIO delayAndExitFailure
   where
@@ -116,7 +124,8 @@ handleFetchPersistResult ep lastUpdatedVar (Success resp) = do
     msPerS = 1000000
 
 -- | Process a (undecoded) response from the API.
-processResponse :: (WithAppMEnv (Env env) Message m, APIPersistable apiType dbType) => EndpointQueried -> Int -> TQueue (ResponseWrapper apiType) -> Either ClientError (ResponseWrapper apiType) -> m PollResult
+processResponse :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m)
+                => EndpointQueried -> Int -> TQueue (ResponseWrapper apiType) -> Either ClientError (ResponseWrapper apiType) -> m PollResult
 processResponse ep _ _ (Left err) =
   handleResponse ep (Left err) >> pure (PollClientError err)
 processResponse ep lastUpdated respQueue (Right respDecoded) =
@@ -124,7 +133,8 @@ processResponse ep lastUpdated respQueue (Right respDecoded) =
 
 
 -- | Process a (decoded) response from the API.
-processValidResponse :: (WithAppMEnv (Env env) Message m, APIPersistable apiType dbType) => EndpointQueried -> ResponseWrapper apiType -> TQueue (ResponseWrapper apiType) -> Maybe Int -> m PollResult
+processValidResponse :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m)
+                     => EndpointQueried -> ResponseWrapper apiType -> TQueue (ResponseWrapper apiType) -> Maybe Int -> m PollResult
 -- Went backwards - return early with amount of time to extend poll period by.
 processValidResponse _ _ _ (Just extendByMs) = pure (WentBackwards extendByMs)
 -- Went forwards - handle response.
