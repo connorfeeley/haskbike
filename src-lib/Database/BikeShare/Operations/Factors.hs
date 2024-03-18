@@ -13,6 +13,7 @@ module Database.BikeShare.Operations.Factors
 import           AppEnv
 
 import           Control.Lens                            hiding ( (.=) )
+import           Control.Monad.Catch                     ( MonadCatch )
 
 import           Data.Aeson
 
@@ -60,7 +61,7 @@ instance ToJSON StatusIntegral where
            , "efit_g5_available_seconds" .= intStatusSecEfitG5Available integral
            ]
 
-queryIntegratedStatus :: StatusVariationQuery -> AppM [StatusIntegral]
+queryIntegratedStatus :: (HasEnv env m, MonadIO m, MonadCatch m) => StatusVariationQuery -> m [StatusIntegral]
 queryIntegratedStatus variation = do
   integrals <- withPostgres $ runSelectReturningList $ selectWith $ integrateColumns variation
 
@@ -160,7 +161,7 @@ boundFloat x
   | isNaN x = 0.0
   | otherwise = x
 
-queryStatusFactors :: StatusVariationQuery -> AppM [StatusFactor]
+queryStatusFactors :: (HasEnv env m, MonadIO m, MonadCatch m) => StatusVariationQuery -> m [StatusFactor]
 queryStatusFactors variation = map integralToFactor <$> queryIntegratedStatus variation
 
 sumStatusFactors :: StatusFactor -> Double

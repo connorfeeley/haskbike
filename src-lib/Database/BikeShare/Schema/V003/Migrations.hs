@@ -8,6 +8,7 @@ module Database.BikeShare.Schema.V003.Migrations
 import           AppEnv
 
 import           Control.Arrow                                ( (>>>) )
+import           Control.Monad.Catch                          ( MonadCatch, MonadThrow )
 
 import           Database.Beam.Migrate
 import           Database.Beam.Migrate.Simple
@@ -18,6 +19,8 @@ import qualified Database.BikeShare.Schema.V001.StationStatus as V001
 import qualified Database.BikeShare.Schema.V002.BikeShare     as V002
 import qualified Database.BikeShare.Schema.V002.Migrations    as V002
 import qualified Database.BikeShare.Schema.V003.BikeShare     as V003
+
+import           UnliftIO                                     ( MonadIO, MonadUnliftIO )
 
 migrationStationStatusChanges :: CheckedDatabaseSettings Postgres V002.BikeshareDb
                               -> Migration Postgres (CheckedDatabaseSettings Postgres V003.BikeshareDb)
@@ -37,7 +40,8 @@ migration :: MigrationSteps Postgres () (CheckedDatabaseSettings Postgres V003.B
 migration = V002.migration >>> migrationStep description migrationStationStatusChanges
   where description = "Add station status changes table (station_status_changes) to store only station_status rows that differ from the previous row (by station ID)"
 
-migrateDB :: AppM (Maybe (CheckedDatabaseSettings Postgres V003.BikeshareDb))
+migrateDB :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m)
+          => m (Maybe (CheckedDatabaseSettings Postgres V003.BikeshareDb))
 migrateDB = do
   withPostgres $ bringUpToDateWithHooks
     allowDestructive

@@ -13,6 +13,8 @@ import           CLI.QueryFormat
 
 import           Colog                                   ( log, logDebug, pattern D )
 
+import           Control.Monad.Catch                     ( MonadCatch )
+
 import           Data.Maybe                              ( fromMaybe )
 import           Data.Proxy
 import           Data.Text.Lazy                          ( Text, pack )
@@ -32,8 +34,9 @@ import           UnliftIO
 
 
 -- | Dispatch CLI arguments for debugging.
-dispatchDebug :: DebugMiscOptions
-              -> AppM ()
+dispatchDebug :: (HasEnv env m, MonadIO m, MonadFail m, MonadUnliftIO m, MonadCatch m)
+              => DebugMiscOptions
+              -> m ()
 dispatchDebug _options = do
   -- Get the number of rows in the station status table.
   numStatusRows <-

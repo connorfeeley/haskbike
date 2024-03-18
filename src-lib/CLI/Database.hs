@@ -21,6 +21,7 @@ import           Colog                         ( log, pattern D, pattern I, patt
 
 import           Control.Lens
 import           Control.Monad                 ( unless )
+import           Control.Monad.Catch           ( MonadCatch, MonadThrow )
 
 import           Data.Foldable                 ( for_ )
 import qualified Data.Text                     as Text
@@ -39,13 +40,14 @@ import           System.Exit                   ( exitSuccess )
 
 import           Text.Pretty.Simple.Extras
 
-import           UnliftIO                      ( liftIO )
+import           UnliftIO                      ( MonadIO, MonadUnliftIO, liftIO )
 
 
 -- | Helper functions.
 
 -- | Dispatch CLI arguments to the database interface.
-dispatchDatabase :: Options -> AppM ()
+dispatchDatabase :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m)
+                 => Options -> m ()
 dispatchDatabase options = do
   case optCommand options of
     Reset resetOptions -> handleReset options resetOptions
@@ -57,7 +59,8 @@ dispatchDatabase options = do
 
 
 -- | Handle the 'Reset' command.
-handleReset :: Options -> ResetOptions -> AppM ()
+handleReset :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m)
+            => Options -> ResetOptions -> m ()
 handleReset options resetOptions = do
   pPrintCompact options
   pPrintCompact resetOptions
@@ -68,7 +71,8 @@ handleReset options resetOptions = do
          log I "Initializing database."     >> handleInformation >> liftIO exitSuccess
 
 -- | Helper for station information request.
-handleInformation :: AppM ()
+handleInformation :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m)
+                  => m ()
 handleInformation = do
   log D "Querying station information from database."
   numInfoRows <- queryRowCount bikeshareStationInformation
@@ -76,10 +80,11 @@ handleInformation = do
   unless (0 == numInfoRows) handleStationInformation
 
 -- | Handle station information request.
-handleStationInformation :: AppM ()
+handleStationInformation :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m)
+                         => m ()
 handleStationInformation = do
   log D "Requesting station information from API."
-  stationInfo <- runQueryM stationInformation :: AppM (Either ClientError (ResponseWrapper [StationInformation]))
+  stationInfo <- runQueryM stationInformation :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m) => m (Either ClientError (ResponseWrapper [StationInformation]))
   log D "Requested station information from API."
 
   for_ (rightToMaybe stationInfo) $ \response -> do
@@ -93,7 +98,7 @@ handleStationInformation = do
     rightToMaybe = either (const Nothing) Just
 
 -- | Helper for station status request.
-handleStatus :: AppM ()
+handleStatus :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m) => m ()
 handleStatus = do
   log D "Querying station status from database."
   numStatusRows <- queryRowCount bikeshareStationStatus
@@ -101,10 +106,11 @@ handleStatus = do
   unless (0 == numStatusRows) handleStationStatus
 
 -- | Handle station status request.
-handleStationStatus :: AppM ()
+handleStationStatus :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m)
+                    => m ()
 handleStationStatus = do
   log D "Requesting station status from API."
-  stationStatus' <- runQueryM stationStatus :: AppM (Either ClientError (ResponseWrapper [StationStatus]))
+  stationStatus' <- runQueryM stationStatus :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m) => m (Either ClientError (ResponseWrapper [StationStatus]))
   log D "Requested station status from API."
 
   for_ (rightToMaybe stationStatus') $ \response -> do

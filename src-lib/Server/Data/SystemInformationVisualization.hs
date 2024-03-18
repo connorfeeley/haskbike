@@ -4,6 +4,7 @@ module Server.Data.SystemInformationVisualization where
 
 import           AppEnv
 
+import           Control.Monad.Catch                         ( MonadCatch )
 import           Control.Monad.Except
 
 import           Data.Aeson
@@ -13,7 +14,7 @@ import           Database.Beam
 import           Database.BikeShare.Expressions
 import           Database.BikeShare.Tables.SystemInformation
 
-import           ServerEnv
+import           UnliftIO
 
 
 
@@ -43,11 +44,10 @@ fromBeamSysInfoCntToVisJSON sysInfCnt =
                                       , _sysInfCntVisEbikeCount      = fromIntegral (_sysInfCntEbikeCount sysInfCnt)
                                       }
 
-generateJsonDataSourceSysInfo :: Maybe LocalTime -> Maybe LocalTime -> ServerAppM [SystemInformationCountVisualization]
+generateJsonDataSourceSysInfo :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m) => Maybe LocalTime -> Maybe LocalTime -> m [SystemInformationCountVisualization]
 generateJsonDataSourceSysInfo _startTime _endTime = do
   -- Accessing the inner environment by using the serverEnv accessor.
-  appEnv <- getAppEnvFromServer
-  result <- liftIO $ runAppM appEnv $ withPostgres $
+  result <- withPostgres $
     runSelectReturningList $ selectWith queryLatestSystemInfo
 
   pure $ map fromBeamSysInfoCntToVisJSON result

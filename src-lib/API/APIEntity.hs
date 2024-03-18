@@ -15,7 +15,6 @@ import qualified API.SystemInformation                        as AT
 
 import           AppEnv
 
-import           CLI.Poll.PollClientEnv
 import           CLI.Poll.Utils
 
 import           Colog
@@ -23,7 +22,6 @@ import           Colog
 import           Control.Lens
 import           Control.Monad                                ( void )
 import           Control.Monad.Catch                          ( MonadCatch, MonadThrow )
-import           Control.Monad.Reader                         ( MonadReader )
 
 import           Data.Maybe                                   ( mapMaybe )
 import qualified Data.Text                                    as T

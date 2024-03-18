@@ -13,6 +13,8 @@ import           API.VehicleType
 
 import           Colog
 
+import           Control.Monad.Catch                        ( MonadCatch )
+
 import           Data.ByteString.Lazy                       ( ByteString )
 import qualified Data.ByteString.Lazy                       as BL
 import           Data.Csv                                   ( encodeDefaultOrderedByName )
@@ -107,7 +109,7 @@ data DataAPI mode where
 
 -- * Handlers.
 
-statusHandler :: DataAPI (AsServerT ServerAppM)
+statusHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m, HasServerEnv env m) => DataAPI (AsServerT m)
 statusHandler =  DataAPI { dataForStation       = stationStatusData
                          , integralsForStation  = stationIntegralData
                          , factorsForStation    = stationFactorData
@@ -119,7 +121,7 @@ statusHandler =  DataAPI { dataForStation       = stationStatusData
                          }
 
 
-stationStatusData :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM [StationStatusVisualization]
+stationStatusData :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m, HasServerEnv env m) => Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> m [StationStatusVisualization]
 stationStatusData stationId startTime endTime = do
   logInfo $ "Creating JSON payload for {station ID: " <> (T.pack . show) stationId <> ", start time: " <> (T.pack . show) startTime <> ", end time: " <> (T.pack . show) endTime <> " "
   dataSource <- generateJsonDataSource stationId startTime endTime
@@ -127,7 +129,7 @@ stationStatusData stationId startTime endTime = do
   pure dataSource
 
 
-stationIntegralData :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM [StatusIntegral]
+stationIntegralData :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m) => Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> m [StatusIntegral]
 stationIntegralData stationId startTime endTime = do
   logInfo $ "Creating integral JSON payload for {station ID: " <> (T.pack . show) stationId <> ", start time: " <> (T.pack . show) startTime <> ", end time: " <> (T.pack . show) endTime <> " "
   dataSource <- generateJsonDataSourceIntegral  stationId startTime endTime
@@ -135,27 +137,26 @@ stationIntegralData stationId startTime endTime = do
   pure dataSource
 
 
-stationFactorData :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM [StatusFactor]
+stationFactorData :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m) => Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> m [StatusFactor]
 stationFactorData stationId startTime endTime = do
   logInfo $ "Creating factor JSON payload for {station ID: " <> (T.pack . show) stationId <> ", start time: " <> (T.pack . show) startTime <> ", end time: " <> (T.pack . show) endTime <> " "
   dataSource <- generateJsonDataSourceFactor  stationId startTime endTime
   logDebug "Created factor JSON payload"
   pure dataSource
 
-systemInfoDataHandler :: Maybe LocalTime -> Maybe LocalTime -> ServerAppM [SystemInformationCountVisualization]
+systemInfoDataHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m) => Maybe LocalTime -> Maybe LocalTime -> m [SystemInformationCountVisualization]
 systemInfoDataHandler startTime endTime = do
   logInfo $ "Creating system information JSON payload for {start time: " <> (T.pack . show) startTime <> ", end time: " <> (T.pack . show) endTime <> " "
   dataSource <- generateJsonDataSourceSysInfo startTime endTime
   logDebug "Created factor JSON payload"
   pure dataSource
 
-performanceCsvHandler :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM (Headers '[Header "Content-Disposition" T.Text] BL.ByteString)
+performanceCsvHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m) => Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> m (Headers '[Header "Content-Disposition" T.Text] BL.ByteString)
 performanceCsvHandler stationId startTime endTime = do
-  logInfo $ "Creating performance data CSV payload for {station ID: " <> (T.pack . show) stationId <> ", start time: " <> (T.pack . show) startTime <> ", end time: " <> (T.pack . show) endTime <> " "
-
-  appEnv <- getAppEnvFromServer
-  let tz = envTimeZone appEnv
+  tz <- getTz
   currentUtc <- liftIO getCurrentTime
+
+  logInfo $ "Creating performance data CSV payload for {station ID: " <> (T.pack . show) stationId <> ", start time: " <> (T.pack . show) startTime <> ", end time: " <> (T.pack . show) endTime <> " "
 
   let params = StatusDataParams tz currentUtc (TimePair startTime endTime tz currentUtc)
   let range = enforceTimeRangeBounds params
@@ -164,10 +165,9 @@ performanceCsvHandler stationId startTime endTime = do
         , LatestTime   (localTimeToUTC tz (latestTime range))
         ]
 
-  (integrals, emptyFullTup) <- liftIO $ concurrently
-    (runAppM appEnv $ queryIntegratedStatus variation)
-    (runAppM appEnv $
-     withPostgres $ runSelectReturningList $ selectWith $
+  (integrals, emptyFullTup) <- concurrently
+    (queryIntegratedStatus variation)
+    (withPostgres $ runSelectReturningList $ selectWith $
      queryStationEmptyFullTime stationId (localTimeToUTC tz (earliestTime range)) (localTimeToUTC tz (latestTime range))
     )
   let emptyFull = head $ map (\(_i, (e, f))
@@ -192,12 +192,9 @@ replaceSpaces (x:xs)
     | x == ' ' = "-" ++ replaceSpaces xs
     | otherwise = x : replaceSpaces xs
 
-handleDockingEventsData :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM [DockingEventsCount]
+handleDockingEventsData :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m) => Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> m [DockingEventsCount]
 handleDockingEventsData stationId startTime endTime = do
-  -- Accessing the inner environment by using the serverEnv accessor.
-  appEnv <- asks serverAppEnv
-  let tz = envTimeZone appEnv
-  -- AppM actions can be lifted into ServerAppM by using a combination of liftIO and runReaderT.
+  tz <- getTz
   currentUtc <- liftIO getCurrentTime
 
   -- TODO: awkward having to compute time bounds here and in 'StationStatusVisualization'
@@ -209,14 +206,11 @@ handleDockingEventsData stationId startTime endTime = do
   let variation = StatusVariationQuery (fromIntegral <$> stationId) [ EarliestTime (localTimeToUTC tz earliest)
                                                                     , LatestTime   (localTimeToUTC tz latest)
                                                                     ]
-  liftIO $ runAppM appEnv $ queryDockingEventsCount variation
+  queryDockingEventsCount variation
 
-handleChargingEventsData :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM [ChargingEvent]
+handleChargingEventsData :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m) => Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> m [ChargingEvent]
 handleChargingEventsData stationId startTime endTime = do
-  -- Accessing the inner environment by using the serverEnv accessor.
-  appEnv <- asks serverAppEnv
-  let tz = envTimeZone appEnv
-  -- AppM actions can be lifted into ServerAppM by using a combination of liftIO and runReaderT.
+  tz <- getTz
   currentUtc <- liftIO getCurrentTime
 
   -- TODO: awkward having to compute time bounds here and in 'StationStatusVisualization'
@@ -228,7 +222,7 @@ handleChargingEventsData stationId startTime endTime = do
   let variation = StatusVariationQuery (fromIntegral <$> stationId) [ EarliestTime (localTimeToUTC tz earliest)
                                                                     , LatestTime   (localTimeToUTC tz latest)
                                                                     ]
-  events <- liftIO $ runAppM appEnv $ queryChargingEventsCount variation
+  events <- queryChargingEventsCount variation
   let result = map (\(_info, _totalCount, efitCount, efitG5Count) ->
                       [ ChargingEvent EFit (fromIntegral efitCount)
                       , ChargingEvent EFitG5 (fromIntegral efitG5Count)
@@ -237,16 +231,16 @@ handleChargingEventsData stationId startTime endTime = do
   pure $ concat result
 
 
-handleEmptyFullData :: Maybe LocalTime -> Maybe LocalTime -> ServerAppM [EmptyFullRecord]
+handleEmptyFullData :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m) => Maybe LocalTime -> Maybe LocalTime -> m [EmptyFullRecord]
 handleEmptyFullData start end = do
-  appEnv <- asks serverAppEnv
-  let tz = envTimeZone appEnv
+  tz <- getTz
   currentUtc <- liftIO getCurrentTime
+
   logInfo $ "Rendering station empty/full data for time [" <> tshow start <> " - " <> tshow end <> "]"
 
-  (latest, emptyFull) <- liftIO $ concurrently (runAppM appEnv $ withPostgres $ runSelectReturningList $ select queryLatestStatuses)
-                                               (runAppM appEnv $ withPostgres $ runSelectReturningList $ selectWith $
-                                                queryStationEmptyFullTime (Nothing :: Maybe Integer) (start' currentUtc tz) (end' currentUtc tz))
+  (latest, emptyFull) <- concurrently (withPostgres $ runSelectReturningList $ select queryLatestStatuses)
+                                      (withPostgres $ runSelectReturningList $ selectWith $
+                                        queryStationEmptyFullTime (Nothing :: Maybe Integer) (start' currentUtc tz) (end' currentUtc tz))
 
   let combined = combineStations latest (resultToEmptyFull emptyFull)
 

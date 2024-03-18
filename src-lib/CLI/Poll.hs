@@ -10,12 +10,11 @@ import           API.Client
 import           AppEnv
 
 import           CLI.Options                        ( PollOptions (..), PopulateStatusChangesOpt (..) )
-import           CLI.Poll.PollClientEnv
 
 import           Colog                              ( logInfo, logWarning )
 
 import           Control.Monad                      ( forever, void )
-import           Control.Monad.Reader               ( ReaderT (..) )
+import           Control.Monad.Catch                ( MonadCatch, MonadThrow )
 
 import qualified Data.Text                          as T
 
@@ -31,14 +30,14 @@ import           UnliftIO
 
 
 -- | Dispatch CLI arguments to the poller.
-dispatchPoll :: PollOptions
-             -> AppM ()
+dispatchPoll :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m)
+             => PollOptions
+             -> m ()
 dispatchPoll = pollClient
 
-
-pollClient :: PollOptions -> AppM ()
+pollClient :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m)
+           => PollOptions -> m ()
 pollClient pollOptions = do
-  env <- ask
   -- runReaderT (unServerAppM app) senv
   -- Initialize TVars for per-thread last updated time.
   (statusLastUpdated, infoLastUpdated, sysInfoLastUpdated) <- liftIO $
@@ -48,7 +47,8 @@ pollClient pollOptions = do
   statusQueue  <- liftIO newTQueueIO
   sysInfoQueue <- liftIO newTQueueIO
 
-  let pollEnv = PollEnv env StationInformationEP infoLastUpdated infoQueue
+  -- env <- ask
+  -- let pollEnv = PollEnv env StationInformationEP infoLastUpdated infoQueue
 
   -- Populate status changes table if switch was enabled.
   void (populateStatusChanges (optPollPopulateStatusChanges pollOptions))
@@ -61,6 +61,7 @@ pollClient pollOptions = do
   let insertThreads = [ insertThreadInfo, insertThreadStatus, insertThreadSysInfo ]
 
   logInfo "Fetching from API once."
+  -- runPollReader pollEnv $ fetchAndPersist StationInformationEP stationInformation firstUpdate infoQueue
   fetchAndPersist StationInformationEP stationInformation firstUpdate infoQueue
   fetchAndPersist StationStatusEP      stationStatus      firstUpdate statusQueue
   fetchAndPersist SystemInformationEP  systemInformation  firstUpdate sysInfoQueue
@@ -84,7 +85,8 @@ pollClient pollOptions = do
     firstUpdate = 0 -- Use Unix epoch for initial lastUpdated.
 
 -- | Populate the station status changes table from the content of the station status table.
-populateStatusChanges :: PopulateStatusChangesOpt -> AppM Int
+populateStatusChanges :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m)
+                      => PopulateStatusChangesOpt -> m Int
 populateStatusChanges AlwaysPopulate = doPopulateStatusChanges
 populateStatusChanges NeverPopulate  = pure 0
 populateStatusChanges AutoPopulate   = do
@@ -94,14 +96,14 @@ populateStatusChanges AutoPopulate   = do
     0     -> logInfo (logRowsMessage    0) >> doPopulateStatusChanges
     rows  -> logInfo (logRowsMessage rows) >> pure rows
   where
-    numRows :: AppM Int
     numRows = queryRowCount bikeshareStationStatusChanges
 
     logRowsMessage :: Int -> T.Text
     logRowsMessage 0    = "Station status changes table is empty."
     logRowsMessage rows = "Station status changes table has " <> showt rows <> " rows; not populating table."
 
-doPopulateStatusChanges :: AppM Int
+doPopulateStatusChanges :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m)
+                        => m Int
 doPopulateStatusChanges = do
   logWarning "Populating station status changes table from station status table."
   statusChanges <- withPostgres populateChangedStationStatusTable

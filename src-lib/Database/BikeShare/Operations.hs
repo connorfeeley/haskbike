@@ -70,6 +70,8 @@ import           GHC.Exts                                     ( fromString )
 
 import           Text.Pretty.Simple.Extras
 
+import           UnliftIO                                     ( MonadUnliftIO )
+
 
 -- | Query database for disabled docks, returning tuples of (name, num_docks_disabled).
 queryDisabledDocks :: AppM [(Text.Text, Int32)] -- ^ List of tuples of (name, num_docks_disabled).
@@ -242,8 +244,9 @@ queryStationStatusBetween stationId startTime endTime =
 {- |
 Query the station name given a station ID.
 -}
-queryStationName :: Int                 -- ^ Station ID.
-                 -> AppM (Maybe String) -- ^ Station name assosicated with the given station ID.
+queryStationName :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m)
+                 => Int                 -- ^ Station ID.
+                 -> m (Maybe String) -- ^ Station name assosicated with the given station ID.
 queryStationName stationId = do
   info <- withPostgres $ runSelectReturningOne $ selectWith $ infoByIdExpr [fromIntegral stationId]
 
@@ -293,8 +296,9 @@ Search for station names containing "Joe Shuster":
 
 __Return:__ Tuples of (station ID, station name) matching the searched name, using SQL `LIKE` semantics.
 -}
-queryStationIdLike :: String               -- ^ Station ID.
-                   -> AppM [(Int, String)]  -- ^ Tuples of (station ID, name) for stations that matched the query.
+queryStationIdLike :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m)
+                   => String               -- ^ Station ID.
+                   -> m [(Int, String)]  -- ^ Tuples of (station ID, name) for stations that matched the query.
 queryStationIdLike stationName = do
   info <- withPostgres $ runSelectReturningList $ select $ queryStationIdLikeExpr stationName
 
@@ -304,8 +308,9 @@ queryStationIdLike stationName = do
                      )) info
 
 -- | Query the latest status for a station.
-queryStationStatusLatest :: Int                       -- ^ Station ID.
-                         -> AppM (Maybe StationStatus) -- ^ Latest 'StationStatus' for the given station.
+queryStationStatusLatest :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m)
+                         => Int                       -- ^ Station ID.
+                         -> m (Maybe StationStatus) -- ^ Latest 'StationStatus' for the given station.
 queryStationStatusLatest station_id = withPostgres $ runSelectReturningOne $ select $ limit_ 1 $ do
   info   <- all_ (bikeshareDb ^. bikeshareStationInformation)
   guard_ (_infoStationId info ==. val_ ( fromIntegral station_id))
@@ -315,24 +320,26 @@ queryStationStatusLatest station_id = withPostgres $ runSelectReturningOne $ sel
   pure status
 
 -- | Count the number of rows in a given table.
-queryRowCount :: (Beamable table, Database Postgres db)
+queryRowCount :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, Beamable table, Database Postgres db)
               => Getting (DatabaseEntity Postgres db (TableEntity table)) (DatabaseSettings Postgres BikeshareDb) (DatabaseEntity Postgres db (TableEntity table))
               -- ^ Lens to the table in the database.
-              -> AppM Int     -- ^ Count of rows in the specified table.
+              -> m Int     -- ^ Count of rows in the specified table.
 queryRowCount table = fromIntegral . fromMaybe 0 <$> withPostgres (runSelectReturningOne $ select $
     aggregate_ (\_ -> as_ @Int32 countAll_)
     (all_ (bikeshareDb ^. table)))
 
 -- | Function to query the size of a table.
-queryTableSize :: String                -- ^ Name of the table.
-               -> AppM (Maybe String)    -- ^ Size of the table.
+queryTableSize :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m, MonadFail m)
+               => String                -- ^ Name of the table.
+               -> m (Maybe String)    -- ^ Size of the table.
 queryTableSize tableName = do
   pool <- withConnPool
   [Only size] <- liftIO (withResource pool (\conn -> query_ conn $ fromString ("SELECT pg_size_pretty(pg_total_relation_size('" ++ tableName ++ "'))")))
   return size
 
-querySystemStatusAtRange :: UTCTime -> UTCTime -> Integer
-                         -> AppM [(UTCTime, Integer, Integer, Integer, Integer, Integer, Integer, Integer)]
+querySystemStatusAtRange :: (HasEnv env m, MonadIO m, MonadCatch m)
+                         => UTCTime -> UTCTime -> Integer
+                         -> m [(UTCTime, Integer, Integer, Integer, Integer, Integer, Integer, Integer)]
 querySystemStatusAtRange earliestTime latestTime intervalMins = do
   -- Execute query expression, returning 'Just (tup)' if one row was returned; otherwise 'Nothing'.
   statusAtTime <-

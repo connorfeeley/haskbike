@@ -6,12 +6,12 @@ module Server.StaticAPI
      , staticHandler
      ) where
 
+import           Control.Monad.Catch    ( MonadThrow )
+
 import           Database.Beam
 
 import           Servant
 import           Servant.Server.Generic
-
-import           ServerEnv
 
 
 -- * API to serve static files.
@@ -22,5 +22,5 @@ data StaticAPI mode where
     } -> StaticAPI mode
   deriving stock Generic
 
-staticHandler :: StaticAPI (AsServerT ServerAppM)
+staticHandler :: (MonadIO m, MonadThrow m) => StaticAPI (AsServerT m)
 staticHandler =  StaticAPI $ serveDirectoryWebApp "static-files"

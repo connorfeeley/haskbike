@@ -16,6 +16,7 @@ import           CLI.QueryFormat
 import           Colog
 
 import           Control.Lens                                 hiding ( para )
+import           Control.Monad.Catch                          ( MonadCatch, MonadThrow )
 
 import qualified Data.Char                                    as Char
 import           Data.Int                                     ( Int32 )
@@ -48,7 +49,8 @@ import           TextShow                                     ( showt )
 import           UnliftIO
 
 -- | Dispatch CLI arguments for debugging.
-dispatchEvents :: EventSubcommand -> AppM ()
+dispatchEvents :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m)
+               => EventSubcommand -> m ()
 dispatchEvents (EventRange options)  = do
   -- For defaults
   today <- liftIO $ utctDay <$> getCurrentTime
@@ -143,7 +145,8 @@ takeMaybe :: Maybe Int -> [a] -> [a]
 takeMaybe (Just limit) xs = take limit xs
 takeMaybe Nothing xs      = xs
 
-bikeCountsAtMoment :: Day -> TimeOfDay -> AppM (Day, TimeOfDay, Int32, Int32, Int32, Int32)
+bikeCountsAtMoment :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m)
+                   => Day -> TimeOfDay -> m (Day, TimeOfDay, Int32, Int32, Int32, Int32)
 bikeCountsAtMoment day timeOfDay = do
   logInfo $ "Getting number of bikes by type in the system on " <> (T.pack . show) day <> " at " <> (T.pack . show) timeOfDay
   statusForMoment <- withPostgres $ runSelectReturningList $ select $
@@ -196,7 +199,8 @@ formatBikeCounts allCounts = Box.printBox table
 
 
 -- | Get (undockings, dockings) for a day.
-eventsForRange :: Maybe Int -> Day -> TimeOfDay -> Day -> TimeOfDay -> AppM [DockingEventsCount]
+eventsForRange :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m)
+               => Maybe Int -> Day -> TimeOfDay -> Day -> TimeOfDay -> m [DockingEventsCount]
 eventsForRange stationId earliestDay earliestTime latestDay latestTime = do
   -- Calculate number of dockings and undockings
   queryDockingEventsCount queryCondition

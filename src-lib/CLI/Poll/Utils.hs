@@ -20,7 +20,6 @@ import           Colog
 
 import           Control.Exception                       ( throw )
 import           Control.Monad.Catch                     ( MonadCatch, MonadThrow )
-import           Control.Monad.Reader                    ( MonadReader )
 
 import           Data.Aeson
 import           Data.Maybe                              ( fromMaybe )

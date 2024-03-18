@@ -22,6 +22,8 @@ import           System.Environment     ( lookupEnv )
 
 import           Text.Read              ( readMaybe )
 
+import           UnliftIO               ( MonadIO, liftIO )
+
 
 -- | The name of the production database.
 dbnameProduction :: String
@@ -67,8 +69,8 @@ mkDbParams name = do
     mkParam defaultVal prefix = maybe (pure defaultVal) (pure . (prefix ++))
 
 -- | Construct a 'ConnectInfo' using values from the HASKBIKE_{PGDBHOST,USERNAME,PASSWORD} environment variables.
-mkDbConnectInfo :: String -> IO ConnectInfo
-mkDbConnectInfo dbName = do
+mkDbConnectInfo :: MonadIO m => String -> m ConnectInfo
+mkDbConnectInfo dbName = liftIO $ do
   envPgDbHostParam <- lookupEnv "HASKBIKE_PGDBHOST"
   envPgDbPortParam <- lookupEnv "HASKBIKE_PGDBPORT"
   envUsernameParam <- lookupEnv "HASKBIKE_USERNAME"

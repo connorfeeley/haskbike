@@ -11,6 +11,9 @@ module Server.ComponentsAPI
 
 import           Colog
 
+import           Control.Monad.Catch                            ( MonadCatch )
+import           Control.Monad.Except                           ( MonadError )
+
 import qualified Data.Text                                      as T
 import           Data.Time
 import           Data.Time.Extras
@@ -47,7 +50,7 @@ data ComponentsAPI mode where
     } -> ComponentsAPI mode
   deriving stock Generic
 
-componentsHandler :: ComponentsAPI (AsServerT ServerAppM)
+componentsHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m, MonadError ServerError m) => ComponentsAPI (AsServerT m)
 componentsHandler =
   ComponentsAPI { eventsComponents = eventsComponentHandler
                 }
@@ -83,7 +86,7 @@ data EventsComponentAPI mode where
     } -> EventsComponentAPI mode
   deriving stock Generic
 
-eventsComponentHandler :: EventsComponentAPI (AsServerT ServerAppM)
+eventsComponentHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m, MonadError ServerError m) => EventsComponentAPI (AsServerT m)
 eventsComponentHandler = EventsComponentAPI
   { dockingEventsHeader          = dockingsHeader
   , chargingEventsHeader         = chargingsHeader
@@ -91,12 +94,9 @@ eventsComponentHandler = EventsComponentAPI
   , performanceHeader            = performanceHeaderHandler
   }
 
-dockingsHeader :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM DockingHeader
+dockingsHeader :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m) => Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> m DockingHeader
 dockingsHeader stationId startTime endTime = do
-  -- Accessing the inner environment by using the serverEnv accessor.
-  appEnv <- asks serverAppEnv
-  let tz = envTimeZone appEnv
-  -- AppM actions can be lifted into ServerAppM by using a combination of liftIO and runReaderT.
+  tz <- getTz
   currentUtc <- liftIO getCurrentTime
 
   -- TODO: awkward having to compute time bounds here and in 'StationStatusVisualization'
@@ -108,15 +108,12 @@ dockingsHeader stationId startTime endTime = do
   let variation = StatusVariationQuery (fromIntegral <$> stationId) [ EarliestTime (localTimeToUTC tz earliest)
                                                                     , LatestTime   (localTimeToUTC tz latest)
                                                                     ]
-  events <- liftIO $ runAppM appEnv $ queryDockingEventsCount variation
+  events <- queryDockingEventsCount variation
   pure $ DockingHeader events
 
-chargingsHeader :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM ChargingHeader
+chargingsHeader :: (HasEnv env m, MonadIO m, MonadCatch m) => Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> m ChargingHeader
 chargingsHeader stationId startTime endTime = do
-  -- Accessing the inner environment by using the serverEnv accessor.
-  appEnv <- asks serverAppEnv
-  let tz = envTimeZone appEnv
-  -- AppM actions can be lifted into ServerAppM by using a combination of liftIO and runReaderT.
+  tz <- getTz
   currentUtc <- liftIO getCurrentTime
 
   -- TODO: awkward having to compute time bounds here and in 'StationStatusVisualization'
@@ -128,18 +125,17 @@ chargingsHeader stationId startTime endTime = do
   let variation = StatusVariationQuery (fromIntegral <$> stationId) [ EarliestTime (localTimeToUTC tz earliest)
                                                                     , LatestTime   (localTimeToUTC tz latest)
                                                                     ]
-  chargings <- liftIO $ runAppM appEnv $ queryChargingEventsCount variation
+  chargings <- queryChargingEventsCount variation
 
   pure $ ChargingHeader chargings
 
-chargingInfrastructureHeaderHandler :: Maybe LocalTime -> ServerAppM ChargingInfrastructureHeader
+chargingInfrastructureHeaderHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadError ServerError m) => Maybe LocalTime -> m ChargingInfrastructureHeader
 chargingInfrastructureHeaderHandler t = do
-  appEnv <- asks serverAppEnv
-  tz     <- asks (envTimeZone . serverAppEnv)
+  tz <- getTz
   currentUtc <- liftIO getCurrentTime
 
   -- Query charging infrastructure at given time.
-  events <- liftIO $ runAppM appEnv $ withPostgres $ runSelectReturningOne $ selectWith $
+  events <- withPostgres $ runSelectReturningOne $ selectWith $
     queryChargingInfrastructure (maybe currentUtc (localTimeToUTC tz) t)
 
   case events of
@@ -149,25 +145,22 @@ chargingInfrastructureHeaderHandler t = do
                                            }
     _ ->  throwError err500 { errBody = "Unable to calculate charging infrastructure counts." }
 
-performanceHeaderHandler :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM PerformanceData
+performanceHeaderHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadError ServerError m, MonadUnliftIO m) => Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> m PerformanceData
 performanceHeaderHandler stationId startTime endTime = do
-  appEnv <- getAppEnvFromServer
-  let tz = envTimeZone appEnv
+  tz <- getTz
   currentUtc <- liftIO getCurrentTime
 
   let params = StatusDataParams tz currentUtc (TimePair startTime endTime tz currentUtc)
   let range = enforceTimeRangeBounds params
 
-  (perf, emptyFullTup) <- liftIO $ concurrently
-    (runAppM appEnv $
-    queryIntegratedStatus
+  (perf, emptyFullTup) <- concurrently
+    (queryIntegratedStatus
     (StatusVariationQuery (fromIntegral <$> stationId)
       [ EarliestTime (localTimeToUTC tz (earliestTime range))
       , LatestTime   (localTimeToUTC tz (latestTime   range))
       ]
     ))
-    (runAppM appEnv $
-     withPostgres $ runSelectReturningList $ selectWith $
+    (withPostgres $ runSelectReturningList $ selectWith $
      queryStationEmptyFullTime stationId (localTimeToUTC tz (earliestTime range)) (localTimeToUTC tz (latestTime range))
     )
   let emptyFull = head $ map (\(_i, (e, f))

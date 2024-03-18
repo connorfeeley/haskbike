@@ -17,7 +17,8 @@ import           CLI.ServeVisualize
 import           Colog                     ( LogAction, Severity (..), cmap, fmtMessage, log, logInfo, logTextStdout,
                                              pattern D, pattern E, pattern I, usingLoggerT )
 
-import           Control.Monad             ( unless, void, when )
+import           Control.Monad             ( unless, when )
+import           Control.Monad.Reader      ( runReaderT )
 
 import qualified Data.Text                 as T
 import qualified Data.Text                 as Text
@@ -78,7 +79,7 @@ main = do
   unless (optLogBuffering options) disableOutputBuffering
 
   -- Run the application.
-  runAppM env (appMain options)
+  runReaderT (unAppM $ appMain options) env
   where
     -- Obfuscate password by replacing with asterisks.
     obfuscatePassword connInfo = (connInfo { connectPassword = map (const '*') (connectPassword connInfo) })
@@ -102,19 +103,22 @@ main = do
 
 
 -- Main application entry point inside the 'AppM' monad environment.
+-- appMain :: (MonadUnliftIO m, MonadCatch m, MonadFail m,  HasServerEnv (ServerEnv m) (ReaderT (ServerEnv m) m),  MonadError S.ServerError m, HasEnv env m,  HasEnv (ServerEnv m) (ReaderT (ServerEnv m) m),  HasEnv    (ServerEnv (ReaderT (ServerEnv m) m))    (ServerAppM (ReaderT (ServerEnv m) m))) => Options -> m ()
 appMain :: Options -> AppM ()
 appMain options = do
   log I $ "Starting Toronto Bikeshare CLI with verbosity '" <> Text.pack (show (logLevel options)) <> "'."
   log I $ "Version: " <> T.pack getCabalVersion <> " | " <> T.pack getGitVersion
+
   -- Dispatch to appropriate command.
+  dispatchDatabase options
   case optCommand options of
-    (Poll p)           -> dispatchDatabase options >> dispatchPoll p
-    (Query q)          -> dispatchDatabase options >> dispatchQuery q
-    QueryApi           -> log E "Not implemented."
-    (Events e)         -> dispatchDatabase options >> dispatchEvents (optEventsSubcommand e)
-    (ServeVisualize s) -> dispatchDatabase options >> dispatchVisualize s
-    (DebugMisc d)      -> dispatchDatabase options >> dispatchDebug d
-    (Reset _)          -> void (dispatchDatabase options)
+    (Poll p)            -> dispatchPoll p
+    (Query q)           -> dispatchQuery q
+    QueryApi            -> log E "Not implemented."
+    (Events e)          -> dispatchEvents (optEventsSubcommand e)
+    (DebugMisc d)       -> dispatchDebug d
+    (Reset _)           -> pure ()
+    (ServeVisualize sv) -> dispatchVisualize sv
 
 -- Convert CLI options to a logging severity.
 logLevel :: Options -> Severity

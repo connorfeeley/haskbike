@@ -21,6 +21,7 @@ import           API.VehicleType
 import           AppEnv
 
 import           Control.Lens                                 hiding ( reuse, (.=), (<.) )
+import           Control.Monad.Catch                          ( MonadCatch, MonadThrow )
 
 import           Data.Int                                     ( Int32 )
 import           Data.List                                    ( sortOn )
@@ -36,6 +37,8 @@ import           Database.BikeShare.Tables.StationInformation
 import           Database.BikeShare.Tables.StationStatus
 
 import           Text.Pretty.Simple.Extras
+
+import           UnliftIO                                     ( MonadUnliftIO )
 
 eventsDeltas = do
   events <- (runWithAppMDebug "haskbike" . queryDockingEventsCount) $
@@ -64,7 +67,8 @@ check d1 d2 = do
 check' res = pPrintCompact $ map (\(s, e) -> (_infoName s, e)) res
 
 -- | Query the number of dockings and undockings for a station.
-queryDockingEventsCount :: StatusVariationQuery -> AppM [DockingEventsCount]
+queryDockingEventsCount :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m)
+                        => StatusVariationQuery -> m [DockingEventsCount]
 queryDockingEventsCount variation =  do
   counts <- queryDockingEventsCountExpr' variation
 
@@ -81,7 +85,8 @@ queryDockingEventsCount variation =  do
              ) counts
 
 -- | Query the number of dockings and undockings for a station (returning tuples of each count for each bike type).
-queryDockingEventsCountExpr' :: StatusVariationQuery -> AppM [(StationInformation, (Int32, Int32), (Int32, Int32), (Int32, Int32))]
+queryDockingEventsCountExpr' :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m)
+                             => StatusVariationQuery -> m [(StationInformation, (Int32, Int32), (Int32, Int32), (Int32, Int32))]
 queryDockingEventsCountExpr' variation = withPostgres $ runSelectReturningList $ selectWith $ do
   cte <- selecting $ do
     let statusForStation = filter_ (filterFor_ variation)
@@ -143,7 +148,7 @@ queryDockingEventsCountExpr' variation = withPostgres $ runSelectReturningList $
 ---------------------------------
 
 -- | Query the number of charging events for a station (returning status record and tuples of (dDisabled, dEfit, dEfitG5, sumDisabled, sumEfit, sumEfitG5).
-queryChargingEventsCount :: StatusVariationQuery -> AppM [(StationInformation, Int32, Int32, Int32)]
+queryChargingEventsCount :: (HasEnv env m, MonadIO m, MonadCatch m) => StatusVariationQuery -> m [(StationInformation, Int32, Int32, Int32)]
 queryChargingEventsCount variation = withPostgres $ runSelectReturningList $ selectWith $ do
   stationInfo <- selecting $ all_ (bikeshareDb ^. bikeshareStationInformation)
   -- Lag expression

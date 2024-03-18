@@ -8,6 +8,8 @@ module Server.Utils
      , sideMenu
      ) where
 
+import           Control.Monad.Catch             ( MonadCatch )
+
 import           Database.Beam
 import           Database.BikeShare.Expressions
 
@@ -25,14 +27,14 @@ import           ServerEnv
 import           Version
 
 
-getLatestQueries :: ServerAppM LatestQueries
+getLatestQueries :: (HasEnv env m, MonadIO m, MonadCatch m) => m LatestQueries
 getLatestQueries = do
-  appEnv <- asks serverAppEnv
-  latest <- liftIO $ runAppM appEnv $ withPostgres $ runSelectReturningList $ selectWith queryLatestQueryLogs
-  pure $ latestQueryLogsToMap (envTimeZone appEnv) latest
+  tz <- getTz
+  latest <- withPostgres $ runSelectReturningList $ selectWith queryLatestQueryLogs
+  pure $ latestQueryLogsToMap tz latest
 
 -- | 'SideMenu' smart constructor.
-sideMenu :: (ToHtml a, ToHtmlComponents a) => a -> ServerAppM (PureSideMenu a)
+sideMenu :: (HasEnv env m, MonadIO m, ToHtml a, ToHtmlComponents a, MonadCatch m) => a -> m (PureSideMenu a)
 sideMenu page = do
   latest <- getLatestQueries
   pure $

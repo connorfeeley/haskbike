@@ -12,6 +12,8 @@ module Server.Routes
 
 import           AppEnv
 
+import           Control.Monad.Catch     ( MonadCatch )
+
 import           Database.Beam
 
 import           Servant
@@ -29,6 +31,8 @@ import           Server.Utils
 import           Server.VisualizationAPI
 
 import           ServerEnv
+
+import           UnliftIO
 
 
 -- | The API type.
@@ -48,11 +52,8 @@ type BikeShareExplorerAPI = NamedRoutes API
 -- routesLinks :: API (AsLink Link)
 -- routesLinks = allFieldLinks
 
--- apiProxy :: Proxy (ToServantApi API)
--- apiProxy = genericApi (Proxy :: Proxy API)
-
 -- | The API handlers.
-server :: API (AsServerT ServerAppM)
+server :: (WithServerEnv m, WithEnv (ServerEnv ServerAppM) m) => API (AsServerT m)
 server = API { debugApi         = debugApiHandler
              , homePage         = homePageHandler
              , dataApi          = statusHandler
@@ -65,10 +66,9 @@ server = API { debugApi         = debugApiHandler
 -- * Handlers.
 
 -- | Handler render the home page.
-homePageHandler :: ServerAppM (PureSideMenu IndexPage)
+homePageHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m, HasServerEnv env m) => m (PureSideMenu IndexPage)
 homePageHandler = do
-  _appEnv <- asks serverAppEnv
-  contactEmail <- asks serverContactEmail
+  contactEmail <- getServerContactEmail
   sideMenu $
     IndexPage { _stationStatusLink = fieldLink pageForStation
               , _contactEmail      = contactEmail

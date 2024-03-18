@@ -12,6 +12,8 @@ module Server.RobotsTXT
      , robotsHandler
      , robotsTxtHandler
      ) where
+import           Control.Monad.Catch    ( MonadCatch, MonadThrow )
+
 import qualified Data.ByteString.Char8  as BSW
 import           Data.Maybe             ( catMaybes )
 
@@ -22,6 +24,8 @@ import           Servant.Server.Generic
 
 import           ServerEnv
 
+import           UnliftIO
+
 -- * API handler.
 
 data RobotsAPI mode where
@@ -30,10 +34,10 @@ data RobotsAPI mode where
     } -> RobotsAPI mode
   deriving stock Generic
 
-robotsHandler :: RobotsAPI (AsServerT ServerAppM)
+robotsHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m, MonadIO m) => RobotsAPI (AsServerT m)
 robotsHandler =  RobotsAPI robotsTxtHandler
 
-robotsTxtHandler :: ServerAppM BSW.ByteString
+robotsTxtHandler :: (MonadIO m, MonadThrow m) => m BSW.ByteString
 robotsTxtHandler = pure $
   packRobots $ makeRobots AllUA AllAllowed (Just 1) ["debug", "data"]
 

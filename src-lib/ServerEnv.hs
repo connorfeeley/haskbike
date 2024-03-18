@@ -4,17 +4,17 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE RankNTypes            #-}
+{-# LANGUAGE UndecidableInstances  #-}
 
 -- |
 
 module ServerEnv
      ( module AppEnv
+     , HasServerEnv (..)
      , ServerAppM (..)
      , ServerEnv (..)
-     , adaptLogAction
-     , getAppEnvFromServer
-     , ntAppM
-     , ntServerAppM
+     , WithServerEnv
+     , ntServer
      , runServerAppM
      , runWithServerAppM
      , runWithServerAppMDebug
@@ -25,7 +25,7 @@ import           AppEnv
 
 import           Colog
 
-import           Control.Monad.Catch      ( MonadCatch, MonadThrow, catch, throwM )
+import           Control.Monad.Catch      ( MonadCatch, MonadThrow, throwM )
 import           Control.Monad.Except
 import           Control.Monad.Reader
 
@@ -40,99 +40,126 @@ import           Network.HTTP.Client.TLS
 import           Prelude                  ()
 import           Prelude.Compat
 
-import           Servant
+import qualified Servant                  as S
 
-import           UnliftIO                 ( MonadUnliftIO )
+import           UnliftIO
+
+-- Server application type
+newtype ServerAppM a where
+  ServerAppM :: { unServerAppM :: ReaderT (ServerEnv ServerAppM) IO a
+                  } -> ServerAppM a
+  deriving newtype ( Functor
+                   , Applicative
+                   , Monad
+                   , MonadIO
+                   , MonadUnliftIO
+                   , MonadReader (ServerEnv ServerAppM)
+                   , MonadFail
+                   , MonadThrow
+                   , MonadCatch )
+
+data ServerEnv m = ServerEnv
+  { serverEnvBase         :: !(Env AppM)
+  , serverPort            :: !Int                   -- ^ Port number on which the server is running
+  , serverTimeoutSeconds  :: !Int                   -- ^ Timeout in seconds for the server.
+  , serverGzipCompression :: !Bool                  -- ^ Whether to use gzip compression.
+  , serverMaxIntervals    :: Pico
+  , serverContactEmail    :: String
+  }
 
 
-{-
-The difference between 'ServerEnv AppM' and 'ServerEnv ServerAppM' lies in the context of how they are used.
+{- | Type alias for constraint for:
 
-1. 'ServerEnv AppM':
-        'ServerEnv' is taking an 'AppM' as an argument.
-        It means that the server environment is constructed on top of an `AppM` environment.
-        In plain words, we have a server-specific environment built upon a general application environment.
+1. Monad @m@ have access to environment @env@.
+2. Environment @env@ contains 'LogAction' that can log messages of type @msg@.
+3. Function call stack.
 
-2. 'ReaderT (ServerEnv AppM) IO a':
-        Here, `ReaderT` monad transformer wraps around the `ServerEnv AppM` environment,
-        implying that actions executed in the monad will have access to server context built on an `AppM` context.
-
-The significance of defining 'ServerAppM' in terms of 'ReaderT (ServerEnv AppM) IO' is that now the server logic (in 'ServerAppM' context)
-is also aware of 'AppM' context because of 'ServerEnv AppM' being inside 'ReaderT'.
-We are able to access states from both 'ServerEnv' and 'Env'.
-This is helpful in maintaining a clean separation of variables specific to both contexts while still maintaining access to them when needed.
+If you use this constraint, function call stack will be propagated and
+you will have access to code lines that log messages.
 -}
+type WithServerEnv m = HasServerEnv (ServerEnv ServerAppM) m
+
+-- | 'HasServerEnv' class
+class (HasLog env Message m, MonadReader env m, MonadError S.ServerError m, MonadUnliftIO m, MonadCatch m) => HasServerEnv env m where
+  getServerPort            :: m Int
+  getServerTimeoutSeconds  :: m Int
+  getServerGzipCompression :: m Bool
+  getServerMaxIntervals    :: m Pico
+  getServerContactEmail    :: m String
 
 
--- | ServerEnv data type that holds server-specific environment including App environment and the server port
--- The m parameter is the type variable which means 'ServerEnv' can hold environment of any Monad 'm'.
-data ServerEnv m where
-  ServerEnv :: { serverAppEnv          :: !(Env AppM)            -- ^ The environment specific for the application
-               , serverPort            :: !Int                   -- ^ Port number on which the server is running
-               , serverTimeoutSeconds  :: !Int                   -- ^ Timeout in seconds for the server.
-               , serverGzipCompression :: !Bool                  -- ^ Whether to use gzip compression.
-               , serverLogAction       :: !(LogAction m Message) -- ^ Maximum number of intervals to query for
-               , serverMaxIntervals    :: Pico
-               , serverContactEmail    :: String
-               } -> ServerEnv m
+-- | 'HasServerEnv' instance for 'ServerEnv'
+instance (Monad m, MonadReader (ServerEnv m) m, HasLog (ServerEnv m) Message m, MonadUnliftIO m, MonadError S.ServerError m, MonadCatch m) => HasServerEnv (ServerEnv m) m where
+  getServerPort            = asks serverPort
+  getServerTimeoutSeconds  = asks serverTimeoutSeconds
+  getServerGzipCompression = asks serverGzipCompression
+  getServerMaxIntervals    = asks serverMaxIntervals
+  getServerContactEmail    = asks serverContactEmail
 
--- Implement logging for the application environment.
-instance HasLog (ServerEnv m) Message m where
-  getLogAction :: ServerEnv m -> LogAction m Message
-  getLogAction = serverLogAction
+
+-- | 'HasEnv' instance for 'ServerAppM'
+instance (HasEnv (ServerEnv ServerAppM) ServerAppM) where
+    getLogDatabase      = asks (envLogDatabase       . serverEnvBase)
+    getMinSeverity      = asks (envMinSeverity       . serverEnvBase)
+    getTz               = asks (envTimeZone          . serverEnvBase)
+    getDBConnectionPool = asks (envDBConnectionPool  . serverEnvBase)
+    getClientManager    = asks (envClientManager     . serverEnvBase)
+    getBaseUrl          = asks (envBaseUrl           . serverEnvBase)
+
+
+-- * 'HasLog' instances
+
+adaptLogAction :: LogAction AppM msg -> LogAction ServerAppM msg
+adaptLogAction (LogAction logAction') = LogAction $ \msg -> ServerAppM $ do
+  appEnv <- asks serverEnvBase
+  liftIO $ flip runReaderT appEnv $ unAppM $ logAction' msg
+
+instance HasLog (ServerEnv ServerAppM) Message ServerAppM where
+  getLogAction :: ServerEnv ServerAppM -> LogAction ServerAppM Message
+  getLogAction = adaptLogAction . envLogAction . serverEnvBase
   {-# INLINE getLogAction #-}
 
-  setLogAction :: LogAction m Message -> ServerEnv m -> ServerEnv m
-  setLogAction newLogAction env = env { serverLogAction = newLogAction }
+  setLogAction :: LogAction ServerAppM Message -> ServerEnv ServerAppM -> ServerEnv ServerAppM
+  setLogAction (LogAction newLogAction) extEnv = do
+    extEnv { serverEnvBase = (serverEnvBase extEnv) { envLogAction = convertedAction } }
+    where
+      convertedAction = LogAction $ \msg -> AppM $
+        liftIO $ flip runReaderT extEnv $ unServerAppM $ newLogAction msg
   {-# INLINE setLogAction #-}
 
--- | ServerAppM is the monad in which the server side computations are carried out.
--- It encompasses both the server-specific environment and the application-specific environment.
--- The 'unServerAppM' function is used to strip away the ServerAppM constructor revealing the underlying ReaderT.
-newtype ServerAppM a = ServerAppM
-  { unServerAppM :: ReaderT (ServerEnv ServerAppM) IO a
-  } deriving newtype (Functor, Applicative, Monad, MonadIO, MonadUnliftIO, MonadReader (ServerEnv ServerAppM), MonadFail, MonadThrow, MonadCatch)
+instance HasLog (ServerEnv m) Message AppM where
+  getLogAction :: ServerEnv m -> LogAction AppM Message
+  getLogAction = getLogAction . serverEnvBase
+  {-# INLINE getLogAction #-}
+
+  setLogAction :: LogAction AppM Message -> ServerEnv m -> ServerEnv m
+  setLogAction newLogAction env = env { serverEnvBase = setLogAction newLogAction (serverEnvBase env) }
+  {-# INLINE setLogAction #-}
 
 
--- | This instance allows us to use Servant's throwError and catchError inside actions of the ServerAppM monad.
-instance MonadError ServerError ServerAppM where
+-- | MonadError instance for 'ServerAppM'
+instance MonadError S.ServerError ServerAppM where
   throwError = ServerAppM . throwM
   catchError action handler = ServerAppM $ catch (unServerAppM action) (unServerAppM . handler)
-
-
--- | Run the server application in the IO monad.
--- This function takes ServerEnv that has been initialized with the AppM environment and server configuration,
--- and a ServerAppM action that it then lifts into an IO.
-runServerAppM :: ServerEnv ServerAppM -> ServerAppM a -> IO a
-runServerAppM senv app = runReaderT (unServerAppM app) senv
-
-
--- | Returns the application environment held within the ServerEnv.
--- This is useful when we want access to the AppM environment from within ServerAppM.
-getAppEnvFromServer :: ServerAppM (Env AppM)
-getAppEnvFromServer = asks serverAppEnv
 
 
 -- | Natural transformation function to lift ServerAppM into the Handler monad.
 -- ServerAppM actions are transformed into Handler actions using this function.
 -- The Handler Monad is the one used by Servant for route handlers,
 -- so the natural transformation is necessary to tell Servant how to operate with ServerAppM actions.
-ntServerAppM :: ServerEnv ServerAppM -> ServerAppM a -> Handler a
-ntServerAppM s a =
-  let r = runReaderT (unServerAppM a) s
-  in liftIO r
+-- ntServerAppM :: MonadIO m => ServerEnv env m ->  a -> m a
+-- ntServerAppM s a =
+--   let r = runReaderT (unServerAppM a) s
+--   in liftIO r
+-- ntServerAppM :: MonadIO m2 => ServerEnv env m -> ServerAppM m a -> m2 a
+ntServer :: r -> ReaderT r m a -> m a
+ntServer env action = runReaderT action env
 
 
--- | Natural transformation function to lift AppM into the Handler monad.
--- This function allows us to lift actions from AppM monad into the Handler monad,
--- so that Servant can understand and utilize the AppM functionalities.
-ntAppM :: Env AppM -> AppM a -> Handler a
-ntAppM s a =
-  let r = runReaderT (unAppM a) s
-  in liftIO r
+-- runServerAppM :: ServerEnv ServerAppM -> ServerAppM a -> IO a
+runServerAppM :: ServerEnv ServerAppM -> ServerAppM a -> IO a
+runServerAppM env app = flip runReaderT env $ unServerAppM app
 
-
--- * Helper functions to run ServerAppM actions (for debugging and test).
 
 -- | Helper function to run a computation in the ServerAppM monad, returning an IO monad.
 runWithServerAppM :: String -> ServerAppM a -> IO a
@@ -141,11 +168,10 @@ runWithServerAppM dbname action = do
   currentTimeZone <- getCurrentTimeZone
   clientManager <- liftIO $ newManager tlsManagerSettings
   let env = mainEnv Info False True currentTimeZone connPool clientManager
-  let serverEnv = ServerEnv { serverAppEnv          = env
+  let serverEnv = ServerEnv { serverEnvBase         = env
                             , serverPort            = 8081
                             , serverTimeoutSeconds  = 5 * 60
                             , serverGzipCompression = True
-                            , serverLogAction       = simpleMessageAction
                             , serverMaxIntervals    = 20
                             , serverContactEmail    = "bikes@cfeeley.org"
                             }
@@ -159,11 +185,10 @@ runWithServerAppMSuppressLog dbname action = do
   currentTimeZone <- getCurrentTimeZone
   clientManager <- liftIO $ newManager tlsManagerSettings
   let env = mainEnv Info False True currentTimeZone connPool clientManager
-  let serverEnv = ServerEnv { serverAppEnv          = env
+  let serverEnv = ServerEnv { serverEnvBase         = env
                             , serverPort            = 8081
                             , serverTimeoutSeconds  = 5 * 60
                             , serverGzipCompression = True
-                            , serverLogAction       = mempty
                             , serverMaxIntervals    = 20
                             , serverContactEmail    = "bikes@cfeeley.org"
                             }
@@ -177,11 +202,10 @@ runWithServerAppMDebug dbname action = do
   currentTimeZone <- getCurrentTimeZone
   clientManager <- liftIO $ newManager tlsManagerSettings
   let env = mainEnv Debug True True currentTimeZone connPool clientManager
-  let serverEnv = ServerEnv { serverAppEnv          = env
+  let serverEnv = ServerEnv { serverEnvBase         = env
                             , serverPort            = 8081
                             , serverTimeoutSeconds  = 5 * 60
                             , serverGzipCompression = True
-                            , serverLogAction       = simpleMessageAction
                             , serverMaxIntervals    = 20
                             , serverContactEmail    = "bikes@cfeeley.org"
                             }
@@ -189,8 +213,7 @@ runWithServerAppMDebug dbname action = do
 
 
 -- Function to adapt LogAction from AppM to ServerAppM
-adaptLogAction :: LogAction AppM Message -> LogAction ServerAppM Message
-adaptLogAction (LogAction logAction') = LogAction $ \msg -> ServerAppM $ do
-  env <- ask -- Get the ServerEnv within ServerAppM context
-  let appEnv = serverAppEnv env
-  liftIO $ runReaderT (unAppM $ logAction' msg) appEnv
+-- adaptLogAction :: LogAction AppM msg -> LogAction ServerAppM msg
+-- adaptLogAction (LogAction logAction') = LogAction $ \msg -> ServerAppM $ do
+--   appEnv <- getServerAppEnv
+--   liftIO $ runReaderT (unAppM $ logAction' msg) appEnv

@@ -13,8 +13,6 @@ import           Data.Time
 
 import           Database.BikeShare.StatusDeltaFields
 
-import           Test.Tasty.HUnit
-
 
 -- * Test data.
 

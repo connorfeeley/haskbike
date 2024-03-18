@@ -34,12 +34,13 @@ import           Servant.Client
 
 import           Text.Pretty.Simple.Extras
 
-import           UnliftIO                      ( concurrently, liftIO )
+import           UnliftIO                      ( MonadIO, MonadUnliftIO, concurrently, liftIO )
 
 
 -- | Dispatch CLI arguments to the query interface.
-dispatchQuery :: QueryOptions
-              -> AppM ()
+dispatchQuery :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m)
+              => QueryOptions
+              -> m ()
 dispatchQuery options = do
   -- Update database with latest station data.
   when (optRefresh options) refreshStationData
@@ -51,7 +52,8 @@ dispatchQuery options = do
 
 
 -- | Refresh the database with the latest information and status from the API.
-refreshStationData :: AppM ()
+refreshStationData :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m)
+                   => m ()
 refreshStationData = do
   log D "Concurrently fetching station information and status from API."
   (reqInfo, reqStatus) <- requestStationDataConcurrently
@@ -66,15 +68,17 @@ refreshStationData = do
 
 
 -- | Concurrently request station information and status.
-requestStationDataConcurrently :: AppM (Either ClientError (ResponseWrapper [StationInformation]), Either ClientError (ResponseWrapper [StationStatus]))
+requestStationDataConcurrently :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m)
+                               => m (Either ClientError (ResponseWrapper [StationInformation]), Either ClientError (ResponseWrapper [StationStatus]))
 requestStationDataConcurrently = concurrently
-  (runQueryM stationInformation :: AppM (Either ClientError (ResponseWrapper [StationInformation])))
-  (runQueryM stationStatus      :: AppM (Either ClientError (ResponseWrapper [StationStatus])))
+  (runQueryM stationInformation :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m) => m (Either ClientError (ResponseWrapper [StationInformation])))
+  (runQueryM stationStatus      :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m) => m (Either ClientError (ResponseWrapper [StationStatus])))
 
 
 -- | Query the database for the station with the given ID.
-queryByStationId :: Int
-                 -> AppM ()
+queryByStationId :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m)
+                 => Int
+                 -> m ()
 queryByStationId stationId = do
   log I $ toStrict $ "Querying station ID '" <> (pack . show) stationId <> "'"
 
@@ -91,8 +95,9 @@ queryByStationId stationId = do
 
 
 -- | Query the database for stations with names matching the given pattern.
-queryByStationName :: MatchMethod String
-                   -> AppM ()
+queryByStationName :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m)
+                   => MatchMethod String
+                   -> m ()
 queryByStationName stationMatch = do
   log I $ toStrict $ "Querying station names like '" <> pack stationName <> "'"
 
@@ -113,17 +118,19 @@ queryByStationName stationMatch = do
     nameTransformer prepend name append = List.intercalate "" [prepend, name, append]
 
 -- | Query the database for the status of the given station tuple.
-queryStatus :: String        -- ^ Header
+queryStatus :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m)
+            => String        -- ^ Header
             -> (Int, String) -- ^ (station_id, station_name)
-            -> AppM [Text]
+            -> m [Text]
 queryStatus header stationTuple = do
   -- Query the latest status for the given station tuple.
   resultsText <- queryAndFmtStationStatus header stationTuple
   pure $ withHeader (pack header) resultsText
 
-queryAndFmtStationStatus :: String -> (Int, String) -> AppM [Text]
+queryAndFmtStationStatus :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m)
+                         => String -> (Int, String) -> m [Text]
 queryAndFmtStationStatus header (id', name') = do
-  currentTimeZone <- asks envTimeZone  -- Fetch the TimeZone from the environment
+  currentTimeZone <- getTz  -- Fetch the TimeZone from the environment
 
   latest <- queryStationStatusLatest id'
 

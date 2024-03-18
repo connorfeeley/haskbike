@@ -15,6 +15,7 @@ module Database.BikeShare.Utils
 import           AppEnv
 
 import           Control.Monad                 ( void )
+import           Control.Monad.Catch           ( MonadCatch, MonadThrow )
 
 import           Data.Pool                     ( withResource )
 import           Data.String                   ( fromString )
@@ -32,7 +33,8 @@ dropCascade :: String -> Query
 dropCascade tableName = fromString $ "DROP TABLE IF EXISTS " ++ tableName ++" CASCADE"
 
 -- | Drop all tables in the named database.
-dropTables :: AppM ()
+dropTables :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m)
+           => m ()
 dropTables = do
   pool <- withConnPool
   void . liftIO . withResource pool $ \conn -> do

@@ -13,6 +13,8 @@ module Server.VisualizationAPI
 import           Colog
 
 import           Control.Lens
+import           Control.Monad.Catch                          ( MonadCatch, MonadThrow )
+import           Control.Monad.Except                         ( MonadError )
 
 import           Data.Default.Class                           ( def )
 import           Data.List                                    ( sortOn )
@@ -46,6 +48,8 @@ import           Server.Utils
 import           ServerEnv
 
 import           TimeInterval
+
+import           UnliftIO                                     ( MonadUnliftIO )
 
 
 -- | Visualization API handler.
@@ -90,7 +94,7 @@ data VisualizationAPI mode where
 
 -- * Handlers.
 
-visualizationHandler :: VisualizationAPI (AsServerT ServerAppM)
+visualizationHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m, MonadError ServerError m) => VisualizationAPI (AsServerT m)
 visualizationHandler = VisualizationAPI
   { pageForStation       = stationStatusVisualizationPage
   , systemStatus         = systemStatusVisualizationPage
@@ -101,13 +105,12 @@ visualizationHandler = VisualizationAPI
   }
 
 -- | Create the station status visualization page record.
-stationStatusVisualizationPage :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM (PureSideMenu StationStatusVisualizationPage)
+stationStatusVisualizationPage :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m, MonadError ServerError m) => Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> m (PureSideMenu StationStatusVisualizationPage)
 stationStatusVisualizationPage (Just stationId) startTime endTime = do
-  appEnv <- asks serverAppEnv
-  let tz = envTimeZone appEnv
+  tz <- getTz
   currentUtc <- liftIO getCurrentTime
 
-  info <- liftIO $ runAppM appEnv $ withPostgres $ runSelectReturningList $ selectWith $ infoByIdExpr [fromIntegral stationId]
+  info <- withPostgres $ runSelectReturningList $ selectWith $ infoByIdExpr [fromIntegral stationId]
 
   case info of
     [info'] -> do
@@ -127,10 +130,9 @@ stationStatusVisualizationPage Nothing _ _ =
 
 
 -- | Create the system status visualization page record.
-systemStatusVisualizationPage :: Maybe LocalTime -> Maybe LocalTime -> ServerAppM (PureSideMenu SystemStatusVisualizationPage)
+systemStatusVisualizationPage :: (HasEnv env m, MonadIO m, MonadCatch m) => Maybe LocalTime -> Maybe LocalTime -> m (PureSideMenu SystemStatusVisualizationPage)
 systemStatusVisualizationPage startTime endTime = do
-  appEnv <- asks serverAppEnv
-  let tz = envTimeZone appEnv
+  tz <- getTz
   currentUtc <- liftIO getCurrentTime
 
   let latest    = maybe currentUtc (localTimeToUTC tz) endTime
@@ -138,7 +140,7 @@ systemStatusVisualizationPage startTime endTime = do
   let increment = minsPerHourlyInterval 4 -- 15 minutes
 
   -- TODO: querySystemStatusAtTime should probably just return this type directly.
-  systemStatus <- liftIO $ runAppM appEnv $ querySystemStatusAtRange earliest latest increment
+  systemStatus <- querySystemStatusAtRange earliest latest increment
   let systemStatusInfo st =
         SystemStatusVisualizationInfo
         { sysStatVisInfNumStations   = 0
@@ -161,15 +163,14 @@ systemStatusVisualizationPage startTime endTime = do
                                   }
 
 -- | Display a list of stations.
-stationListPageHandler :: Maybe StationListFilter -> ServerAppM (PureSideMenu (StationList [(StationInformation, StationStatus)]))
+stationListPageHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m) => Maybe StationListFilter -> m (PureSideMenu (StationList [(StationInformation, StationStatus)]))
 stationListPageHandler stations  = stationListPage (defaultStationFilter stations)
 
-stationListPage :: StationListFilter -> ServerAppM (PureSideMenu (StationList [(StationInformation, StationStatus)]))
+stationListPage :: (HasEnv env m, MonadIO m, MonadCatch m) => StationListFilter -> m (PureSideMenu (StationList [(StationInformation, StationStatus)]))
 stationListPage filterSelection = do
-  appEnv <- asks serverAppEnv
   logInfo "Rendering station list"
 
-  latest <- liftIO $ runAppM appEnv $ withPostgres $ runSelectReturningList $ select queryLatestStatuses
+  latest <- withPostgres $ runSelectReturningList $ select queryLatestStatuses
 
   let sorted = sortOn (_infoStationId . fst) latest
   sideMenu $
@@ -188,7 +189,7 @@ defaultStationFilter :: Maybe StationListFilter -> StationListFilter
 defaultStationFilter (Just stations) = stations
 defaultStationFilter Nothing         = AllStations
 
-stationEmptyFullListPage :: Maybe LocalTime -> Maybe LocalTime -> ServerAppM (PureSideMenu (StationList [(StationInformation, StationStatus, EmptyFull)]))
+stationEmptyFullListPage :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m) => Maybe LocalTime -> Maybe LocalTime -> m (PureSideMenu (StationList [(StationInformation, StationStatus, EmptyFull)]))
 stationEmptyFullListPage start end = do
   logInfo $ "Rendering station empty/full list for time [" <> tshow start <> " - " <> tshow end <> "]"
 
@@ -204,10 +205,9 @@ stationEmptyFullListPage start end = do
     tshow = T.pack . show
 
 -- | Create the system status visualization page record.
-systemInfoVisualizationPage :: Maybe LocalTime -> Maybe LocalTime -> ServerAppM (PureSideMenu SystemInfoVisualizationPage)
+systemInfoVisualizationPage :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m) => Maybe LocalTime -> Maybe LocalTime -> m (PureSideMenu SystemInfoVisualizationPage)
 systemInfoVisualizationPage startTime endTime = do
-  appEnv <- asks serverAppEnv
-  let tz = envTimeZone appEnv
+  tz <- getTz
   currentUtc <- liftIO getCurrentTime
 
   sideMenu $
@@ -220,11 +220,9 @@ systemInfoVisualizationPage startTime endTime = do
     , _sysInfoVisPageSysStatusLink = fieldLink systemStatus Nothing Nothing
     }
 
-performanceCsvPageHandler :: Maybe LocalTime -> Maybe LocalTime -> ServerAppM (PureSideMenu PerformanceCSV)
+performanceCsvPageHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m) => Maybe LocalTime -> Maybe LocalTime -> m (PureSideMenu PerformanceCSV)
 performanceCsvPageHandler startTime endTime = do
-  appEnv <- asks serverAppEnv
-  let tz = envTimeZone appEnv
-  -- AppM actions can be lifted into ServerAppM by using a combination of liftIO and runReaderT.
+  tz <- getTz
   currentUtc <- liftIO getCurrentTime
 
   logInfo "Rendering performance CSV page"

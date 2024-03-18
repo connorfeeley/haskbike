@@ -13,6 +13,7 @@ import           AppEnv
 import           Colog
 
 import           Control.Lens                            hiding ( (.=) )
+import           Control.Monad.Catch                     ( MonadCatch )
 import           Control.Monad.Except
 
 import           Data.Aeson
@@ -80,18 +81,15 @@ fromBeamStationStatusToVisJSON status =
                              }
 
 
-generateJsonDataSource :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM [StationStatusVisualization]
+generateJsonDataSource :: (HasEnv env m, MonadIO m, MonadCatch m, HasServerEnv env m) => Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> m [StationStatusVisualization]
 generateJsonDataSource (Just stationId) startTime endTime = do
   logDebug $ "Generating JSON data source for station " <> showt stationId <> ": " <> (T.pack . show) startTime <> " to " <> (T.pack . show) endTime
-  -- Accessing the inner environment by using the serverEnv accessor.
-  appEnv <- getAppEnvFromServer
-  let tz = envTimeZone appEnv
-  -- AppM actions can be lifter into ServerAppM by using a combination of liftIO and runReaderT.
+  tz <- getTz
   currentUtc <- liftIO getCurrentTime
 
   let params = StatusDataParams tz currentUtc (TimePair startTime endTime tz currentUtc)
   let range = enforceTimeRangeBounds params
-  result <- liftIO $ runAppM appEnv $ withPostgres $
+  result <- withPostgres $
     runSelectReturningList $ select $ -- limit_ 10000 $
     statusBetweenExpr (fromIntegral stationId) (localTimeToUTC tz (earliestTime  range)) (localTimeToUTC tz (latestTime range))
 
@@ -99,21 +97,18 @@ generateJsonDataSource (Just stationId) startTime endTime = do
 
 generateJsonDataSource Nothing startTime endTime = do
   logDebug $ "Generating JSON data source for system: " <> " " <> (T.pack . show) startTime <> " to " <> (T.pack . show) endTime
-  env <- ask
-  -- Accessing the inner environment by using the serverEnv accessor.
-  appEnv <- getAppEnvFromServer
-  let tz = envTimeZone appEnv
-  -- AppM actions can be lifter into ServerAppM by using a combination of liftIO and runReaderT.
+  tz <- getTz
+  maxIntervals <- getServerMaxIntervals
   currentUtc <- liftIO getCurrentTime
 
   let params = StatusDataParams tz currentUtc (TimePair startTime endTime tz currentUtc)
   let rangeBounded = enforceTimeRangeBounds params
   let start = localTimeToUTC tz (earliestTime rangeBounded)
   let end = localTimeToUTC tz (latestTime rangeBounded)
-  let rangeIncrement = secondsPerIntervalForRange start end (serverMaxIntervals env)
+  let rangeIncrement = secondsPerIntervalForRange start end maxIntervals
 
   logDebug $ "Start: " <> (T.pack . show) start <> ", end: " <> (T.pack . show) end <> ", increment: " <> (T.pack . show) rangeIncrement <> "s"
-  statusAtRange <- liftIO $ runAppM appEnv $ withPostgres $ runSelectReturningList $ selectWith $
+  statusAtRange <- withPostgres $ runSelectReturningList $ selectWith $
     querySystemStatusAtRangeExpr start end (div rangeIncrement 60)
   (pure . map toVisualization) statusAtRange
   where
@@ -132,19 +127,15 @@ generateJsonDataSource Nothing startTime endTime = do
                                  }
 
 
-generateJsonDataSourceIntegral :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM [StatusIntegral]
+generateJsonDataSourceIntegral :: (HasEnv env m, MonadIO m, MonadCatch m) => Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> m [StatusIntegral]
 generateJsonDataSourceIntegral stationId startTime endTime = do
-  -- Accessing the inner environment by using the serverEnv accessor.
-  appEnv <- getAppEnvFromServer
-  let tz = envTimeZone appEnv
-  -- AppM actions can be lifter into ServerAppM by using a combination of liftIO and runReaderT.
+  tz <- getTz
   currentUtc <- liftIO getCurrentTime
 
   let params = StatusDataParams tz currentUtc (TimePair startTime endTime tz currentUtc)
   let range = enforceTimeRangeBounds params
 
-  liftIO $ runAppM appEnv $
-    queryIntegratedStatus
+  queryIntegratedStatus
     (StatusVariationQuery (fromIntegral <$> stationId)
       [ EarliestTime (localTimeToUTC tz (earliestTime  range))
       , LatestTime (localTimeToUTC tz (latestTime range))
@@ -152,19 +143,15 @@ generateJsonDataSourceIntegral stationId startTime endTime = do
     )
 
 
-generateJsonDataSourceFactor :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> ServerAppM [StatusFactor]
+generateJsonDataSourceFactor :: (HasEnv env m, MonadIO m, MonadCatch m) => Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> m [StatusFactor]
 generateJsonDataSourceFactor stationId startTime endTime = do
-  -- Accessing the inner environment by using the serverEnv accessor.
-  appEnv <- getAppEnvFromServer
-  let tz = envTimeZone appEnv
-  -- AppM actions can be lifter into ServerAppM by using a combination of liftIO and runReaderT.
+  tz <- getTz
   currentUtc <- liftIO getCurrentTime
 
   let params = StatusDataParams tz currentUtc (TimePair startTime endTime tz currentUtc)
   let range = enforceTimeRangeBounds params
 
-  liftIO $ runAppM appEnv $
-    queryStatusFactors
+  queryStatusFactors
     (StatusVariationQuery (fromIntegral <$> stationId)
       [ EarliestTime (localTimeToUTC tz (earliestTime  range))
       , LatestTime (localTimeToUTC tz (latestTime range))

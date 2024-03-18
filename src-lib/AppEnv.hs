@@ -8,7 +8,7 @@ module AppEnv
      , Env (..)
      , HasEnv (..)
      , Message
-     , WithAppMEnv
+     , WithEnv
      , ask
      , asks
      , executeWithConnPool
@@ -46,7 +46,6 @@ import           Database.BikeShare.Connection          ( mkDbConnectInfo )
 import           Database.PostgreSQL.Simple.Transaction ( withTransaction )
 
 import           GHC.Conc                               ( numCapabilities )
-import           GHC.Stack                              ( HasCallStack )
 
 import           Network.HTTP.Client                    ( Manager, newManager )
 import           Network.HTTP.Client.TLS                ( tlsManagerSettings )
@@ -85,20 +84,18 @@ newtype AppM a where
                    , MonadCatch )
 
 
-class (HasLog env Message m, MonadReader env m) => HasEnv env m where
-    getLogAction        :: m (LogAction m Message)
+class (HasLog env Message m, MonadReader env m, MonadIO m) => HasEnv env m where
     getLogDatabase      :: m Bool
     getMinSeverity      :: m Severity
-    getTimeZone         :: m TimeZone
+    getTz               :: m TimeZone
     getDBConnectionPool :: m (Pool Connection)
     getClientManager    :: m Manager
     getBaseUrl          :: m BaseUrl
 
-instance (Monad m, MonadReader (Env m) m) => HasEnv (Env m) m where
-    getLogAction        = asks envLogAction
+instance (Monad m, MonadReader (Env m) m, MonadIO m) => HasEnv (Env m) m where
     getLogDatabase      = asks envLogDatabase
     getMinSeverity      = asks envMinSeverity
-    getTimeZone         = asks envTimeZone
+    getTz               = asks envTimeZone
     getDBConnectionPool = asks envDBConnectionPool
     getClientManager    = asks envClientManager
     getBaseUrl          = asks envBaseUrl
@@ -112,7 +109,7 @@ instance (Monad m, MonadReader (Env m) m) => HasEnv (Env m) m where
 If you use this constraint, function call stack will be propagated and
 you will have access to code lines that log messages.
 -}
-type WithAppMEnv env msg m = (MonadReader env m, HasLog env msg m, HasCallStack, MonadIO m, MonadUnliftIO m, MonadFail m, MonadThrow m, MonadCatch m)
+type WithEnv env m = HasEnv env m
 
 instance MonadError ServerError AppM where
   throwError = AppM . throwM
@@ -176,7 +173,7 @@ instance HasLog (Env m) Message m where
   {-# INLINE setLogAction #-}
 
 -- | Simple environment for the main application.
-simpleEnv :: TimeZone -> Pool Connection -> Manager -> Env AppM
+simpleEnv :: (HasEnv env m, MonadIO m, MonadThrow m) => TimeZone -> Pool Connection -> Manager -> Env m
 simpleEnv timeZone connPool manager =
   Env { envLogAction        = mainLogAction Info False
       , envLogDatabase      = False
@@ -188,7 +185,7 @@ simpleEnv timeZone connPool manager =
       }
 
 -- | Environment for the main application.
-mainEnv :: Severity -> Bool -> Bool -> TimeZone -> Pool Connection -> Manager -> Env AppM
+mainEnv :: (MonadIO m, MonadThrow m) => Severity -> Bool -> Bool -> TimeZone -> Pool Connection -> Manager -> Env m
 mainEnv sev logDatabase logRichOutput timeZone connPool manager =
   Env { envLogAction        = mainLogAction sev logRichOutput
       , envLogDatabase      = logDatabase
@@ -225,7 +222,7 @@ runWithAppMSuppressLog dbname action = do
   connPool <- mkDbConnectInfo dbname >>= mkDatabaseConnectionPool
   currentTimeZone <- getCurrentTimeZone
   clientManager <- liftIO $ newManager tlsManagerSettings
-  let env = (mainEnv Info False True currentTimeZone connPool clientManager) { envLogAction = mempty }
+  let env = (mainEnv Info False True currentTimeZone connPool clientManager :: Env AppM) { envLogAction = mempty }
   runAppM env action
 
 
@@ -238,6 +235,6 @@ runWithAppMDebug dbname action = do
   let env = mainEnv Debug True True currentTimeZone connPool clientManager
   runAppM env action
 
-mkDatabaseConnectionPool :: ConnectInfo -> IO (Pool Connection)
-mkDatabaseConnectionPool connInfo = newPool (defaultPoolConfig (connect connInfo) close 30 numCapabilities)
+mkDatabaseConnectionPool :: MonadIO m => ConnectInfo -> m (Pool Connection)
+mkDatabaseConnectionPool connInfo = liftIO $ newPool (defaultPoolConfig (connect connInfo) close 30 numCapabilities)
 {-# INLINE mkDatabaseConnectionPool #-}
