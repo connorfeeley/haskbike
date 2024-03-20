@@ -2,7 +2,7 @@
 
 -- | This module contains the BikeShare API client.
 
-module API.Client
+module Haskbike.API.Client
      ( bikeShareAPIClient
      , handleResponse
      , mkClientManager
@@ -19,28 +19,26 @@ module API.Client
      , versions
      ) where
 
-import           API.BikeShare
-import           API.ResponseWrapper
-import           API.StationInformation
-import           API.StationStatus
-import           API.SystemInformation
+import           Control.Monad.Catch             ( MonadCatch, MonadThrow )
 
-import           AppEnv
-
-import           BikeShareAPI
-
-import           Control.Monad.Catch     ( MonadCatch, MonadThrow )
-
-import           Data.Aeson              ( Object )
+import           Data.Aeson                      ( Object )
 import           Data.Proxy
 
-import           Network.HTTP.Client     ( Manager, newManager )
-import           Network.HTTP.Client.TLS ( tlsManagerSettings )
+import           Haskbike.API.BikeShare
+import           Haskbike.API.BikeShareAPI
+import           Haskbike.API.ResponseWrapper
+import           Haskbike.API.StationInformation
+import           Haskbike.API.StationStatus
+import           Haskbike.API.SystemInformation
+import           Haskbike.AppEnv
+
+import           Network.HTTP.Client             ( Manager, newManager )
+import           Network.HTTP.Client.TLS         ( tlsManagerSettings )
 
 import           Servant.API
 import           Servant.Client
 
-import           Text.Pretty.Simple      ( pPrintString )
+import           Text.Pretty.Simple              ( pPrintString )
 
 import           UnliftIO
 

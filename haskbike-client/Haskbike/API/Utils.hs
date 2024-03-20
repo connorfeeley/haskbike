@@ -1,18 +1,18 @@
--- | Utility functions for the API.
+-- | Utility functions for the Haskbike.API.
 
-module API.Utils
+module Haskbike.API.Utils
      ( StationStatusSimple (..)
      , baseStatus
      , mkStatusSimple
      , stationStatusFromSimple
      ) where
 
-import           API.StationStatus
-import           API.VehicleType
-
 import           Data.Time
 
-import           GHC.Generics      ( Generic )
+import           GHC.Generics               ( Generic )
+
+import           Haskbike.API.StationStatus
+import           Haskbike.API.VehicleType
 
 
  {- |

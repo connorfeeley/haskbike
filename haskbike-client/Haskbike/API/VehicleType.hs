@@ -1,6 +1,6 @@
 -- |
 
-module API.VehicleType where
+module Haskbike.API.VehicleType where
 
 import           Data.Aeson
 import           Data.Attoparsec.Text ( Parser, choice, parseOnly, string )

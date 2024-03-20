@@ -1,4 +1,4 @@
--- | This module contains the data types for the BikeShare station_information API.
+-- | This module contains the data types for the BikeShare station_information Haskbike.API.
 
 {-# LANGUAGE DeriveGeneric         #-}
 {-# LANGUAGE FlexibleInstances     #-}
@@ -6,14 +6,12 @@
 {-# LANGUAGE TemplateHaskell       #-}
 {-# LANGUAGE UndecidableInstances  #-}
 
-module API.StationInformation
+module Haskbike.API.StationInformation
      ( PhysicalConfiguration (..)
      , RentalMethod (..)
      , RentalURIs (..)
      , StationInformation (..)
      ) where
-
-import           API.Classes
 
 import           Control.Lens         hiding ( (.=) )
 
@@ -26,6 +24,8 @@ import           Data.Text            ( pack )
 import qualified Data.Text            as Text
 
 import           GHC.Generics
+
+import           Haskbike.API.Classes
 
 
 -- | Enumeration representing a BikeShare station physical configuration.

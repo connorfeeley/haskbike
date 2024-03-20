@@ -3,7 +3,7 @@
 {-# LANGUAGE DataKinds          #-}
 {-# LANGUAGE ExplicitNamespaces #-}
 
-module API.DebugClient
+module Haskbike.API.DebugClient
      ( bikeShareAPIClient
        -- , handleResponse
        -- , mkClientManager
@@ -19,16 +19,16 @@ module API.DebugClient
      , versions
      ) where
 
-import           API.ResponseWrapper
-import           API.StationInformation
-import           API.StationStatus
-import           API.SystemInformation
-
 import           BikeShareAPI
 
 import           Control.Monad.Free
 
 import           Data.Aeson                         ( Object )
+
+import           Haskbike.API.ResponseWrapper
+import           Haskbike.API.StationInformation
+import           Haskbike.API.StationStatus
+import           Haskbike.API.SystemInformation
 
 import qualified Network.HTTP.Client                as HTTP
 import           Network.HTTP.Client.TLS            ( tlsManagerSettings )

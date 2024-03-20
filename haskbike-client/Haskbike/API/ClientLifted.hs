@@ -1,6 +1,6 @@
--- | This module provides a lifted version of the API.Client module.
+-- | This module provides a lifted version of the Haskbike.Haskbike.API.Client module.
 
-module API.ClientLifted
+module Haskbike.API.ClientLifted
      ( liftClientM
      , runQueryM
        -- Lifted API client functions
@@ -13,22 +13,21 @@ module API.ClientLifted
      , versionsM
      ) where
 
-import           API.BikeShare
-import           API.Client
-import           API.ResponseWrapper
-import           API.StationInformation
-import           API.StationStatus
-import           API.SystemInformation
-
-import           AppEnv
-
-import           Colog                  ( logException )
+import           Colog                           ( logException )
 
 import           Control.Monad.Catch
 
-import           Data.Aeson             ( Object )
+import           Data.Aeson                      ( Object )
 
-import           Prelude                hiding ( log )
+import           Haskbike.API.BikeShare
+import           Haskbike.API.Client
+import           Haskbike.API.ResponseWrapper
+import           Haskbike.API.StationInformation
+import           Haskbike.API.StationStatus
+import           Haskbike.API.SystemInformation
+import           Haskbike.AppEnv
+
+import           Prelude                         hiding ( log )
 
 import           Servant.Client
 

@@ -1,6 +1,6 @@
 -- |
 
-module API.Classes
+module Haskbike.API.Classes
      ( HasDataField (..)
      ) where
 

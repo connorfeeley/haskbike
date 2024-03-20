@@ -1,16 +1,15 @@
--- | Miscellanous utilities for the client API. Mostly useful for REPL testing.
+-- | Miscellanous utilities for the client Haskbike.API. Mostly useful for REPL testing.
 
-module API.ClientUtils
+module Haskbike.API.ClientUtils
      ( fromRight'
      , unsafeQuery
      ) where
 
-import           API.ClientLifted
-import           API.ResponseWrapper ( ResponseWrapper, _respData )
+import           Haskbike.API.ClientLifted
+import           Haskbike.API.ResponseWrapper ( ResponseWrapper, _respData )
+import           Haskbike.AppEnv
 
-import           AppEnv
-
-import           Servant.Client      ( ClientM )
+import           Servant.Client               ( ClientM )
 
 
 -- | Fetch from bikeshare API unsafely. Throws an error if the request fails to be decoded.

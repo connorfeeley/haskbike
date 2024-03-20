@@ -1,9 +1,9 @@
--- | This module contains the data types for the BikeShare station_status API.
+-- | This module contains the data types for the BikeShare station_status Haskbike.API.
 
 {-# LANGUAGE DeriveGeneric   #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module API.StationStatus
+module Haskbike.API.StationStatus
      ( StationStatus (..)
      , StationStatusString (..)
      , VehicleDock (..)
@@ -31,22 +31,22 @@ module API.StationStatus
      , updateMap
      ) where
 
-import           API.Classes
-import           API.VehicleType
+import           Control.Lens             hiding ( (.=) )
 
-import           Control.Lens         hiding ( (.=) )
-
-import           Data.Aeson           ( FromJSON (parseJSON), KeyValue ((.=)), ToJSON (toJSON), Value (String), object,
-                                        withObject, withText, (.:), (.:?) )
-import           Data.Attoparsec.Text ( Parser, choice, parseOnly, string )
-import           Data.Either          ( fromRight )
-import           Data.Functor         ( ($>) )
-import qualified Data.Map             as Map
-import qualified Data.Text            as Text
+import           Data.Aeson               ( FromJSON (parseJSON), KeyValue ((.=)), ToJSON (toJSON), Value (String),
+                                            object, withObject, withText, (.:), (.:?) )
+import           Data.Attoparsec.Text     ( Parser, choice, parseOnly, string )
+import           Data.Either              ( fromRight )
+import           Data.Functor             ( ($>) )
+import qualified Data.Map                 as Map
+import qualified Data.Text                as Text
 import           Data.Time
 import           Data.Time.Extras
 
-import           GHC.Generics         ( Generic )
+import           GHC.Generics             ( Generic )
+
+import           Haskbike.API.Classes
+import           Haskbike.API.VehicleType
 
 
 -- | Enumeration representing a BikeShare station status string.

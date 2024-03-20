@@ -2,16 +2,16 @@
 
 -- | GBFS 2.3 System Information
 
-module API.SystemInformation where
+module Haskbike.API.SystemInformation where
 
-import           API.Classes
+import           Control.Lens         hiding ( (.=) )
 
-import           Control.Lens hiding ( (.=) )
+import           Data.Aeson           ( FromJSON (parseJSON), KeyValue ((.=)), ToJSON (toJSON), Value (Object), object,
+                                        withObject, (.:) )
 
-import           Data.Aeson   ( FromJSON (parseJSON), KeyValue ((.=)), ToJSON (toJSON), Value (Object), object,
-                                withObject, (.:) )
+import           GHC.Generics         ( Generic )
 
-import           GHC.Generics ( Generic )
+import           Haskbike.API.Classes
 
 -- * Count of bikes by type.
 data SystemInformationVehicleCount where

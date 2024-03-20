@@ -1,6 +1,6 @@
 -- | *DEPRECATED*.
 
-module API.Pollable
+module Haskbike.API.Pollable
      ( Pollable (..)
      ) where
 

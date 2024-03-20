@@ -7,7 +7,7 @@
 {-# LANGUAGE TemplateHaskell       #-}
 {-# LANGUAGE UndecidableInstances  #-}
 
-module API.ResponseWrapper
+module Haskbike.API.ResponseWrapper
      ( ResponseWrapper (..)
      , respData
      , respLastUpdated
@@ -15,15 +15,15 @@ module API.ResponseWrapper
      , respVer
      ) where
 
-import           API.Classes
-
-import           Control.Lens     hiding ( (.=) )
+import           Control.Lens         hiding ( (.=) )
 
 import           Data.Aeson
 import           Data.Time
 import           Data.Time.Extras
 
 import           GHC.Generics
+
+import           Haskbike.API.Classes
 
 
 -- | A type representing a BikeShare response.
