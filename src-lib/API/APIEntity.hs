@@ -72,8 +72,12 @@ class APIPersistable apiType dbType | apiType -> dbType where
   fetchAndPersist ep apiFetch lastUpdated respQueue =
     runQueryM apiFetch >>= processResponse ep lastUpdated respQueue
 
-  pollThread :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m)
-             => EndpointQueried -> ClientM (ResponseWrapper apiType) -> TVar Int -> TQueue (ResponseWrapper apiType) -> m ()
+  pollThread :: ( HasEnv env m
+                -- , HasPollEnv env apiType m
+                , MonadIO m
+                , MonadThrow m
+                , MonadCatch m
+                ) => EndpointQueried -> ClientM (ResponseWrapper apiType) -> TVar Int -> TQueue (ResponseWrapper apiType) -> m PollResult
   pollThread ep apiFetch lastUpdatedVar respQueue = do
     lastUpdated <- liftIO $ readTVarIO lastUpdatedVar
     fetchAndPersist ep apiFetch lastUpdated respQueue >>= handleFetchPersistResult ep lastUpdatedVar
@@ -97,24 +101,25 @@ handleFetchPersistResult :: (HasEnv env m, MonadIO m, MonadThrow m, Show a)
                          => a
                          -> TVar Int
                          -> PollResult
-                         -> m ()
+                         -> m PollResult
 -- Handle a client error.
-handleFetchPersistResult _ _ (PollClientError _err) = liftIO delayAndExitFailure
+handleFetchPersistResult _ _ result@(PollClientError _err) = liftIO delayAndExitFailure >> pure result
   where
     delayAndExitFailure = delaySecs 10 >> exitFailure
     delaySecs secs = threadDelay (secs * msPerS)
     msPerS = 1000000
 -- Handle the API returning stale data.
-handleFetchPersistResult _ _ (WentBackwards extendByMs) = liftIO (delaySecs extendByMs)
+handleFetchPersistResult _ _ result@(WentBackwards extendByMs) = liftIO (delaySecs extendByMs) >> pure result
   where
     msPerS = 1000000
     delaySecs secs = threadDelay (secs * msPerS)
 -- Handle a successfully decoded response, with a non-stale "last_reported" value.
-handleFetchPersistResult ep lastUpdatedVar (Success resp) = do
+handleFetchPersistResult ep lastUpdatedVar result@(Success resp) = do
   liftIO $ atomically $ writeTVar lastUpdatedVar (utcToPosix (_respLastUpdated resp) + timeToLiveS resp)
   logInfo $ "[" <> epName <> "] Queued records for insertion - sleeping for " <> ttlTxt
   -- Sleep for requisite TTL.
   liftIO $ threadDelay (timeToLiveS resp * msPerS)
+  pure result
   where
     epName = (T.pack . show) ep
     ttlTxt = (showt . timeToLiveS) resp <> "s"

@@ -219,8 +219,12 @@ library
                     , API.StationInformation
                     , API.StationStatus
                     , API.SystemInformation
+                    , API.APIVersion
                     , API.Utils
                     , API.VehicleType
+                    , API.VehicleTypeFull
+                    , API.SystemRegion
+                    , API.SystemPricingPlan
                     , AppEnv
                     , CLI.Database
                     , CLI.Debug
@@ -228,7 +232,7 @@ library
                     , CLI.Events
                     , CLI.Options
                     , CLI.Poll
-                    -- , CLI.Poll.PollClientEnv
+                    , CLI.Poll.PollClientEnv
                     , CLI.Poll.Utils
                     , CLI.Query
                     , CLI.QueryFormat
