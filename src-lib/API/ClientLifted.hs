@@ -13,6 +13,7 @@ module API.ClientLifted
      , versionsM
      ) where
 
+import           API.APIVersion         ( APIVersion )
 import           API.BikeShare
 import           API.Client
 import           API.ResponseWrapper
@@ -54,7 +55,7 @@ liftClientM clientM = do
 
 
 versionsM :: (HasEnv env m, MonadIO m, MonadThrow m)
-          => m Object
+          => m (ResponseWrapper [APIVersion])
 versionsM = liftClientM versions
 
 vehicleTypesM :: (HasEnv env m, MonadIO m, MonadThrow m)

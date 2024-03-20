@@ -219,6 +219,7 @@ library
                     , API.StationInformation
                     , API.StationStatus
                     , API.SystemInformation
+                    , API.APIVersion
                     , API.Utils
                     , API.VehicleType
                     , AppEnv

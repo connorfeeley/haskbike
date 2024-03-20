@@ -4,9 +4,15 @@
 {-# LANGUAGE TypeOperators #-}
 
 module BikeShareAPI
-     ( BikeShareAPI
+     ( module API.APIVersion
+     , module API.ResponseWrapper
+     , module API.StationInformation
+     , module API.StationStatus
+     , module API.SystemInformation
+     , BikeShareAPI
      ) where
 
+import           API.APIVersion
 import           API.ResponseWrapper
 import           API.StationInformation
 import           API.StationStatus
@@ -19,7 +25,7 @@ import           Servant.API
 
 -- | The Bike Share API.
 type BikeShareAPI =
-  "gbfs_versions"                             :> Get '[JSON] Object
+  "gbfs_versions"                             :> Get '[JSON] (ResponseWrapper [APIVersion])
   :<|> "en" :> "vehicle_types"                :> Get '[JSON] Object
   :<|> "en" :> "station_information"          :> Get '[JSON] (ResponseWrapper [StationInformation])
   :<|> "en" :> "station_status"               :> Get '[JSON] (ResponseWrapper [StationStatus])

@@ -49,7 +49,7 @@ bikeShareAPIClient :: Proxy BikeShareAPI
 bikeShareAPIClient = Proxy
 
 -- | The BikeShare API client functions.
-versions            :: ClientM Object
+versions            :: ClientM (ResponseWrapper [APIVersion])
 vehicleTypes        :: ClientM Object
 stationInformation  :: ClientM (ResponseWrapper [StationInformation])
 stationStatus       :: ClientM (ResponseWrapper [StationStatus])
