@@ -114,13 +114,24 @@
               servant-docs.source = "0.13";
               servant-server.source = "0.20";
               servant-client.source = "0.20";
+            } // lib.optionalAttrs (lib.versionAtLeast config.haskellProjects.default.basePackages.ghc.version "9.5") {
+              pqueue.source = "1.5.0.0";
+              postgresql-libpg.source = "0.10.0.0";
+            };
+            settings = {
+              postgresql-libpg.jailbreak = true;
+              beam-postgres.jailbreak = true;
+              beam-migrate = {
+                jailbreak = true;
+                broken = false;
+              };
             };
 
             # The base package set representing a specific GHC version.
             # By default, this is pkgs.haskellPackages.
             # You may also create your own. See https://haskell.flake.page/package-set
             # basePackages = pkgs.haskellPackages;
-            basePackages = pkgs.haskell.packages.ghc94;
+            basePackages = pkgs.haskell.packages.ghc96;
 
             devShell =
               let

@@ -19,10 +19,6 @@ import           Test.Tasty.HUnit
 
 import           Utils
 
--- import           Data.Aeson.BetterErrors ( Parse, ParseError, ParseError', asIntegral, asString, displayError,
---                                            displayError', eachInArray, eachInObject, key, keyMay, keyOrDefault, nth,
---                                            nthMay, nthOrDefault, parse, toAesonParser, toAesonParser', withString )
-
 
 -- | Decode a ByteString into a value.
 decodeByteString :: FromJSON a => BL.ByteString -> Either String a

@@ -163,7 +163,6 @@ common test-depends
                     , QuickCheck
                     , HUnit
                     , file-embed
-                    , aeson-better-errors
                     , silently
 
     -- Ensure tasty-discover is available to discover tests.
