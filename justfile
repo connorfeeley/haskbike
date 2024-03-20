@@ -99,8 +99,8 @@ watch:
 build-clang:
     {{CABAL}} --with-gcc=clang --with-ld=clang --ghc-options=-fllvm build
 
-build:
-    {{CABAL}} build
+build *ARGS:
+    {{CABAL}} build {{ARGS}}
 
 redate:
     git-privacy redate origin/master
