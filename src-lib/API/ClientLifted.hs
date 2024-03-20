@@ -17,9 +17,11 @@ import           API.APIVersion         ( APIVersion )
 import           API.BikeShare
 import           API.Client
 import           API.ResponseWrapper
-import           API.StationInformation
-import           API.StationStatus
-import           API.SystemInformation
+import           API.StationInformation ( StationInformation )
+import           API.StationStatus      ( StationStatus )
+import           API.SystemInformation  ( SystemInformation )
+import           API.SystemPricingPlan  ( SystemPricingPlan )
+import           API.SystemRegion       ( SystemRegion )
 import           API.VehicleTypeFull    ( VehicleTypeFull )
 
 import           AppEnv
@@ -27,8 +29,6 @@ import           AppEnv
 import           Colog                  ( logException )
 
 import           Control.Monad.Catch
-
-import           Data.Aeson             ( Object )
 
 import           Prelude                hiding ( log )
 
@@ -72,7 +72,7 @@ stationStatusM :: (HasEnv env m, MonadIO m, MonadThrow m)
 stationStatusM = liftClientM stationStatus
 
 systemRegionsM :: (HasEnv env m, MonadIO m, MonadThrow m)
-               => m Object
+               => m (ResponseWrapper [SystemRegion])
 systemRegionsM = liftClientM systemRegions
 
 systemInformationM :: (HasEnv env m, MonadIO m, MonadThrow m)
@@ -80,5 +80,5 @@ systemInformationM :: (HasEnv env m, MonadIO m, MonadThrow m)
 systemInformationM = liftClientM systemInformation
 
 systemPricingPlansM :: (HasEnv env m, MonadIO m, MonadThrow m)
-                    => m Object
+                    => m (ResponseWrapper [SystemPricingPlan])
 systemPricingPlansM = liftClientM systemPricingPlans

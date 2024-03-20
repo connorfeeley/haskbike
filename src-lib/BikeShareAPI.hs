@@ -4,12 +4,7 @@
 {-# LANGUAGE TypeOperators #-}
 
 module BikeShareAPI
-     ( module API.APIVersion
-     , module API.ResponseWrapper
-     , module API.StationInformation
-     , module API.StationStatus
-     , module API.SystemInformation
-     , BikeShareAPI
+     ( BikeShareAPI
      ) where
 
 import           API.APIVersion
@@ -17,9 +12,9 @@ import           API.ResponseWrapper
 import           API.StationInformation
 import           API.StationStatus
 import           API.SystemInformation
+import           API.SystemPricingPlan  ( SystemPricingPlan )
+import           API.SystemRegion       ( SystemRegion )
 import           API.VehicleTypeFull    ( VehicleTypeFull )
-
-import           Data.Aeson             ( Object )
 
 import           Servant.API
 
@@ -30,6 +25,6 @@ type BikeShareAPI =
   :<|> "en" :> "vehicle_types"                :> Get '[JSON] (ResponseWrapper [VehicleTypeFull])
   :<|> "en" :> "station_information"          :> Get '[JSON] (ResponseWrapper [StationInformation])
   :<|> "en" :> "station_status"               :> Get '[JSON] (ResponseWrapper [StationStatus])
-  :<|> "en" :> "system_regions"               :> Get '[JSON] Object
+  :<|> "en" :> "system_regions"               :> Get '[JSON] (ResponseWrapper [SystemRegion])
   :<|> "en" :> "system_information"           :> Get '[JSON] (ResponseWrapper SystemInformation)
-  :<|> "en" :> "system_pricing_plans"         :> Get '[JSON] Object
+  :<|> "en" :> "system_pricing_plans"         :> Get '[JSON] (ResponseWrapper [SystemPricingPlan])

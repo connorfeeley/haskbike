@@ -9,14 +9,15 @@ module API.APIVersion
 import           API.Classes  ( HasDataField (..) )
 
 import           Data.Aeson
+import qualified Data.Text    as T
 
 import           GHC.Generics
 
 
 -- | Data type for core response object of 'versions' API.
 data APIVersion where
-  APIVersion :: { apiVersion :: Int
-                , apiUrl     :: String
+  APIVersion :: { apiVersion :: Double
+                , apiUrl     :: T.Text
                 } -> APIVersion
   deriving (Show, Eq, Generic)
 

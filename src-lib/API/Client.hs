@@ -19,11 +19,14 @@ module API.Client
      , versions
      ) where
 
+import           API.APIVersion          ( APIVersion )
 import           API.BikeShare
 import           API.ResponseWrapper
-import           API.StationInformation
-import           API.StationStatus
-import           API.SystemInformation
+import           API.StationInformation  ( StationInformation )
+import           API.StationStatus       ( StationStatus )
+import           API.SystemInformation   ( SystemInformation )
+import           API.SystemPricingPlan   ( SystemPricingPlan )
+import           API.SystemRegion        ( SystemRegion )
 import           API.VehicleTypeFull     ( VehicleTypeFull )
 
 import           AppEnv
@@ -32,7 +35,6 @@ import           BikeShareAPI
 
 import           Control.Monad.Catch     ( MonadCatch, MonadThrow )
 
-import           Data.Aeson              ( Object )
 import           Data.Proxy
 
 import           Network.HTTP.Client     ( Manager, newManager )
@@ -54,9 +56,9 @@ versions            :: ClientM (ResponseWrapper [APIVersion])
 vehicleTypes        :: ClientM (ResponseWrapper [VehicleTypeFull])
 stationInformation  :: ClientM (ResponseWrapper [StationInformation])
 stationStatus       :: ClientM (ResponseWrapper [StationStatus])
-systemRegions       :: ClientM Object
+systemRegions       :: ClientM (ResponseWrapper [SystemRegion])
 systemInformation   :: ClientM (ResponseWrapper SystemInformation)
-systemPricingPlans  :: ClientM Object
+systemPricingPlans  :: ClientM (ResponseWrapper [SystemPricingPlan])
 (      versions
   :<|> vehicleTypes
   :<|> stationInformation

@@ -223,6 +223,8 @@ library
                     , API.Utils
                     , API.VehicleType
                     , API.VehicleTypeFull
+                    , API.SystemRegion
+                    , API.SystemPricingPlan
                     , AppEnv
                     , CLI.Database
                     , CLI.Debug
