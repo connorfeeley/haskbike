@@ -14,7 +14,6 @@ import           Colog
 
 import           Control.Lens                            hiding ( (.=) )
 import           Control.Monad.Catch                     ( MonadCatch )
-import           Control.Monad.Except
 
 import           Data.Aeson
 import qualified Data.Text                               as T

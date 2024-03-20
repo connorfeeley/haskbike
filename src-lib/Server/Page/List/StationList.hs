@@ -24,8 +24,10 @@ import           Prelude                                      hiding ( null )
 import           Servant
 
 import           Server.Classes
+import           Server.Data.EmptyFullData
 import           Server.Page.List.Common
 import           Server.Page.SelectionForm
+import           Server.Page.Utils                            ( stylesheet_ )
 
 import           TextShow
 
@@ -50,6 +52,10 @@ instance ToHtml (StationList [(StationInformation, StationStatus)]) where
     div_ [class_ "content"] $ do
       toHtml (StationListForm (_stationListInputs params))
       toHtml (toStationListTable params)
+
+instance ToHtmlComponents (StationList [(StationInformation, StationStatus)]) where
+  toMenuHeading _ = menuHeading "#station-list" "Station List"
+
 
 -- | Table displaying station information.
 toStationListTable :: Monad m => StationList [(StationInformation, StationStatus)] -> HtmlT m ()
@@ -80,5 +86,30 @@ toStationListTable params = do
               td_ [columnId_ "station-address-col"] (toHtml (fromMaybe "" (_infoAddress info)))
             ) (_stationList params)
 
-instance ToHtmlComponents (StationList [(StationInformation, StationStatus)]) where
-  toMenuHeading _ = menuHeading "#station-list" "Station List"
+
+-- * Station empty/full list.
+
+-- | Table displaying station information.
+toStationEmptyFullTable :: Monad m => StationList [(StationInformation, StationStatus, EmptyFull)] -> HtmlT m ()
+toStationEmptyFullTable _ = do
+  div_ [id_ "station-list-table"] mempty
+
+instance ToHtml (StationList [(StationInformation, StationStatus, EmptyFull)]) where
+  toHtmlRaw = toHtml
+  toHtml params = do
+    div_ [class_ "header"] $ do
+      h1_ [] (toHtml "Station Empty/Full List")
+    div_ [class_ "content"] $ do
+      toHtml (StationListForm (_stationListInputs params))
+      toHtml (toStationEmptyFullTable params)
+
+instance ToHtmlComponents (StationList [(StationInformation, StationStatus, EmptyFull)]) where
+  toMenuHeading _ = menuHeading "#station-empty-full" "Station Empty/Full"
+  toHead params = do
+
+    -- GridJS
+    script_ [src_ "https://cdn.jsdelivr.net/npm/gridjs/dist/gridjs.umd.js"] ""
+    stylesheet_ "https://cdn.jsdelivr.net/npm/gridjs/dist/theme/mermaid.min.css"
+
+    -- Station list JavaScript.
+    script_ [src_ ("/" <> toUrlPiece (_staticLink params) <> "/js/station-empty-full-list.js")] ""

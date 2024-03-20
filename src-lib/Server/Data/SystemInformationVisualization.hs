@@ -5,7 +5,6 @@ module Server.Data.SystemInformationVisualization where
 import           AppEnv
 
 import           Control.Monad.Catch                         ( MonadCatch )
-import           Control.Monad.Except
 
 import           Data.Aeson
 import           Data.Time

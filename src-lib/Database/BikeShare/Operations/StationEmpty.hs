@@ -201,5 +201,7 @@ stationIdCond (Just stationId') row = (_unInformationStationId . _statusInfoId .
 stationIdCond Nothing           _   = val_ True
 
 
+infoStationIdCond :: (HaskellLiteralForQExpr (expr Bool) ~ Bool, SqlEq expr (Columnar f Int32), Integral a, SqlValable (expr Bool), SqlValable (Columnar f Int32), Num (HaskellLiteralForQExpr (Columnar f Int32)))
+                  => Maybe a -> StationInformationT f -> expr Bool
 infoStationIdCond (Just stationId') row = _infoStationId row ==. val_ (fromIntegral stationId')
 infoStationIdCond Nothing           _   = val_ True

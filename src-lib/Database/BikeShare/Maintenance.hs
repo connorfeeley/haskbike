@@ -19,7 +19,6 @@ import           Data.Time
 
 import           Database.Beam
 import           Database.Beam.Postgres                       ( Postgres )
-import qualified Database.Beam.Postgres                       as Pg
 import           Database.BikeShare
 import           Database.BikeShare.Tables.StationInformation
 import           Database.BikeShare.Tables.StationStatus

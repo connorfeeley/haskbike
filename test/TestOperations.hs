@@ -162,7 +162,7 @@ check :: DayOfMonth -> CalendarDiffTime -> IO ()
 check d expected = do
   empty <- runWithAppMSuppressLog dbnameTest $ withPostgres $ do
     runSelectReturningList $ selectWith $
-      queryStationEmptyFullTime Nothing
+      queryStationEmptyFullTime (Nothing :: Maybe Int)
       (UTCTime (fromGregorian 2023 01 d)      (timeOfDayToTime (TimeOfDay 0 0 0)))
       (UTCTime (fromGregorian 2023 01 (d +1)) (timeOfDayToTime (TimeOfDay 0 0 0)))
   assertEqual ("Station empty time " <> show d) expected ((toDuration . fromIntegral . fst . snd . head) empty)

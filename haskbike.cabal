@@ -295,7 +295,6 @@ library
                     , Server.DebugAPI
                     , Server.Page.IndexPage
                     , Server.Page.List.Common
-                    , Server.Page.List.StationEmptyFullList
                     , Server.Page.List.StationList
                     , Server.Page.PerformanceCSV
                     , Server.Page.SideMenu
@@ -363,7 +362,6 @@ library haskbike-test-lib
                     , TestOperations
                     , TestChargings
                     , TestMisc
-                    , TestDeltas
 
     -- Modules included in this library but not exported.
     -- other-modules:
@@ -415,7 +413,6 @@ test-suite haskbike-test
                   , TestOperations
                   , TestChargings
                   , TestMisc
-                  , TestDeltas
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:

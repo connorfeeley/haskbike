@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
 module Server.Page.StatusVisualization
      ( boolToText
      , dateHeader
