@@ -32,6 +32,7 @@ instance FromJSON VehicleType where
     <*> v .: "count"
 
 data TorontoVehicleType where
+  Fit    :: TorontoVehicleType
   Boost  :: TorontoVehicleType
   Iconic :: TorontoVehicleType
   EFit   :: TorontoVehicleType
@@ -39,6 +40,7 @@ data TorontoVehicleType where
   deriving (Generic, Eq, Ord)
 
 instance Show TorontoVehicleType where
+  show Fit    = "FIT"
   show Boost  = "BOOST"
   show Iconic = "ICONIC"
   show EFit   = "EFIT"
@@ -50,13 +52,15 @@ instance Read TorontoVehicleType where
     where
     parser :: Parser [(TorontoVehicleType, String)]
     parser = choice
-      [ string "BOOST"    $> [(Boost,  "")]
+      [ string "FIT"      $> [(Fit,    "")]
+      , string "BOOST"    $> [(Boost,  "")]
       , string "ICONIC"   $> [(Iconic, "")]
       , string "EFIT"     $> [(EFit,   "")]
       , string "EFIT G5"  $> [(EFitG5, "")]
       ]
 
 instance ToJSON TorontoVehicleType where
+  toJSON Fit    = String (T.pack "FIT")
   toJSON Boost  = String (T.pack "BOOST")
   toJSON Iconic = String (T.pack "ICONIC")
   toJSON EFit   = String (T.pack "EFIT")
@@ -64,6 +68,7 @@ instance ToJSON TorontoVehicleType where
 
 instance FromJSON TorontoVehicleType where
   parseJSON = withText "TorontoVehicleType" $ \t -> case t of
+     "FIT"     -> return Fit
      "BOOST"   -> return Boost
      "ICONIC"  -> return Iconic
      "EFIT"    -> return EFit
