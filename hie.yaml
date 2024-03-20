@@ -17,3 +17,6 @@ cradle:
 
     - path: "haskbike-client"
       component: "lib:haskbike-client"
+
+    - path: "haskbike-database"
+      component: "lib:haskbike-database"
