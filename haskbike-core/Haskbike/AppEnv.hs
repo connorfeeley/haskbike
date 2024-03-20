@@ -3,7 +3,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 -- | Application environment and monad.
-module AppEnv
+module Haskbike.AppEnv
      ( AppM (..)
      , Env (..)
      , HasEnv (..)
@@ -14,6 +14,7 @@ module AppEnv
      , executeWithConnPool
      , mainEnv
      , mkDatabaseConnectionPool
+     , mkDbConnectInfo
      , runAppM
      , runWithAppM
      , runWithAppMDebug
@@ -26,26 +27,29 @@ module AppEnv
      , withPostgresTransaction
      ) where
 
-import           API.BikeShare
-
 import           Colog                                  ( HasLog (..), LogAction (..), Message, Msg (msgSeverity),
                                                           Severity (..), filterBySeverity, logException,
                                                           richMessageAction, simpleMessageAction )
 
 import           Control.Exception                      ( throw )
+import           Control.Monad                          ( when )
 import           Control.Monad.Catch
 import           Control.Monad.Except
 import           Control.Monad.Reader                   ( MonadReader, ReaderT (..), ask, asks )
 
+import           Data.Maybe                             ( fromMaybe, isNothing )
 import           Data.Pool
 import           Data.Time                              ( TimeZone, getCurrentTimeZone )
+import           Data.Word                              ( Word16 )
 
-import           Database.Beam.Postgres                 ( ConnectInfo, Connection, Pg, SqlError, close, connect,
+import           Database.Beam.Postgres                 ( ConnectInfo (..), Connection, Pg, SqlError, close, connect,
                                                           runBeamPostgres, runBeamPostgresDebug )
-import           Database.BikeShare.Connection          ( mkDbConnectInfo )
+import           Database.PostgreSQL.Simple             ( defaultConnectInfo )
 import           Database.PostgreSQL.Simple.Transaction ( withTransaction )
 
 import           GHC.Conc                               ( numCapabilities )
+
+import           Haskbike.API.BikeShare
 
 import           Network.HTTP.Client                    ( Manager, newManager )
 import           Network.HTTP.Client.TLS                ( tlsManagerSettings )
@@ -54,6 +58,10 @@ import           Prelude                                hiding ( log )
 
 import           Servant                                ( ServerError )
 import           Servant.Client
+
+import           System.Environment                     ( lookupEnv )
+
+import           Text.Read                              ( readMaybe )
 
 import           UnliftIO                               ( MonadIO (..), MonadUnliftIO )
 
@@ -238,3 +246,23 @@ runWithAppMDebug dbname action = do
 mkDatabaseConnectionPool :: MonadIO m => ConnectInfo -> m (Pool Connection)
 mkDatabaseConnectionPool connInfo = liftIO $ newPool (defaultPoolConfig (connect connInfo) close 30 numCapabilities)
 {-# INLINE mkDatabaseConnectionPool #-}
+
+-- | Construct a 'ConnectInfo' using values from the HASKBIKE_{PGDBHOST,USERNAME,PASSWORD} environment variables.
+mkDbConnectInfo :: MonadIO m => String -> m ConnectInfo
+mkDbConnectInfo dbName = liftIO $ do
+  envPgDbHostParam <- lookupEnv "HASKBIKE_PGDBHOST"
+  envPgDbPortParam <- lookupEnv "HASKBIKE_PGDBPORT"
+  envUsernameParam <- lookupEnv "HASKBIKE_USERNAME"
+  envPasswordParam <- lookupEnv "HASKBIKE_PASSWORD"
+
+  -- Log when using defaults.
+  when (isNothing envPgDbHostParam) $ putStrLn "No HASKBIKE_PGDBHOST value found, using default"
+  when (isNothing envPgDbPortParam) $ putStrLn "No HASKBIKE_PGDBPORT value found, using default"
+  when (isNothing envUsernameParam) $ putStrLn "No HASKBIKE_USERNAME value found, using default"
+  when (isNothing envPasswordParam) $ putStrLn "No HASKBIKE_PASSWORD value found, using default"
+
+  pure $ ConnectInfo (fromMaybe (connectHost     defaultConnectInfo) envPgDbHostParam)
+                     (fromMaybe (connectPort     defaultConnectInfo) ((readMaybe :: String -> Maybe Word16) =<< envPgDbPortParam))
+                     (fromMaybe (connectUser     defaultConnectInfo) envUsernameParam)
+                     (fromMaybe (connectPassword defaultConnectInfo) envPasswordParam)
+                     dbName

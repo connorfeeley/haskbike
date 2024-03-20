@@ -6,7 +6,6 @@ module Database.BikeShare.Connection
      , connectTestDb
      , dbnameProduction
      , dbnameTest
-     , mkDbConnectInfo
      , mkDbParams
      ) where
 
@@ -17,6 +16,7 @@ import           Data.String            ( IsString (..) )
 import           Data.Word              ( Word16 )
 
 import           Database.Beam.Postgres
+import           Database.Beam.Postgres ( ConnectInfo (..) )
 
 import           System.Environment     ( lookupEnv )
 
@@ -68,22 +68,3 @@ mkDbParams name = do
     mkParam :: String -> String -> Maybe String -> IO String
     mkParam defaultVal prefix = maybe (pure defaultVal) (pure . (prefix ++))
 
--- | Construct a 'ConnectInfo' using values from the HASKBIKE_{PGDBHOST,USERNAME,PASSWORD} environment variables.
-mkDbConnectInfo :: MonadIO m => String -> m ConnectInfo
-mkDbConnectInfo dbName = liftIO $ do
-  envPgDbHostParam <- lookupEnv "HASKBIKE_PGDBHOST"
-  envPgDbPortParam <- lookupEnv "HASKBIKE_PGDBPORT"
-  envUsernameParam <- lookupEnv "HASKBIKE_USERNAME"
-  envPasswordParam <- lookupEnv "HASKBIKE_PASSWORD"
-
-  -- Log when using defaults.
-  when (isNothing envPgDbHostParam) $ putStrLn "No HASKBIKE_PGDBHOST value found, using default"
-  when (isNothing envPgDbPortParam) $ putStrLn "No HASKBIKE_PGDBPORT value found, using default"
-  when (isNothing envUsernameParam) $ putStrLn "No HASKBIKE_USERNAME value found, using default"
-  when (isNothing envPasswordParam) $ putStrLn "No HASKBIKE_PASSWORD value found, using default"
-
-  pure $ ConnectInfo (fromMaybe (connectHost     defaultConnectInfo) envPgDbHostParam)
-                     (fromMaybe (connectPort     defaultConnectInfo) ((readMaybe :: String -> Maybe Word16) =<< envPgDbPortParam))
-                     (fromMaybe (connectUser     defaultConnectInfo) envUsernameParam)
-                     (fromMaybe (connectPassword defaultConnectInfo) envPasswordParam)
-                     dbName

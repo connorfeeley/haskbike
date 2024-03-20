@@ -233,7 +233,6 @@ library
                     , CLI.QueryFormat
                     , CLI.ServeVisualize
                     , CLI.Utils
-                    , Data.Time.Extras
 
                     , Database.BikeShare
                     , Database.BikeShare.BeamConvertable
@@ -313,9 +312,6 @@ library
                     , Server.VisualizationAPI
                     , ServerEnv
 
-                    , Text.Pretty.Simple.Extras
-                    , TimeInterval
-                    , Version
                     , Visualization.StationOccupancy
                     , Visualization.SystemInformation
 

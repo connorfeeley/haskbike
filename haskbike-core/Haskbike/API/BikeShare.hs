@@ -1,6 +1,6 @@
 -- |
 
-module API.BikeShare
+module Haskbike.API.BikeShare
      ( bikeshareBaseUrl
      ) where
 import           Servant.Client

@@ -7,7 +7,6 @@ module Database.BikeShare.Utils
      , dbnameProduction
      , dbnameTest
      , dropTables
-     , mkDbConnectInfo
      , mkDbParams
      , referencesTable
      ) where

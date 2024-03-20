@@ -11,3 +11,6 @@ cradle:
 
     - path: "src-bench"
       component: "haskbike:bench:bench-haskbike"
+
+    - path: "haskbike-core"
+      component: "lib:haskbike-core"

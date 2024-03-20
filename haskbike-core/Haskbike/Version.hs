@@ -2,18 +2,18 @@
 
 -- | This module provides the version information for the package.
 
-module Version
+module Haskbike.Version
      ( getCabalVersion
      , getGitHash
      , getGitVersion
      , version
      ) where
 
-import           Data.Version   ( showVersion )
+import           Data.Version        ( showVersion )
 
 import           GitHash
 
-import           Paths_haskbike ( version )
+import           Paths_haskbike_core ( version )
 
 gi :: GitInfo
 gi = $$tGitInfoCwd

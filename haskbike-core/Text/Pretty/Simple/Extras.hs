@@ -12,9 +12,9 @@ module Text.Pretty.Simple.Extras
 
 import qualified Data.Text.Lazy     as TextL
 
-import           Database.Beam
-
 import           Text.Pretty.Simple
+
+import           UnliftIO           ( MonadIO )
 
 
 -- | pPrint with compact output.

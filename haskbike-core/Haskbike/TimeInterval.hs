@@ -1,6 +1,6 @@
 -- | Functions for handling time intervals/ranges.
 
-module TimeInterval
+module Haskbike.TimeInterval
      ( fromPico
      , generateTimeRange
      , incrementsPerRange
