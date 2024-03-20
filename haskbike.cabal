@@ -228,7 +228,7 @@ library
                     , CLI.Events
                     , CLI.Options
                     , CLI.Poll
-                    -- , CLI.Poll.PollClientEnv
+                    , CLI.Poll.PollClientEnv
                     , CLI.Poll.Utils
                     , CLI.Query
                     , CLI.QueryFormat

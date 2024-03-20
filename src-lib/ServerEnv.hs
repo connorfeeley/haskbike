@@ -47,7 +47,7 @@ import           UnliftIO
 -- Server application type
 newtype ServerAppM a where
   ServerAppM :: { unServerAppM :: ReaderT (ServerEnv ServerAppM) IO a
-                  } -> ServerAppM a
+                } -> ServerAppM a
   deriving newtype ( Functor
                    , Applicative
                    , Monad

@@ -1,20 +1,18 @@
-{-# LANGUAGE DataKinds             #-}
-{-# LANGUAGE DerivingStrategies    #-}
-{-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE PartialTypeSignatures #-}
-{-# LANGUAGE RankNTypes            #-}
-{-# LANGUAGE UndecidableInstances  #-}
+{-# LANGUAGE DataKinds              #-}
+{-# LANGUAGE DerivingStrategies     #-}
+{-# LANGUAGE FlexibleInstances      #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE PartialTypeSignatures  #-}
+{-# LANGUAGE RankNTypes             #-}
+{-# LANGUAGE UndecidableInstances   #-}
 
 -- |
 
 module CLI.Poll.PollClientEnv
      ( HasPollEnv (..)
-     , PollAppM (..)
      , PollEnv (..)
-     , PollReaderT (..)
-     , WithPollEnv
-     , runPollReader
+     , PollM (..)
+     , runPollM
      ) where
 
 import           API.ResponseWrapper                ( ResponseWrapper )
@@ -22,6 +20,7 @@ import           API.ResponseWrapper                ( ResponseWrapper )
 import           AppEnv
 
 import           Colog                              ( HasLog (..) )
+import           Colog.Core
 
 import           Control.Monad.Catch
 import           Control.Monad.Except
@@ -29,68 +28,89 @@ import           Control.Monad.Reader               ( MonadReader (..), ReaderT 
 
 import           Database.BikeShare.EndpointQueried ( EndpointQueried )
 
-import           GHC.Stack                          ( HasCallStack )
-
 import           Prelude                            hiding ( log )
 
 import           UnliftIO                           ( MonadUnliftIO, TQueue, TVar )
 
 
-class (HasLog env Message m, MonadReader env m) => HasPollEnv env m where
-  getEndpoint :: m EndpointQueried
+-- Poll application type
+newtype PollM apiType a where
+  PollM :: { unPollM :: ReaderT (PollEnv apiType PollM) IO a
+                } -> PollM apiType a
+  deriving newtype ( Functor
+                   , Applicative
+                   , Monad
+                   , MonadIO
+                   , MonadUnliftIO
+                   , MonadReader (PollEnv apiType PollM)
+                   , MonadFail
+                   , MonadThrow
+                   , MonadCatch )
 
 
-instance (Monad m, MonadReader (PollEnv m) m, HasLog (PollEnv m) Message m) => HasEnv (PollEnv m) m where
-    getLogAction        = asks (envLogAction . pollAppEnv)
-    getLogDatabase      = asks (envLogDatabase . pollAppEnv)
-    getMinSeverity      = asks (envMinSeverity . pollAppEnv)
-    getTz               = asks (envTimeZone . pollAppEnv)
-    getDBConnectionPool = asks (envDBConnectionPool . pollAppEnv)
-    getClientManager    = asks (envClientManager . pollAppEnv)
-    getBaseUrl          = asks (envBaseUrl . pollAppEnv)
-
-instance (Monad m, MonadReader (PollEnv e) m, HasLog (PollEnv e) Message m) => HasPollEnv (PollEnv e) m where
-  getEndpoint = asks pollEnvEndpoint
+data PollEnv apiType m where
+  PollEnv :: { pollEnvBase          :: !(Env AppM)
+             , pollEnvEndpoint      :: !EndpointQueried
+             , pollEnvLastUpdated   :: !(TVar Int)
+             , pollEnvResponseQueue :: !(TQueue (ResponseWrapper apiType))
+             } -> PollEnv apiType m
 
 
-data PollEnv m where
-  PollEnv :: { pollAppEnv      :: !(Env m)
-             , pollEnvEndpoint :: !EndpointQueried
-             , pollEnvTVar     :: !(TVar Int)
-             , pollEnvTQueue   :: !(TQueue (ResponseWrapper apiType))
-             } -> PollEnv m
 
-newtype PollReaderT r m a = PollReaderT
-  { runPollReaderT :: ReaderT r m a
-  } deriving newtype (Functor, Applicative, Monad, MonadIO, MonadTrans)
-
-instance Monad m => MonadReader (Env AppM) (PollReaderT (PollEnv AppM) m) where
-  ask = PollReaderT (asks pollAppEnv)
-  local f m = PollReaderT (local (\env -> env {pollAppEnv = f (pollAppEnv env)}) (runPollReaderT m))
-
-runPollReader :: PollReaderT r m a -> r -> m a
-runPollReader = runReaderT . runPollReaderT
+-- | 'HasPollEnv' class
+class (Monad m, MonadReader env m, HasLog env Message m, MonadUnliftIO m, MonadCatch m) => HasPollEnv env apiType m | env m -> apiType where
+  getPollEndpoint        :: m EndpointQueried
+  getPollLastUpdated     :: m (TVar Int)
+  getPollResponseQueue   :: m (TQueue (ResponseWrapper apiType))
 
 
-newtype PollAppM a where
-  PollAppM :: { unPollAppM :: ReaderT (PollEnv PollAppM) IO a
-              } -> PollAppM a
-  deriving newtype (Functor, Applicative, Monad, MonadIO, MonadUnliftIO, MonadReader (PollEnv PollAppM), MonadFail, MonadThrow, MonadCatch)
+-- | 'HasPollEnv' instance for 'PollEnv'
+instance (Monad m, MonadReader (PollEnv apiType m) m, HasLog (PollEnv apiType m) Message m, MonadUnliftIO m, MonadCatch m) => HasPollEnv (PollEnv apiType m) apiType m where
+  getPollEndpoint        = asks pollEnvEndpoint
+  getPollLastUpdated     = asks pollEnvLastUpdated
+  getPollResponseQueue   = asks pollEnvResponseQueue
 
--- instance MonadPoll PollAppM
 
-{- | Type alias for constraint for:
+-- | 'HasEnv' instance for 'ServerAppM'
+instance (HasEnv (PollEnv apiType PollM) (PollM apiType)) where
+    getLogDatabase      = asks (envLogDatabase       . pollEnvBase)
+    getMinSeverity      = asks (envMinSeverity       . pollEnvBase)
+    getTz               = asks (envTimeZone          . pollEnvBase)
+    getDBConnectionPool = asks (envDBConnectionPool  . pollEnvBase)
+    getClientManager    = asks (envClientManager     . pollEnvBase)
+    getBaseUrl          = asks (envBaseUrl           . pollEnvBase)
 
-1. Monad @m@ have access to environment @env@.
-2. Environment @env@ contains 'LogAction' that can log messages of type @msg@.
-3. Function call stack.
--}
-type WithPollEnv env msg m = ( MonadReader env m
-                             , HasLog env msg m
-                             , HasCallStack
-                             , MonadIO m
-                             , MonadUnliftIO m
-                             , MonadFail m
-                             , MonadThrow m
-                             , MonadCatch m
-                             )
+
+-- runPollAppM :: ServerEnv PollM -> ServerAppM a -> IO a
+runPollM :: (PollEnv apiType) PollM -> (PollM apiType) a -> IO a
+runPollM env app = flip runReaderT env $ unPollM app
+
+
+-- * 'HasLog' instances
+
+adaptLogAction :: LogAction AppM msg -> LogAction (PollM apiType) msg
+adaptLogAction (LogAction logAction') = LogAction $ \msg -> PollM $ do
+  appEnv <- asks pollEnvBase
+  liftIO $ flip runReaderT appEnv $ unAppM $ logAction' msg
+
+instance HasLog (PollEnv apiType PollM) Message (PollM apiType) where
+  getLogAction :: PollEnv apiType PollM -> LogAction (PollM apiType) Message
+  getLogAction = adaptLogAction . envLogAction . pollEnvBase
+  {-# INLINE getLogAction #-}
+
+  setLogAction :: LogAction (PollM apiType) Message -> PollEnv apiType PollM -> PollEnv apiType PollM
+  setLogAction (LogAction newLogAction) extEnv = do
+    extEnv { pollEnvBase = (pollEnvBase extEnv) { envLogAction = convertedAction } }
+    where
+      convertedAction = LogAction $ \msg -> AppM $
+        liftIO $ flip runReaderT extEnv $ unPollM $ newLogAction msg
+  {-# INLINE setLogAction #-}
+
+instance HasLog (PollEnv apiType m) Message AppM where
+  getLogAction :: PollEnv apiType m -> LogAction AppM Message
+  getLogAction = getLogAction . pollEnvBase
+  {-# INLINE getLogAction #-}
+
+  setLogAction :: LogAction AppM Message -> PollEnv apiType m -> PollEnv apiType m
+  setLogAction newLogAction env = env { pollEnvBase = setLogAction newLogAction (pollEnvBase env) }
+  {-# INLINE setLogAction #-}
