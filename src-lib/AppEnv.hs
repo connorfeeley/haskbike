@@ -55,7 +55,7 @@ import           Prelude                                hiding ( log )
 import           Servant                                ( ServerError )
 import           Servant.Client
 
-import           UnliftIO                               ( MonadUnliftIO )
+import           UnliftIO                               ( MonadIO (..), MonadUnliftIO )
 
 
 -- Application environment

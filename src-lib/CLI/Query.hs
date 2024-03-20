@@ -18,8 +18,8 @@ import           CLI.QueryFormat
 import           Colog
 
 import           Control.Lens
+import           Control.Monad                 ( when )
 import           Control.Monad.Catch
-import           Control.Monad.Reader          ( when )
 
 import qualified Data.List                     as List
 import           Data.Maybe                    ( fromMaybe )
