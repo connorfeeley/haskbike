@@ -1,3 +1,5 @@
+{-# LANGUAGE AllowAmbiguousTypes   #-}
+{-# LANGUAGE PartialTypeSignatures #-}
 -- | Poll the API for status updates, inserting results in database as needed.
 module CLI.Poll
      ( dispatchPoll
@@ -5,7 +7,7 @@ module CLI.Poll
      ) where
 
 import           API.APIEntity
-import           API.Client
+import           API.Client                         as C
 
 import           AppEnv
 
@@ -35,6 +37,7 @@ dispatchPoll :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnlif
              -> m ()
 dispatchPoll = pollClient
 
+
 pollClient :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m)
            => PollOptions -> m ()
 pollClient pollOptions = do
@@ -47,8 +50,6 @@ pollClient pollOptions = do
   statusQueue  <- liftIO newTQueueIO
   sysInfoQueue <- liftIO newTQueueIO
 
-  -- env <- ask
-  -- let pollEnv = PollEnv env StationInformationEP infoLastUpdated infoQueue
 
   -- Populate status changes table if switch was enabled.
   void (populateStatusChanges (optPollPopulateStatusChanges pollOptions))
@@ -67,9 +68,9 @@ pollClient pollOptions = do
   fetchAndPersist SystemInformationEP  systemInformation  firstUpdate sysInfoQueue
 
   logInfo "Initializing polling threads."
-  pollThreadInfo    <- (async . forever) (pollThread StationInformationEP stationInformation infoLastUpdated    infoQueue)
-  pollThreadStatus  <- (async . forever) (pollThread StationStatusEP      stationStatus      statusLastUpdated  statusQueue)
-  pollThreadSysInfo <- (async . forever) (pollThread SystemInformationEP  systemInformation  sysInfoLastUpdated sysInfoQueue)
+  pollThreadInfo    <- (async . forever) (pollThread StationInformationEP C.stationInformation infoLastUpdated    infoQueue)
+  pollThreadStatus  <- (async . forever) (pollThread StationStatusEP      C.stationStatus      statusLastUpdated  statusQueue)
+  pollThreadSysInfo <- (async . forever) (pollThread SystemInformationEP  C.systemInformation  sysInfoLastUpdated sysInfoQueue)
   let pollThreads = [ pollThreadInfo, pollThreadStatus, pollThreadSysInfo ]
 
   -- All threads managed by pollClient.
