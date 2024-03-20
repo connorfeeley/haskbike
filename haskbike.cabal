@@ -222,6 +222,7 @@ library
                     , API.APIVersion
                     , API.Utils
                     , API.VehicleType
+                    , API.VehicleTypeFull
                     , AppEnv
                     , CLI.Database
                     , CLI.Debug

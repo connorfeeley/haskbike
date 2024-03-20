@@ -24,6 +24,7 @@ import           API.ResponseWrapper
 import           API.StationInformation
 import           API.StationStatus
 import           API.SystemInformation
+import           API.VehicleTypeFull     ( VehicleTypeFull )
 
 import           AppEnv
 
@@ -50,7 +51,7 @@ bikeShareAPIClient = Proxy
 
 -- | The BikeShare API client functions.
 versions            :: ClientM (ResponseWrapper [APIVersion])
-vehicleTypes        :: ClientM Object
+vehicleTypes        :: ClientM (ResponseWrapper [VehicleTypeFull])
 stationInformation  :: ClientM (ResponseWrapper [StationInformation])
 stationStatus       :: ClientM (ResponseWrapper [StationStatus])
 systemRegions       :: ClientM Object

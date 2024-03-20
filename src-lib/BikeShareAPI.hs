@@ -17,6 +17,7 @@ import           API.ResponseWrapper
 import           API.StationInformation
 import           API.StationStatus
 import           API.SystemInformation
+import           API.VehicleTypeFull    ( VehicleTypeFull )
 
 import           Data.Aeson             ( Object )
 
@@ -26,7 +27,7 @@ import           Servant.API
 -- | The Bike Share API.
 type BikeShareAPI =
   "gbfs_versions"                             :> Get '[JSON] (ResponseWrapper [APIVersion])
-  :<|> "en" :> "vehicle_types"                :> Get '[JSON] Object
+  :<|> "en" :> "vehicle_types"                :> Get '[JSON] (ResponseWrapper [VehicleTypeFull])
   :<|> "en" :> "station_information"          :> Get '[JSON] (ResponseWrapper [StationInformation])
   :<|> "en" :> "station_status"               :> Get '[JSON] (ResponseWrapper [StationStatus])
   :<|> "en" :> "system_regions"               :> Get '[JSON] Object

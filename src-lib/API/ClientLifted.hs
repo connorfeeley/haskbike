@@ -20,6 +20,7 @@ import           API.ResponseWrapper
 import           API.StationInformation
 import           API.StationStatus
 import           API.SystemInformation
+import           API.VehicleTypeFull    ( VehicleTypeFull )
 
 import           AppEnv
 
@@ -59,7 +60,7 @@ versionsM :: (HasEnv env m, MonadIO m, MonadThrow m)
 versionsM = liftClientM versions
 
 vehicleTypesM :: (HasEnv env m, MonadIO m, MonadThrow m)
-              => m Object
+              => m (ResponseWrapper [VehicleTypeFull])
 vehicleTypesM = liftClientM vehicleTypes
 
 stationInformationM :: (HasEnv env m, MonadIO m, MonadThrow m)
