@@ -4,8 +4,7 @@ module Main
      ) where
 
 
-import           Colog                       ( LogAction, Severity (..), cmap, fmtMessage, log, logDebug, logInfo,
-                                               logTextStdout, usingLoggerT )
+import           Colog
 
 import           Control.Monad               ( unless, when )
 import           Control.Monad.Reader        ( runReaderT )
@@ -111,7 +110,7 @@ appMain options = do
   case optCommand options of
     (Poll p)            -> dispatchPoll p
     (Query q)           -> dispatchQuery q
-    QueryApi            -> log E "Not implemented."
+    QueryApi            -> logError "Not implemented."
     (Events e)          -> dispatchEvents (optEventsSubcommand e)
     (DebugMisc d)       -> dispatchDebug d
     (Reset _)           -> pure ()

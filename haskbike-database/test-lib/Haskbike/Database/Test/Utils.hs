@@ -11,12 +11,14 @@
 
 module Haskbike.Database.Test.Utils where
 
+import           Control.Exception                           ( displayException, toException )
 import           Control.Lens
 import           Control.Monad                               ( void, (<=<) )
 import           Control.Monad.Catch                         ( MonadCatch )
 
 import           Data.Aeson
 import qualified Data.ByteString.Lazy                        as BL
+import           Data.Either.Combinators                     ( whenLeft )
 import           Data.Pool                                   ( Pool )
 import           Data.Time
 
@@ -50,6 +52,7 @@ data LogConfig where
   Silent :: LogConfig
   LogAt  :: Severity -> LogConfig
 
+
 withTempDbM :: LogConfig -> AppM a -> AppM b -> IO b
 withTempDbM logConfig setup action = do
   -- Create temporary postgres database
@@ -62,10 +65,12 @@ withTempDbM logConfig setup action = do
       clientManager <- mkClientManager
       let env = makeEnvForTest logConfig currentTimeZone connPool clientManager
       runAppM env (setup >> action)
-  pure $ unsafeUnwrapResult tempPgResult
+  -- Log error, if one occurred.
+  whenLeft tempPgResult (putStrLn . displayException . toException)
+  pure $ unwrapResult tempPgResult
   where
-    unsafeUnwrapResult (Right x) = x
-    unsafeUnwrapResult _         = error "Database setup failed"
+    unwrapResult (Right x) = x
+    unwrapResult _         = error "Temporary database setup failed"
 
 silenceLogs :: Env AppM -> Env AppM
 silenceLogs env = env { envLogAction = mempty }
