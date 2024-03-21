@@ -56,10 +56,10 @@ sum-ebike-v1:
     curl --location "https://toronto.publicbikesystem.net/customer/ube/gbfs/v1/en/station_status" | jq '[.data.stations[].num_bikes_available_types.ebike] | add'
 
 test:
-    {{CABAL}} test --test-show-details=direct
+    {{CABAL}} test all --test-show-details=direct
 
 test-one PATTERN:
-    {{CABAL}} test --test-show-details=direct --test-options='--pattern /{{PATTERN}}/'
+    {{CABAL}} test all --test-show-details=direct --test-options='--pattern /{{PATTERN}}/'
 
 bench:
     {{CABAL}} bench
