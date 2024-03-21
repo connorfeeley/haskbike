@@ -24,7 +24,25 @@
       ];
 
       perSystem = { self', config, pkgs, ... }:
-        let inherit (pkgs) lib; in {
+        let inherit (pkgs) lib;
+          haskellOptions = {
+            # Profiling options.
+            # libraryProfiling     = false;   # Disable profiling for libraries.
+            # executableProfiling  = false;   # Disable profiling for executables.
+
+            # Debugging options.
+            # strip                = false;   # Don't strip executables.
+            # enableDWARFDebugging = true;    # Enable DWARF debugging.
+            # deadCodeElimination  = false;   # Disable dead code elimination.
+
+            # disableOptimization  = true;    # Disable optimization - significantly speeds up build time.
+
+            # Documentation options.
+            # haddock              = true;    # Enable haddock generation.
+            # hyperlinkSource      = true;    # Enable hyperlinked source.
+          };
+        in
+        {
           # Typically, you just want a single project named "default". But
           # multiple projects are also possible, each using different GHC version.
           haskellProjects.default = {
@@ -33,8 +51,8 @@
             projectRoot = ./.;
 
             settings = {
-              haskbike = { self, super, ... }: {
-                custom = pkg: pkgs.lib.pipe super.haskbike [
+              haskbike-core = { self, super, ... }: {
+                custom = pkg: pkgs.lib.pipe super.haskbike-core [
                   # Replace Version.hs with a generated one, since it requires access to the git directory
                   # to determine the version.
                   (pkgs.haskell.lib.compose.overrideCabal (o:
@@ -53,48 +71,53 @@
                       #   pkgs.cabal-install
                       # ];
 
-                      postPatch = o.postPatch or "" + "cp ${versionFile} src-lib/Version.hs";
-
-                      preCheck = pkg.preCheck or "" + ''
-                        export PGDATABASE=haskbike-test
-
-                        export HASKBIKE_USERNAME=$PGUSER
-                        export HASKBIKE_PASSWORD=""
-                        export HASKBIKE_DATABASE=$PGDATABASE
-                        export HASKBIKE_PGDBHOST=$PGHOST
-                        export HASKBIKE_PGDBPORT=$PGPORT
-                      '';
-                      doCheck = false;
-
-                      postInstall = o.postInstall or "" + ''
-                        mkdir -p $out/share/haskbike/www/static
-                        cp -r ${./static-files}/* $out/share/haskbike/www/static/
+                      postPatch = o.postPatch or "" + ''
+                        cp ${versionFile} Haskbike/Version.hs
                       '';
                     }))
                   (pkgs.haskell.lib.enableLibraryProfiling)
-
-                  # Add optparse-applicative completions to the derivation output.
-                  (self.generateOptparseApplicativeCompletions [ "haskbike" ])
                 ];
 
                 extraBuildTools = [ pkgs.git ];
 
                 check = false; # Don't run checks as part of the build.
+              };
+              haskbike-server = { self, super, ... }: {
+                custom = pkg: pkgs.lib.pipe super.haskbike-server [
+                  # Replace Version.hs with a generated one, since it requires access to the git directory
+                  # to determine the version.
+                  (pkgs.haskell.lib.compose.overrideCabal (o: {
+                    postInstall = o.postInstall or "" + ''
+                      mkdir -p $out/share/haskbike/www/static
+                      cp -r ${./static-files}/* $out/share/haskbike/www/static/
+                    '';
+                  }))
+                  (pkgs.haskell.lib.enableLibraryProfiling)
+                ];
+                check = false; # Don't run checks as part of the build.
+              };
+              haskbike-cli = { self, super, ... }: {
+                custom = pkg: pkgs.lib.pipe super.haskbike-cli [
+                  # Replace Version.hs with a generated one, since it requires access to the git directory
+                  # to determine the version.
+                  (pkgs.haskell.lib.compose.overrideCabal (o: {
+                    extraLibraries = [ pkgs.stdenv.cc.libcxx ];
+                    preCheck = pkg.preCheck or "" + ''
+                      export PGDATABASE=haskbike-test
 
-                # Profiling options.
-                # libraryProfiling     = false;   # Disable profiling for libraries.
-                # executableProfiling  = false;   # Disable profiling for executables.
-
-                # Debugging options.
-                # strip                = false;   # Don't strip executables.
-                # enableDWARFDebugging = true;    # Enable DWARF debugging.
-                # deadCodeElimination  = false;   # Disable dead code elimination.
-
-                # disableOptimization  = true;    # Disable optimization - significantly speeds up build time.
-
-                # Documentation options.
-                # haddock              = true;    # Enable haddock generation.
-                # hyperlinkSource      = true;    # Enable hyperlinked source.
+                      export HASKBIKE_USERNAME=$PGUSER
+                      export HASKBIKE_PASSWORD=""
+                      export HASKBIKE_DATABASE=$PGDATABASE
+                      export HASKBIKE_PGDBHOST=$PGHOST
+                      export HASKBIKE_PGDBPORT=$PGPORT
+                    '';
+                    doCheck = false;
+                  }))
+                  (pkgs.haskell.lib.enableLibraryProfiling)
+                  # Add optparse-applicative completions to the derivation output.
+                  (self.generateOptparseApplicativeCompletions [ "haskbike" ])
+                ];
+                check = false; # Don't run checks as part of the build.
               };
             };
 
