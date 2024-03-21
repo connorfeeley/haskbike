@@ -3,3 +3,4 @@ packages:
   haskbike-client
   haskbike-database
   haskbike-server
+  haskbike-cli

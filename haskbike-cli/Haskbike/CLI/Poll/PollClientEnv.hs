@@ -8,7 +8,7 @@
 
 -- |
 
-module CLI.Poll.PollClientEnv
+module Haskbike.CLI.Poll.PollClientEnv
      ( HasPollEnv (..)
      , PollAppM (..)
      , PollEnv (..)
@@ -17,9 +17,9 @@ module CLI.Poll.PollClientEnv
      , runPollReader
      ) where
 
-import           API.ResponseWrapper                ( ResponseWrapper )
+import           Haskbike.API.ResponseWrapper                ( ResponseWrapper )
 
-import           AppEnv
+import           Haskbike.AppEnv
 
 import           Colog                              ( HasLog (..) )
 
@@ -27,7 +27,7 @@ import           Control.Monad.Catch
 import           Control.Monad.Except
 import           Control.Monad.Reader               ( MonadReader (..), ReaderT (..) )
 
-import           Database.BikeShare.EndpointQueried ( EndpointQueried )
+import           Haskbike.Database.EndpointQueried ( EndpointQueried )
 
 import           GHC.Stack                          ( HasCallStack )
 

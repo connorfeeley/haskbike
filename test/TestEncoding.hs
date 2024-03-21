@@ -4,8 +4,8 @@ module TestEncoding
      ( unit_roundtripStationInformation
      ) where
 
-import           API.ResponseWrapper
-import qualified API.StationInformation                       as AT
+import           Haskbike.API.ResponseWrapper
+import qualified Haskbike.API.StationInformation                       as AT
 
 import           AppEnv
 

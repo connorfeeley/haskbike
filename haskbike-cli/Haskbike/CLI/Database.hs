@@ -1,5 +1,5 @@
 -- | CLI interface for database operations.
-module CLI.Database
+module Haskbike.CLI.Database
      ( dispatchDatabase
      , handleInformation
      , handleStationInformation
@@ -7,40 +7,37 @@ module CLI.Database
      , handleStatus
      ) where
 
-import           API.Client
-import           API.ClientLifted              ( runQueryM )
-import           API.ResponseWrapper
-import           API.StationInformation
-import           API.StationStatus
-
-import           AppEnv
-
-import           CLI.Options
-
-import           Colog                         ( log, pattern D, pattern I, pattern W )
+import           Colog                           ( log, pattern D, pattern I, pattern W )
 
 import           Control.Lens
-import           Control.Monad                 ( unless )
-import           Control.Monad.Catch           ( MonadCatch, MonadThrow )
+import           Control.Monad                   ( unless )
+import           Control.Monad.Catch             ( MonadCatch, MonadThrow )
 
-import           Data.Foldable                 ( for_ )
-import qualified Data.Text                     as Text
+import           Data.Foldable                   ( for_ )
+import qualified Data.Text                       as Text
 
-import           Database.BikeShare
-import           Database.BikeShare.Operations
-import           Database.BikeShare.Utils
+import           Haskbike.API.Client
+import           Haskbike.API.ClientLifted       ( runQueryM )
+import           Haskbike.API.ResponseWrapper
+import           Haskbike.API.StationInformation
+import           Haskbike.API.StationStatus
+import           Haskbike.AppEnv
+import           Haskbike.CLI.Options
+import           Haskbike.Database.BikeShare
+import           Haskbike.Database.Operations
+import           Haskbike.Database.Utils
 
 import           Options.Applicative
 
-import           Prelude                       hiding ( log )
+import           Prelude                         hiding ( log )
 
-import           Servant.Client                ( ClientError )
+import           Servant.Client                  ( ClientError )
 
-import           System.Exit                   ( exitSuccess )
+import           System.Exit                     ( exitSuccess )
 
 import           Text.Pretty.Simple.Extras
 
-import           UnliftIO                      ( MonadIO, MonadUnliftIO, liftIO )
+import           UnliftIO                        ( MonadIO, MonadUnliftIO, liftIO )
 
 
 -- | Helper functions.

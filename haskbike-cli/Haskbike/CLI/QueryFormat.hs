@@ -1,8 +1,8 @@
 -- | This module defines the formatters for the command line interface.
 
-module CLI.QueryFormat where
+module Haskbike.CLI.QueryFormat where
 
-import           CLI.Utils
+import           Haskbike.CLI.Utils
 
 import           Control.Lens
 
@@ -11,8 +11,8 @@ import           Data.Text.Lazy                               ( Text, chunksOf, 
                                                                 unwords )
 import           Data.Time                                    ( TimeZone, UTCTime )
 
-import           Database.BikeShare.Tables.StationInformation ( unInformationStationId )
-import           Database.BikeShare.Tables.StationStatus
+import           Haskbike.Database.Tables.StationInformation ( unInformationStationId )
+import           Haskbike.Database.Tables.StationStatus
 
 import           Prelude                                      hiding ( log, reverse, unlines, unwords )
 

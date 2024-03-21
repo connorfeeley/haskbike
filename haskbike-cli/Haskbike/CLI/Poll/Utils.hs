@@ -3,7 +3,7 @@
 
 -- | Utility functions for polling the API.
 
-module CLI.Poll.Utils
+module Haskbike.CLI.Poll.Utils
      ( errToQueryLog
      , handleResponse
      , handleResponseBackwards
@@ -12,9 +12,9 @@ module CLI.Poll.Utils
      , maybeDecodeFailure
      ) where
 
-import           API.ResponseWrapper
+import           Haskbike.API.ResponseWrapper
 
-import           AppEnv
+import           Haskbike.AppEnv
 
 import           Colog
 
@@ -27,9 +27,9 @@ import qualified Data.Text                               as T
 import           Data.Time
 import           Data.Time.Extras
 
-import           Database.BikeShare.EndpointQueried
-import           Database.BikeShare.Operations.QueryLogs ( insertQueryLog )
-import           Database.BikeShare.Tables.QueryLogs
+import           Haskbike.Database.EndpointQueried
+import           Haskbike.Database.Operations.QueryLogs ( insertQueryLog )
+import           Haskbike.Database.Tables.QueryLogs
 
 import           Servant.Client
 

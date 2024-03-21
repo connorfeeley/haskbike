@@ -1,12 +1,12 @@
 -- | Test the client functions.
 module TestClient where
 
-import           API.Client
+import           Haskbike.API.Client
 
 import           AppEnv
 
-import           CLI.Options               ( PollOptions (..), PopulateStatusChangesOpt (..) )
-import qualified CLI.Poll                  as Poll
+import           Haskbike.CLI.Options               ( PollOptions (..), PopulateStatusChangesOpt (..) )
+import qualified Haskbike.CLI.Poll                  as Poll
 
 import           Colog                     ( logInfo, pattern W )
 

@@ -1,23 +1,20 @@
 -- | CLI handler for visualization HTTP server.
-module CLI.ServeVisualize
+module Haskbike.CLI.ServeVisualize
      ( dispatchVisualize
      ) where
 
-import           AppEnv
+import           Colog                hiding ( getLogAction )
 
-import           CLI.Options
+import qualified Data.Text            as T
 
-import           Colog       hiding ( getLogAction )
+import           Haskbike.AppEnv
+import           Haskbike.CLI.Options
+import           Haskbike.Server
+import           Haskbike.ServerEnv
 
-import qualified Data.Text   as T
+import           Prelude              hiding ( log )
 
-import           Prelude     hiding ( log )
-
-import           Server
-
-import           ServerEnv
-
-import           UnliftIO    ( liftIO )
+import           UnliftIO             ( liftIO )
 
 
 -- | Dispatch CLI arguments to the visualization server.

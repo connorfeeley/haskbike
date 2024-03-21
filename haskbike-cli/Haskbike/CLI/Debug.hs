@@ -1,34 +1,33 @@
 {-# LANGUAGE PartialTypeSignatures #-}
 
 -- | CLI debug interface.
-module CLI.Debug
+module Haskbike.CLI.Debug
      ( dispatchDebug
      ) where
 
 
-import           AppEnv
+import           Colog                                  ( log, logDebug, pattern D )
 
-import           CLI.Options
-import           CLI.QueryFormat
+import           Control.Monad.Catch                    ( MonadCatch )
 
-import           Colog                                   ( log, logDebug, pattern D )
-
-import           Control.Monad.Catch                     ( MonadCatch )
-
-import           Data.Maybe                              ( fromMaybe )
+import           Data.Maybe                             ( fromMaybe )
 import           Data.Proxy
-import           Data.Text.Lazy                          ( Text, pack )
+import           Data.Text.Lazy                         ( Text, pack )
 
 import           Database.Beam.Schema.Tables
-import           Database.BikeShare
-import           Database.BikeShare.Operations
-import           Database.BikeShare.Tables.StationStatus
 
-import           Prelude                                 hiding ( log )
+import           Haskbike.AppEnv
+import           Haskbike.CLI.Options
+import           Haskbike.CLI.QueryFormat
+import           Haskbike.Database.BikeShare
+import           Haskbike.Database.Operations
+import           Haskbike.Database.Tables.StationStatus
+
+import           Prelude                                hiding ( log )
 
 import           System.Console.ANSI
 
-import           TextShow                                ( showt )
+import           TextShow                               ( showt )
 
 import           UnliftIO
 

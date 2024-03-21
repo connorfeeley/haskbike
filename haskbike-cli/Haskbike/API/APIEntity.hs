@@ -3,45 +3,43 @@
 {-# LANGUAGE StarIsType             #-}
 {-# LANGUAGE TypeFamilies           #-}
 
-module API.APIEntity
+module Haskbike.API.APIEntity
      ( APIPersistable (..)
      ) where
-
-import           API.ClientLifted
-import           API.ResponseWrapper
-import qualified API.StationInformation                       as AT
-import qualified API.StationStatus                            as AT
-import qualified API.SystemInformation                        as AT
-
-import           AppEnv
-
-import           CLI.Poll.Utils
 
 import           Colog
 
 import           Control.Lens
-import           Control.Monad                                ( void )
-import           Control.Monad.Catch                          ( MonadCatch, MonadThrow )
+import           Control.Monad                               ( void )
+import           Control.Monad.Catch                         ( MonadCatch, MonadThrow )
 
-import           Data.Maybe                                   ( mapMaybe )
-import qualified Data.Text                                    as T
+import           Data.Maybe                                  ( mapMaybe )
+import qualified Data.Text                                   as T
 import           Data.Time.Extras
 
 import           Database.Beam
-import           Database.Beam.Backend.SQL.BeamExtensions     ( MonadBeamInsertReturning (runInsertReturningList) )
+import           Database.Beam.Backend.SQL.BeamExtensions    ( MonadBeamInsertReturning (runInsertReturningList) )
 import           Database.Beam.Postgres
-import qualified Database.BikeShare                           as DB
-import           Database.BikeShare.EndpointQueried
-import           Database.BikeShare.Operations                ( insertStationInformation, insertStationStatus )
-import qualified Database.BikeShare.Tables.StationInformation as DB
-import qualified Database.BikeShare.Tables.StationStatus      as DB
-import qualified Database.BikeShare.Tables.SystemInformation  as DB
 
-import           Servant.Client                               ( ClientError, ClientM )
+import           Haskbike.API.ClientLifted
+import           Haskbike.API.ResponseWrapper
+import qualified Haskbike.API.StationInformation             as AT
+import qualified Haskbike.API.StationStatus                  as AT
+import qualified Haskbike.API.SystemInformation              as AT
+import           Haskbike.AppEnv
+import           Haskbike.CLI.Poll.Utils
+import qualified Haskbike.Database.BikeShare                 as DB
+import           Haskbike.Database.EndpointQueried
+import           Haskbike.Database.Operations                ( insertStationInformation, insertStationStatus )
+import qualified Haskbike.Database.Tables.StationInformation as DB
+import qualified Haskbike.Database.Tables.StationStatus      as DB
+import qualified Haskbike.Database.Tables.SystemInformation  as DB
 
-import           System.Directory.Internal.Prelude            ( exitFailure )
+import           Servant.Client                              ( ClientError, ClientM )
 
-import           TextShow                                     ( showt )
+import           System.Directory.Internal.Prelude           ( exitFailure )
+
+import           TextShow                                    ( showt )
 
 import           UnliftIO
 import           UnliftIO.Concurrent

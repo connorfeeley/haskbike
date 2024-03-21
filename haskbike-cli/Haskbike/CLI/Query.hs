@@ -1,40 +1,37 @@
 -- | CLI interface for querying the database.
-module CLI.Query
+module Haskbike.CLI.Query
      ( dispatchQuery
      , requestStationDataConcurrently
      ) where
 
-import           API.Client
-import           API.ClientLifted
-import           API.ResponseWrapper
-import           API.StationInformation
-import           API.StationStatus
-
-import           AppEnv
-
-import           CLI.Options
-import           CLI.QueryFormat
-
 import           Colog
 
 import           Control.Lens
-import           Control.Monad                 ( when )
+import           Control.Monad                   ( when )
 import           Control.Monad.Catch
 
-import qualified Data.List                     as List
-import           Data.Maybe                    ( fromMaybe )
-import qualified Data.Text                     as T
-import           Data.Text.Lazy                ( Text, pack, toStrict, unlines, unpack )
+import qualified Data.List                       as List
+import           Data.Maybe                      ( fromMaybe )
+import qualified Data.Text                       as T
+import           Data.Text.Lazy                  ( Text, pack, toStrict, unlines, unpack )
 
-import           Database.BikeShare.Operations
+import           Haskbike.API.Client
+import           Haskbike.API.ClientLifted
+import           Haskbike.API.ResponseWrapper
+import           Haskbike.API.StationInformation
+import           Haskbike.API.StationStatus
+import           Haskbike.AppEnv
+import           Haskbike.CLI.Options
+import           Haskbike.CLI.QueryFormat
+import           Haskbike.Database.Operations
 
-import           Prelude                       hiding ( log, unlines )
+import           Prelude                         hiding ( log, unlines )
 
 import           Servant.Client
 
 import           Text.Pretty.Simple.Extras
 
-import           UnliftIO                      ( MonadIO, MonadUnliftIO, concurrently, liftIO )
+import           UnliftIO                        ( MonadIO, MonadUnliftIO, concurrently, liftIO )
 
 
 -- | Dispatch CLI arguments to the query interface.

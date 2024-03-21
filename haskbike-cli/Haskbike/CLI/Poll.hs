@@ -1,30 +1,27 @@
 -- | Poll the API for status updates, inserting results in database as needed.
-module CLI.Poll
+module Haskbike.CLI.Poll
      ( dispatchPoll
      , pollClient
      ) where
 
-import           API.APIEntity
-import           API.Client
+import           Colog                             ( logInfo, logWarning )
 
-import           AppEnv
+import           Control.Monad                     ( forever, void )
+import           Control.Monad.Catch               ( MonadCatch, MonadThrow )
 
-import           CLI.Options                        ( PollOptions (..), PopulateStatusChangesOpt (..) )
+import qualified Data.Text                         as T
 
-import           Colog                              ( logInfo, logWarning )
+import           Haskbike.API.APIEntity
+import           Haskbike.API.Client
+import           Haskbike.AppEnv
+import           Haskbike.CLI.Options              ( PollOptions (..), PopulateStatusChangesOpt (..) )
+import           Haskbike.Database.BikeShare       ( bikeshareStationStatusChanges )
+import           Haskbike.Database.EndpointQueried
+import           Haskbike.Database.Operations      ( populateChangedStationStatusTable, queryRowCount )
 
-import           Control.Monad                      ( forever, void )
-import           Control.Monad.Catch                ( MonadCatch, MonadThrow )
+import           Prelude                           hiding ( log )
 
-import qualified Data.Text                          as T
-
-import           Database.BikeShare                 ( bikeshareStationStatusChanges )
-import           Database.BikeShare.EndpointQueried
-import           Database.BikeShare.Operations      ( populateChangedStationStatusTable, queryRowCount )
-
-import           Prelude                            hiding ( log )
-
-import           TextShow                           ( showt )
+import           TextShow                          ( showt )
 
 import           UnliftIO
 

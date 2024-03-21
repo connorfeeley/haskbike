@@ -1,6 +1,6 @@
 -- | This module contains the CLI functions to query the database for events.
 
-module CLI.Events
+module Haskbike.CLI.Events
      ( bikeCountsAtMoment
      , dayTimes
      , dispatchEvents
@@ -8,43 +8,42 @@ module CLI.Events
      ) where
 
 
-import           AppEnv
-
-import           CLI.Options
-import           CLI.QueryFormat
-
 import           Colog
 
-import           Control.Lens                                 hiding ( para )
-import           Control.Monad.Catch                          ( MonadCatch, MonadThrow )
+import           Control.Lens                                hiding ( para )
+import           Control.Monad.Catch                         ( MonadCatch, MonadThrow )
 
-import qualified Data.Char                                    as Char
-import           Data.Int                                     ( Int32 )
-import           Data.List                                    ( sortOn )
-import           Data.Maybe                                   ( fromMaybe )
-import           Data.Ord                                     ( Down (Down) )
-import qualified Data.Text                                    as T
-import           Data.Text.Lazy                               ( pack, unpack )
-import qualified Data.Text.Lazy                               as TL
+import qualified Data.Char                                   as Char
+import           Data.Int                                    ( Int32 )
+import           Data.List                                   ( sortOn )
+import           Data.Maybe                                  ( fromMaybe )
+import           Data.Ord                                    ( Down (Down) )
+import qualified Data.Text                                   as T
+import           Data.Text.Lazy                              ( pack, unpack )
+import qualified Data.Text.Lazy                              as TL
 import           Data.Time
 import           Data.Time.Extras
 
 import           Database.Beam
-import           Database.BikeShare.EventCounts
-import           Database.BikeShare.Expressions
-import           Database.BikeShare.Operations
-import           Database.BikeShare.StatusVariationQuery
-import           Database.BikeShare.Tables.StationInformation
-import           Database.BikeShare.Tables.StationStatus
 
-import           Prelude                                      hiding ( log )
+import           Haskbike.AppEnv
+import           Haskbike.CLI.Options
+import           Haskbike.CLI.QueryFormat
+import           Haskbike.Database.EventCounts
+import           Haskbike.Database.Expressions
+import           Haskbike.Database.Operations
+import           Haskbike.Database.StatusVariationQuery
+import           Haskbike.Database.Tables.StationInformation
+import           Haskbike.Database.Tables.StationStatus
+
+import           Prelude                                     hiding ( log )
 
 import           System.Console.ANSI
 
 import           Text.Pretty.Simple.Extras
-import qualified Text.PrettyPrint.Boxes                       as Box
+import qualified Text.PrettyPrint.Boxes                      as Box
 
-import           TextShow                                     ( showt )
+import           TextShow                                    ( showt )
 
 import           UnliftIO
 

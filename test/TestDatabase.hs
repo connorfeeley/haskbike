@@ -30,9 +30,9 @@ module TestDatabase
      , unit_queryStationStatusBetween
      ) where
 
-import           API.ResponseWrapper
-import qualified API.StationInformation                       as AT
-import qualified API.SystemInformation                        as AT
+import           Haskbike.API.ResponseWrapper
+import qualified Haskbike.API.StationInformation                       as AT
+import qualified Haskbike.API.SystemInformation                        as AT
 
 import           AppEnv
 

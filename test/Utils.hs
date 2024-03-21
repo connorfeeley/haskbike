@@ -12,11 +12,11 @@
 
 module Utils where
 
-import           API.ResponseWrapper
-import qualified API.StationInformation                       as AT
-import qualified API.StationStatus                            as AT
-import qualified API.SystemInformation                        as AT
-import           API.Utils
+import           Haskbike.API.ResponseWrapper
+import qualified Haskbike.API.StationInformation                       as AT
+import qualified Haskbike.API.StationStatus                            as AT
+import qualified Haskbike.API.SystemInformation                        as AT
+import           Haskbike.API.Utils
 
 import           AppEnv
 

@@ -1,6 +1,6 @@
 -- | This module contains utility functions for the CLI.
 
-module CLI.Utils
+module Haskbike.CLI.Utils
      ( boxDrawingCharacter
      , boxLine
      , formatTime'

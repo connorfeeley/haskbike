@@ -16,9 +16,6 @@ module TestOperations
      , unit_stationEmptyTime
      ) where
 
-import qualified API.StationStatus                          as AT
-import           API.Utils
-
 import           AppEnv
 
 import           Control.Monad                              ( void )
@@ -32,6 +29,9 @@ import           Database.BikeShare.Operations.Factors
 import           Database.BikeShare.Operations.StationEmpty
 import           Database.BikeShare.StatusVariationQuery
 import           Database.BikeShare.Utils
+
+import qualified Haskbike.API.StationStatus                 as AT
+import           Haskbike.API.Utils
 
 import           Test.Tasty.HUnit
 

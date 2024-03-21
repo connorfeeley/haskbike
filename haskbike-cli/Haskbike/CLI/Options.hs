@@ -1,7 +1,7 @@
 {-# LANGUAGE RecordWildCards #-}
 
 -- | Command-line options.
-module CLI.Options where
+module Haskbike.CLI.Options where
 
 import qualified Data.Attoparsec.Text     as A
 import           Data.Either              ( fromRight )
@@ -9,7 +9,7 @@ import           Data.Functor             ( ($>) )
 import qualified Data.Text                as T
 import           Data.Time
 
-import           Database.BikeShare.Utils
+import           Haskbike.Database.Utils
 
 import           Options.Applicative
 

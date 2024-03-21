@@ -4,10 +4,10 @@ module TestDecoding
      , unit_systemInformation
      ) where
 
-import           API.ResponseWrapper
-import           API.StationInformation
-import           API.StationStatus
-import           API.SystemInformation
+import           Haskbike.API.ResponseWrapper
+import           Haskbike.API.StationInformation
+import           Haskbike.API.StationStatus
+import           Haskbike.API.SystemInformation
 
 import           Data.Aeson             ( FromJSON, eitherDecode )
 import qualified Data.ByteString        as B

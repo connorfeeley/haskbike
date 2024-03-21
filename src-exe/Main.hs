@@ -6,13 +6,13 @@ module Main
 
 import           AppEnv
 
-import           CLI.Database
-import           CLI.Debug
-import           CLI.Events
-import           CLI.Options
-import           CLI.Poll
-import           CLI.Query
-import           CLI.ServeVisualize
+import           Haskbike.CLI.Database
+import           Haskbike.CLI.Debug
+import           Haskbike.CLI.Events
+import           Haskbike.CLI.Options
+import           Haskbike.CLI.Poll
+import           Haskbike.CLI.Query
+import           Haskbike.CLI.ServeVisualize
 
 import           Colog                     ( LogAction, Severity (..), cmap, fmtMessage, log, logInfo, logTextStdout,
                                              pattern D, pattern E, pattern I, usingLoggerT )
@@ -43,7 +43,7 @@ import           Text.Pretty.Simple.Extras
 
 import           UnliftIO                  ( liftIO )
 
-import           Version
+import           Haskbike.Version
 
 
 main :: IO ()
