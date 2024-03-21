@@ -127,6 +127,8 @@ test-suite haskbike-client-test
     -- Base language which the package is written in.
     default-language: GHC2021
 
+    ghc-options: -Wall -fwrite-ide-info -threaded "-with-rtsopts=-N"
+
     -- Modules included in this test suite, other than Main.
     -- other-modules:
 
@@ -153,11 +155,6 @@ test-suite haskbike-client-test
                     , tasty-hunit
                     , haskbike-core
                     , haskbike-client
-                    , lens
-                    , time
                     , bytestring
                     , aeson
-                    , http-client
-                    , http-client-tls
-                    , unliftio
                     , file-embed

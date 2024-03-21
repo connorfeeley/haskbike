@@ -1,24 +1,14 @@
 -- | Test the client functions.
 module TestClient where
 
-import           Control.Exception         ( SomeException, try )
-import           Control.Monad             ( void )
-
-import           Data.Time                 ( getCurrentTimeZone )
+import           Control.Exception   ( SomeException, try )
+import           Control.Monad       ( void )
 
 import           Haskbike.API.Client
-import           Haskbike.AppEnv
 
-import           Network.HTTP.Client       ( newManager )
-import           Network.HTTP.Client.TLS   ( tlsManagerSettings )
-
-import           Prelude                   hiding ( log, unwords )
+import           Prelude             hiding ( log, unwords )
 
 import           Test.Tasty.HUnit
-
-import           Text.Pretty.Simple.Extras
-
-import           UnliftIO                  ( liftIO, timeout )
 
 
 -- | Mark a test as expected to fail.

@@ -12,20 +12,17 @@
 
 module Utils where
 
-import           Control.Lens
 import           Control.Monad                   ( void )
 
 import           Data.Aeson
 import qualified Data.ByteString                 as B
 import qualified Data.ByteString.Lazy            as BL
 import           Data.FileEmbed                  ( embedDir )
-import           Data.Time
 
 import           Haskbike.API.ResponseWrapper
 import qualified Haskbike.API.StationInformation as AT
 import qualified Haskbike.API.StationStatus      as AT
 import qualified Haskbike.API.SystemInformation  as AT
-import           Haskbike.API.Utils
 import           Haskbike.AppEnv
 
 import           Test.Tasty.HUnit
