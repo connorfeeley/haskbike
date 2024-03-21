@@ -17,15 +17,14 @@ module TestChargings
      , unit_querySystemStatus
      ) where
 
-import           AppEnv
-
-import           Data.Functor                            ( void )
+import           Data.Functor                           ( void )
 import           Data.Time
 
-import           Database.BikeShare.EventCounts
-import           Database.BikeShare.Operations
-import           Database.BikeShare.StatusVariationQuery
-import           Database.BikeShare.Utils
+import           Haskbike.AppEnv
+import           Haskbike.Database.EventCounts
+import           Haskbike.Database.Operations
+import           Haskbike.Database.StatusVariationQuery
+import           Haskbike.Database.Utils
 
 import           Test.Tasty.HUnit
 

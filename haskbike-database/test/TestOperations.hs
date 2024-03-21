@@ -16,22 +16,21 @@ module TestOperations
      , unit_stationEmptyTime
      ) where
 
-import           AppEnv
+import           Control.Monad                             ( void )
 
-import           Control.Monad                              ( void )
-
-import           Data.Fixed                                 ( Pico )
+import           Data.Fixed                                ( Pico )
 import           Data.Time
 
 import           Database.Beam
-import           Database.BikeShare.Operations
-import           Database.BikeShare.Operations.Factors
-import           Database.BikeShare.Operations.StationEmpty
-import           Database.BikeShare.StatusVariationQuery
-import           Database.BikeShare.Utils
 
-import qualified Haskbike.API.StationStatus                 as AT
+import qualified Haskbike.API.StationStatus                as AT
 import           Haskbike.API.Utils
+import           Haskbike.AppEnv
+import           Haskbike.Database.Operations
+import           Haskbike.Database.Operations.Factors
+import           Haskbike.Database.Operations.StationEmpty
+import           Haskbike.Database.StatusVariationQuery
+import           Haskbike.Database.Utils
 
 import           Test.Tasty.HUnit
 

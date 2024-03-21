@@ -30,33 +30,32 @@ module TestDatabase
      , unit_queryStationStatusBetween
      ) where
 
-import           Haskbike.API.ResponseWrapper
-import qualified Haskbike.API.StationInformation                       as AT
-import qualified Haskbike.API.SystemInformation                        as AT
+import           Control.Lens                                hiding ( reuse )
+import           Control.Monad                               ( unless )
 
-import           AppEnv
-
-import           Control.Lens                                 hiding ( reuse )
-import           Control.Monad                                ( unless )
-
-import           Data.Functor                                 ( void )
-import           Data.Int                                     ( Int32 )
+import           Data.Functor                                ( void )
+import           Data.Int                                    ( Int32 )
 import           Data.Time
 
 import           Database.Beam
 import           Database.Beam.Postgres
-import           Database.BikeShare.EventCounts
-import           Database.BikeShare.Expressions
-import           Database.BikeShare.Operations
-import           Database.BikeShare.StatusVariationQuery
-import           Database.BikeShare.Tables.StationInformation
-import           Database.BikeShare.Tables.StationStatus
-import           Database.BikeShare.Tables.SystemInformation
-import           Database.BikeShare.Utils
+
+import           Haskbike.API.ResponseWrapper
+import qualified Haskbike.API.StationInformation             as AT
+import qualified Haskbike.API.SystemInformation              as AT
+import           Haskbike.AppEnv
+import           Haskbike.Database.EventCounts
+import           Haskbike.Database.Expressions
+import           Haskbike.Database.Operations
+import           Haskbike.Database.StatusVariationQuery
+import           Haskbike.Database.Tables.StationInformation
+import           Haskbike.Database.Tables.StationStatus
+import           Haskbike.Database.Tables.SystemInformation
+import           Haskbike.Database.Utils
 
 import           Test.Tasty.HUnit
 
-import           UnliftIO                                     ( try )
+import           UnliftIO                                    ( try )
 
 import           Utils
 

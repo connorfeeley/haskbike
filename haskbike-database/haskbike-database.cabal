@@ -169,3 +169,60 @@ library
 
     -- Base language which the package is written in.
     default-language: GHC2021
+
+
+test-suite haskbike-database-test
+    import: common-extensions
+
+    -- Base language which the package is written in.
+    default-language: GHC2021
+
+    -- Modules included in this test suite, other than Main.
+    -- other-modules:
+
+    -- Modules exported by the library.
+    other-modules:  Utils
+                  , TestChargings
+                  , TestDatabase
+                  , TestOperations
+
+    -- LANGUAGE extensions used by modules in this package.
+    -- other-extensions:
+
+    -- The interface type and version of the test suite.
+    type:             exitcode-stdio-1.0
+
+    -- Directories containing source files.
+    hs-source-dirs:   test
+
+    -- The entrypoint to the test suite.
+    main-is:          Driver.hs
+
+    -- Test dependencies.
+    build-depends:    base
+                    , haskbike-core
+                    , haskbike-client
+                    , haskbike-database
+                    , tasty
+                    , tasty-hunit
+                    , beam-core
+                    , beam-postgres
+                    , lens
+                    , time
+                    , extra
+                    , bytestring
+                    , aeson
+                    , http-client
+                    , http-client-tls
+                    , unliftio
+                    , tasty-quickcheck
+                    , tasty-discover
+                    , tasty-expected-failure
+                    , QuickCheck
+                    , HUnit
+                    , file-embed
+                    , silently
+
+    -- Ensure tasty-discover is available to discover tests.
+    build-tool-depends:
+      tasty-discover:tasty-discover

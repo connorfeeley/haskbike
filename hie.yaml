@@ -17,9 +17,13 @@ cradle:
 
     - path: "haskbike-client"
       component: "lib:haskbike-client"
+    - path: "haskbike-client"
+      component: "haskbike-client:test:haskbike-client-test"
 
     - path: "haskbike-database"
       component: "lib:haskbike-database"
+    - path: "haskbike-database"
+      component: "haskbike-database:test:haskbike-database-test"
 
     - path: "haskbike-server"
       component: "lib:haskbike-server"

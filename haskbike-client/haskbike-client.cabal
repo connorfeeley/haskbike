@@ -69,22 +69,6 @@ common common-extensions
                       , TupleSections
                       , ScopedTypeVariables
 
--- Dependencies needed by testing targets.
-common test-depends
-    build-depends:    tasty
-                    , tasty-hunit
-                    , tasty-quickcheck
-                    , tasty-discover
-                    , tasty-expected-failure
-                    , QuickCheck
-                    , HUnit
-                    , file-embed
-                    , silently
-
-    -- Ensure tasty-discover is available to discover tests.
-    build-tool-depends:
-      tasty-discover:tasty-discover
-
 -- Library target.
 library
     import:           common-extensions
@@ -133,9 +117,8 @@ library
     default-language: GHC2021
 
 
-test-suite haskbike-test
+test-suite haskbike-client-test
     import: common-extensions
-          , test-depends
 
     -- Base language which the package is written in.
     default-language: GHC2021
@@ -174,4 +157,4 @@ test-suite haskbike-test
                     , http-client
                     , http-client-tls
                     , unliftio
-                    -- , haskbike-test-lib
+                    , file-embed
