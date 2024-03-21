@@ -15,9 +15,6 @@ import qualified Data.ByteString.Lazy            as BL
 import qualified Data.Maybe                      as Maybe
 
 import           Haskbike.API.APIVersion
-import           Haskbike.API.BikeShare
-import           Haskbike.API.BikeShareAPI
-import           Haskbike.API.Client
 import           Haskbike.API.ResponseWrapper
 import           Haskbike.API.StationInformation
 import           Haskbike.API.StationStatus
