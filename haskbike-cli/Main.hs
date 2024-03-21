@@ -4,7 +4,7 @@ module Main
      ) where
 
 
-import           AppEnv
+import           Haskbike.AppEnv
 
 import           Haskbike.CLI.Database
 import           Haskbike.CLI.Debug
@@ -27,7 +27,7 @@ import qualified Data.Text.Lazy            as TL
 import           Data.Time                 ( getCurrentTimeZone )
 
 import           Database.Beam.Postgres    ( ConnectInfo (connectPassword) )
-import           Database.BikeShare.Utils
+import           Haskbike.Database.Utils
 
 import           Network.HTTP.Client       ( newManager )
 import           Network.HTTP.Client.TLS   ( tlsManagerSettings )
