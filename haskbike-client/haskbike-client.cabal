@@ -151,7 +151,6 @@ test-suite haskbike-client-test
                     , haskbike-client
                     , lens
                     , time
-                    , extra
                     , bytestring
                     , aeson
                     , http-client

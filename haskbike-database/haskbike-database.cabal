@@ -183,6 +183,7 @@ test-suite haskbike-database-test
     other-modules:  Utils
                   , TestChargings
                   , TestDatabase
+                  , TestDatabaseRoundtrip
                   , TestOperations
                   , Paths_haskbike_database
 
@@ -209,22 +210,11 @@ test-suite haskbike-database-test
                     , tasty-hunit
                     , beam-core
                     , beam-postgres
+                    , aeson
+                    , bytestring
+                    , containers
                     , lens
                     , time
-                    , extra
-                    , bytestring
-                    , aeson
-                    , http-client
-                    , http-client-tls
                     , unliftio
-                    , tasty-quickcheck
-                    , tasty-discover
-                    , tasty-expected-failure
-                    , QuickCheck
-                    , HUnit
-                    , file-embed
-                    , silently
 
-    -- Ensure tasty-discover is available to discover tests.
-    build-tool-depends:
-      tasty-discover:tasty-discover
+    build-tool-depends: tasty-discover:tasty-discover
