@@ -195,14 +195,14 @@
           };
 
           # haskell-flake doesn't set the default package, but you can do it here.
-          packages.default = self'.packages.haskbike;
+          packages.default = self'.packages.haskbike-cli;
           packages.haskbike-completions = pkgs.writeTextFile {
             name = "haskbike-completions";
             text = "source <(haskbike --bash-completion-script haskbike)";
             destination = "/etc/bash_completion.d/haskbike";
           };
 
-          packages.haskbike-static = pkgs.haskell.lib.justStaticExecutables self'.packages.haskbike;
+          packages.haskbike-cli-static = pkgs.haskell.lib.justStaticExecutables self'.packages.haskbike-cli;
 
           # Display a graph of all modules and how they depend on each other
           packages.module-deps-with-filetype = pkgs.writeShellScript "mainserv-module-deps-with-filetype" ''
