@@ -27,7 +27,6 @@ import qualified Data.Text.Lazy            as TL
 import           Data.Time                 ( getCurrentTimeZone )
 
 import           Database.Beam.Postgres    ( ConnectInfo (connectPassword) )
-import           Haskbike.Database.Utils
 
 import           Network.HTTP.Client       ( newManager )
 import           Network.HTTP.Client.TLS   ( tlsManagerSettings )
