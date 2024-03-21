@@ -9,6 +9,10 @@
     haskell-flake.url = "github:srid/haskell-flake";
     flake-root.url = "github:srid/flake-root";
     treefmt-nix.url = "github:numtide/treefmt-nix";
+
+    # Haskell package sources.
+    # tmp-postgres needs a new release.
+    tmp-postgres = { url = "github:jfischoff/tmp-postgres"; flake = false; };
   };
   outputs = inputs@{ self, nixpkgs, flake-parts, ... }:
     let rev = self.rev or self.dirtyRev or "dirty";
@@ -128,6 +132,7 @@
               # haskbike.source = ./.;
               # aeson.source = "2.1.2.0";
               # zlib.source = pkgs.zlib;
+              tmp-postgres.source = inputs.tmp-postgres;
             } // lib.optionalAttrs (lib.versionOlder config.haskellProjects.default.basePackages.ghc.version "9.4") {
               resource-pool.source = "0.4.0.0";
 
@@ -148,6 +153,7 @@
                 jailbreak = true;
                 broken = false;
               };
+              tmp-postgres.check = false;
             };
 
             # The base package set representing a specific GHC version.

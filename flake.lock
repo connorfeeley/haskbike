@@ -121,7 +121,24 @@
         "flake-root": "flake-root",
         "haskell-flake": "haskell-flake",
         "nixpkgs": "nixpkgs",
+        "tmp-postgres": "tmp-postgres",
         "treefmt-nix": "treefmt-nix"
+      }
+    },
+    "tmp-postgres": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1691516008,
+        "narHash": "sha256-dE1OQN7I4Lxy6RBdLCvm75Z9D/Hu+9G4ejV2pEtvL1A=",
+        "owner": "jfischoff",
+        "repo": "tmp-postgres",
+        "rev": "7f2467a6d6d5f6db7eed59919a6773fe006cf22b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "jfischoff",
+        "repo": "tmp-postgres",
+        "type": "github"
       }
     },
     "treefmt-nix": {
