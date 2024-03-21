@@ -130,46 +130,44 @@ library
     -- other-extensions:
 
     -- Other library packages from which modules are imported.
-    build-depends:    text-show
-                    , attoparsec
-                    , hvega
-                    , aeson-pretty
-                    , data-default-class
-                    , cond
-                    , base-compat-batteries
-
+    build-depends:    base
                     , haskbike-core
                     , haskbike-client
                     , haskbike-database
 
+                    , bytestring
+                    , cassava
+                    , co-log
+                    , containers
+                    , exceptions
+                    , mtl
+                    , resource-pool >= 0.4.0.0
+                    , text
+                    , time
+                    , unliftio
+
+                    , attoparsec
+                    , base-compat-batteries
+                    , cond
+                    , data-default-class
+                    , hvega
+                    , lens
+                    , text-show
+
+                    , aeson
+                    , aeson-pretty
                     , http-client
                     , http-client-tls
-
-                    , base
-                    , bytestring
-                    , text
-                    , containers
-                    , mtl
-                    , unliftio
-                    , co-log
-                    , time
-                    , exceptions
-                    , cassava
-                    , resource-pool >= 0.4.0.0
-
+                    , lucid
+                    , servant-lucid
                     , servant-server
                     , wai-extra
                     , warp
-                    , aeson
-
-                    , lucid
-                    , servant-lucid
 
                     , beam-core
                     , beam-migrate
-                    , postgresql-simple
                     , beam-postgres
-                    , lens
+                    , postgresql-simple
 
     -- Directories containing source files.
     -- hs-source-dirs:

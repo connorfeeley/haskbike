@@ -106,12 +106,12 @@ executable haskbike
                     , haskbike-core
                     , haskbike-cli
 
-                    , mtl
-                    , text
-                    , unliftio
                     , co-log
+                    , mtl
                     , optparse-applicative
+                    , text
                     , time
+                    , unliftio
 
                     , http-client
                     , http-client-tls
@@ -160,18 +160,18 @@ library
                     , haskbike-database
                     , haskbike-server
 
-                    , text-show
-                    , attoparsec
-                    , directory
-                    , text
-                    , unliftio
-                    , co-log
                     , ansi-terminal
-                    , optparse-applicative
-                    , time
+                    , attoparsec
                     , boxes
+                    , co-log
+                    , directory
                     , exceptions
                     , lens
+                    , optparse-applicative
+                    , text
+                    , text-show
+                    , time
+                    , unliftio
 
                     , aeson
                     , servant-client

@@ -91,25 +91,24 @@ library
     -- other-extensions:
 
     -- Other library packages from which modules are imported.
-    build-depends:    attoparsec
-                    , lens
-
+    build-depends:    base
                     , haskbike-core
 
-                    , base
+                    , attoparsec
+                    , co-log
+                    , containers
+                    , exceptions
+                    , lens
                     , pretty-simple
                     , text
-                    , containers
-                    , unliftio
-                    , co-log
                     , time
-                    , exceptions
+                    , unliftio
 
-                    , servant
                     , aeson
-                    , servant-client
                     , http-client
                     , http-client-tls
+                    , servant
+                    , servant-client
 
     -- Directories containing source files.
     -- hs-source-dirs:

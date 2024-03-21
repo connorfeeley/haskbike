@@ -105,24 +105,23 @@ library
 
     -- Other library packages from which modules are imported.
     build-depends:  base
-                  , githash
-                  , pretty-simple
-                  , text
-                  , mtl
-                  , unliftio
                   , co-log
-                  , time
                   , exceptions
+                  , githash
+                  , mtl
+                  , pretty-simple
                   , resource-pool >= 0.4.0.0
+                  , text
+                  , time
+                  , unliftio
 
-                  , postgresql-simple
                   , beam-postgres
-
-                  , servant-client
-                  , servant-server
+                  , postgresql-simple
 
                   , http-client
                   , http-client-tls
+                  , servant-client
+                  , servant-server
 
     -- Base language which the package is written in.
     default-language: GHC2021
