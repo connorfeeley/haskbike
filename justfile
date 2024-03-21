@@ -102,6 +102,9 @@ build-clang:
 build *ARGS:
     {{CABAL}} build {{ARGS}}
 
+clean *ARGS:
+    cabal clean {{ARGS}}
+
 redate:
     git-privacy redate origin/master
 
