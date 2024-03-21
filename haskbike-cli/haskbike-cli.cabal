@@ -60,8 +60,6 @@ extra-source-files: docs/json/2.3/*.json
 
 -- Linker (use gold) common warning flags.
 common compile-flags
-    -- ghc-options: -Wall -fwrite-ide-info -fprof-auto -threaded
-    -- ghc-options: -Wall -fwrite-ide-info -fprof-auto
     ghc-options: -Wall -fwrite-ide-info -threaded
     -- Link with gold on Linux.
     if os(linux)
@@ -192,6 +190,8 @@ test-suite haskbike-cli-test
     -- Base language which the package is written in.
     default-language: GHC2021
 
+    ghc-options: -Wall -fwrite-ide-info -threaded "-with-rtsopts=-N"
+
     other-modules:  TestPoll
                   , Paths_haskbike_cli
 
@@ -205,7 +205,6 @@ test-suite haskbike-cli-test
 
     build-depends:    base
                     , haskbike-core
-                    , haskbike-client
                     , haskbike-database
                     , haskbike-cli
                     , tasty

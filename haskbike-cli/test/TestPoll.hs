@@ -1,15 +1,13 @@
 -- | Test the client functions.
 module TestPoll where
 
-import           Colog                       ( Severity (Warning), logInfo )
+import           Colog                       ( logInfo )
 
-import           Control.Exception           ( SomeException, try )
 import           Control.Monad               ( void )
 
 import qualified Data.Text.Lazy              as TL
 import           Data.Time                   ( getCurrentTimeZone )
 
-import           Haskbike.API.Client
 import           Haskbike.AppEnv
 import           Haskbike.CLI.Options        ( PollOptions (..), PopulateStatusChangesOpt (..) )
 import qualified Haskbike.CLI.Poll           as Poll
@@ -20,8 +18,6 @@ import           Network.HTTP.Client         ( newManager )
 import           Network.HTTP.Client.TLS     ( tlsManagerSettings )
 
 import           Prelude                     hiding ( log, unwords )
-
-import           Test.Tasty.HUnit
 
 import           Text.Pretty.Simple.Extras
 
