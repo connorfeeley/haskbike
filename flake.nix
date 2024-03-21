@@ -178,7 +178,7 @@
                     haskell-language-server
                     implicit-hie
                     floskell
-                    hasktags
+                    # hasktags
                     cabal-install
                     hlint
                     doctest
