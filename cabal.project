@@ -1,0 +1,11 @@
+packages:
+  haskbike-core
+  haskbike-client
+  haskbike-database
+  haskbike-server
+  haskbike-cli
+
+source-repository-package
+  type: git
+  location: https://github.com/jfischoff/tmp-postgres.git
+  tag: 7f2467a6d6d5f6db7eed59919a6773fe006cf22b

@@ -1,0 +1,182 @@
+{
+  "last_updated": 1694211235,
+  "ttl": 10,
+  "data": {
+    "stations": [
+      {
+        "station_id": "7000",
+        "name": "Fort York  Blvd / Capreol Ct",
+        "physical_configuration": "REGULAR",
+        "lat": 43.639832,
+        "lon": -79.395954,
+        "altitude": 0.0,
+        "address": "Fort York  Blvd / Capreol Ct",
+        "capacity": 35,
+        "is_charging_station": false,
+        "rental_methods": [
+          "KEY",
+          "TRANSITCARD",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "groups": [],
+        "obcn": "647-643-9607",
+        "nearby_distance": 500.0,
+        "_bluetooth_id": "",
+        "_ride_code_support": true,
+        "rental_uris": {}
+      },
+      {
+        "station_id": "7001",
+        "name": "Wellesley Station Green P",
+        "physical_configuration": "ELECTRICBIKESTATION",
+        "lat": 43.66496415990742,
+        "lon": -79.38355031526893,
+        "altitude": 0.0,
+        "address": "Yonge / Wellesley",
+        "post_code": "M4Y 1G7",
+        "capacity": 23,
+        "is_charging_station": true,
+        "rental_methods": [
+          "KEY",
+          "TRANSITCARD",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "groups": [],
+        "obcn": "416-617-9576",
+        "nearby_distance": 500.0,
+        "_bluetooth_id": "",
+        "_ride_code_support": true,
+        "rental_uris": {}
+      },
+      {
+        "station_id": "7437",
+        "name": "Concord Ave / Bloor St W",
+        "physical_configuration": "REGULARLITMAPFRAME",
+        "lat": 43.66189,
+        "lon": -79.42679,
+        "altitude": 0.0,
+        "address": "Concord Ave / Bloor St W - SMART",
+        "post_code": "M6H 1L1",
+        "capacity": 15,
+        "is_charging_station": false,
+        "rental_methods": [
+          "KEY",
+          "TRANSITCARD",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "groups": [
+          "P7152-7437"
+        ],
+        "obcn": "437-243-9475",
+        "nearby_distance": 1609.34,
+        "_bluetooth_id": "",
+        "_ride_code_support": true,
+        "rental_uris": {}
+      },
+      {
+        "station_id": "7546",
+        "name": "Ross St / Cecil St - SMART",
+        "physical_configuration": "SMARTLITMAPFRAME",
+        "lat": 43.6568254,
+        "lon": -79.3966159,
+        "altitude": 0.0,
+        "address": "Ross St / Cecil St",
+        "post_code": "M5T 1N3",
+        "capacity": 18,
+        "is_charging_station": false,
+        "rental_methods": [
+          "KEY",
+          "TRANSITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "groups": [],
+        "obcn": "437-333-8180",
+        "nearby_distance": 1609.34,
+        "_bluetooth_id": "",
+        "_ride_code_support": true,
+        "rental_uris": {}
+      },
+      {
+        "station_id": "7109",
+        "name": "Seaton St / Dundas St E - SMART",
+        "physical_configuration": "SMARTMAPFRAME",
+        "lat": 43.658777,
+        "lon": -79.369596,
+        "altitude": 0.0,
+        "address": "Seaton St / Dundas St E",
+        "capacity": 32,
+        "is_charging_station": false,
+        "rental_methods": [
+          "KEY",
+          "TRANSITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "groups": [],
+        "obcn": "647-669-3971",
+        "nearby_distance": 500.0,
+        "_bluetooth_id": "",
+        "_ride_code_support": true,
+        "rental_uris": {}
+      },
+      {
+        "station_id": "7052",
+        "name": "Wellington St W / Bay St",
+        "physical_configuration": "VAULT",
+        "lat": 43.647259,
+        "lon": -79.379878,
+        "altitude": 0.0,
+        "address": "Wellington St W / Bay St",
+        "capacity": 27,
+        "is_charging_station": false,
+        "rental_methods": [
+          "KEY",
+          "TRANSITCARD",
+          "PHONE"
+        ],
+        "is_virtual_station": false,
+        "groups": [],
+        "obcn": "416-723-3438",
+        "nearby_distance": 500.0,
+        "_bluetooth_id": "db35",
+        "_ride_code_support": true,
+        "rental_uris": {}
+      },
+      {
+        "_bluetooth_id": "",
+        "_ride_code_support": true,
+        "address": "University Ave / College St (East)",
+        "altitude": 0.0,
+        "capacity": 14,
+        "groups": [
+          "P7062-7502"
+        ],
+        "is_charging_station": false,
+        "is_virtual_station": false,
+        "lat": 43.65995,
+        "lon": -79.38964,
+        "name": "University Ave / College St (East)",
+        "nearby_distance": 1609.34,
+        "obcn": "437-241-6388",
+        "physical_configuration": "REGULAR",
+        "post_code": "M5G 1L7",
+        "rental_methods": [
+          "KEY",
+          "TRANSITCARD",
+          "CREDITCARD",
+          "PHONE"
+        ],
+        "rental_uris": {},
+        "station_id": "7502"
+      }
+    ]
+  },
+  "version": "2.3"
+}

@@ -3,7 +3,7 @@
 /result
 *.hi
 *.o
-/TAGS
+TAGS
 
 # Ignore environment files (except example template)
 /.env

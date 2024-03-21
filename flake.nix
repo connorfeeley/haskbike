@@ -1,6 +1,6 @@
 {
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
 
     flake-compat = { url = "github:edolstra/flake-compat"; flake = false; };
 
@@ -9,6 +9,10 @@
     haskell-flake.url = "github:srid/haskell-flake";
     flake-root.url = "github:srid/flake-root";
     treefmt-nix.url = "github:numtide/treefmt-nix";
+
+    # Haskell package sources.
+    # tmp-postgres needs a new release.
+    tmp-postgres = { url = "github:jfischoff/tmp-postgres"; flake = false; };
   };
   outputs = inputs@{ self, nixpkgs, flake-parts, ... }:
     let rev = self.rev or self.dirtyRev or "dirty";
@@ -24,7 +28,25 @@
       ];
 
       perSystem = { self', config, pkgs, ... }:
-        let inherit (pkgs) lib; in {
+        let inherit (pkgs) lib;
+          haskellOptions = {
+            # Profiling options.
+            # libraryProfiling     = false;   # Disable profiling for libraries.
+            # executableProfiling  = false;   # Disable profiling for executables.
+
+            # Debugging options.
+            # strip                = false;   # Don't strip executables.
+            # enableDWARFDebugging = true;    # Enable DWARF debugging.
+            # deadCodeElimination  = false;   # Disable dead code elimination.
+
+            # disableOptimization  = true;    # Disable optimization - significantly speeds up build time.
+
+            # Documentation options.
+            # haddock              = true;    # Enable haddock generation.
+            # hyperlinkSource      = true;    # Enable hyperlinked source.
+          };
+        in
+        {
           # Typically, you just want a single project named "default". But
           # multiple projects are also possible, each using different GHC version.
           haskellProjects.default = {
@@ -33,8 +55,8 @@
             projectRoot = ./.;
 
             settings = {
-              haskbike = { self, super, ... }: {
-                custom = pkg: pkgs.lib.pipe super.haskbike [
+              haskbike-core = { self, super, ... }: {
+                custom = pkg: pkgs.lib.pipe super.haskbike-core [
                   # Replace Version.hs with a generated one, since it requires access to the git directory
                   # to determine the version.
                   (pkgs.haskell.lib.compose.overrideCabal (o:
@@ -53,48 +75,53 @@
                       #   pkgs.cabal-install
                       # ];
 
-                      postPatch = o.postPatch or "" + "cp ${versionFile} src-lib/Version.hs";
-
-                      preCheck = pkg.preCheck or "" + ''
-                        export PGDATABASE=haskbike-test
-
-                        export HASKBIKE_USERNAME=$PGUSER
-                        export HASKBIKE_PASSWORD=""
-                        export HASKBIKE_DATABASE=$PGDATABASE
-                        export HASKBIKE_PGDBHOST=$PGHOST
-                        export HASKBIKE_PGDBPORT=$PGPORT
-                      '';
-                      doCheck = false;
-
-                      postInstall = o.postInstall or "" + ''
-                        mkdir -p $out/share/haskbike/www/static
-                        cp -r ${./static-files}/* $out/share/haskbike/www/static/
+                      postPatch = o.postPatch or "" + ''
+                        cp ${versionFile} Haskbike/Version.hs
                       '';
                     }))
                   (pkgs.haskell.lib.enableLibraryProfiling)
-
-                  # Add optparse-applicative completions to the derivation output.
-                  (self.generateOptparseApplicativeCompletions [ "haskbike" ])
                 ];
 
                 extraBuildTools = [ pkgs.git ];
 
                 check = false; # Don't run checks as part of the build.
+              };
+              haskbike-server = { self, super, ... }: {
+                custom = pkg: pkgs.lib.pipe super.haskbike-server [
+                  # Replace Version.hs with a generated one, since it requires access to the git directory
+                  # to determine the version.
+                  (pkgs.haskell.lib.compose.overrideCabal (o: {
+                    postInstall = o.postInstall or "" + ''
+                      mkdir -p $out/share/haskbike/www/static
+                      cp -r ${./static-files}/* $out/share/haskbike/www/static/
+                    '';
+                  }))
+                  (pkgs.haskell.lib.enableLibraryProfiling)
+                ];
+                check = false; # Don't run checks as part of the build.
+              };
+              haskbike-cli = { self, super, ... }: {
+                custom = pkg: pkgs.lib.pipe super.haskbike-cli [
+                  # Replace Version.hs with a generated one, since it requires access to the git directory
+                  # to determine the version.
+                  (pkgs.haskell.lib.compose.overrideCabal (o: {
+                    extraLibraries = [ pkgs.stdenv.cc.libcxx ];
+                    preCheck = pkg.preCheck or "" + ''
+                      export PGDATABASE=haskbike-test
 
-                # Profiling options.
-                # libraryProfiling     = false;   # Disable profiling for libraries.
-                # executableProfiling  = false;   # Disable profiling for executables.
-
-                # Debugging options.
-                # strip                = false;   # Don't strip executables.
-                # enableDWARFDebugging = true;    # Enable DWARF debugging.
-                # deadCodeElimination  = false;   # Disable dead code elimination.
-
-                # disableOptimization  = true;    # Disable optimization - significantly speeds up build time.
-
-                # Documentation options.
-                # haddock              = true;    # Enable haddock generation.
-                # hyperlinkSource      = true;    # Enable hyperlinked source.
+                      export HASKBIKE_USERNAME=$PGUSER
+                      export HASKBIKE_PASSWORD=""
+                      export HASKBIKE_DATABASE=$PGDATABASE
+                      export HASKBIKE_PGDBHOST=$PGHOST
+                      export HASKBIKE_PGDBPORT=$PGPORT
+                    '';
+                    doCheck = false;
+                  }))
+                  (pkgs.haskell.lib.enableLibraryProfiling)
+                  # Add optparse-applicative completions to the derivation output.
+                  (self.generateOptparseApplicativeCompletions [ "haskbike" ])
+                ];
+                check = false; # Don't run checks as part of the build.
               };
             };
 
@@ -105,6 +132,7 @@
               # haskbike.source = ./.;
               # aeson.source = "2.1.2.0";
               # zlib.source = pkgs.zlib;
+              tmp-postgres.source = inputs.tmp-postgres;
             } // lib.optionalAttrs (lib.versionOlder config.haskellProjects.default.basePackages.ghc.version "9.4") {
               resource-pool.source = "0.4.0.0";
 
@@ -114,13 +142,25 @@
               servant-docs.source = "0.13";
               servant-server.source = "0.20";
               servant-client.source = "0.20";
+            } // lib.optionalAttrs (lib.versionAtLeast config.haskellProjects.default.basePackages.ghc.version "9.5") {
+              pqueue.source = "1.5.0.0";
+              postgresql-libpg.source = "0.10.0.0";
+            };
+            settings = {
+              postgresql-libpg.jailbreak = true;
+              beam-postgres.jailbreak = true;
+              beam-migrate = {
+                jailbreak = true;
+                broken = false;
+              };
+              tmp-postgres.check = false;
             };
 
             # The base package set representing a specific GHC version.
             # By default, this is pkgs.haskellPackages.
             # You may also create your own. See https://haskell.flake.page/package-set
             # basePackages = pkgs.haskellPackages;
-            basePackages = pkgs.haskell.packages.ghc94;
+            basePackages = pkgs.haskell.packages.ghc96;
 
             devShell =
               let
@@ -138,7 +178,7 @@
                     haskell-language-server
                     implicit-hie
                     floskell
-                    hasktags
+                    # hasktags
                     cabal-install
                     hlint
                     doctest
@@ -184,14 +224,14 @@
           };
 
           # haskell-flake doesn't set the default package, but you can do it here.
-          packages.default = self'.packages.haskbike;
+          packages.default = self'.packages.haskbike-cli;
           packages.haskbike-completions = pkgs.writeTextFile {
             name = "haskbike-completions";
             text = "source <(haskbike --bash-completion-script haskbike)";
             destination = "/etc/bash_completion.d/haskbike";
           };
 
-          packages.haskbike-static = pkgs.haskell.lib.justStaticExecutables self'.packages.haskbike;
+          packages.haskbike-cli-static = pkgs.haskell.lib.justStaticExecutables self'.packages.haskbike-cli;
 
           # Display a graph of all modules and how they depend on each other
           packages.module-deps-with-filetype = pkgs.writeShellScript "mainserv-module-deps-with-filetype" ''
