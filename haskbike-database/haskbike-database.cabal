@@ -161,6 +161,7 @@ library
                     , beam-migrate
                     , postgresql-simple
                     , beam-postgres
+
                     , lens
 
     -- Directories containing source files.
@@ -216,5 +217,7 @@ test-suite haskbike-database-test
                     , lens
                     , time
                     , unliftio
+                    , tmp-postgres
+                    , postgresql-simple
 
     build-tool-depends: tasty-discover:tasty-discover

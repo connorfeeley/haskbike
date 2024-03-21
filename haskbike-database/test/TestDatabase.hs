@@ -31,7 +31,7 @@ module TestDatabase
      ) where
 
 import           Control.Lens                                hiding ( reuse )
-import           Control.Monad                               ( unless )
+import           Control.Monad                               ( unless, (<=<) )
 
 import           Data.Functor                                ( void )
 import           Data.Int                                    ( Int32 )
@@ -39,7 +39,10 @@ import           Data.Time
 
 import           Database.Beam
 import           Database.Beam.Postgres
+import           Database.Postgres.Temp
+import           Database.PostgreSQL.Simple                  ( connectPostgreSQL, defaultConnectInfo )
 
+import           Haskbike.API.Client                         ( mkClientManager )
 import           Haskbike.API.ResponseWrapper
 import qualified Haskbike.API.StationInformation             as AT
 import qualified Haskbike.API.SystemInformation              as AT
@@ -57,24 +60,41 @@ import           Paths_haskbike_database                     ( getDataFileName )
 
 import           Test.Tasty.HUnit
 
-import           UnliftIO                                    ( try )
+import           UnliftIO                                    ( bracket, try )
 
 import           Utils
+
+withTempDbM :: AppM a -> IO a
+withTempDbM action = do
+  -- Create temporary postgres database
+  tempPgResult <- withConfig defaultConfig $ \db -> bracket
+    (pure (toConnectionString db))  -- Setup step
+    (close <=< connectPostgreSQL) $ -- Shutdown step
+    \connString -> do               -- Middle step
+      connPool <- mkDatabaseConnectionPoolFrom connectPostgreSQL connString
+      currentTimeZone <- getCurrentTimeZone
+      clientManager <- mkClientManager
+      let env = mainEnv Debug True True currentTimeZone connPool clientManager
+      runAppM env action
+  pure $ unsafeUnwrapResult tempPgResult
+  where
+    unsafeUnwrapResult (Right x) = x
+    unsafeUnwrapResult _         = error "Database setup failed"
 
 
 -- | HUnit test for inserting system information.
 unit_insertSystemInformation :: IO ()
 unit_insertSystemInformation = do
-  -- Connect to the database.
-  runWithAppMSuppressLog dbnameTest setupTestDatabase
-
   status  <- getDecodedFileSystemInformation "test/json/system_information.json"
   let (reported, info) = (status ^. respLastUpdated, status ^. respData)
 
-  -- Should fail because station information has not been inserted.
-  -- Catch exception with 'try'.
-  (insertedInfo, insertedInfoCount) <- runWithAppMSuppressLog dbnameTest $
+  -- Connect to the database.
+  (insertedInfo, insertedInfoCount) <- withTempDbM $ do
+    setupTestDatabase
+    -- Should fail because station information has not been inserted.
+    -- Catch exception with 'try'.
     insertSystemInformation reported info
+
 
   assertEqual "Inserted system information length" (1, 1) (length insertedInfo, length insertedInfoCount)
 

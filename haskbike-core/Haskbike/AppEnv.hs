@@ -8,12 +8,14 @@ module Haskbike.AppEnv
      , Env (..)
      , HasEnv (..)
      , Message
+     , Severity (..)
      , WithEnv
      , ask
      , asks
      , executeWithConnPool
      , mainEnv
      , mkDatabaseConnectionPool
+     , mkDatabaseConnectionPoolFrom
      , mkDbConnectInfo
      , runAppM
      , runWithAppM
@@ -244,8 +246,12 @@ runWithAppMDebug dbname action = do
   runAppM env action
 
 mkDatabaseConnectionPool :: MonadIO m => ConnectInfo -> m (Pool Connection)
-mkDatabaseConnectionPool connInfo = liftIO $ newPool (defaultPoolConfig (connect connInfo) close 30 numCapabilities)
+mkDatabaseConnectionPool = mkDatabaseConnectionPoolFrom connect
 {-# INLINE mkDatabaseConnectionPool #-}
+
+mkDatabaseConnectionPoolFrom :: MonadIO m => (t -> IO Connection) -> t -> m (Pool Connection)
+mkDatabaseConnectionPoolFrom connectFn param = liftIO $ newPool (defaultPoolConfig (connectFn param) close 30 numCapabilities)
+{-# INLINE mkDatabaseConnectionPoolFrom #-}
 
 -- | Construct a 'ConnectInfo' using values from the HASKBIKE_{PGDBHOST,USERNAME,PASSWORD} environment variables.
 mkDbConnectInfo :: MonadIO m => String -> m ConnectInfo
