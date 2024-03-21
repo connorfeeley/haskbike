@@ -103,8 +103,8 @@ main = do
 -- appMain :: (MonadUnliftIO m, MonadCatch m, MonadFail m,  HasServerEnv (ServerEnv m) (ReaderT (ServerEnv m) m),  MonadError S.ServerError m, HasEnv env m,  HasEnv (ServerEnv m) (ReaderT (ServerEnv m) m),  HasEnv    (ServerEnv (ReaderT (ServerEnv m) m))    (ServerAppM (ReaderT (ServerEnv m) m))) => Options -> m ()
 appMain :: Options -> AppM ()
 appMain options = do
-  log I $ "Starting Toronto Bikeshare CLI with verbosity '" <> Text.pack (show (logLevel options)) <> "'."
-  log I $ "Version: " <> T.pack getCabalVersion <> " | " <> T.pack getGitVersion
+  logInfo $ "Starting Toronto Bikeshare CLI with verbosity '" <> Text.pack (show (logLevel options)) <> "'."
+  logInfo $ "Version: " <> T.pack getCabalVersion <> " | " <> T.pack getGitVersion
 
   -- Dispatch to appropriate command.
   dispatchDatabase options

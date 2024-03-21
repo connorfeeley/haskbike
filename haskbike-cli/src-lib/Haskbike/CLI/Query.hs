@@ -52,16 +52,16 @@ dispatchQuery options = do
 refreshStationData :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m)
                    => m ()
 refreshStationData = do
-  log D "Concurrently fetching station information and status from API."
+  logDebug "Concurrently fetching station information and status from API."
   (reqInfo, reqStatus) <- requestStationDataConcurrently
-  log D "Refreshing database with latest station data."
+  logDebug "Refreshing database with latest station data."
   case (reqInfo, reqStatus) of
     (Left err, _) -> logException err >> throwM err
     (_, Left err) -> logException err >> throwM err
     (Right info, Right status) -> do
       insInfo   <- insertStationInformation (info ^. respLastUpdated) (info ^. respData)
       insStatus <- insertStationStatus      (status ^. respData)
-      log D $ "Inserted " <> (T.pack . show) (length insInfo) <> " information records and " <> (T.pack . show) (length insStatus) <> " status records."
+      logDebug $ "Inserted " <> (T.pack . show) (length insInfo) <> " information records and " <> (T.pack . show) (length insStatus) <> " status records."
 
 
 -- | Concurrently request station information and status.
@@ -77,14 +77,14 @@ queryByStationId :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadU
                  => Int
                  -> m ()
 queryByStationId stationId = do
-  log I $ toStrict $ "Querying station ID '" <> (pack . show) stationId <> "'"
+  logInfo $ toStrict $ "Querying station ID '" <> (pack . show) stationId <> "'"
 
   -- Try to lookup station name from the ID.
   name <- queryStationName stationId
   -- Maybe tuple of (id, name)
   let station_pair = fmap (stationId,) name
 
-  log I $ toStrict $ "Station: " <> pShowCompact station_pair
+  logInfo $ toStrict $ "Station: " <> pShowCompact station_pair
 
   results <- mapM (queryStatus "By ID") station_pair
 
@@ -96,7 +96,7 @@ queryByStationName :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, Mona
                    => MatchMethod String
                    -> m ()
 queryByStationName stationMatch = do
-  log I $ toStrict $ "Querying station names like '" <> pack stationName <> "'"
+  logInfo $ toStrict $ "Querying station names like '" <> pack stationName <> "'"
 
   let transformer = case stationMatch of
         WildcardMatch query -> ("Wildcard", nameTransformer "%" query "%")
@@ -105,7 +105,7 @@ queryByStationName stationMatch = do
         SuffixMatch   query -> ("Suffix",   nameTransformer "%" query "")
 
   results <- queryStationIdLike (snd transformer)
-  log D $ toStrict $ fst transformer <> ": "    <> (pack . show) results
+  logDebug $ toStrict $ fst transformer <> ": "    <> (pack . show) results
 
   resultsText <- mapM (queryStatus (unpack $ fst transformer)) results
   liftIO $ putStrLn $ unpack $ unlines (concat resultsText)

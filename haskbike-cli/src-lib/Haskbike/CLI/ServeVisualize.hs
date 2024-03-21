@@ -23,7 +23,7 @@ dispatchVisualize :: (HasEnv (Env AppM) m)
 dispatchVisualize options = do
   env <- ask
 
-  log I $ "Launching visualization web server on port " <> (T.pack . show) (optServeVisualizePort options)
+  logInfo $ "Launching visualization web server on port " <> (T.pack . show) (optServeVisualizePort options)
 
   let serverEnv = ServerEnv { serverEnvBase         = env
                             , serverPort            = optServeVisualizePort options
@@ -33,7 +33,7 @@ dispatchVisualize options = do
                             , serverContactEmail    = "bikes@cfeeley.org"
                             }
 
-  log I $ "Gzip compression enabled: " <> (T.pack . show) (serverGzipCompression serverEnv)
+  logInfo $ "Gzip compression enabled: " <> (T.pack . show) (serverGzipCompression serverEnv)
 
 
   _ <- liftIO $ runServerAppM serverEnv serveVisualization
