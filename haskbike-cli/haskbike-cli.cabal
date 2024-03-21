@@ -23,7 +23,7 @@ name:               haskbike-cli
 version:            3.3.1
 
 -- A short (one-line) description of the package.
-synopsis:           Database for Toronto Bike Share.
+synopsis:           CLI for Toronto Bike Share.
 
 -- A longer description of the package.
 -- description:
@@ -184,3 +184,37 @@ library
 
     -- Base language which the package is written in.
     default-language: GHC2021
+
+
+test-suite haskbike-cli-test
+    import: common-extensions
+
+    -- Base language which the package is written in.
+    default-language: GHC2021
+
+    other-modules:  TestPoll
+                  , Paths_haskbike_cli
+
+    autogen-modules: Paths_haskbike_cli
+
+    type:             exitcode-stdio-1.0
+
+    hs-source-dirs:   test
+
+    main-is:          Driver.hs
+
+    build-depends:    base
+                    , haskbike-core
+                    , haskbike-client
+                    , haskbike-database
+                    , haskbike-cli
+                    , tasty
+                    , tasty-hunit
+                    , co-log
+                    , text
+                    , time
+                    , http-client
+                    , http-client-tls
+                    , unliftio
+
+    build-tool-depends: tasty-discover:tasty-discover

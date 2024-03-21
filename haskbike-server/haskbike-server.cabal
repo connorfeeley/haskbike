@@ -165,8 +165,6 @@ library
                     , warp
 
                     , beam-core
-                    , beam-migrate
-                    , beam-postgres
                     , postgresql-simple
 
     -- Directories containing source files.
