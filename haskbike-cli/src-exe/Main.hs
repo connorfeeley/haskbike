@@ -4,8 +4,21 @@ module Main
      ) where
 
 
-import           Haskbike.AppEnv
+import           Colog                       ( LogAction, Severity (..), cmap, fmtMessage, log, logDebug, logInfo,
+                                               logTextStdout, usingLoggerT )
 
+import           Control.Monad               ( unless, when )
+import           Control.Monad.Reader        ( runReaderT )
+
+import qualified Data.Text                   as T
+import qualified Data.Text                   as Text
+import           Data.Text.Lazy              ( toStrict )
+import qualified Data.Text.Lazy              as TL
+import           Data.Time                   ( getCurrentTimeZone )
+
+import           Database.Beam.Postgres      ( ConnectInfo (connectPassword) )
+
+import           Haskbike.AppEnv
 import           Haskbike.CLI.Database
 import           Haskbike.CLI.Debug
 import           Haskbike.CLI.Events
@@ -13,36 +26,21 @@ import           Haskbike.CLI.Options
 import           Haskbike.CLI.Poll
 import           Haskbike.CLI.Query
 import           Haskbike.CLI.ServeVisualize
+import           Haskbike.Version
 
-import           Colog                     ( LogAction, Severity (..), cmap, fmtMessage, log, logInfo, logTextStdout,
-                                             pattern D, pattern E, pattern I, usingLoggerT )
-
-import           Control.Monad             ( unless, when )
-import           Control.Monad.Reader      ( runReaderT )
-
-import qualified Data.Text                 as T
-import qualified Data.Text                 as Text
-import           Data.Text.Lazy            ( toStrict )
-import qualified Data.Text.Lazy            as TL
-import           Data.Time                 ( getCurrentTimeZone )
-
-import           Database.Beam.Postgres    ( ConnectInfo (connectPassword) )
-
-import           Network.HTTP.Client       ( newManager )
-import           Network.HTTP.Client.TLS   ( tlsManagerSettings )
+import           Network.HTTP.Client         ( newManager )
+import           Network.HTTP.Client.TLS     ( tlsManagerSettings )
 
 import           Options.Applicative
 
-import           Prelude                   hiding ( log, unwords )
+import           Prelude                     hiding ( log, unwords )
 
-import           System.Exit               ( exitSuccess )
+import           System.Exit                 ( exitSuccess )
 import           System.IO
 
 import           Text.Pretty.Simple.Extras
 
-import           UnliftIO                  ( liftIO )
-
-import           Haskbike.Version
+import           UnliftIO                    ( liftIO )
 
 
 main :: IO ()
@@ -57,7 +55,7 @@ main = do
 
   -- Log options when verbosity is high enough.
   when (length (optVerbose options) >= 3) $ usingLoggerT logStdoutAction $
-    log D $ "Options: " <> toStrict (pShowCompact options)
+    logDebug $ "Options: " <> toStrict (pShowCompact options)
 
   -- Get the current time zone.
   timeZone <- getCurrentTimeZone

@@ -19,10 +19,10 @@ import           Data.Maybe             ( catMaybes )
 
 import           GHC.Generics           ( Generic )
 
+import           Haskbike.ServerEnv
+
 import           Servant
 import           Servant.Server.Generic
-
-import           Haskbike.ServerEnv
 
 import           UnliftIO
 

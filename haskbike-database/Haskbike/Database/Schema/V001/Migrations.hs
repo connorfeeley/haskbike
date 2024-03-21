@@ -11,13 +11,13 @@
 
 module Haskbike.Database.Schema.V001.Migrations where
 
-import           Haskbike.AppEnv
-
 import           Database.Beam.Migrate
 import           Database.Beam.Migrate.Simple
 import           Database.Beam.Postgres
 import           Database.Beam.Postgres.CustomTypes
-import qualified Database.Beam.Postgres.Migrate                    as PG
+import qualified Database.Beam.Postgres.Migrate                   as PG
+
+import           Haskbike.AppEnv
 import           Haskbike.Database.EndpointQueried
 import           Haskbike.Database.Schema.V001.BikeShare          as V001
 import           Haskbike.Database.Schema.V001.QueryLogs          as V001

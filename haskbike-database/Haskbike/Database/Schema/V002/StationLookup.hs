@@ -19,12 +19,13 @@ module Haskbike.Database.Schema.V002.StationLookup
 
 import           Control.Lens
 
-import           Data.String                                       ( IsString )
+import           Data.String                                      ( IsString )
 
 import           Database.Beam
-import           Database.Beam.Backend                             ( IsSql92DataTypeSyntax (..) )
+import           Database.Beam.Backend                            ( IsSql92DataTypeSyntax (..) )
 import           Database.Beam.Migrate
 import           Database.Beam.Postgres
+
 import           Haskbike.Database.Schema.V001.StationInformation as V001
 import           Haskbike.Database.Schema.V001.StationStatus      as V001
 

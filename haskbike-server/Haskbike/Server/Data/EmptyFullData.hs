@@ -7,21 +7,21 @@ module Haskbike.Server.Data.EmptyFullData
      , formatDiffTime
      ) where
 
-import           Control.Arrow                                ( first )
+import           Control.Arrow                               ( first )
 
-import           Data.Aeson                                   ( ToJSON (..), object, (.=) )
-import qualified Data.Map                                     as Map
-import           Data.Maybe                                   ( mapMaybe )
-import           Data.String                                  ( IsString )
-import qualified Data.Text                                    as T
+import           Data.Aeson                                  ( ToJSON (..), object, (.=) )
+import qualified Data.Map                                    as Map
+import           Data.Maybe                                  ( mapMaybe )
+import           Data.String                                 ( IsString )
+import qualified Data.Text                                   as T
 import           Data.Time
+
+import           GHC.Generics                                ( Generic )
 
 import           Haskbike.Database.Tables.StationInformation ( fromBeamStationInformationToJSON )
 import qualified Haskbike.Database.Tables.StationInformation as DB
 import           Haskbike.Database.Tables.StationStatus      ( fromBeamStationStatusToJSON )
 import qualified Haskbike.Database.Tables.StationStatus      as DB
-
-import           GHC.Generics                                 ( Generic )
 
 
 data EmptyFull where

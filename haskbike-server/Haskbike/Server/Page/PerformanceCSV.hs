@@ -5,14 +5,14 @@ module Haskbike.Server.Page.PerformanceCSV where
 import           Data.Time
 import           Data.Time.Extras
 
-import           Lucid
-
-import           Servant
-
 import           Haskbike.Server.Classes
 import           Haskbike.Server.Page.SelectionForm
 import           Haskbike.Server.Page.StatusVisualization
 import           Haskbike.Server.StatusDataParams
+
+import           Lucid
+
+import           Servant
 
 
 data PerformanceCSV where

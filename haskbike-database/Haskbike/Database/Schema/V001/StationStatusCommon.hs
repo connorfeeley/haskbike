@@ -23,10 +23,11 @@ module Haskbike.Database.Schema.V001.StationStatusCommon
 import           Control.Lens
 
 import           Data.Int
-import           Data.String                                       ( IsString (fromString) )
+import           Data.String                                      ( IsString (fromString) )
 import           Data.Time
 
 import           Database.Beam
+
 import           Haskbike.Database.Schema.V001.StationInformation
 
 

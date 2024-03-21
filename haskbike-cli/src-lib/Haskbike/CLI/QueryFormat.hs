@@ -2,19 +2,17 @@
 
 module Haskbike.CLI.QueryFormat where
 
-import           Haskbike.CLI.Utils
-
 import           Control.Lens
 
-import           Data.Int                                     ( Int32 )
-import           Data.Text.Lazy                               ( Text, chunksOf, pack, reverse, unlines, unpack,
-                                                                unwords )
-import           Data.Time                                    ( TimeZone, UTCTime )
+import           Data.Int                                    ( Int32 )
+import           Data.Text.Lazy                              ( Text, chunksOf, pack, reverse, unlines, unpack, unwords )
+import           Data.Time                                   ( TimeZone, UTCTime )
 
+import           Haskbike.CLI.Utils
 import           Haskbike.Database.Tables.StationInformation ( unInformationStationId )
 import           Haskbike.Database.Tables.StationStatus
 
-import           Prelude                                      hiding ( log, reverse, unlines, unwords )
+import           Prelude                                     hiding ( log, reverse, unlines, unwords )
 
 import           System.Console.ANSI
 

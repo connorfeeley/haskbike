@@ -1,7 +1,7 @@
 -- | Test the client functions.
 module TestPoll where
 
-import           Colog                       ( logInfo, pattern W )
+import           Colog                       ( Severity (Warning), logInfo )
 
 import           Control.Exception           ( SomeException, try )
 import           Control.Monad               ( void )
@@ -41,7 +41,7 @@ unit_poll = do
   clientManager <- liftIO $ newManager tlsManagerSettings
 
   -- Create the application environment.
-  let env = mainEnv W False False timeZone connPool clientManager
+  let env = mainEnv Warning False False timeZone connPool clientManager
 
   -- Log the database connection parameters.
   runAppM env $

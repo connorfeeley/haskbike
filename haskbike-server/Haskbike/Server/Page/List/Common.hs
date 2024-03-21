@@ -9,21 +9,20 @@ module Haskbike.Server.Page.List.Common
      , stationTypeText
      ) where
 
-import           Data.Maybe                                   ( catMaybes )
+import           Data.Maybe                                  ( catMaybes )
 import           Data.Text
-import qualified Data.Text                                    as T
+import qualified Data.Text                                   as T
 import           Data.Time
 
 import           Haskbike.Database.Tables.StationInformation
+import           Haskbike.Server.Page.SelectionForm
+import           Haskbike.Server.Page.Utils
 
 import           Lucid
 
-import           Prelude                                      hiding ( null )
+import           Prelude                                     hiding ( null )
 
 import           Servant
-
-import           Haskbike.Server.Page.SelectionForm
-import           Haskbike.Server.Page.Utils
 
 import           TextShow
 

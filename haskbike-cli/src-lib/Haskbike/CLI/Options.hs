@@ -3,17 +3,17 @@
 -- | Command-line options.
 module Haskbike.CLI.Options where
 
-import qualified Data.Attoparsec.Text     as A
-import           Data.Either              ( fromRight )
-import           Data.Functor             ( ($>) )
-import qualified Data.Text                as T
+import qualified Data.Attoparsec.Text    as A
+import           Data.Either             ( fromRight )
+import           Data.Functor            ( ($>) )
+import qualified Data.Text               as T
 import           Data.Time
 
 import           Haskbike.Database.Utils
 
 import           Options.Applicative
 
-import           Prelude                  hiding ( log )
+import           Prelude                 hiding ( log )
 
 
 -- | Top-level options.

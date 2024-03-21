@@ -11,35 +11,35 @@ module Haskbike.Server.ComponentsAPI
 
 import           Colog
 
-import           Control.Monad.Catch                            ( MonadCatch )
-import           Control.Monad.Except                           ( MonadError )
+import           Control.Monad.Catch                                     ( MonadCatch )
+import           Control.Monad.Except                                    ( MonadError )
 
-import qualified Data.Text                                      as T
+import qualified Data.Text                                               as T
 import           Data.Time
 import           Data.Time.Extras
 
-import           Database.Beam                                  ( runSelectReturningList, runSelectReturningOne,
-                                                                  selectWith )
-import           Haskbike.Database.Expressions                 ( queryChargingInfrastructure )
+import           Database.Beam                                           ( runSelectReturningList,
+                                                                           runSelectReturningOne, selectWith )
+
+import           GHC.Generics                                            ( Generic )
+
+import           Haskbike.Database.Expressions                           ( queryChargingInfrastructure )
 import           Haskbike.Database.Operations.Dockings
 import           Haskbike.Database.Operations.Factors
-import           Haskbike.Database.Operations.StationEmpty     ( queryStationEmptyFullTime )
-import           Haskbike.Database.StatusVariationQuery        ( StatusThreshold (..), StatusVariationQuery (..) )
-
-import           GHC.Generics                                   ( Generic )
-
-import           Servant
-import           Servant.HTML.Lucid
-import           Servant.Server.Generic                         ( AsServerT )
-
+import           Haskbike.Database.Operations.StationEmpty               ( queryStationEmptyFullTime )
+import           Haskbike.Database.StatusVariationQuery                  ( StatusThreshold (..),
+                                                                           StatusVariationQuery (..) )
 import           Haskbike.Server.Components.ChargingHeader
 import           Haskbike.Server.Components.ChargingInfrastructureHeader
 import           Haskbike.Server.Components.DockingHeader
 import           Haskbike.Server.Components.PerformanceData
 import           Haskbike.Server.Data.EmptyFullData                      ( EmptyFull (..) )
 import           Haskbike.Server.StatusDataParams
-
 import           Haskbike.ServerEnv
+
+import           Servant
+import           Servant.HTML.Lucid
+import           Servant.Server.Generic                                  ( AsServerT )
 
 import           UnliftIO
 

@@ -24,14 +24,15 @@ import           Control.Lens
 
 import           Data.Aeson
 import           Data.Int
-import qualified Data.Text                          as T
+import qualified Data.Text                         as T
 import           Data.Time
 
 import           Database.Beam
-import           Database.Beam.Backend              ( IsSql92DataTypeSyntax (..), SqlSerial )
+import           Database.Beam.Backend             ( IsSql92DataTypeSyntax (..), SqlSerial )
 import           Database.Beam.Migrate
-import           Database.Beam.Postgres             ( PgJSONB (PgJSONB), Postgres )
-import qualified Database.Beam.Postgres             as Pg
+import           Database.Beam.Postgres            ( PgJSONB (PgJSONB), Postgres )
+import qualified Database.Beam.Postgres            as Pg
+
 import           Haskbike.Database.BeamConvertable
 import           Haskbike.Database.EndpointQueried
 

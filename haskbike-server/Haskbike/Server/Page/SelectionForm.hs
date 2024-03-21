@@ -14,22 +14,22 @@ module Haskbike.Server.Page.SelectionForm
      , makeInputField
      ) where
 
-import           Control.Applicative  ( (<|>) )
-import           Control.Monad        ( forM_ )
+import           Control.Applicative        ( (<|>) )
+import           Control.Monad              ( forM_ )
 
 import           Data.Attoparsec.Text
-import           Data.Functor         ( ($>) )
-import qualified Data.Text            as T
+import           Data.Functor               ( ($>) )
+import qualified Data.Text                  as T
 import           Data.Time
 import           Data.Time.Extras
 
+import           Haskbike.Server.Page.Utils ( mkData_ )
+
 import           Lucid
 
-import           Servant              ( FromHttpApiData (..), ToHttpApiData (..) )
+import           Servant                    ( FromHttpApiData (..), ToHttpApiData (..) )
 
-import           Haskbike.Server.Page.Utils    ( mkData_ )
-
-import           TextShow             ( showt )
+import           TextShow                   ( showt )
 
 
 -- | Values used to select station list filter parameters.

@@ -7,7 +7,7 @@ module Haskbike.CLI.Database
      , handleStatus
      ) where
 
-import           Colog                           ( log, pattern D, pattern I, pattern W )
+import           Colog                           ( logDebug, logInfo, logWarning )
 
 import           Control.Lens
 import           Control.Monad                   ( unless )
@@ -49,9 +49,9 @@ dispatchDatabase options = do
   case optCommand options of
     Reset resetOptions -> handleReset options resetOptions
     _ | optEnableMigration options -> do
-          log I "Migrating database."
+          logInfo "Migrating database."
           migrateDB
-          log I "Migrated database."
+          logInfo "Migrated database."
       | otherwise -> pure ()
 
 
@@ -62,60 +62,60 @@ handleReset options resetOptions = do
   pPrintCompact options
   pPrintCompact resetOptions
   if optResetOnly resetOptions
-    then log W "Only resetting database..." >> dropTables >> migrateDB >> log W "Database reset; exiting." >> liftIO exitSuccess
-    else log W "Resetting database..."      >> dropTables >> log W "Database reset." >>
-         log W "Migrating database."        >> migrateDB >> log W "Migrations performed." >>
-         log I "Initializing database."     >> handleInformation >> liftIO exitSuccess
+    then logWarning "Only resetting database..." >> dropTables >> migrateDB >> logWarning "Database reset; exiting." >> liftIO exitSuccess
+    else logWarning "Resetting database..."      >> dropTables >> logWarning "Database reset." >>
+         logWarning "Migrating database."        >> migrateDB >> logWarning "Migrations performed." >>
+         logInfo "Initializing database."     >> handleInformation >> liftIO exitSuccess
 
 -- | Helper for station information request.
 handleInformation :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m)
                   => m ()
 handleInformation = do
-  log D "Querying station information from database."
+  logDebug "Querying station information from database."
   numInfoRows <- queryRowCount bikeshareStationInformation
-  log D "Queried station information from database."
+  logDebug "Queried station information from database."
   unless (0 == numInfoRows) handleStationInformation
 
 -- | Handle station information request.
 handleStationInformation :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m)
                          => m ()
 handleStationInformation = do
-  log D "Requesting station information from API."
+  logDebug "Requesting station information from API."
   stationInfo <- runQueryM stationInformation :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m) => m (Either ClientError (ResponseWrapper [StationInformation]))
-  log D "Requested station information from API."
+  logDebug "Requested station information from API."
 
   for_ (rightToMaybe stationInfo) $ \response -> do
         let stations = response ^. respData
         let reported = response ^. respLastUpdated
-        log D "Inserting station information into database."
+        logDebug "Inserting station information into database."
         insertStationInformation reported stations >>= report
-        log D "Inserted station information into database."
+        logDebug "Inserted station information into database."
   where
-    report = log I . ("Stations inserted: " <>) . Text.pack . show . length
+    report = logInfo . ("Stations inserted: " <>) . Text.pack . show . length
     rightToMaybe = either (const Nothing) Just
 
 -- | Helper for station status request.
 handleStatus :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m) => m ()
 handleStatus = do
-  log D "Querying station status from database."
+  logDebug "Querying station status from database."
   numStatusRows <- queryRowCount bikeshareStationStatus
-  log D "Queried station status from database."
+  logDebug "Queried station status from database."
   unless (0 == numStatusRows) handleStationStatus
 
 -- | Handle station status request.
 handleStationStatus :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m)
                     => m ()
 handleStationStatus = do
-  log D "Requesting station status from API."
+  logDebug "Requesting station status from API."
   stationStatus' <- runQueryM stationStatus :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m) => m (Either ClientError (ResponseWrapper [StationStatus]))
-  log D "Requested station status from API."
+  logDebug "Requested station status from API."
 
   for_ (rightToMaybe stationStatus') $ \response -> do
         let stations = response ^. respData
-        log D "Inserting station status into database."
+        logDebug "Inserting station status into database."
         insertStationStatus stations >>= report
-        log D "Inserted station status into database."
+        logDebug "Inserted station status into database."
   where
-    report = log I . ("Status updated: " <>) . Text.pack . show .
+    report = logInfo . ("Status updated: " <>) . Text.pack . show .
       (\inserted -> length inserted + length inserted)
     rightToMaybe = either (const Nothing) Just

@@ -7,13 +7,12 @@ module Haskbike.Server.Components.ChargingHeader
 
 import           Control.Lens
 
-import           Data.Int                                     ( Int32 )
+import           Data.Int                                    ( Int32 )
 
 import           Haskbike.Database.Tables.StationInformation ( StationInformation )
+import           Haskbike.Server.Page.Utils
 
 import           Lucid
-
-import           Haskbike.Server.Page.Utils
 
 
 

@@ -6,7 +6,7 @@ module Haskbike.CLI.Debug
      ) where
 
 
-import           Colog                                  ( log, logDebug, pattern D )
+import           Colog                                  ( logDebug )
 
 import           Control.Monad.Catch                    ( MonadCatch )
 
@@ -39,7 +39,7 @@ dispatchDebug :: (HasEnv env m, MonadIO m, MonadFail m, MonadUnliftIO m, MonadCa
 dispatchDebug _options = do
   -- Get the number of rows in the station status table.
   numStatusRows <-
-    log D "Querying number of rows in status table."
+    logDebug "Querying number of rows in status table."
     >> queryRowCount bikeshareStationStatus
 
   let tableSize = tableValuesNeeded (Proxy :: Proxy StationStatusT)

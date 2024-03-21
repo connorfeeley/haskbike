@@ -43,34 +43,34 @@ module Haskbike.Database.Schema.V001.StationStatus
      , vehicleTypesAvailableIconic
      ) where
 
-import qualified Haskbike.API.StationStatus                                  as AT
-import qualified Haskbike.API.VehicleType                                    as AT
-
 import           Control.Lens
 
-import qualified Data.ByteString.Char8                              as B
-import           Data.Coerce                                        ( coerce )
+import qualified Data.ByteString.Char8                             as B
+import           Data.Coerce                                       ( coerce )
 import           Data.Int
-import qualified Data.Map                                           as Map
-import           Data.Maybe                                         ( listToMaybe )
-import           Data.String                                        ( IsString )
-import qualified Data.Text                                          as T
+import qualified Data.Map                                          as Map
+import           Data.Maybe                                        ( listToMaybe )
+import           Data.String                                       ( IsString )
+import qualified Data.Text                                         as T
 import           Data.Time
 
 import           Database.Beam
-import           Database.Beam.Backend                              ( BeamBackend, HasSqlValueSyntax (sqlValueSyntax),
-                                                                      IsSql92DataTypeSyntax (..) )
+import           Database.Beam.Backend                             ( BeamBackend, HasSqlValueSyntax (sqlValueSyntax),
+                                                                     IsSql92DataTypeSyntax (..) )
 import           Database.Beam.Migrate
-import           Database.Beam.Postgres                             ( Postgres )
-import qualified Database.Beam.Postgres                             as Pg
-import           Database.Beam.Postgres.Syntax                      ( pgTextType )
+import           Database.Beam.Postgres                            ( Postgres )
+import qualified Database.Beam.Postgres                            as Pg
+import           Database.Beam.Postgres.Syntax                     ( pgTextType )
+import           Database.PostgreSQL.Simple.FromField              ( Field (typeOid), FromField (..), ResultError (..),
+                                                                     returnError, typoid )
+import           Database.PostgreSQL.Simple.ToField                ( ToField (..) )
+import           Database.PostgreSQL.Simple.TypeInfo.Static        ( text )
+
+import qualified Haskbike.API.StationStatus                        as AT
+import qualified Haskbike.API.VehicleType                          as AT
 import           Haskbike.Database.Schema.V001.StationInformation
 import           Haskbike.Database.Schema.V001.StationStatusCommon
 import           Haskbike.Database.Schema.V001.VehicleTypeMixin
-import           Database.PostgreSQL.Simple.FromField               ( Field (typeOid), FromField (..), ResultError (..),
-                                                                      returnError, typoid )
-import           Database.PostgreSQL.Simple.ToField                 ( ToField (..) )
-import           Database.PostgreSQL.Simple.TypeInfo.Static         ( text )
 
 
 -- | Declare a (Beam) table for the 'StationStatus' type.

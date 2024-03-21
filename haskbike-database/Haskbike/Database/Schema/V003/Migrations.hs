@@ -5,22 +5,22 @@ module Haskbike.Database.Schema.V003.Migrations
      , migration
      ) where
 
-import           Haskbike.AppEnv
-
-import           Control.Arrow                                ( (>>>) )
-import           Control.Monad.Catch                          ( MonadCatch, MonadThrow )
+import           Control.Arrow                               ( (>>>) )
+import           Control.Monad.Catch                         ( MonadCatch, MonadThrow )
 
 import           Database.Beam.Migrate
 import           Database.Beam.Migrate.Simple
 import           Database.Beam.Postgres
-import qualified Database.Beam.Postgres.Migrate               as Pg
+import qualified Database.Beam.Postgres.Migrate              as Pg
+
+import           Haskbike.AppEnv
 import           Haskbike.Database.Schema.V001.Migrations    ( allowDestructive )
 import qualified Haskbike.Database.Schema.V001.StationStatus as V001
 import qualified Haskbike.Database.Schema.V002.BikeShare     as V002
 import qualified Haskbike.Database.Schema.V002.Migrations    as V002
 import qualified Haskbike.Database.Schema.V003.BikeShare     as V003
 
-import           UnliftIO                                     ( MonadIO, MonadUnliftIO )
+import           UnliftIO                                    ( MonadIO, MonadUnliftIO )
 
 migrationStationStatusChanges :: CheckedDatabaseSettings Postgres V002.BikeshareDb
                               -> Migration Postgres (CheckedDatabaseSettings Postgres V003.BikeshareDb)

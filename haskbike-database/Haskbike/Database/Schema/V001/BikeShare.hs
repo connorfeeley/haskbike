@@ -21,11 +21,12 @@ module Haskbike.Database.Schema.V001.BikeShare
      , bikeshareSystemInformationCount
      ) where
 
-import           Control.Lens                                      ( Lens' )
+import           Control.Lens                                     ( Lens' )
 
 import           Database.Beam
 import           Database.Beam.Postgres
 import           Database.Beam.Postgres.CustomTypes
+
 import           Haskbike.Database.EndpointQueried
 import           Haskbike.Database.Schema.V001.QueryLogs          as V001
 import           Haskbike.Database.Schema.V001.StationInformation as V001

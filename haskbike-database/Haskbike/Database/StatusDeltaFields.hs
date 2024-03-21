@@ -5,12 +5,12 @@ module Haskbike.Database.StatusDeltaFields
      , calculateDelta
      ) where
 
+import qualified Data.Map                   as Map
+import           Data.Maybe                 ( fromMaybe, listToMaybe )
+import           Data.Time
+
 import           Haskbike.API.StationStatus
 import           Haskbike.API.VehicleType
-
-import qualified Data.Map          as Map
-import           Data.Maybe        ( fromMaybe, listToMaybe )
-import           Data.Time
 
 
 -- * Types for creating a delta.

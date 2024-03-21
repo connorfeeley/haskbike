@@ -3,10 +3,9 @@
 module Haskbike.Server.Components.DockingHeader where
 
 import           Haskbike.Database.EventCounts
+import           Haskbike.Server.Page.Utils
 
 import           Lucid
-
-import           Haskbike.Server.Page.Utils
 
 
 data DockingHeader where

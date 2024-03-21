@@ -16,23 +16,21 @@ module Haskbike.CLI.Poll.PollClientEnv
      , runPollM
      ) where
 
-import           Haskbike.API.ResponseWrapper                ( ResponseWrapper )
-
-import           Haskbike.AppEnv
-
-import           Colog                              ( HasLog (..), LogAction (..) )
+import           Colog                             ( HasLog (..), LogAction (..) )
 
 import           Control.Monad.Catch
 import           Control.Monad.Except
-import           Control.Monad.Reader               ( MonadReader (..), ReaderT (..) )
+import           Control.Monad.Reader              ( MonadReader (..), ReaderT (..) )
 
+import           Haskbike.API.ResponseWrapper      ( ResponseWrapper )
+import           Haskbike.AppEnv
 import           Haskbike.Database.EndpointQueried ( EndpointQueried )
 
-import           Prelude                            hiding ( log )
+import           Prelude                           hiding ( log )
 
-import           Servant.Client                     ( ClientM )
+import           Servant.Client                    ( ClientM )
 
-import           UnliftIO                           ( MonadUnliftIO, TQueue, TVar, newTQueueIO, newTVarIO )
+import           UnliftIO                          ( MonadUnliftIO, TQueue, TVar, newTQueueIO, newTVarIO )
 
 
 -- Poll application type

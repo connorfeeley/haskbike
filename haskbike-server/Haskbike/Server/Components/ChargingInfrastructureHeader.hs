@@ -4,9 +4,9 @@ module Haskbike.Server.Components.ChargingInfrastructureHeader
      ( ChargingInfrastructureHeader (..)
      ) where
 
-import           Lucid
-
 import           Haskbike.Server.Page.Utils
+
+import           Lucid
 
 
 data ChargingInfrastructureHeader where

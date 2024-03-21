@@ -6,13 +6,14 @@ module Haskbike.Database.Operations.StatusChanges
      , populateChangedStationStatusTable
      ) where
 
-import           Control.Lens                                 hiding ( reuse, (<.) )
+import           Control.Lens                                hiding ( reuse, (<.) )
 
-import           Data.Int                                     ( Int32 )
+import           Data.Int                                    ( Int32 )
 
 import           Database.Beam
 import           Database.Beam.Backend.SQL.BeamExtensions
 import           Database.Beam.Postgres
+
 import           Haskbike.Database.BikeShare
 import           Haskbike.Database.Tables.StationInformation
 import           Haskbike.Database.Tables.StationStatus

@@ -3,17 +3,16 @@
 module Haskbike.Server.Components.PerformanceData where
 
 
-import qualified Data.Text                             as T
+import qualified Data.Text                            as T
 import           Data.Time
 
+import           GHC.Generics                         ( Generic )
+
 import           Haskbike.Database.Operations.Factors
-
-import           GHC.Generics                          ( Generic )
-
-import           Lucid
-
 import           Haskbike.Server.Data.EmptyFullData
 import           Haskbike.Server.Page.Utils
+
+import           Lucid
 
 
 -- | Combination of status integrals and factors.

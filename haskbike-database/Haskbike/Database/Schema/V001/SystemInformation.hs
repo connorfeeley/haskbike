@@ -29,21 +29,21 @@ module Haskbike.Database.Schema.V001.SystemInformation
      , systemInformationModification
      ) where
 
-import qualified Haskbike.API.SystemInformation         as AT
-
 import           Control.Lens
 
-import           Data.Int                      ( Int32 )
-import           Data.String                   ( IsString (fromString) )
-import qualified Data.Text                     as T
+import           Data.Int                       ( Int32 )
+import           Data.String                    ( IsString (fromString) )
+import qualified Data.Text                      as T
 import           Data.Time
 
 import           Database.Beam
-import           Database.Beam.Backend         ( IsSql92DataTypeSyntax (..), SqlSerial )
+import           Database.Beam.Backend          ( IsSql92DataTypeSyntax (..), SqlSerial )
 import           Database.Beam.Migrate
-import           Database.Beam.Postgres        ( Postgres )
-import qualified Database.Beam.Postgres        as Pg
-import           Database.Beam.Postgres.Syntax ( pgTextType )
+import           Database.Beam.Postgres         ( Postgres )
+import qualified Database.Beam.Postgres         as Pg
+import           Database.Beam.Postgres.Syntax  ( pgTextType )
+
+import qualified Haskbike.API.SystemInformation as AT
 
 
 -- | Beam mixin for common system information fields.

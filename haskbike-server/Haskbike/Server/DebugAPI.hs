@@ -10,28 +10,27 @@ module Haskbike.Server.DebugAPI
 
 import           Colog
 
-import           Control.Monad.Catch                     ( MonadCatch )
+import           Control.Monad.Catch                    ( MonadCatch )
 
-import           Data.Aeson                              ( ToJSON (..), Value )
-import           Data.Maybe                              ( isJust )
+import           Data.Aeson                             ( ToJSON (..), Value )
+import           Data.Maybe                             ( isJust )
 import           Data.Pool
-import           Data.String                             ( fromString )
-import qualified Data.Text                               as T
+import           Data.String                            ( fromString )
+import qualified Data.Text                              as T
 
 import           Database.Beam
+import           Database.PostgreSQL.Simple
+
 import           Haskbike.Database.DaysAgo
 import           Haskbike.Database.Operations.QueryLogs
 import           Haskbike.Database.Tables.QueryLogs
-import           Database.PostgreSQL.Simple
+import           Haskbike.ServerEnv
+import           Haskbike.Version
 
 import           Servant
-import           Servant.Server.Generic                  ( AsServerT )
-
-import           Haskbike.ServerEnv
+import           Servant.Server.Generic                 ( AsServerT )
 
 import           UnliftIO
-
-import           Haskbike.Version
 
 
 data DebugAPI mode where

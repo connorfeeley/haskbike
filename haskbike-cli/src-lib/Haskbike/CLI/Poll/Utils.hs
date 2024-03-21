@@ -12,21 +12,19 @@ module Haskbike.CLI.Poll.Utils
      , maybeDecodeFailure
      ) where
 
-import           Haskbike.API.ResponseWrapper
-
-import           Haskbike.AppEnv
-
 import           Colog
 
-import           Control.Exception                       ( throw )
-import           Control.Monad.Catch                     ( MonadCatch, MonadThrow )
+import           Control.Exception                      ( throw )
+import           Control.Monad.Catch                    ( MonadCatch, MonadThrow )
 
 import           Data.Aeson
-import           Data.Maybe                              ( fromMaybe )
-import qualified Data.Text                               as T
+import           Data.Maybe                             ( fromMaybe )
+import qualified Data.Text                              as T
 import           Data.Time
 import           Data.Time.Extras
 
+import           Haskbike.API.ResponseWrapper
+import           Haskbike.AppEnv
 import           Haskbike.Database.EndpointQueried
 import           Haskbike.Database.Operations.QueryLogs ( insertQueryLog )
 import           Haskbike.Database.Tables.QueryLogs

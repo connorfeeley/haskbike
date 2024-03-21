@@ -23,13 +23,13 @@ module Haskbike.Database.EventCounts
      , sumEvents
      ) where
 
-import           Haskbike.API.VehicleType
-
-import           Control.Lens                                 hiding ( reuse, (.=), (<.) )
+import           Control.Lens                                hiding ( reuse, (.=), (<.) )
 
 import           Data.Aeson
 
 import           Database.Beam
+
+import           Haskbike.API.VehicleType
 import           Haskbike.Database.StatusVariationQuery
 import           Haskbike.Database.Tables.StationInformation
 

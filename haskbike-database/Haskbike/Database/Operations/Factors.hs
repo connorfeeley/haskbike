@@ -10,14 +10,14 @@ module Haskbike.Database.Operations.Factors
      , sumStatusFactors
      ) where
 
-import           Haskbike.AppEnv
-
-import           Control.Lens                            hiding ( (.=) )
-import           Control.Monad.Catch                     ( MonadCatch )
+import           Control.Lens                           hiding ( (.=) )
+import           Control.Monad.Catch                    ( MonadCatch )
 
 import           Data.Aeson
 
-import           Database.Beam                           hiding ( div_ )
+import           Database.Beam                          hiding ( div_ )
+
+import           Haskbike.AppEnv
 import           Haskbike.Database.Expressions          ( integrateColumns )
 import           Haskbike.Database.StatusVariationQuery
 

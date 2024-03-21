@@ -5,14 +5,14 @@ module Haskbike.Database.Schema.V002.Migrations
      , migration
      ) where
 
-import           Haskbike.AppEnv
-
-import           Control.Arrow                                ( (>>>) )
+import           Control.Arrow                               ( (>>>) )
 
 import           Database.Beam.Migrate
 import           Database.Beam.Migrate.Simple
 import           Database.Beam.Postgres
-import qualified Database.Beam.Postgres.Migrate               as Pg
+import qualified Database.Beam.Postgres.Migrate              as Pg
+
+import           Haskbike.AppEnv
 import qualified Haskbike.Database.Schema.V001.BikeShare     as V001
 import           Haskbike.Database.Schema.V001.Migrations    ( allowDestructive )
 import qualified Haskbike.Database.Schema.V001.Migrations    as V001
