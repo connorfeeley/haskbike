@@ -16,7 +16,6 @@ module TestOperations
      , unit_stationEmptyTime
      ) where
 
-import           Control.Monad                             ( void )
 import           Control.Monad.Catch                       ( MonadCatch )
 
 import           Data.Fixed                                ( Pico )
@@ -32,11 +31,8 @@ import           Haskbike.Database.Operations.Factors
 import           Haskbike.Database.Operations.StationEmpty
 import           Haskbike.Database.StatusVariationQuery
 import           Haskbike.Database.Test.Utils
-import           Haskbike.Database.Utils
 
 import           Test.Tasty.HUnit
-
-import           TestDatabase
 
 import           UnliftIO
 

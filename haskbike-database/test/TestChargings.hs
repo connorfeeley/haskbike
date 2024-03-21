@@ -27,8 +27,6 @@ import           Haskbike.Database.Test.Utils
 
 import           Test.Tasty.HUnit
 
-import           TestDatabase
-
 import           UnliftIO
 
 
