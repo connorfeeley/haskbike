@@ -110,21 +110,7 @@
               };
               haskbike-cli = { self, super, ... }: {
                 custom = pkg: pkgs.lib.pipe super.haskbike-cli [
-                  # Replace Version.hs with a generated one, since it requires access to the git directory
-                  # to determine the version.
-                  (pkgs.haskell.lib.compose.overrideCabal (o: {
-                    extraLibraries = [ pkgs.stdenv.cc.libcxx ];
-                    preCheck = pkg.preCheck or "" + ''
-                      export PGDATABASE=haskbike-test
-
-                      export HASKBIKE_USERNAME=$PGUSER
-                      export HASKBIKE_PASSWORD=""
-                      export HASKBIKE_DATABASE=$PGDATABASE
-                      export HASKBIKE_PGDBHOST=$PGHOST
-                      export HASKBIKE_PGDBPORT=$PGPORT
-                    '';
-                    doCheck = false;
-                  }))
+                  (pkgs.haskell.lib.compose.addTestToolDepends [ pkgs.postgresql ])
                   (pkgs.haskell.lib.enableLibraryProfiling)
                   # Add optparse-applicative completions to the derivation output.
                   (self.generateOptparseApplicativeCompletions [ "haskbike" ])

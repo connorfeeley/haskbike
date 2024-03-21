@@ -128,6 +128,9 @@ library
 
                     , Haskbike.LatestQueries
 
+                    , Haskbike.Database.Test.Utils
+                    , Paths_haskbike_database
+
     -- Modules included in this library but not exported.
     -- other-modules:
 
@@ -164,6 +167,15 @@ library
                     , beam-postgres
 
                     , lens
+
+                    , tasty-hunit
+
+                    , http-client
+                    , resource-pool >= 0.4.0.0
+                    , either
+
+                    , tmp-postgres
+                    , postgresql-simple
 
     -- Directories containing source files.
     -- hs-source-dirs:
@@ -207,7 +219,6 @@ test-suite haskbike-database-test
                     , haskbike-core
                     , haskbike-client
                     , haskbike-database
-                    , haskbike-database-test-lib
                     , tasty
                     , tasty-hunit
                     , beam-core
@@ -219,42 +230,3 @@ test-suite haskbike-database-test
                     , exceptions
 
     build-tool-depends: tasty-discover:tasty-discover
-
-
--- Testing library target.
-library haskbike-database-test-lib
-    import:           compile-flags
-                    , common-extensions
-
-    -- Modules exported by the library.
-    exposed-modules:  Paths_haskbike_database
-                    , Haskbike.Database.Test.Utils
-
-    autogen-modules: Paths_haskbike_database
-
-    -- Other library packages from which modules are imported.
-    build-depends:    base
-
-                    , tasty-hunit
-
-                    , haskbike-core
-                    , haskbike-client
-                    , haskbike-database
-
-                    , aeson
-                    , bytestring
-                    , exceptions
-                    , lens
-                    , http-client
-                    , resource-pool >= 0.4.0.0
-                    , time
-                    , unliftio
-
-                    , tmp-postgres
-                    , postgresql-simple
-
-    -- Directories containing source files.
-    hs-source-dirs: test-lib
-
-    -- Base language which the package is written in.
-    default-language: GHC2021
