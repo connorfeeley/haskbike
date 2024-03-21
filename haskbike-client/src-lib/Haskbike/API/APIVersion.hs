@@ -2,16 +2,16 @@
 
 -- | Types for "versions" endpoint.
 
-module API.APIVersion
+module Haskbike.API.APIVersion
      ( APIVersion (..)
      ) where
 
-import           API.Classes  ( HasDataField (..) )
-
 import           Data.Aeson
-import qualified Data.Text    as T
+import qualified Data.Text            as T
 
 import           GHC.Generics
+
+import           Haskbike.API.Classes ( HasDataField (..) )
 
 
 -- | Data type for core response object of 'versions' API.

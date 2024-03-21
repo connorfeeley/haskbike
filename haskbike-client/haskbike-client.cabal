@@ -81,11 +81,15 @@ library
                     , Haskbike.API.ClientUtils
                     -- , API.Pollable
                     , Haskbike.API.ResponseWrapper
+                    , Haskbike.API.APIVersion
                     , Haskbike.API.StationInformation
                     , Haskbike.API.StationStatus
                     , Haskbike.API.SystemInformation
+                    , Haskbike.API.SystemPricingPlan
+                    , Haskbike.API.SystemRegion
                     , Haskbike.API.Utils
                     , Haskbike.API.VehicleType
+                    , Haskbike.API.VehicleTypeFull
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:

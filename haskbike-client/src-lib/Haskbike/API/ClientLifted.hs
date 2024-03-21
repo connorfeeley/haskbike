@@ -13,18 +13,23 @@ module Haskbike.API.ClientLifted
      , versionsM
      ) where
 
-import           AppEnv
-
 import           Colog                           ( logException )
+
+import           Control.Monad.Catch             ( MonadCatch, MonadThrow, throwM )
 
 import           Data.Aeson                      ( Object )
 
+import           Haskbike.API.APIVersion
 import           Haskbike.API.BikeShare
+import           Haskbike.API.BikeShareAPI
 import           Haskbike.API.Client
 import           Haskbike.API.ResponseWrapper
 import           Haskbike.API.StationInformation
 import           Haskbike.API.StationStatus
 import           Haskbike.API.SystemInformation
+import           Haskbike.API.SystemPricingPlan
+import           Haskbike.API.SystemRegion
+import           Haskbike.API.VehicleTypeFull
 import           Haskbike.AppEnv
 
 import           Prelude                         hiding ( log )

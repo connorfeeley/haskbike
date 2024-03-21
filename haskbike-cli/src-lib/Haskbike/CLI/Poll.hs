@@ -60,9 +60,9 @@ pollClient pollOptions = do
 
   logInfo "Fetching from API once."
   -- runPollReader pollEnv $ fetchAndPersist StationInformationEP stationInformation firstUpdate infoQueue
-  fetchAndPersist StationInformationEP stationInformation firstUpdate infoQueue
-  fetchAndPersist StationStatusEP      stationStatus      firstUpdate statusQueue
-  fetchAndPersist SystemInformationEP  systemInformation  firstUpdate sysInfoQueue
+  fetchAndPersist StationInformationEP C.stationInformation firstUpdate infoQueue
+  fetchAndPersist StationStatusEP      C.stationStatus      firstUpdate statusQueue
+  fetchAndPersist SystemInformationEP  C.systemInformation  firstUpdate sysInfoQueue
 
   logInfo "Initializing polling threads."
   pollThreadInfo    <- (async . forever) (pollThread StationInformationEP C.stationInformation infoLastUpdated    infoQueue)

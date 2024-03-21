@@ -24,12 +24,16 @@ import           Control.Monad.Catch             ( MonadCatch, MonadThrow )
 import           Data.Aeson                      ( Object )
 import           Data.Proxy
 
+import           Haskbike.API.APIVersion
 import           Haskbike.API.BikeShare
 import           Haskbike.API.BikeShareAPI
 import           Haskbike.API.ResponseWrapper
 import           Haskbike.API.StationInformation
 import           Haskbike.API.StationStatus
 import           Haskbike.API.SystemInformation
+import           Haskbike.API.SystemPricingPlan
+import           Haskbike.API.SystemRegion
+import           Haskbike.API.VehicleTypeFull
 import           Haskbike.AppEnv
 
 import           Network.HTTP.Client             ( Manager, newManager )

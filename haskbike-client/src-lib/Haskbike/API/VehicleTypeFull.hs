@@ -2,16 +2,16 @@
 
 -- | Types for "versions" endpoint.
 
-module API.VehicleTypeFull
+module Haskbike.API.VehicleTypeFull
      ( VehicleTypeFull (..)
      ) where
-
-import           API.Classes     ( HasDataField (..) )
-import           API.VehicleType
 
 import           Data.Aeson
 
 import           GHC.Generics
+
+import           Haskbike.API.Classes     ( HasDataField (..) )
+import           Haskbike.API.VehicleType
 
 -- | Data type for core response object of 'versions' API.
 data VehicleTypeFull where

@@ -14,10 +14,17 @@ import           Data.ByteString.Lazy            ( fromStrict )
 import qualified Data.ByteString.Lazy            as BL
 import qualified Data.Maybe                      as Maybe
 
+import           Haskbike.API.APIVersion
+import           Haskbike.API.BikeShare
+import           Haskbike.API.BikeShareAPI
+import           Haskbike.API.Client
 import           Haskbike.API.ResponseWrapper
 import           Haskbike.API.StationInformation
 import           Haskbike.API.StationStatus
 import           Haskbike.API.SystemInformation
+import           Haskbike.API.SystemPricingPlan
+import           Haskbike.API.SystemRegion
+import           Haskbike.API.VehicleTypeFull
 
 import           Test.Tasty.HUnit
 
