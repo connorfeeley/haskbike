@@ -32,6 +32,7 @@ module TestDatabase
 
 import           Control.Lens                                hiding ( reuse )
 import           Control.Monad                               ( unless, (<=<) )
+import           Control.Monad.Catch                         ( MonadCatch )
 
 import           Data.Functor                                ( void )
 import           Data.Int                                    ( Int32 )
@@ -39,10 +40,7 @@ import           Data.Time
 
 import           Database.Beam
 import           Database.Beam.Postgres
-import           Database.Postgres.Temp
-import           Database.PostgreSQL.Simple                  ( connectPostgreSQL, defaultConnectInfo )
 
-import           Haskbike.API.Client                         ( mkClientManager )
 import           Haskbike.API.ResponseWrapper
 import qualified Haskbike.API.StationInformation             as AT
 import qualified Haskbike.API.SystemInformation              as AT
@@ -60,26 +58,9 @@ import           Paths_haskbike_database                     ( getDataFileName )
 
 import           Test.Tasty.HUnit
 
-import           UnliftIO                                    ( bracket, try )
+import           UnliftIO                                    ( MonadUnliftIO, bracket, try )
 
 import           Utils
-
-withTempDbM :: AppM a -> IO a
-withTempDbM action = do
-  -- Create temporary postgres database
-  tempPgResult <- withConfig defaultConfig $ \db -> bracket
-    (pure (toConnectionString db))  -- Setup step
-    (close <=< connectPostgreSQL) $ -- Shutdown step
-    \connString -> do               -- Middle step
-      connPool <- mkDatabaseConnectionPoolFrom connectPostgreSQL connString
-      currentTimeZone <- getCurrentTimeZone
-      clientManager <- mkClientManager
-      let env = mainEnv Debug True True currentTimeZone connPool clientManager
-      runAppM env action
-  pure $ unsafeUnwrapResult tempPgResult
-  where
-    unsafeUnwrapResult (Right x) = x
-    unsafeUnwrapResult _         = error "Database setup failed"
 
 
 -- | HUnit test for inserting system information.
@@ -89,8 +70,7 @@ unit_insertSystemInformation = do
   let (reported, info) = (status ^. respLastUpdated, status ^. respData)
 
   -- Connect to the database.
-  (insertedInfo, insertedInfoCount) <- withTempDbM $ do
-    setupTestDatabase
+  (insertedInfo, insertedInfoCount) <- withTempDbM Silent setupTestDatabase $ do
     -- Should fail because station information has not been inserted.
     -- Catch exception with 'try'.
     insertSystemInformation reported info
@@ -118,13 +98,11 @@ unit_insertSystemInformation = do
 -- | HUnit test for inserting station information.
 unit_insertStationInformation :: IO ()
 unit_insertStationInformation = do
-  -- Connect to the database.
-  runWithAppMSuppressLog dbnameTest setupTestDatabase
-
   info <- getDecodedFileInformation "test/json/station_information.json"
 
-  -- Insert test data.
-  inserted_info <- runWithAppM dbnameTest $ insertStationInformation (_respLastUpdated info) (_respData info)
+  inserted_info <- withTempDbM Silent setupTestDatabase $ do
+    -- Insert test data.
+    insertStationInformation (_respLastUpdated info) (_respData info)
 
   assertEqual "Inserted station information" 7 (length inserted_info)
 
@@ -133,19 +111,18 @@ unit_insertStationInformation = do
 unit_insertStationInformationDuplicate :: IO ()
 unit_insertStationInformationDuplicate = do
   -- Connect to the database.
-  runWithAppMSuppressLog dbnameTest setupTestDatabase
+  withTempDbM Silent setupTestDatabase $ do
+    -- Insert first record. Should insert.
+    insertedInfo <- insertStationInformation firstTime [testInfo]
+    liftIO $ assertEqual "Inserted station information" 1 (length insertedInfo)
 
-  -- Insert first record. Should insert.
-  insertedInfo <- runWithAppM dbnameTest $ insertStationInformation firstTime [testInfo]
-  assertEqual "Inserted station information" 1 (length insertedInfo)
+    -- Insert first record again with same reported time (no other changes). Should not insert.
+    insertedInfo' <- insertStationInformation firstTime [testInfo]
+    liftIO $ assertEqual "Inserted station information" 0 (length insertedInfo')
 
-  -- Insert first record again with same reported time (no other changes). Should not insert.
-  insertedInfo' <- runWithAppM dbnameTest $ insertStationInformation firstTime [testInfo]
-  assertEqual "Inserted station information" 0 (length insertedInfo')
-
-  -- Insert first record again with different reported time (no other changes). Should not insert.
-  insertedInfo'' <- runWithAppM dbnameTest $ insertStationInformation secondTime [testInfo]
-  assertEqual "Inserted station information" 0 (length insertedInfo'')
+    -- Insert first record again with different reported time (no other changes). Should not insert.
+    insertedInfo'' <- insertStationInformation secondTime [testInfo]
+    liftIO $ assertEqual "Inserted station information" 0 (length insertedInfo'')
 
   -- TODO: bluetooth_id is flapping.
 
@@ -178,88 +155,77 @@ unit_insertStationInformationDuplicate = do
 -- | HUnit test for inserting station status.
 unit_insertStationStatus :: IO ()
 unit_insertStationStatus = do
-  -- Connect to the database.
-  runWithAppMSuppressLog dbnameTest setupTestDatabase
-
   info    <- getDecodedFileInformation "test/json/station_information-1.json"
   status  <- getDecodedFileStatus      "test/json/station_status.json"
 
-  -- Insert test data.
-  insertedInfo   <- runWithAppM dbnameTest $ insertStationInformation (_respLastUpdated info) (_respData info)
-  insertedStatus <- runWithAppM dbnameTest $ insertStationStatus $ status ^. respData
+  withTempDbM Silent setupTestDatabase $ do
 
-  assertEqual "Inserted station information" 704 (length insertedInfo)
-  assertEqual "Inserted station status"        8 (length insertedStatus)
+    -- Insert test data.
+    insertedInfo   <- insertStationInformation (_respLastUpdated info) (_respData info)
+    insertedStatus <- insertStationStatus $ status ^. respData
+
+    liftIO $ assertEqual "Inserted station information" 704 (length insertedInfo)
+    liftIO $ assertEqual "Inserted station status"        8 (length insertedStatus)
 
 
 -- | HUnit test for querying station status.
 unit_queryStationStatus :: IO ()
 unit_queryStationStatus = do
-  -- Connect to the database.
-  runWithAppMSuppressLog dbnameTest setupTestDatabase
-
   info    <- getDecodedFileInformation  "test/json/station_information-1.json"
   status  <- getDecodedFileStatus       "test/json/station_status.json"
 
-  -- Insert test data.
-  insertedInfo   <- runWithAppM dbnameTest $ insertStationInformation (_respLastUpdated info) (_respData info)
-  insertedStatus <- runWithAppM dbnameTest $ insertStationStatus $ status ^. respData
+  withTempDbM Silent setupTestDatabase $ do
+    -- Insert test data.
+    insertedInfo   <- insertStationInformation (_respLastUpdated info) (_respData info)
+    insertedStatus <- insertStationStatus $ status ^. respData
 
-  assertEqual "Inserted station information" 704 (length insertedInfo)
-  assertEqual "Inserted station status"        8 (length insertedStatus)
+    liftIO $ assertEqual "Inserted station information" 704 (length insertedInfo)
+    liftIO $ assertEqual "Inserted station status"        8 (length insertedStatus)
 
-  -- Query station status.
-  liftIO $ assertEqual "Query status (limit: 1000)" 8 . length =<< runWithAppM dbnameTest (queryStationStatus (Just 1000))
-  liftIO $ assertEqual "Query status (limit: none)" 8 . length =<< runWithAppM dbnameTest (queryStationStatus Nothing)
+    -- Query station status.
+    queryStationStatus (Just 1000) >>= liftIO . (assertEqual "Query status (limit: 1000)" 8 . length)
+    queryStationStatus Nothing     >>= liftIO . (assertEqual "Query status (limit: none)" 8 . length)
 
 
 -- | HUnit test for inserting station information, with data from the actual API.
 unit_insertStationInformationApi :: IO ()
 unit_insertStationInformationApi = do
-  -- Connect to the database.
-  runWithAppMSuppressLog dbnameTest setupTestDatabase
-
   info    <- getDecodedFileInformation "test/json/station_information-1.json"
-
-  -- Insert test data.
-  void $ runWithAppM dbnameTest $ insertStationInformation (_respLastUpdated info) (_respData info)
+  withTempDbM Silent setupTestDatabase $ do
+    -- Insert test data.
+    void $ insertStationInformation (_respLastUpdated info) (_respData info)
 
 
 -- | HUnit test for inserting station status, with data from the actual API.
 unit_insertStationStatusApi :: IO ()
 unit_insertStationStatusApi = do
-  -- Connect to the database.
-  runWithAppMSuppressLog dbnameTest setupTestDatabase
-
   status  <- getDecodedFileStatus "test/json/station_status-1.json"
+  withTempDbM Silent setupTestDatabase $ do
+    -- Should fail because station information has not been inserted.
+    -- Catch exception with 'try'.
+    insertedStatus <- try $
+      insertStationStatus $ status ^. respData
 
-  -- Should fail because station information has not been inserted.
-  -- Catch exception with 'try'.
-  insertedStatus <- runWithAppMSuppressLog dbnameTest $ try $
-    insertStationStatus $ status ^. respData
-
-  -- Exception was expected - only return error if inserted succeeded.
-  -- If the insertion succeeded and is not length 0, then database schema does not enforce foreign key constraint correctly.
-  case insertedStatus of
-    Left (_ :: SqlError) -> pure ()
-    Right inserted       -> unless (null inserted)
-      (assertFailure ("Was able to insert status records without information populated: " <> (show . length) inserted <> " inserted"))
+    -- Exception was expected - only return error if inserted succeeded.
+    -- If the insertion succeeded and is not length 0, then database schema does not enforce foreign key constraint correctly.
+    case insertedStatus of
+      Left (_ :: SqlError) -> pure ()
+      Right inserted       ->
+        unless (null inserted)
+        (liftIO $ assertFailure ("Was able to insert status records without information populated: " <> (show . length) inserted <> " inserted"))
 
 -- | HUnit test for inserting station information and status, with data from the actual API.
 unit_insertStationApi :: IO ()
 unit_insertStationApi = do
-  -- Connect to the database.
-  runWithAppMSuppressLog dbnameTest setupTestDatabase
-
   info    <- getDecodedFileInformation "test/json/station_information-1.json"
   status  <- getDecodedFileStatus      "test/json/station_status-1.json"
+  withTempDbM Silent setupTestDatabase $ do
+    -- Insert test data.
+    inserted_info   <- insertStationInformation (_respLastUpdated info) (_respData info)
+    inserted_status <- insertStationStatus $ status ^. respData
 
-  -- Insert test data.
-  inserted_info   <- runWithAppM dbnameTest $ insertStationInformation (_respLastUpdated info) (_respData info)
-  inserted_status <- runWithAppM dbnameTest $ insertStationStatus $ status ^. respData
-
-  assertEqual "Inserted station information" 704 (length inserted_info)
-  assertEqual "Inserted station status"      704 (length inserted_status)
+    liftIO $ assertEqual "Inserted station information" 704 (length inserted_info)
+    liftIO $ assertEqual "Inserted station status"      704 (length inserted_status)
 
 
 {- | HUnit test for querying which station status have reported.
@@ -275,181 +241,171 @@ Between /station_status-1/ and /station_status-2/, station 7000 reported new dat
 -}
 unit_insertNewerStatusRecords :: IO ()
 unit_insertNewerStatusRecords = do
-  runWithAppMSuppressLog dbnameTest setupTestDatabase
+  withTempDbM Silent setupTestDatabase $ do
+    -- Separate API status records into those that are newer than in the database entry and those that are unchanged.
+    inserted <- doInsertNewerStatusRecords
 
-  -- Separate API status records into those that are newer than in the database entry and those that are unchanged.
-  inserted <- doInsertNewerStatusRecords
+    liftIO $ assertEqual "No API status records newer than database entries" 302 (length inserted)
 
-  assertEqual "No API status records newer than database entries" 302 (length inserted)
+    -- Station 7000 should be in the list of API records that would trigger a database update, but not in the list of unchanged records.
+    liftIO $ assertBool "Station 7000 record is newer"          (has (traverse . statusInfoId . unInformationStationId . only 7000) inserted)
 
-  -- Station 7000 should be in the list of API records that would trigger a database update, but not in the list of unchanged records.
-  assertBool "Station 7000 record is newer"          (has (traverse . statusInfoId . unInformationStationId . only 7000) inserted)
+    -- Station 7001 should be in the list of API records that would /not/ trigger a database update, but not in the list of newer records.
+    liftIO $ assertBool "Station 7001 record is unchanged" (not (has (traverse . statusInfoId . unInformationStationId . only 7001) inserted))
 
-  -- Station 7001 should be in the list of API records that would /not/ trigger a database update, but not in the list of newer records.
-  assertBool "Station 7001 record is unchanged" (not (has (traverse . statusInfoId . unInformationStationId . only 7001) inserted))
-
-doInsertNewerStatusRecords :: IO [StationStatus]
+doInsertNewerStatusRecords :: (HasEnv env m, MonadCatch m) => m [StationStatus]
 doInsertNewerStatusRecords = do
-  info      <- getDecodedFileInformation "test/json/station_information-1.json"
-  status_1  <- getDecodedFileStatus      "test/json/station_status-1.json"
-  status_2  <- getDecodedFileStatus      "test/json/station_status-2.json"
+  info      <- liftIO $ getDecodedFileInformation "test/json/station_information-1.json"
+  status_1  <- liftIO $ getDecodedFileStatus      "test/json/station_status-1.json"
+  status_2  <- liftIO $ getDecodedFileStatus      "test/json/station_status-2.json"
 
   -- Insert test data.
-  void $ runWithAppM dbnameTest $ insertStationInformation (_respLastUpdated info) (_respData info)
-  void $ runWithAppM dbnameTest $ insertStationStatus      $ status_1 ^. respData
+  void $ insertStationInformation (_respLastUpdated info) (_respData info)
+  void $ insertStationStatus      $ status_1 ^. respData
 
   -- Return inserted station status.
-  runWithAppM dbnameTest $ insertStationStatus $ status_2 ^. respData
+  insertStationStatus $ status_2 ^. respData
 
 
 -- | HUnit test to assert that changed station status are inserted.
 unit_insertNewerStatusRecordsInsert :: IO ()
 unit_insertNewerStatusRecordsInsert = do
-  runWithAppMSuppressLog dbnameTest setupTestDatabase
+  withTempDbM Silent setupTestDatabase $ do
+    {-
+    - Insert information and status data (1)
+    - Insert/update status data (2)
+    - Check if inserting status data (2) would result in updates
+    - Returns (updated, same)
+    -}
+    updated <- doStatusInsertOnce
 
-  {-
-  - Insert information and status data (1)
-  - Insert/update status data (2)
-  - Check if inserting status data (2) would result in updates
-  - Returns (updated, same)
-  -}
-  updated <- doStatusInsertOnce
-
-  -- Assert that the same number of status rows are inserted as were updated.
-  assertEqual "Inserted status rows"        302 (length updated)
+    -- Assert that the same number of status rows are inserted as were updated.
+    liftIO $ assertEqual "Inserted status rows"        302 (length updated)
 
 -- | Insert station statuses (1) into a database, then (2).
-doStatusInsertOnce :: IO [StationStatus] -- ^ Result of inserting station statuses.
+doStatusInsertOnce :: (HasEnv env m, MonadCatch m) => m [StationStatus] -- ^ Result of inserting station statuses.
 doStatusInsertOnce = do
-  info      <- getDecodedFileInformation "test/json/station_information-1.json"
-  status_1  <- getDecodedFileStatus      "test/json/station_status-1.json"
-  status_2  <- getDecodedFileStatus      "test/json/station_status-2.json"
+  info      <- liftIO $ getDecodedFileInformation "test/json/station_information-1.json"
+  status_1  <- liftIO $ getDecodedFileStatus      "test/json/station_status-1.json"
+  status_2  <- liftIO $ getDecodedFileStatus      "test/json/station_status-2.json"
 
   -- Insert test data.
-  void $ runWithAppM dbnameTest $ insertStationInformation (_respLastUpdated info) (_respData info)
-  void $ runWithAppM dbnameTest $ insertStationStatus      $ status_1 ^. respData
+  void $ insertStationInformation (_respLastUpdated info) (_respData info)
+  void $ insertStationStatus      $ status_1 ^. respData
 
   -- Insert second round of test data (some of which have reported since the first round was inserted).
-  runWithAppM dbnameTest $ insertStationStatus $ status_2 ^. respData
+  insertStationStatus $ status_2 ^. respData
 
 
 -- | HUnit test to assert that reinserting rows is a no-op.
 unit_insertNewerStatusRecordsInsertTwice :: IO ()
 unit_insertNewerStatusRecordsInsertTwice = do
-  runWithAppMSuppressLog dbnameTest setupTestDatabase
+  withTempDbM Silent setupTestDatabase $ do
+    inserted <- doStatusInsertTwice
 
-  inserted <- doStatusInsertTwice
-
-  -- Assert that the no status rows were inserted on the second iteration.
-  assertEqual "Reinserting duplicate statuses inserts 0 new status rows"          0 (length inserted)
+    -- Assert that the no status rows were inserted on the second iteration.
+    liftIO $ assertEqual "Reinserting duplicate statuses inserts 0 new status rows"          0 (length inserted)
 
 
 -- | Insert station statuses (1) into a database, then (2), then (2) again.
-doStatusInsertTwice :: IO [StationStatus] -- ^ Result of inserting updated station statuses.
+doStatusInsertTwice :: (HasEnv env m, MonadCatch m) => m [StationStatus] -- ^ Result of inserting updated station statuses.
 doStatusInsertTwice = do
-  info      <- getDecodedFileInformation "test/json/station_information-1.json"
-  status_1  <- getDecodedFileStatus "test/json/station_status-1.json"
-  status_2  <- getDecodedFileStatus "test/json/station_status-2.json"
+  info      <- liftIO $ getDecodedFileInformation "test/json/station_information-1.json"
+  status_1  <- liftIO $ getDecodedFileStatus "test/json/station_status-1.json"
+  status_2  <- liftIO $ getDecodedFileStatus "test/json/station_status-2.json"
 
   -- Insert first round of test data.
-  void $ runWithAppM dbnameTest $ insertStationInformation (_respLastUpdated info) (_respData info)
-  void $ runWithAppM dbnameTest $ insertStationStatus      $ status_1 ^. respData
+  void $ insertStationInformation (_respLastUpdated info) (_respData info)
+  void $ insertStationStatus      $ status_1 ^. respData
 
   -- Insert second round of test data (some of which have reported since the first round was inserted).
-  void $ runWithAppM dbnameTest $ insertStationStatus $ status_2 ^. respData
+  void $ insertStationStatus $ status_2 ^. respData
 
   -- Insert second round of test data once again (nothing should have changed).
-  runWithAppM dbnameTest $ insertStationStatus $ status_2 ^. respData
+  insertStationStatus $ status_2 ^. respData
 
 
 -- | HUnit test to validate that a station ID can be looked up by its name, and vice-versa.
 unit_queryStationByIdAndName :: IO ()
 unit_queryStationByIdAndName = do
-  runWithAppMSuppressLog dbnameTest setupTestDatabase
   info <- getDecodedFileInformation "test/json/station_information-1.json"
-  void $ runWithAppM dbnameTest $ insertStationInformation (_respLastUpdated info) (_respData info)
+  withTempDbM Silent setupTestDatabase $ do
+    void $ insertStationInformation (_respLastUpdated info) (_respData info)
 
-  assertEqual "Station ID for 'King St W / Joe Shuster Way'" (Just 7148)  =<< runWithAppM dbnameTest (queryStationId "King St W / Joe Shuster Way")
-  assertEqual "Station ID for 'Wellesley Station Green P'" (Just 7001)    =<< runWithAppM dbnameTest (queryStationId "Wellesley Station Green P")
-  assertEqual "Stations with name ending in 'Green P'"
-    [ (7001,"Wellesley Station Green P")
-    , (7050,"Richmond St E / Jarvis St Green P")
-    , (7112,"Liberty St / Fraser Ave Green P")
-    , (7789,"75 Holly St - Green P")
-    ] =<< runWithAppM dbnameTest (queryStationIdLike "%Green P")
+    liftIO . assertEqual "Station ID for 'King St W / Joe Shuster Way'" (Just 7148)  =<< queryStationId "King St W / Joe Shuster Way"
+    liftIO . assertEqual "Station ID for 'Wellesley Station Green P'" (Just 7001)    =<< queryStationId "Wellesley Station Green P"
+    liftIO . assertEqual "Stations with name ending in 'Green P'"
+      [ (7001,"Wellesley Station Green P")
+      , (7050,"Richmond St E / Jarvis St Green P")
+      , (7112,"Liberty St / Fraser Ave Green P")
+      , (7789,"75 Holly St - Green P")
+      ] =<< queryStationIdLike "%Green P"
 
 
 -- | HUnit test to query all status records for a station between two times.
 unit_queryStationStatusBetween :: IO ()
-unit_queryStationStatusBetween = do
-  runWithAppMSuppressLog dbnameTest setupTestDatabase
-  initDBWithAllTestData
+unit_queryStationStatusBetween = withTempDbM Silent (setupTestDatabase >> initDBWithAllTestData) $ do
+    -- First status for #7001 was inserted at 2023-09-15 17:16:58; last status at 2023-09-15 17:35:00.
+    statusBetweenAll <- queryStationStatusBetween 7001
+      (UTCTime (read "2023-09-15") (timeOfDayToTime (read "17:16:58")))
+      (UTCTime (read "2023-09-15") (timeOfDayToTime (read "17:35:00")))
+    liftIO $ assertEqual "Expected number of status records for #7001 between two valid times" 4 (length statusBetweenAll)
 
-  -- First status for #7001 was inserted at 2023-09-15 17:16:58; last status at 2023-09-15 17:35:00.
-  statusBetweenAll <- runWithAppM dbnameTest $ queryStationStatusBetween 7001
-    (UTCTime (read "2023-09-15") (timeOfDayToTime (read "17:16:58")))
-    (UTCTime (read "2023-09-15") (timeOfDayToTime (read "17:35:00")))
-  assertEqual "Expected number of status records for #7001 between two valid times" 4 (length statusBetweenAll)
+    -- Query for status records for #7001 between two times, where the start and end time match the first status report.
+    statusBetweenFirst <- queryStationStatusBetween 7001
+      (UTCTime (read "2023-09-15") (timeOfDayToTime (read "17:16:58"))) -- Moment the first status was reported.
+      (UTCTime (read "2023-09-15") (timeOfDayToTime (read "17:16:58"))) -- Moment the first status was reported.
+    liftIO $ assertEqual "Expected number of status records for #7001 for first status reported" 1 (length statusBetweenFirst)
 
-  -- Query for status records for #7001 between two times, where the start and end time match the first status report.
-  statusBetweenFirst <- runWithAppM dbnameTest $ queryStationStatusBetween 7001
-    (UTCTime (read "2023-09-15") (timeOfDayToTime (read "17:16:58"))) -- Moment the first status was reported.
-    (UTCTime (read "2023-09-15") (timeOfDayToTime (read "17:16:58"))) -- Moment the first status was reported.
-  assertEqual "Expected number of status records for #7001 for first status reported" 1 (length statusBetweenFirst)
+    -- Query for status records for #7001 between two times, where the end time is before the first status was reported.
+    statusBetweenTooEarly <- queryStationStatusBetween 7001
+      (UTCTime (read "2000-01-01") (timeOfDayToTime (read "00:00:00")))-- Arbitrary date
+      (UTCTime (read "2023-09-15") (timeOfDayToTime (read "17:16:57")))-- One second before first status reported.
+    liftIO $ assertEqual "Expected number of status records for #7001 before first status reported" 0 (length statusBetweenTooEarly)
 
-  -- Query for status records for #7001 between two times, where the end time is before the first status was reported.
-  statusBetweenTooEarly <- runWithAppM dbnameTest $ queryStationStatusBetween 7001
-    (UTCTime (read "2000-01-01") (timeOfDayToTime (read "00:00:00")))-- Arbitrary date
-    (UTCTime (read "2023-09-15") (timeOfDayToTime (read "17:16:57")))-- One second before first status reported.
-  assertEqual "Expected number of status records for #7001 before first status reported" 0 (length statusBetweenTooEarly)
-
-  {-
-  Query for status records for #7001 between two times, where the earliest time is *after* the first status was reported,
-  and the end time is *before* the first status was reported.
-  -}
-  statusBetweenBackwards <- runWithAppM dbnameTest $ queryStationStatusBetween 7001
-    (UTCTime (read "2023-09-15") (timeOfDayToTime (read "17:16:59"))) -- One second after first status reported.
-    (UTCTime (read "2000-01-01") (timeOfDayToTime (read "00:00:00"))) -- Arbitrary date
-  assertEqual "Expected number of status records for #7001 with backwards time parameters" 0 (length statusBetweenBackwards)
+    {-
+    Query for status records for #7001 between two times, where the earliest time is *after* the first status was reported,
+    and the end time is *before* the first status was reported.
+    -}
+    statusBetweenBackwards <- queryStationStatusBetween 7001
+      (UTCTime (read "2023-09-15") (timeOfDayToTime (read "17:16:59"))) -- One second after first status reported.
+      (UTCTime (read "2000-01-01") (timeOfDayToTime (read "00:00:00"))) -- Arbitrary date
+    liftIO $ assertEqual "Expected number of status records for #7001 with backwards time parameters" 0 (length statusBetweenBackwards)
 
 
 -- | HUnit test to query all status records for a station between two times.
 unit_queryDockingUndockingCount :: IO ()
-unit_queryDockingUndockingCount = do
-  runWithAppMSuppressLog dbnameTest setupTestDatabase
-  initDBWithAllTestData
+unit_queryDockingUndockingCount = withTempDbM Silent (setupTestDatabase >> initDBWithAllTestData) $ do
+    -- Test dataset has 5 rows for station 7000, 3 rows for 7006, 5 for 7012, and 5 rows for 7148:
+    -- |   id | station | reported               | iconic |
+    -- |------+---------+------------------------+--------|
+    -- |    1 |    7000 | 2023-09-15 17:14:50-04 |      0 |
+    -- |  705 |    7000 | 2023-09-15 17:19:10-04 |      0 |
+    -- | 1309 |    7000 | 2023-09-15 17:23:29-04 |      5 |
+    -- | 1849 |    7000 | 2023-09-15 17:32:06-04 |     26 |
+    -- | 2746 |    7000 | 2023-09-15 17:36:27-04 |     29 |
+    -- |------+---------+------------------------+--------|
+    -- |    7 |    7006 | 2023-09-15 17:17:15-04 |     13 |
+    -- | 1164 |    7006 | 2023-09-15 17:21:36-04 |     10 |
+    -- | 1855 |    7006 | 2023-09-15 17:34:31-04 |      7 |
+    -- |------+---------+------------------------+--------|
+    -- |   12 |    7012 | 2023-09-15 17:14:33-04 |     10 |
+    -- |  710 |    7012 | 2023-09-15 17:18:52-04 |     11 |
+    -- | 1317 |    7012 | 2023-09-15 17:23:09-04 |     13 |
+    -- | 1860 |    7012 | 2023-09-15 17:31:47-04 |     12 |
+    -- | 2749 |    7012 | 2023-09-15 17:36:06-04 |     12 |
+    -- |------+---------+------------------------+--------|
+    -- |  136 |    7148 | 2023-09-15 17:14:12-04 |     17 |
+    -- |  757 |    7148 | 2023-09-15 17:18:40-04 |     17 |
+    -- | 1411 |    7148 | 2023-09-15 17:23:08-04 |     17 |
+    -- | 1983 |    7148 | 2023-09-15 17:32:07-04 |     19 |
+    -- | 2849 |    7148 | 2023-09-15 17:36:37-04 |     19 |
 
-  -- Test dataset has 5 rows for station 7000, 3 rows for 7006, 5 for 7012, and 5 rows for 7148:
-  -- |   id | station | reported               | iconic |
-  -- |------+---------+------------------------+--------|
-  -- |    1 |    7000 | 2023-09-15 17:14:50-04 |      0 |
-  -- |  705 |    7000 | 2023-09-15 17:19:10-04 |      0 |
-  -- | 1309 |    7000 | 2023-09-15 17:23:29-04 |      5 |
-  -- | 1849 |    7000 | 2023-09-15 17:32:06-04 |     26 |
-  -- | 2746 |    7000 | 2023-09-15 17:36:27-04 |     29 |
-  -- |------+---------+------------------------+--------|
-  -- |    7 |    7006 | 2023-09-15 17:17:15-04 |     13 |
-  -- | 1164 |    7006 | 2023-09-15 17:21:36-04 |     10 |
-  -- | 1855 |    7006 | 2023-09-15 17:34:31-04 |      7 |
-  -- |------+---------+------------------------+--------|
-  -- |   12 |    7012 | 2023-09-15 17:14:33-04 |     10 |
-  -- |  710 |    7012 | 2023-09-15 17:18:52-04 |     11 |
-  -- | 1317 |    7012 | 2023-09-15 17:23:09-04 |     13 |
-  -- | 1860 |    7012 | 2023-09-15 17:31:47-04 |     12 |
-  -- | 2749 |    7012 | 2023-09-15 17:36:06-04 |     12 |
-  -- |------+---------+------------------------+--------|
-  -- |  136 |    7148 | 2023-09-15 17:14:12-04 |     17 |
-  -- |  757 |    7148 | 2023-09-15 17:18:40-04 |     17 |
-  -- | 1411 |    7148 | 2023-09-15 17:23:08-04 |     17 |
-  -- | 1983 |    7148 | 2023-09-15 17:32:07-04 |     19 |
-  -- | 2849 |    7148 | 2023-09-15 17:36:37-04 |     19 |
-
-
-  --              station  thresholds     dockings undockings
-  checkConditions 7000     thresholds7000 29         0
-  checkConditions 7006     thresholds7006  0       (-6)
-  checkConditions 7012     thresholds7012  3       (-1)
-  checkConditions 7148     thresholds7148  2         0
+    --              station  thresholds     dockings undockings
+    checkConditions 7000     thresholds7000 29         0
+    checkConditions 7006     thresholds7006  0       (-6)
+    checkConditions 7012     thresholds7012  3       (-1)
+    checkConditions 7148     thresholds7148  2         0
   where
     thresholds7000  = [ EarliestTime (UTCTime (read "2023-09-01") (timeOfDayToTime midnight)), LatestTime (UTCTime (read "2023-09-15") (timeOfDayToTime (read "17:36:27.0"))) ]
     thresholds7006  = [ EarliestTime (UTCTime (read "2023-09-01") (timeOfDayToTime midnight)), LatestTime (UTCTime (read "2023-09-15") (timeOfDayToTime (read "17:34:31.0"))) ]
@@ -457,13 +413,13 @@ unit_queryDockingUndockingCount = do
     thresholds7148  = [ EarliestTime (UTCTime (read "2023-09-01") (timeOfDayToTime midnight)), LatestTime (UTCTime (read "2023-09-15") (timeOfDayToTime (read "17:36:37.0"))) ]
 
 
-checkConditions :: Int32 -> [StatusThreshold] -> Int -> Int -> IO ()
+checkConditions :: (HasEnv env m, MonadCatch m, MonadUnliftIO m) => Int32 -> [StatusThreshold] -> Int -> Int -> m ()
 checkConditions stationId thresholds expectDockings expectUndockings = do
-  eventCountsForStation <- findInList stationId <$> runWithAppM dbnameTest (queryDockingEventsCount (StatusVariationQuery (Just stationId) thresholds))
-  assertEqual ("Expected number of undockings at station " ++ show stationId)
+  eventCountsForStation <- findInList stationId <$> queryDockingEventsCount (StatusVariationQuery (Just stationId) thresholds)
+  liftIO $ assertEqual ("Expected number of undockings at station " ++ show stationId)
     (Just expectUndockings)
     (_eventsCountUndockings . _eventsIconicCount  <$> eventCountsForStation)
-  assertEqual ("Expected number of dockings at station "   ++ show stationId)
+  liftIO $ assertEqual ("Expected number of dockings at station "   ++ show stationId)
     (Just expectDockings)
     (_eventsCountDockings   . _eventsIconicCount  <$> eventCountsForStation)
 
@@ -473,20 +429,18 @@ findInList key tuples = tuples ^? folded . filtered (\k -> k ^. eventsStation . 
 -- | HUnit test for inserting station status and asserting that the lookup table is accurate.
 unit_insertStationLookupLatest :: IO ()
 unit_insertStationLookupLatest = do
-  runWithAppMSuppressLog dbnameTest setupTestDatabase
-
   info    <- getDecodedFileInformation "test/json/station_information-1.json"
   status  <- getDecodedFileStatus      "test/json/station_status-1.json"
+  withTempDbM Silent setupTestDatabase $ do
+    -- Insert test data.
+    insertedInfo   <- insertStationInformation (_respLastUpdated info) (_respData info)
+    insertedStatus <- insertStationStatus (status ^. respData)
 
-  -- Insert test data.
-  insertedInfo   <- runWithAppM dbnameTest $ insertStationInformation (_respLastUpdated info) (_respData info)
-  insertedStatus <- runWithAppM dbnameTest $ insertStationStatus (status ^. respData)
+    statusLookup <- withPostgres $ runSelectReturningList $ selectWith $ queryLatestStatusLookup Nothing
+    infoLookup   <- withPostgres $ runSelectReturningList $ selectWith $ queryLatestInfoLookup   Nothing
 
-  statusLookup <- runWithAppM dbnameTest $ withPostgres $ runSelectReturningList $ selectWith $ queryLatestStatusLookup Nothing
-  infoLookup   <- runWithAppM dbnameTest $ withPostgres $ runSelectReturningList $ selectWith $ queryLatestInfoLookup   Nothing
+    liftIO $ assertEqual "Status lookup length" (length insertedStatus) (length statusLookup)
+    liftIO $ assertEqual "Inserted station status is same as latest status" insertedStatus statusLookup
 
-  assertEqual "Status lookup length" (length insertedStatus) (length statusLookup)
-  assertEqual "Inserted station status is same as latest status" insertedStatus statusLookup
-
-  assertEqual "Info lookup length" (length insertedInfo) (length infoLookup)
-  assertEqual "Inserted station information is same as latest info" insertedInfo infoLookup
+    liftIO $ assertEqual "Info lookup length" (length insertedInfo) (length infoLookup)
+    liftIO $ assertEqual "Inserted station information is same as latest info" insertedInfo infoLookup

@@ -20,15 +20,15 @@ module TestChargings
 import           Data.Functor                           ( void )
 import           Data.Time
 
-import           Haskbike.AppEnv
 import           Haskbike.Database.EventCounts
 import           Haskbike.Database.Operations
 import           Haskbike.Database.StatusVariationQuery
-import           Haskbike.Database.Utils
 
 import           Test.Tasty.HUnit
 
 import           TestDatabase
+
+import           UnliftIO
 
 import           Utils
 
@@ -37,12 +37,9 @@ import           Utils
 
 -- | HUnit test to query all charging events.
 unit_queryChargings :: IO ()
-unit_queryChargings = do
-  runWithAppMSuppressLog dbnameTest setupTestDatabase
-  initDBWithAllTestData
-
-  chargings <- runWithAppM dbnameTest (queryChargingEventsCount variation)
-  assertEqual "Expected number of chargings for entire system" (-1, 0, 1) (sumTuples chargings)
+unit_queryChargings = withTempDbM Silent (setupTestDatabase >> initDBWithAllTestData) $ do
+  chargings <- queryChargingEventsCount variation
+  liftIO $ assertEqual "Expected number of chargings for entire system" (-1, 0, 1) (sumTuples chargings)
   where
     -- Query for all stations, for all data in the test dataset.
     variation = StatusVariationQuery Nothing
@@ -55,12 +52,9 @@ sumTuples = foldr (\(_, a1, b1, c1) (a2, b2, c2) -> (a1 + a2, b1 + b2, c1 + c2))
 
 -- | HUnit test to query all charging events (using exported database dump).
 unit_queryChargings' :: IO ()
-unit_queryChargings' = do
-  runWithAppMSuppressLog dbnameTest setupTestDatabase
-  initDBWithExportedData
-
-  chargings <- runWithAppM dbnameTest $ queryChargingEventsCount variation
-  assertEqual "Expected number of charging for entire system" (-110, 29, 81) (sumTuples chargings)
+unit_queryChargings' = withTempDbM Silent (setupTestDatabase >> initDBWithExportedData) $ do
+  chargings <- queryChargingEventsCount variation
+  liftIO $ assertEqual "Expected number of charging for entire system" (-110, 29, 81) (sumTuples chargings)
   where
     -- Query for all stations, for all data in the test dataset.
     variation = StatusVariationQuery Nothing
@@ -70,16 +64,13 @@ unit_queryChargings' = do
 
 -- | HUnit test to query all charging events (using manually constructed test data).
 unit_queryChargingsManual :: IO ()
-unit_queryChargingsManual = do
-  runWithAppMSuppressLog dbnameTest setupTestDatabase
-
+unit_queryChargingsManual = withTempDbM Silent setupTestDatabase $ do
   let ct = UTCTime (fromGregorian 2023 01 01) (timeOfDayToTime midnight)
 
-  runWithAppM dbnameTest $ do
-    -- Insert the single manually constructed station information.
-    void $ insertStationInformation ct [manualStationInformation]
-    -- Insert manually constructed station status.
-    void $ insertStationStatus manualStatus
+  -- Insert the single manually constructed station information.
+  void $ insertStationInformation ct [manualStationInformation]
+  -- Insert manually constructed station status.
+  void $ insertStationStatus manualStatus
 
   -- Check charging events.
   void $ do
@@ -102,8 +93,8 @@ unit_queryChargingsManual = do
   where
     -- | Get charging events between two timestamps (with varying minute values).
     assertEqualBetweenMinute expected startMinute endMinute = do
-      chargings <- runWithAppM dbnameTest $ queryChargingEventsCount (variation startMinute endMinute)
-      assertEqual "Expected number of chargings for entire system" expected (sumTuples chargings)
+      chargings <- queryChargingEventsCount (variation startMinute endMinute)
+      liftIO $ assertEqual "Expected number of chargings for entire system" expected (sumTuples chargings)
 
     -- Query charging events between two minutes, for all stations.
     variation startMinute endMinute = StatusVariationQuery Nothing
@@ -113,14 +104,11 @@ unit_queryChargingsManual = do
 
 -- | HUnit test to query all charging events (using manually constructed test data).
 unit_queryDockingsManual :: IO ()
-unit_queryDockingsManual = do
-  runWithAppMSuppressLog dbnameTest setupTestDatabase
-
-  runWithAppM dbnameTest $ do
-    -- Insert the single manually constructed station information.
-    void $ insertStationInformation ct [manualStationInformation]
-    -- Insert manually constructed station status.
-    void $ insertStationStatus manualStatus
+unit_queryDockingsManual = withTempDbM Silent setupTestDatabase $ do
+  -- Insert the single manually constructed station information.
+  void $ insertStationInformation ct [manualStationInformation]
+  -- Insert manually constructed station status.
+  void $ insertStationStatus manualStatus
 
   -- Check docking events.
   void $ do
@@ -147,19 +135,19 @@ unit_queryDockingsManual = do
       (expectedDockingAll, expectedDockingIconic, expectedDockingEfit, expectedDockingEfitG5)
       (expectedUndockingAll, expectedUndockingIconic, expectedUndockingEfit, expectedUndockingEfitG5)
       (startMinute, endMinute) = do
-      events <- runWithAppM dbnameTest $ queryDockingEventsCount (variation startMinute endMinute)
+      events <- queryDockingEventsCount (variation startMinute endMinute)
 
       let minutesString = " at " ++ show startMinute ++ "-" ++ show endMinute
 
-      assertEqual ("Expected total dockings"    ++ minutesString) expectedDockingAll    (abs (sumEvents Docking (allBikeEvents events)))
-      assertEqual ("Expected Iconic dockings"   ++ minutesString) expectedDockingIconic (abs (sumEvents Docking (iconicEvents  events)))
-      assertEqual ("Expected E-Fit dockings"    ++ minutesString) expectedDockingEfit   (abs (sumEvents Docking (efitEvents    events)))
-      assertEqual ("Expected E-Fit G5 dockings" ++ minutesString) expectedDockingEfitG5 (abs (sumEvents Docking (efitG5Events  events)))
+      liftIO $ assertEqual ("Expected total dockings"    ++ minutesString) expectedDockingAll    (abs (sumEvents Docking (allBikeEvents events)))
+      liftIO $ assertEqual ("Expected Iconic dockings"   ++ minutesString) expectedDockingIconic (abs (sumEvents Docking (iconicEvents  events)))
+      liftIO $ assertEqual ("Expected E-Fit dockings"    ++ minutesString) expectedDockingEfit   (abs (sumEvents Docking (efitEvents    events)))
+      liftIO $ assertEqual ("Expected E-Fit G5 dockings" ++ minutesString) expectedDockingEfitG5 (abs (sumEvents Docking (efitG5Events  events)))
 
-      assertEqual ("Expected total undockings"    ++ minutesString) expectedUndockingAll    (abs (sumEvents Undocking (allBikeEvents events)))
-      assertEqual ("Expected Iconic undockings"   ++ minutesString) expectedUndockingIconic (abs (sumEvents Undocking (iconicEvents  events)))
-      assertEqual ("Expected E-Fit undockings"    ++ minutesString) expectedUndockingEfit   (abs (sumEvents Undocking (efitEvents    events)))
-      assertEqual ("Expected E-Fit G5 undockings" ++ minutesString) expectedUndockingEfitG5 (abs (sumEvents Undocking (efitG5Events  events)))
+      liftIO $ assertEqual ("Expected total undockings"    ++ minutesString) expectedUndockingAll    (abs (sumEvents Undocking (allBikeEvents events)))
+      liftIO $ assertEqual ("Expected Iconic undockings"   ++ minutesString) expectedUndockingIconic (abs (sumEvents Undocking (iconicEvents  events)))
+      liftIO $ assertEqual ("Expected E-Fit undockings"    ++ minutesString) expectedUndockingEfit   (abs (sumEvents Undocking (efitEvents    events)))
+      liftIO $ assertEqual ("Expected E-Fit G5 undockings" ++ minutesString) expectedUndockingEfitG5 (abs (sumEvents Undocking (efitG5Events  events)))
 
     -- Query docking and undocking events between two minutes (timestamps), for all stations.
     variation startMinute endMinute = StatusVariationQuery Nothing
@@ -169,14 +157,10 @@ unit_queryDockingsManual = do
 
 -- | HUnit test to query the number of {bikes, docks} {available, disabled} and {iconic, efit, efit g5} available across entire system at a point in time.
 unit_querySystemStatus :: IO ()
-unit_querySystemStatus = do
-  runWithAppMSuppressLog dbnameTest setupTestDatabase
-  initDBWithExportedData
-
-  ctz <- getCurrentTimeZone
-  systemStatus <- runWithAppM dbnameTest $
-    querySystemStatusAtRange (earliest ctz) (latest ctz) 60 -- 60 minute interval
-  assertEqual "" (expected ctz) systemStatus
+unit_querySystemStatus = withTempDbM Silent (setupTestDatabase >> initDBWithExportedData) $ do
+  ctz <- liftIO getCurrentTimeZone
+  systemStatus <- querySystemStatusAtRange (earliest ctz) (latest ctz) 60 -- 60 minute interval
+  liftIO $ assertEqual "" (expected ctz) systemStatus
   where
     earliest ctz = localTimeToUTC ctz (LocalTime (fromGregorian 2023 10 30) (TimeOfDay 07 00 00))
     latest   ctz = localTimeToUTC ctz (LocalTime (fromGregorian 2023 10 30) (TimeOfDay 08 00 00))

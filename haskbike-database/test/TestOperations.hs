@@ -17,6 +17,7 @@ module TestOperations
      ) where
 
 import           Control.Monad                             ( void )
+import           Control.Monad.Catch                       ( MonadCatch )
 
 import           Data.Fixed                                ( Pico )
 import           Data.Time
@@ -36,6 +37,8 @@ import           Test.Tasty.HUnit
 
 import           TestDatabase
 
+import           UnliftIO
+
 import           Utils
 
 
@@ -43,10 +46,7 @@ import           Utils
 
 -- | HUnit test to query each column multiplied by the time delta (in seconds) between the previous row.
 unit_queryFieldIntegrals :: IO ()
-unit_queryFieldIntegrals = do
-  _ <- liftIO $ runWithAppMSuppressLog dbnameTest setupTestDatabase
-  _ <- initDBWithExportedData
-
+unit_queryFieldIntegrals = withTempDbM Silent (setupTestDatabase >> initDBWithExportedData) $ do
   let variation = StatusVariationQuery (Just 7001) [ EarliestTime (UTCTime (fromGregorian 2023 10 30) (timeOfDayToTime midnight))
                                                    , LatestTime   (UTCTime (fromGregorian 2023 10 31) (timeOfDayToTime midnight))
                                                    ]
@@ -66,16 +66,13 @@ unit_queryFieldIntegrals = do
                        , intStatusSecEfitG5Available = 179423
                        }
 
-  integrals <- runWithAppM dbnameTest $ queryIntegratedStatus variation
+  integrals <- queryIntegratedStatus variation
 
-  assertEqual "Expected values of column integrals" [expected7001] integrals
+  liftIO $ assertEqual "Expected values of column integrals" [expected7001] integrals
 
 -- | HUnit test to calculate usage factors (query each column multiplied by the time delta (in seconds) between the previous row, divided by total time, divided by capacity).
 unit_queryStatusFactors :: IO ()
-unit_queryStatusFactors = do
-  _ <- liftIO $ runWithAppMSuppressLog dbnameTest setupTestDatabase
-  _ <- initDBWithExportedData
-
+unit_queryStatusFactors = withTempDbM Silent (setupTestDatabase >> initDBWithExportedData) $ do
   let variation = StatusVariationQuery (Just 7001) [ EarliestTime (UTCTime (fromGregorian 2023 10 30) (timeOfDayToTime midnight))
                                                    , LatestTime   (UTCTime (fromGregorian 2023 10 31) (timeOfDayToTime midnight))
                                                    ]
@@ -97,23 +94,20 @@ unit_queryStatusFactors = do
                      , statusFactorNormalizedEfitG5Available = 0.6050794528678574
                      }
 
-  integrals <- runWithAppM dbnameTest $ queryStatusFactors variation
+  integrals <- queryStatusFactors variation
 
-  assertEqual "Expected status factors" [expected7001] integrals
+  liftIO $ assertEqual "Expected status factors" [expected7001] integrals
 
-  assertEqual "Expected sum of status factors equals 1.0" 1.0 (sumStatusFactors expected7001)
+  liftIO $ assertEqual "Expected sum of status factors equals 1.0" 1.0 (sumStatusFactors expected7001)
 
-  assertEqual "Expected sum of normalized bike status factors equals 1.0" 1.0 (sumBikeStatusFactors expected7001)
+  liftIO $ assertEqual "Expected sum of normalized bike status factors equals 1.0" 1.0 (sumBikeStatusFactors expected7001)
 
 
 -- | Test station empty query.
 unit_stationEmptyTime :: IO ()
-unit_stationEmptyTime = do
-  runWithAppMSuppressLog dbnameTest $ void $ do
-    setupTestDatabase
-
-    insertStationInformation ct [manualStationInformation]
-    insertStationStatus statusInsert
+unit_stationEmptyTime = withTempDbM Silent setupTestDatabase $ do
+  insertStationInformation ct [manualStationInformation]
+  insertStationStatus statusInsert
 
   check 1 (calendarTimeTime nominalDay)
   check 2 (calendarTimeTime (nominalDay / 2))
@@ -157,11 +151,12 @@ unit_stationEmptyTime = do
 toDuration :: Pico -> CalendarDiffTime
 toDuration = calendarTimeTime . secondsToNominalDiffTime
 
-check :: DayOfMonth -> CalendarDiffTime -> IO ()
+check :: (HasEnv env m, MonadIO m, MonadFail m, MonadUnliftIO m, MonadCatch m)
+      => DayOfMonth -> CalendarDiffTime -> m ()
 check d expected = do
-  empty <- runWithAppMSuppressLog dbnameTest $ withPostgres $ do
+  empty <- withPostgres $ do
     runSelectReturningList $ selectWith $
       queryStationEmptyFullTime (Nothing :: Maybe Int)
       (UTCTime (fromGregorian 2023 01 d)      (timeOfDayToTime (TimeOfDay 0 0 0)))
       (UTCTime (fromGregorian 2023 01 (d +1)) (timeOfDayToTime (TimeOfDay 0 0 0)))
-  assertEqual ("Station empty time " <> show d) expected ((toDuration . fromIntegral . fst . snd . head) empty)
+  liftIO $ assertEqual ("Station empty time " <> show d) expected ((toDuration . fromIntegral . fst . snd . head) empty)

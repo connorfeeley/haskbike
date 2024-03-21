@@ -136,21 +136,22 @@ library
     -- other-extensions:
 
     -- Other library packages from which modules are imported.
-    build-depends:    vector
+    build-depends:    base
                     , attoparsec
 
                     , haskbike-core
                     , haskbike-client
 
-                    , base
                     , bytestring
-                    , pretty-simple
-                    , text
+                    , co-log
                     , containers
-                    , unliftio
-                    , time
                     , exceptions
+                    , pretty-simple
                     , resource-pool >= 0.4.0.0
+                    , text
+                    , time
+                    , unliftio
+                    , vector
 
                     , servant
                     , aeson
@@ -176,6 +177,8 @@ test-suite haskbike-database-test
 
     -- Base language which the package is written in.
     default-language: GHC2021
+
+    ghc-options: -Wall -fwrite-ide-info -threaded "-with-rtsopts=-N"
 
     -- Modules included in this test suite, other than Main.
     -- other-modules:
@@ -219,5 +222,7 @@ test-suite haskbike-database-test
                     , unliftio
                     , tmp-postgres
                     , postgresql-simple
+                    , exceptions
+                    , mtl
 
     build-tool-depends: tasty-discover:tasty-discover

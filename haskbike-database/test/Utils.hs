@@ -12,13 +12,19 @@
 module Utils where
 
 import           Control.Lens
-import           Control.Monad                               ( void )
+import           Control.Monad                               ( unless, void, (<=<) )
+import           Control.Monad.Catch                         ( MonadCatch )
+import           Control.Monad.Reader                        ( MonadReader )
 
 import           Data.Aeson
 import qualified Data.ByteString                             as B
 import qualified Data.ByteString.Lazy                        as BL
 import           Data.Time
 
+import           Database.Postgres.Temp
+import           Database.PostgreSQL.Simple                  ( close, connectPostgreSQL, defaultConnectInfo )
+
+import           Haskbike.API.Client                         ( mkClientManager )
 import           Haskbike.API.ResponseWrapper
 import qualified Haskbike.API.StationInformation             as AT
 import qualified Haskbike.API.StationStatus                  as AT
@@ -36,25 +42,56 @@ import           Paths_haskbike_database                     ( getDataFileName )
 
 import           Test.Tasty.HUnit
 
+import           UnliftIO                                    ( MonadIO, MonadUnliftIO, bracket, liftIO, try )
+
+
+data LogConfig where
+  Silent :: LogConfig
+  LogAt  :: Severity -> LogConfig
+
+withTempDbM :: LogConfig -> AppM a -> AppM b -> IO b
+withTempDbM logConfig setup action = do
+  -- Create temporary postgres database
+  tempPgResult <- withConfig defaultConfig $ \db -> bracket
+    (pure (toConnectionString db))  -- Setup step
+    (close <=< connectPostgreSQL) $ -- Shutdown step
+    \connString -> do               -- Middle step
+      connPool <- mkDatabaseConnectionPoolFrom connectPostgreSQL connString
+      currentTimeZone <- getCurrentTimeZone
+      clientManager <- mkClientManager
+      let env = (mainEnv Info False True currentTimeZone connPool clientManager :: Env AppM)
+      runAppM env (setup >> action)
+  pure $ unsafeUnwrapResult tempPgResult
+  where
+    unsafeUnwrapResult (Right x) = x
+    unsafeUnwrapResult _         = error "Database setup failed"
+
+silenceLogs :: Env AppM -> Env AppM
+silenceLogs env = env { envLogAction = mempty }
+
+condSilence Silent           currentTimeZone connPool clientManager = silenceLogs (mainEnv Info False True currentTimeZone connPool clientManager :: Env AppM)
+condSilence (LogAt severity) currentTimeZone connPool clientManager = mainEnv severity False True currentTimeZone connPool clientManager :: Env AppM
+
 
 -- * Test setup.
 
 -- | Initialize empty database from exported station information and station status JSON.
-initDBWithExportedData :: IO ([DB.StationInformation], [DB.StationStatus])
+initDBWithExportedData :: (HasEnv env m, MonadIO m, MonadFail m, MonadUnliftIO m, MonadCatch m)
+                       => m ([DB.StationInformation], [DB.StationStatus])
 initDBWithExportedData = do
   importDbTestData "test/dumps/" "station_information_2023-10-30.json" "station_status_2023-10-30_2023-10-30.json"
 
 
 -- | Initialize empty database from the test station information response and all 22 station status responses.
-initDBWithAllTestData :: IO ()
+initDBWithAllTestData :: (HasEnv env m, MonadIO m, MonadFail m, MonadUnliftIO m, MonadCatch m) => m ()
 initDBWithAllTestData = do
-  info <- getDecodedFileInformation  "test/json/station_information-1.json"
-  void $ runWithAppM dbnameTest $ insertStationInformation (_respLastUpdated info) (_respData info)
+  info <- liftIO $ getDecodedFileInformation  "test/json/station_information-1.json"
+  void $ insertStationInformation (_respLastUpdated info) (_respData info)
 
   -- Insert test station status data 1-22.
   mapM_ (\i -> do
-            statusResponse <- getDecodedFileStatus $ "test/json/station_status-" <> show i <> ".json"
-            void $ runWithAppM dbnameTest $ insertStationStatus $ statusResponse ^. respData
+            statusResponse <- liftIO $ getDecodedFileStatus $ "test/json/station_status-" <> show i <> ".json"
+            void $ insertStationStatus $ statusResponse ^. respData
         ) [(1 :: Int) .. (22 :: Int)]
 
 

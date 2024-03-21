@@ -5,23 +5,27 @@ module Haskbike.Database.ImportExport
      , importDbTestData
      ) where
 
-import qualified Haskbike.API.StationInformation                       as AT
-import qualified Haskbike.API.StationStatus                            as AT
-
-import           Haskbike.AppEnv
+import           Colog                                       ( logError )
 
 import           Control.Lens
+import           Control.Monad.Catch                         ( MonadCatch )
 
-import           Data.Aeson                                   ( eitherDecode, encode )
-import qualified Data.ByteString.Lazy                         as L
+import           Data.Aeson                                  ( eitherDecode, encode )
+import qualified Data.ByteString.Lazy                        as L
+import qualified Data.Text                                   as T
 import           Data.Time
 
 import           Database.Beam
+
+import qualified Haskbike.API.StationInformation             as AT
+import qualified Haskbike.API.StationStatus                  as AT
+import           Haskbike.AppEnv
 import           Haskbike.Database.BikeShare
 import           Haskbike.Database.Operations
 import           Haskbike.Database.Tables.StationInformation
 import           Haskbike.Database.Tables.StationStatus
-import           Haskbike.Database.Utils
+
+import           UnliftIO
 
 
 -- * Export functions.
@@ -97,7 +101,8 @@ Export table data to a JSON file.
 
 >>> importDbTestData "test/dumps/" "station_information_2023-10-30.json" "station_status_2023-10-29_2023-10-30.json"
 -}
-importDbTestData :: FilePath -> FilePath -> FilePath -> IO ([StationInformationT Identity], [StationStatusT Identity])
+importDbTestData :: (HasEnv env m, MonadIO m, MonadFail m, MonadUnliftIO m, MonadCatch m)
+                 => FilePath -> FilePath -> FilePath -> m ([StationInformationT Identity], [StationStatusT Identity])
 importDbTestData inputDir infoFile statusFile = do
   info <- importDbTestDataInfo inputDir infoFile
   status <- importDbTestDataStatus inputDir statusFile
@@ -110,31 +115,33 @@ Import station information from a JSON file.
 
 >>> importDbTestDataInfo "test/dumps/" "station_information_2023-10-30.json"
 -}
-importDbTestDataInfo :: FilePath -> FilePath -> IO [StationInformationT Identity]
+importDbTestDataInfo :: (HasEnv env m, MonadIO m, MonadFail m, MonadUnliftIO m, MonadCatch m)
+                     => FilePath -> FilePath -> m [StationInformationT Identity]
 importDbTestDataInfo inputDir filePrefix = do
-  infoJson <- L.readFile (inputDir <> filePrefix)
+  infoJson <- (liftIO . L.readFile) (inputDir <> filePrefix)
   let info = eitherDecode infoJson :: Either String [AT.StationInformation]
 
-  reported <- getCurrentTime
+  reported <- liftIO getCurrentTime
 
   case info of
     Left err -> do
-      putStrLn ("Error decoding JSON dump: " <> err)
+      (logError . T.pack) ("Error decoding JSON dump: " <> err)
       pure []
-    Right info' -> runWithAppM dbnameTest $ insertStationInformation reported info'
+    Right info' -> insertStationInformation reported info'
 
 {- |
 Import station status from a JSON file.
 
 >>> importDbTestDataStatus "test/dumps/" "station_status_2023-10-29_2023-10-30.json"
 -}
-importDbTestDataStatus :: FilePath -> FilePath -> IO [StationStatusT Identity]
+importDbTestDataStatus :: (HasEnv env m, MonadIO m, MonadFail m, MonadUnliftIO m, MonadCatch m)
+                       => FilePath -> FilePath -> m [StationStatusT Identity]
 importDbTestDataStatus inputDir filePrefix = do
-  statusJson <- L.readFile (inputDir <> filePrefix)
+  statusJson <- (liftIO . L.readFile) (inputDir <> filePrefix)
   let status = eitherDecode statusJson :: Either String [AT.StationStatus]
 
   case status of
     Left err -> do
-      putStrLn ("Error decoding JSON dump: " <> err)
+      (logError . T.pack) ("Error decoding JSON dump: " <> err)
       pure []
-    Right status' -> runWithAppM dbnameTest $ insertStationStatus status'
+    Right status' -> insertStationStatus status'
