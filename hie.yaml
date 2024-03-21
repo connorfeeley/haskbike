@@ -20,3 +20,6 @@ cradle:
 
     - path: "haskbike-database"
       component: "lib:haskbike-database"
+
+    - path: "haskbike-server"
+      component: "lib:haskbike-server"

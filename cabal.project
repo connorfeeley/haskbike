@@ -2,3 +2,4 @@ packages:
   haskbike-core
   haskbike-client
   haskbike-database
+  haskbike-server
