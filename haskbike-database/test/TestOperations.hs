@@ -31,6 +31,7 @@ import           Haskbike.Database.Operations
 import           Haskbike.Database.Operations.Factors
 import           Haskbike.Database.Operations.StationEmpty
 import           Haskbike.Database.StatusVariationQuery
+import           Haskbike.Database.Test.Utils
 import           Haskbike.Database.Utils
 
 import           Test.Tasty.HUnit
@@ -38,8 +39,6 @@ import           Test.Tasty.HUnit
 import           TestDatabase
 
 import           UnliftIO
-
-import           Utils
 
 
 -- * Test units.

@@ -52,6 +52,7 @@ import           Haskbike.Database.StatusVariationQuery
 import           Haskbike.Database.Tables.StationInformation
 import           Haskbike.Database.Tables.StationStatus
 import           Haskbike.Database.Tables.SystemInformation
+import           Haskbike.Database.Test.Utils
 import           Haskbike.Database.Utils
 
 import           Paths_haskbike_database                     ( getDataFileName )
@@ -59,8 +60,6 @@ import           Paths_haskbike_database                     ( getDataFileName )
 import           Test.Tasty.HUnit
 
 import           UnliftIO                                    ( MonadUnliftIO, bracket, try )
-
-import           Utils
 
 
 -- | HUnit test for inserting system information.

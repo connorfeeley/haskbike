@@ -9,20 +9,19 @@
 
 -- |
 
-module Utils where
+module Haskbike.Database.Test.Utils where
 
 import           Control.Lens
-import           Control.Monad                               ( unless, void, (<=<) )
+import           Control.Monad                               ( void, (<=<) )
 import           Control.Monad.Catch                         ( MonadCatch )
-import           Control.Monad.Reader                        ( MonadReader )
 
 import           Data.Aeson
-import qualified Data.ByteString                             as B
 import qualified Data.ByteString.Lazy                        as BL
+import           Data.Pool                                   ( Pool )
 import           Data.Time
 
 import           Database.Postgres.Temp
-import           Database.PostgreSQL.Simple                  ( close, connectPostgreSQL, defaultConnectInfo )
+import           Database.PostgreSQL.Simple                  ( Connection, close, connectPostgreSQL )
 
 import           Haskbike.API.Client                         ( mkClientManager )
 import           Haskbike.API.ResponseWrapper
@@ -38,11 +37,13 @@ import qualified Haskbike.Database.Tables.StationInformation as DB
 import qualified Haskbike.Database.Tables.StationStatus      as DB
 import           Haskbike.Database.Utils
 
+import           Network.HTTP.Client                         ( Manager )
+
 import           Paths_haskbike_database                     ( getDataFileName )
 
 import           Test.Tasty.HUnit
 
-import           UnliftIO                                    ( MonadIO, MonadUnliftIO, bracket, liftIO, try )
+import           UnliftIO                                    ( MonadIO, MonadUnliftIO, bracket, liftIO )
 
 
 data LogConfig where
@@ -59,7 +60,7 @@ withTempDbM logConfig setup action = do
       connPool <- mkDatabaseConnectionPoolFrom connectPostgreSQL connString
       currentTimeZone <- getCurrentTimeZone
       clientManager <- mkClientManager
-      let env = (mainEnv Info False True currentTimeZone connPool clientManager :: Env AppM)
+      let env = makeEnvForTest logConfig currentTimeZone connPool clientManager
       runAppM env (setup >> action)
   pure $ unsafeUnwrapResult tempPgResult
   where
@@ -69,8 +70,9 @@ withTempDbM logConfig setup action = do
 silenceLogs :: Env AppM -> Env AppM
 silenceLogs env = env { envLogAction = mempty }
 
-condSilence Silent           currentTimeZone connPool clientManager = silenceLogs (mainEnv Info False True currentTimeZone connPool clientManager :: Env AppM)
-condSilence (LogAt severity) currentTimeZone connPool clientManager = mainEnv severity False True currentTimeZone connPool clientManager :: Env AppM
+makeEnvForTest :: LogConfig -> TimeZone -> Pool Connection -> Manager -> Env AppM
+makeEnvForTest Silent           currentTimeZone connPool clientManager = silenceLogs (mainEnv Info False True currentTimeZone connPool clientManager :: Env AppM)
+makeEnvForTest (LogAt severity) currentTimeZone connPool clientManager = mainEnv severity False True currentTimeZone connPool clientManager :: Env AppM
 
 
 -- * Test setup.

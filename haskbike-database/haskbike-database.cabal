@@ -137,7 +137,6 @@ library
 
     -- Other library packages from which modules are imported.
     build-depends:    base
-                    , attoparsec
 
                     , haskbike-core
                     , haskbike-client
@@ -146,6 +145,7 @@ library
                     , co-log
                     , containers
                     , exceptions
+                    , attoparsec
                     , pretty-simple
                     , resource-pool >= 0.4.0.0
                     , text
@@ -184,14 +184,11 @@ test-suite haskbike-database-test
     -- other-modules:
 
     -- Modules exported by the library.
-    other-modules:  Utils
+    other-modules:  Paths_haskbike_database
                   , TestChargings
                   , TestDatabase
                   , TestDatabaseRoundtrip
                   , TestOperations
-                  , Paths_haskbike_database
-
-    autogen-modules: Paths_haskbike_database
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
@@ -210,19 +207,62 @@ test-suite haskbike-database-test
                     , haskbike-core
                     , haskbike-client
                     , haskbike-database
+                    , haskbike-database-test-lib
                     , tasty
                     , tasty-hunit
                     , beam-core
                     , beam-postgres
-                    , aeson
-                    , bytestring
                     , containers
                     , lens
                     , time
                     , unliftio
-                    , tmp-postgres
-                    , postgresql-simple
                     , exceptions
-                    , mtl
 
     build-tool-depends: tasty-discover:tasty-discover
+
+
+-- Testing library target.
+library haskbike-database-test-lib
+    import:           compile-flags
+                    , common-extensions
+
+    -- Modules exported by the library.
+    exposed-modules:  Paths_haskbike_database
+                    , Haskbike.Database.Test.Utils
+
+    autogen-modules: Paths_haskbike_database
+
+
+    -- Modules included in this library but not exported.
+    -- other-modules:
+
+
+    -- LANGUAGE extensions used by modules in this package.
+    -- other-extensions:
+
+    -- Other library packages from which modules are imported.
+    build-depends:    base
+
+                    , tasty-hunit
+
+                    , haskbike-core
+                    , haskbike-client
+                    , haskbike-database
+
+                    , aeson
+                    , bytestring
+                    , exceptions
+                    , lens
+                    , http-client
+                    , resource-pool >= 0.4.0.0
+                    , time
+                    , unliftio
+
+                    , tmp-postgres
+                    , postgresql-simple
+
+    -- Directories containing source files.
+    hs-source-dirs: test-lib
+
+    -- Base language which the package is written in.
+    default-language: GHC2021

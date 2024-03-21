@@ -23,14 +23,13 @@ import           Data.Time
 import           Haskbike.Database.EventCounts
 import           Haskbike.Database.Operations
 import           Haskbike.Database.StatusVariationQuery
+import           Haskbike.Database.Test.Utils
 
 import           Test.Tasty.HUnit
 
 import           TestDatabase
 
 import           UnliftIO
-
-import           Utils
 
 
 -- * Test units.

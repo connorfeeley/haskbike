@@ -13,12 +13,11 @@ import           Haskbike.API.ResponseWrapper
 import qualified Haskbike.API.StationInformation             as AT
 import           Haskbike.Database.Operations
 import qualified Haskbike.Database.Tables.StationInformation as DB
+import           Haskbike.Database.Test.Utils
 
 import           Test.Tasty.HUnit
 
 import           UnliftIO
-
-import           Utils
 
 
 unit_roundtripStationInformation :: IO ()
