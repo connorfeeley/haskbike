@@ -1,0 +1,17 @@
+{
+  "last_updated": 1694211221,
+  "ttl": 13,
+  "data": {
+    "versions": [
+      {
+        "version": "1.1",
+        "url": "https://toronto.publicbikesystem.net/ube/gbfs/v1/"
+      },
+      {
+        "version": "2.3",
+        "url": "https://toronto.publicbikesystem.net/customer/gbfs/v2/"
+      }
+    ]
+  },
+  "version": "2.3"
+}
