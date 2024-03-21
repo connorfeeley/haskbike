@@ -86,6 +86,14 @@
 
                 check = false; # Don't run checks as part of the build.
               };
+
+              haskbike-database = { self, super, ... }: {
+                custom = pkg: pkgs.lib.pipe super.haskbike-database [
+                  (pkgs.haskell.lib.compose.addTestToolDepends [ pkgs.postgresql ])
+                  (pkgs.haskell.lib.enableLibraryProfiling)
+                ];
+                check = true;
+              };
               haskbike-server = { self, super, ... }: {
                 custom = pkg: pkgs.lib.pipe super.haskbike-server [
                   # Replace Version.hs with a generated one, since it requires access to the git directory

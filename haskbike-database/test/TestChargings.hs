@@ -155,13 +155,13 @@ unit_queryDockingsManual = withTempDbM Silent setupTestDatabase $ do
 -- | HUnit test to query the number of {bikes, docks} {available, disabled} and {iconic, efit, efit g5} available across entire system at a point in time.
 unit_querySystemStatus :: IO ()
 unit_querySystemStatus = withTempDbM Silent (setupTestDatabase >> initDBWithExportedData) $ do
-  ctz <- liftIO getCurrentTimeZone
   systemStatus <- querySystemStatusAtRange (earliest ctz) (latest ctz) 60 -- 60 minute interval
   liftIO $ assertEqual "" (expected ctz) systemStatus
   where
-    earliest ctz = localTimeToUTC ctz (LocalTime (fromGregorian 2023 10 30) (TimeOfDay 07 00 00))
-    latest   ctz = localTimeToUTC ctz (LocalTime (fromGregorian 2023 10 30) (TimeOfDay 08 00 00))
-    expected ctz = [ ( earliest ctz -- Latest time
+    ctz :: TimeZone = read "EDT"
+    earliest tz = localTimeToUTC tz (LocalTime (fromGregorian 2023 10 30) (TimeOfDay 07 00 00))
+    latest   tz = localTimeToUTC tz (LocalTime (fromGregorian 2023 10 30) (TimeOfDay 08 00 00))
+    expected tz = [ ( earliest tz -- Latest time
                      , 6099 -- Total available bikes
                      , 192  -- Total disabled  bikes
                      , 7284 -- Total available docks
@@ -170,7 +170,7 @@ unit_querySystemStatus = withTempDbM Silent (setupTestDatabase >> initDBWithExpo
                      , 106  -- Total available efit    bikes
                      , 279  -- Total available efit g5 bikes
                      )
-                   , ( latest ctz -- Latest time
+                   , ( latest tz -- Latest time
                      , 6038 -- Total available bikes
                      , 200  -- Total disabled  bikes
                      , 7336 -- Total available docks

@@ -158,3 +158,5 @@ test-suite haskbike-client-test
                     , bytestring
                     , aeson
                     , file-embed
+
+    build-tool-depends: tasty-discover:tasty-discover
