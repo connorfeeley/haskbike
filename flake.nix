@@ -251,6 +251,7 @@
 
           treefmt.config = {
             inherit (config.flake-root) projectRootFile;
+
             # This is the default, and can be overriden.
             package = pkgs.treefmt;
             # formats .hs files
@@ -262,7 +263,7 @@
             # Suggests improvements for your code in .hs files
             programs.hlint.enable = false;
 
-            settings.formatter.stylish-haskell.excludes = [ "./test/Driver.hs" ];
+            settings.formatter.stylish-haskell.excludes = [ "./*/test/Driver.hs" ];
           };
         };
     });
