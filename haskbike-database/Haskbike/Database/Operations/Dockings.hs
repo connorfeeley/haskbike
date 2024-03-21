@@ -16,19 +16,19 @@ module Haskbike.Database.Operations.Dockings
      ) where
 
 
-import           Haskbike.API.VehicleType
+import           Control.Lens                                hiding ( reuse, (.=), (<.) )
+import           Control.Monad.Catch                         ( MonadCatch, MonadThrow )
 
-import           Haskbike.AppEnv
-
-import           Control.Lens                                 hiding ( reuse, (.=), (<.) )
-import           Control.Monad.Catch                          ( MonadCatch, MonadThrow )
-
-import           Data.Int                                     ( Int32 )
-import           Data.List                                    ( sortOn )
-import           Data.Ord                                     ( Down (..) )
+import           Data.Bifunctor                              ( first )
+import           Data.Int                                    ( Int32 )
+import           Data.List                                   ( sortOn )
+import           Data.Ord                                    ( Down (..) )
 import           Data.Time
 
 import           Database.Beam
+
+import           Haskbike.API.VehicleType
+import           Haskbike.AppEnv
 import           Haskbike.Database.BikeShare
 import           Haskbike.Database.EventCounts
 import           Haskbike.Database.Operations.StationEmpty
@@ -38,9 +38,9 @@ import           Haskbike.Database.Tables.StationStatus
 
 import           Text.Pretty.Simple.Extras
 
-import           UnliftIO                                     ( MonadUnliftIO )
+import           UnliftIO                                    ( MonadUnliftIO )
 
-eventsDeltas = do
+_eventsDeltas = do
   events <- (runWithAppMDebug "haskbike" . queryDockingEventsCount) $
     StatusVariationQuery Nothing
     [ EarliestTime (UTCTime (fromGregorian 2023 12 01) (timeOfDayToTime (TimeOfDay 0 0 0)))
@@ -57,14 +57,14 @@ perStationEventsDeltas = sortOn (Down . abs . (^. _4))
                          . map ((\(s, e) -> (_infoName s, _eventsCountDockings e, _eventsCountUndockings e, _eventsCountDockings e + _eventsCountUndockings e))
                                 . (\e -> (_eventsStation e, _eventsIconicCount e)))
 
-check d1 d2 = do
+_check d1 d2 = do
   runWithAppMDebug "haskbike" $ withPostgres $ do
     runSelectReturningList $ selectWith $
       queryStationEmptyFullTime Nothing
       (UTCTime (fromGregorian 2023 12 d1) (timeOfDayToTime (TimeOfDay 0 0 0)))
       (UTCTime (fromGregorian 2023 12 d2) (timeOfDayToTime (TimeOfDay 0 0 0)))
 
-check' res = pPrintCompact $ map (\(s, e) -> (_infoName s, e)) res
+_check' res = pPrintCompact $ map (first _infoName) res
 
 -- | Query the number of dockings and undockings for a station.
 queryDockingEventsCount :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m)
