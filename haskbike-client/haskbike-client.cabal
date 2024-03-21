@@ -91,49 +91,25 @@ library
     -- other-extensions:
 
     -- Other library packages from which modules are imported.
-    build-depends:    vector
-                    , colour
-                    , text-show
-                    , attoparsec
-                    , hvega
-                    , unordered-containers
-                    , aeson-pretty
-                    , data-default-class
-                    , githash
+    build-depends:    attoparsec
                     , lens
 
                     , haskbike-core
 
                     , base
-                    , bytestring
                     , pretty-simple
                     , text
                     , containers
-                    , stm
-                    , mtl
                     , unliftio
-                    , async
-                    , co-log-core
-                    , monad-control
                     , co-log
-                    , ansi-terminal
-                    , optparse-applicative
                     , time
-                    , boxes
                     , exceptions
-                    , cassava
-                    , resource-pool >= 0.4.0.0
-                    , timeit
 
                     , servant
                     , aeson
                     , servant-client
-                    , servant-client-core
-                    , free
-                    , servant-docs
                     , http-client
                     , http-client-tls
-                    , http-conduit
 
     -- Directories containing source files.
     -- hs-source-dirs:

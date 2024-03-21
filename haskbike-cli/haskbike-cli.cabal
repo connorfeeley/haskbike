@@ -102,75 +102,28 @@ executable haskbike
     -- other-extensions:
 
     -- Other library packages from which modules are imported.
-    build-depends:    vector
-                    , colour
-                    , text-show
-                    , attoparsec
-                    , hvega
-                    , unordered-containers
-                    , aeson-pretty
-                    , data-default-class
-                    , githash
-                    , cond
-                    , base-compat-batteries
-                    , directory
-
+    build-depends:    base
                     , haskbike-core
-                    , haskbike-client
-                    , haskbike-database
-                    , haskbike-server
                     , haskbike-cli
+
+                    , mtl
+                    , text
+                    , unliftio
+                    , co-log
+                    , optparse-applicative
+                    , time
 
                     , http-client
                     , http-client-tls
-                    , http-conduit
 
-                    , base
-                    , bytestring
-                    , pretty-simple
-                    , text
-                    , containers
-                    , stm
-                    , mtl
-                    , unliftio
-                    , async
-                    , co-log-core
-                    , monad-control
-                    , co-log
-                    , ansi-terminal
-                    , optparse-applicative
-                    , time
-                    , boxes
-                    , exceptions
-                    , cassava
-                    , resource-pool >= 0.4.0.0
-                    , timeit
-
-                    , servant
-                    , servant-client
-                    , servant-server
-                    , wai
-                    , wai-extra
-                    , warp
-                    , aeson
-
-                    , lucid
-                    , servant-lucid
-
-                    , beam-core
-                    , beam-migrate
-                    , beam-sqlite
-                    , sqlite-simple
-                    , postgresql-simple
                     , beam-postgres
-                    , lens
-                    , dotenv
 
     -- Directories containing source files.
     hs-source-dirs:   src-exe
 
     -- Base language which the package is written in.
     default-language: GHC2021
+
 
 -- Library target.
 library
@@ -201,68 +154,30 @@ library
     -- other-extensions:
 
     -- Other library packages from which modules are imported.
-    build-depends:    vector
-                    , colour
-                    , text-show
-                    , attoparsec
-                    , hvega
-                    , unordered-containers
-                    , aeson-pretty
-                    , data-default-class
-                    , githash
-                    , cond
-                    , base-compat-batteries
-                    , directory
-
+    build-depends:    base
                     , haskbike-core
                     , haskbike-client
                     , haskbike-database
                     , haskbike-server
 
-                    , http-client
-                    , http-client-tls
-                    , http-conduit
-
-                    , base
-                    , bytestring
-                    , pretty-simple
+                    , text-show
+                    , attoparsec
+                    , directory
                     , text
-                    , containers
-                    , stm
-                    , mtl
                     , unliftio
-                    , async
-                    , co-log-core
-                    , monad-control
                     , co-log
                     , ansi-terminal
                     , optparse-applicative
                     , time
                     , boxes
                     , exceptions
-                    , cassava
-                    , resource-pool >= 0.4.0.0
-                    , timeit
+                    , lens
 
-                    , servant
-                    , servant-client
-                    , servant-server
-                    , wai
-                    , wai-extra
-                    , warp
                     , aeson
-
-                    , lucid
-                    , servant-lucid
+                    , servant-client
 
                     , beam-core
-                    , beam-migrate
-                    , beam-sqlite
-                    , sqlite-simple
-                    , postgresql-simple
                     , beam-postgres
-                    , lens
-                    , dotenv
 
     -- Directories containing source files.
     hs-source-dirs:   src-lib

@@ -105,41 +105,19 @@ library
 
     -- Other library packages from which modules are imported.
     build-depends:  base
-                  , vector
-                  , colour
-                  , text-show
-                  , attoparsec
-                  , hvega
-                  , unordered-containers
-                  , aeson-pretty
-                  , data-default-class
                   , githash
-                  , bytestring
                   , pretty-simple
                   , text
-                  , containers
-                  , stm
                   , mtl
                   , unliftio
-                  , async
-                  , co-log-core
-                  , monad-control
                   , co-log
-                  , ansi-terminal
-                  , optparse-applicative
                   , time
-                  , boxes
                   , exceptions
-                  , cassava
                   , resource-pool >= 0.4.0.0
-                  , timeit
 
                   , postgresql-simple
-                  , beam-core
                   , beam-postgres
-                  , beam-migrate
 
-                  , servant
                   , servant-client
                   , servant-server
 

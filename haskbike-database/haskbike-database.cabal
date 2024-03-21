@@ -138,14 +138,7 @@ library
 
     -- Other library packages from which modules are imported.
     build-depends:    vector
-                    , colour
-                    , text-show
                     , attoparsec
-                    , hvega
-                    , unordered-containers
-                    , aeson-pretty
-                    , data-default-class
-                    , githash
 
                     , haskbike-core
                     , haskbike-client
@@ -155,21 +148,10 @@ library
                     , pretty-simple
                     , text
                     , containers
-                    , stm
-                    , mtl
                     , unliftio
-                    , async
-                    , co-log-core
-                    , monad-control
-                    , co-log
-                    , ansi-terminal
-                    , optparse-applicative
                     , time
-                    , boxes
                     , exceptions
-                    , cassava
                     , resource-pool >= 0.4.0.0
-                    , timeit
 
                     , servant
                     , aeson
@@ -178,12 +160,9 @@ library
 
                     , beam-core
                     , beam-migrate
-                    , beam-sqlite
-                    , sqlite-simple
                     , postgresql-simple
                     , beam-postgres
                     , lens
-                    , dotenv
 
     -- Directories containing source files.
     -- hs-source-dirs:

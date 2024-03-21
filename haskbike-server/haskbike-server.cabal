@@ -130,15 +130,11 @@ library
     -- other-extensions:
 
     -- Other library packages from which modules are imported.
-    build-depends:    vector
-                    , colour
-                    , text-show
+    build-depends:    text-show
                     , attoparsec
                     , hvega
-                    , unordered-containers
                     , aeson-pretty
                     , data-default-class
-                    , githash
                     , cond
                     , base-compat-batteries
 
@@ -148,32 +144,20 @@ library
 
                     , http-client
                     , http-client-tls
-                    , http-conduit
 
                     , base
                     , bytestring
-                    , pretty-simple
                     , text
                     , containers
-                    , stm
                     , mtl
                     , unliftio
-                    , async
-                    , co-log-core
-                    , monad-control
                     , co-log
-                    , ansi-terminal
-                    , optparse-applicative
                     , time
-                    , boxes
                     , exceptions
                     , cassava
                     , resource-pool >= 0.4.0.0
-                    , timeit
 
-                    , servant
                     , servant-server
-                    , wai
                     , wai-extra
                     , warp
                     , aeson
@@ -183,12 +167,9 @@ library
 
                     , beam-core
                     , beam-migrate
-                    , beam-sqlite
-                    , sqlite-simple
                     , postgresql-simple
                     , beam-postgres
                     , lens
-                    , dotenv
 
     -- Directories containing source files.
     -- hs-source-dirs:
