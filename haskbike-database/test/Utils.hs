@@ -4,7 +4,6 @@
 {-# LANGUAGE ImpredicativeTypes        #-}
 {-# LANGUAGE MultiParamTypeClasses     #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
-{-# LANGUAGE TemplateHaskell           #-}
 {-# LANGUAGE TypeFamilies              #-}
 {-# LANGUAGE UndecidableInstances      #-}
 
@@ -33,6 +32,8 @@ import qualified Haskbike.Database.Tables.StationInformation as DB
 import qualified Haskbike.Database.Tables.StationStatus      as DB
 import           Haskbike.Database.Utils
 
+import           Paths_haskbike_database                     ( getDataFileName )
+
 import           Test.Tasty.HUnit
 
 
@@ -47,12 +48,12 @@ initDBWithExportedData = do
 -- | Initialize empty database from the test station information response and all 22 station status responses.
 initDBWithAllTestData :: IO ()
 initDBWithAllTestData = do
-  info <- getDecodedFileInformation  "docs/json/2.3/station_information-1.json"
+  info <- getDecodedFileInformation  "test/json/station_information-1.json"
   void $ runWithAppM dbnameTest $ insertStationInformation (_respLastUpdated info) (_respData info)
 
   -- Insert test station status data 1-22.
   mapM_ (\i -> do
-            statusResponse <- getDecodedFileStatus $ "docs/json/2.3/station_status-" <> show i <> ".json"
+            statusResponse <- getDecodedFileStatus $ "test/json/station_status-" <> show i <> ".json"
             void $ runWithAppM dbnameTest $ insertStationStatus $ statusResponse ^. respData
         ) [(1 :: Int) .. (22 :: Int)]
 
@@ -121,7 +122,7 @@ setupTestDatabase = do
 
 
 -- | Helper function to decode a JSON file.
-decodeFile :: FromJSON a => FilePath -- ^ Path to the JSON file.
+decodeFile :: FromJSON a => String -- ^ Path to the JSON file.
            -> IO (Either String a)   -- ^ Decoded value.
 decodeFile file = eitherDecode <$> BL.readFile file
 
@@ -131,9 +132,9 @@ The file is located at the given 'FilePath'. If the decoding is successful,
 the decoded value is returned. If there is an error decoding the JSON, an
 assertion failure with the error message is thrown.
 -}
-getDecodedFile :: FromJSON a => FilePath -- ^ Path to the JSON file.
+getDecodedFile :: FromJSON a => String -- ^ Path to the JSON file.
                              -> IO a     -- ^ Decoded value.
-getDecodedFile filePath = either (assertFailure . ("Error decoding JSON: " ++)) return =<< decodeFile filePath
+getDecodedFile filePath = either (assertFailure . ("Error decoding JSON: " ++)) return =<< decodeFile =<< getDataFileName filePath
 
 -- | Helper function to decode 'StationInformation' from a JSON file.
 getDecodedFileInformation :: FromJSON (ResponseWrapper [AT.StationInformation])

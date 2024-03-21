@@ -53,6 +53,8 @@ import           Haskbike.Database.Tables.StationStatus
 import           Haskbike.Database.Tables.SystemInformation
 import           Haskbike.Database.Utils
 
+import           Paths_haskbike_database                     ( getDataFileName )
+
 import           Test.Tasty.HUnit
 
 import           UnliftIO                                    ( try )
@@ -159,7 +161,7 @@ unit_insertStationStatus = do
   -- Connect to the database.
   runWithAppMSuppressLog dbnameTest setupTestDatabase
 
-  info    <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
+  info    <- getDecodedFileInformation "test/json/station_information-1.json"
   status  <- getDecodedFileStatus      "test/json/station_status.json"
 
   -- Insert test data.
@@ -176,7 +178,7 @@ unit_queryStationStatus = do
   -- Connect to the database.
   runWithAppMSuppressLog dbnameTest setupTestDatabase
 
-  info    <- getDecodedFileInformation  "docs/json/2.3/station_information-1.json"
+  info    <- getDecodedFileInformation  "test/json/station_information-1.json"
   status  <- getDecodedFileStatus       "test/json/station_status.json"
 
   -- Insert test data.
@@ -197,7 +199,7 @@ unit_insertStationInformationApi = do
   -- Connect to the database.
   runWithAppMSuppressLog dbnameTest setupTestDatabase
 
-  info    <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
+  info    <- getDecodedFileInformation "test/json/station_information-1.json"
 
   -- Insert test data.
   void $ runWithAppM dbnameTest $ insertStationInformation (_respLastUpdated info) (_respData info)
@@ -209,7 +211,7 @@ unit_insertStationStatusApi = do
   -- Connect to the database.
   runWithAppMSuppressLog dbnameTest setupTestDatabase
 
-  status  <- getDecodedFileStatus "docs/json/2.3/station_status-1.json"
+  status  <- getDecodedFileStatus "test/json/station_status-1.json"
 
   -- Should fail because station information has not been inserted.
   -- Catch exception with 'try'.
@@ -229,8 +231,8 @@ unit_insertStationApi = do
   -- Connect to the database.
   runWithAppMSuppressLog dbnameTest setupTestDatabase
 
-  info    <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
-  status  <- getDecodedFileStatus      "docs/json/2.3/station_status-1.json"
+  info    <- getDecodedFileInformation "test/json/station_information-1.json"
+  status  <- getDecodedFileStatus      "test/json/station_status-1.json"
 
   -- Insert test data.
   inserted_info   <- runWithAppM dbnameTest $ insertStationInformation (_respLastUpdated info) (_respData info)
@@ -268,9 +270,9 @@ unit_insertNewerStatusRecords = do
 
 doInsertNewerStatusRecords :: IO [StationStatus]
 doInsertNewerStatusRecords = do
-  info      <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
-  status_1  <- getDecodedFileStatus      "docs/json/2.3/station_status-1.json"
-  status_2  <- getDecodedFileStatus      "docs/json/2.3/station_status-2.json"
+  info      <- getDecodedFileInformation "test/json/station_information-1.json"
+  status_1  <- getDecodedFileStatus      "test/json/station_status-1.json"
+  status_2  <- getDecodedFileStatus      "test/json/station_status-2.json"
 
   -- Insert test data.
   void $ runWithAppM dbnameTest $ insertStationInformation (_respLastUpdated info) (_respData info)
@@ -299,9 +301,9 @@ unit_insertNewerStatusRecordsInsert = do
 -- | Insert station statuses (1) into a database, then (2).
 doStatusInsertOnce :: IO [StationStatus] -- ^ Result of inserting station statuses.
 doStatusInsertOnce = do
-  info      <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
-  status_1  <- getDecodedFileStatus      "docs/json/2.3/station_status-1.json"
-  status_2  <- getDecodedFileStatus      "docs/json/2.3/station_status-2.json"
+  info      <- getDecodedFileInformation "test/json/station_information-1.json"
+  status_1  <- getDecodedFileStatus      "test/json/station_status-1.json"
+  status_2  <- getDecodedFileStatus      "test/json/station_status-2.json"
 
   -- Insert test data.
   void $ runWithAppM dbnameTest $ insertStationInformation (_respLastUpdated info) (_respData info)
@@ -325,9 +327,9 @@ unit_insertNewerStatusRecordsInsertTwice = do
 -- | Insert station statuses (1) into a database, then (2), then (2) again.
 doStatusInsertTwice :: IO [StationStatus] -- ^ Result of inserting updated station statuses.
 doStatusInsertTwice = do
-  info      <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
-  status_1  <- getDecodedFileStatus "docs/json/2.3/station_status-1.json"
-  status_2  <- getDecodedFileStatus "docs/json/2.3/station_status-2.json"
+  info      <- getDecodedFileInformation "test/json/station_information-1.json"
+  status_1  <- getDecodedFileStatus "test/json/station_status-1.json"
+  status_2  <- getDecodedFileStatus "test/json/station_status-2.json"
 
   -- Insert first round of test data.
   void $ runWithAppM dbnameTest $ insertStationInformation (_respLastUpdated info) (_respData info)
@@ -344,7 +346,7 @@ doStatusInsertTwice = do
 unit_queryStationByIdAndName :: IO ()
 unit_queryStationByIdAndName = do
   runWithAppMSuppressLog dbnameTest setupTestDatabase
-  info <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
+  info <- getDecodedFileInformation "test/json/station_information-1.json"
   void $ runWithAppM dbnameTest $ insertStationInformation (_respLastUpdated info) (_respData info)
 
   assertEqual "Station ID for 'King St W / Joe Shuster Way'" (Just 7148)  =<< runWithAppM dbnameTest (queryStationId "King St W / Joe Shuster Way")
@@ -453,8 +455,8 @@ unit_insertStationLookupLatest :: IO ()
 unit_insertStationLookupLatest = do
   runWithAppMSuppressLog dbnameTest setupTestDatabase
 
-  info    <- getDecodedFileInformation "docs/json/2.3/station_information-1.json"
-  status  <- getDecodedFileStatus      "docs/json/2.3/station_status-1.json"
+  info    <- getDecodedFileInformation "test/json/station_information-1.json"
+  status  <- getDecodedFileStatus      "test/json/station_status-1.json"
 
   -- Insert test data.
   insertedInfo   <- runWithAppM dbnameTest $ insertStationInformation (_respLastUpdated info) (_respData info)
