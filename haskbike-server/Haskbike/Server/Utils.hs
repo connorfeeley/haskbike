@@ -37,8 +37,9 @@ sideMenu page = do
   latest <- getLatestQueries
   pure $
     PureSideMenu
-    { visPageParams = page
-    , staticLink    = fieldLink staticApi
-    , versionText   = getGitHash
-    , latestQueries = latest
+    { visPageParams    = page
+    , staticLink       = fieldLink staticApi
+    , cabalVersionText = getCabalVersion
+    , gitVersionText   = getGitHash
+    , latestQueries    = latest
     }

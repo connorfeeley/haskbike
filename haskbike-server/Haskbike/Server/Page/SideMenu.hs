@@ -1,7 +1,12 @@
 {-# OPTIONS_GHC -Wno-type-defaults #-}
 {-# OPTIONS_GHC -Wno-unused-local-binds #-}
 
-module Haskbike.Server.Page.SideMenu where
+module Haskbike.Server.Page.SideMenu
+     ( PureSideMenu (..)
+     , renderMain
+     , renderMenu
+     , versionLink
+     ) where
 
 import qualified Data.Text                  as T
 
@@ -17,41 +22,42 @@ import           Servant                    ( Link, toUrlPiece )
 
 data PureSideMenu a where
   PureSideMenu :: (ToHtml a, ToHtmlComponents a) =>
-    { visPageParams :: a
-    , staticLink    :: Link
-    , versionText   :: String
-    , latestQueries :: LatestQueries
+    { visPageParams    :: a
+    , staticLink       :: Link
+    , cabalVersionText :: String
+    , gitVersionText   :: String
+    , latestQueries    :: LatestQueries
     } -> PureSideMenu a
 
-instance (ToHtml a, ToHtmlComponents a) => ToHtml (PureSideMenu a) where
+instance (ToHtml a, ToHtml LatestQueries, ToHtmlComponents a) => ToHtml (PureSideMenu a) where
   toHtmlRaw = toHtml
-  toHtml params = do
+  toHtml component = do
     doctype_ -- Disable HTML quirks mode.
-    head_ $ do
-      makeHeadElements ("/" <> toUrlPiece (staticLink params)) "//stats.bikes.cfeeley.org/count.js"
-      toHead (visPageParams params)
+    headElement component
+    layoutElement component
+    where
+      headElement c = head_ $ do
+        makeHeadElements ("/" <> toUrlPiece (staticLink c)) "//stats.bikes.cfeeley.org/count.js"
+        toHead (visPageParams c)
 
-      stylesheet_ ("/" <> toUrlPiece (staticLink params) <> "/css/pure/side-menu.css")
-      script_ [src_ ("/" <> toUrlPiece (staticLink params) <> "/js/pure/ui.js"), async_ mempty] ""
-    div_ [id_ "layout"] $ do
-      a_ [href_ "#menu", id_ "menuLink", class_ "menu-link", makeAttribute "aria-label" "Toggle sidebar"] $
-        span_ mempty
+        stylesheet_ ("/" <> toUrlPiece (staticLink c) <> "/css/pure/side-menu.css")
+        script_ [src_ ("/" <> toUrlPiece (staticLink c) <> "/js/pure/ui.js"), async_ mempty] ""
+      menuLink = a_ [href_ "#menu", id_ "menuLink", class_ "menu-link", makeAttribute "aria-label" "Toggle sidebar"] $ span_ mempty
+      layoutElement c = div_ [id_ "layout"] $ do
+        menuLink
+        renderMenu c -- Render menu and menu footer.
+        renderMain c -- Render main content.
 
-      -- Render menu and menu footer.
-      renderMenu params
-
-      -- Render main content.
-      renderMain params
 
 -- | Render the main content.
 renderMain :: (Monad m, ToHtml a, ToHtmlComponents a) => PureSideMenu a -> HtmlT m ()
-renderMain params =
-  div_ [id_ "main", class_ "main-container"] $ do
-    -- Render parameterized type
-    toHtml (visPageParams params)
+renderMain = mainContainer . mainContent -- Render parameterized type
+  where
+    mainContainer = div_ [id_ "main", class_ "main-container"]
+    mainContent = toHtml . visPageParams
 
 -- | Render the menu sidebar.
-renderMenu :: (Monad m, ToHtml a, ToHtmlComponents a) => PureSideMenu a -> HtmlT m ()
+renderMenu :: (Monad m, ToHtml a, ToHtmlComponents a, ToHtml LatestQueries) => PureSideMenu a -> HtmlT m ()
 renderMenu params =
   div_ [id_ "menu"] $ do
     div_ [class_ "pure-menu"] $ do
@@ -71,13 +77,20 @@ renderMenu params =
 
 -- | Render the version link.
 renderVersion :: (Monad m, ToHtml a, ToHtmlComponents a) => PureSideMenu a -> HtmlT m ()
-renderVersion params = div_ [class_ "menu-footer-element menu-footer-version"] $ "Version: " <> renderedVersion params
-  where renderedVersion = toHtml . versionLink . versionText
+renderVersion params =
+  versionContainer versionContent
+  where
+    versionContainer = div_ [class_ "menu-footer-element menu-footer-version"]
+    versionContent   = "Version: " <> cabalVersion params <> gitVersion params
+    wrapBrackets content = "(" <> content <> ")"
+    gitVersion   = toHtml . versionLink . gitVersionText
+    cabalVersion = toHtml . cabalVersionText
 
 -- | Render the version link.
 versionLink :: Monad m => String -> HtmlT m ()
-versionLink version = a_ [href_ (urlForVersion version)] (toHtml shortVersion)
+versionLink version = linkElement shortVersion
   where
-    shortVersion = T.pack (take 7 version)
+    linkElement = a_ [href_ (urlForVersion version)]
+    shortVersion = (toHtml . T.pack . take 7) version
     baseUrl = "https://github.com/connorfeeley/haskbike/tree/"
     urlForVersion object = baseUrl <> T.pack object
