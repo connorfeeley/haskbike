@@ -86,7 +86,9 @@
 
                 check = false; # Don't run checks as part of the build.
               };
-
+              haskbike-client = { self, super, ... }: {
+                check = pkgs.lib.mkIf pkgs.stdenv.isDarwin false;
+              };
               haskbike-database = { self, super, ... }: {
                 custom = pkg: pkgs.lib.pipe super.haskbike-database [
                   (pkgs.haskell.lib.compose.addTestToolDepends [ pkgs.postgresql ])
