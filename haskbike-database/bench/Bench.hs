@@ -1,20 +1,10 @@
 -- | Benchmark suite.
 
-module Main where
+module Main
+     ( main
+     ) where
 
 import           BenchDatabase
-
-import           Control.Monad                             ( void )
-
-import           Data.Time
-
-import           Database.Beam
-
-import           Haskbike.AppEnv
-import           Haskbike.Database.Operations
-import           Haskbike.Database.Operations.StationEmpty
-import           Haskbike.Database.StatusVariationQuery
-import           Haskbike.Database.Utils
 
 import           Test.Tasty.Bench
 
