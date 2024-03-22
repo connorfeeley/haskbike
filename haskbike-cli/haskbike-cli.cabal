@@ -209,11 +209,6 @@ test-suite haskbike-cli-test
                     , haskbike-cli
                     , tasty
                     , tasty-hunit
-                    , co-log
-                    , text
-                    , time
-                    , http-client
-                    , http-client-tls
                     , unliftio
 
     build-tool-depends: tasty-discover:tasty-discover
