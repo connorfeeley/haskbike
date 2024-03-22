@@ -230,3 +230,27 @@ test-suite haskbike-database-test
                     , exceptions
 
     build-tool-depends: tasty-discover:tasty-discover
+
+benchmark haskbike-database-bench
+    import: common-extensions
+
+    default-language: GHC2021
+
+    ghc-options: -Wall -fwrite-ide-info -threaded "-with-rtsopts=-N -A32m"
+    if impl(ghc >= 8.6)
+      ghc-options: -fproc-alignment=64
+
+    main-is:          Bench.hs
+
+    other-modules:    BenchDatabase
+
+    type:             exitcode-stdio-1.0
+
+    build-depends:    base
+                    , tasty-bench
+                    , haskbike-core
+                    , haskbike-database
+                    , beam-core
+                    , time
+
+    hs-source-dirs:   bench
