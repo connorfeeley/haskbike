@@ -4,7 +4,7 @@ Upstream-Contact: Connor Feeley <git@cfeeley.org>
 Source: https://github.com/connorfeeley/haskbike
 
 ### Source files: exe, lib, test, etc.
-Files: src-exe/* src-lib/* test/* haskbike.cabal cabal.project.freeze hie.yaml flake.nix flake.lock .stylish-haskell.yaml nix/VersionPure.hs
+Files: haskbike-*/* src-bench/* sql/* cabal.project cabal.project.freeze flake.nix flake.lock nix/VersionPure.hs
 Copyright: 2023 Connor Feeley <git@cfeeley.org>
 License: BSD-3-Clause
 
@@ -14,7 +14,7 @@ Copyright: 2023 Connor Feeley <git@cfeeley.org>
 License: BSD-3-Clause
 
 ### Other files
-Files: .dir-locals.el .envrc .gitignore .builds/check.yml weeder.dhall .env.template justfile
+Files: .dir-locals.el .envrc .gitignore .builds/check.yml weeder.dhall .env.template justfile .github/workflows/checks.yml .stylish-haskell.yaml weeder.toml
 Copyright: 2023 Connor Feeley <git@cfeeley.org>
 License: BSD-3-Clause
 
