@@ -89,9 +89,11 @@
               haskbike-database = { self, super, ... }: {
                 custom = pkg: pkgs.lib.pipe super.haskbike-database [
                   (pkgs.haskell.lib.compose.addTestToolDepends [ pkgs.postgresql ])
+                  (pkgs.haskell.lib.compose.overrideCabal (o: {
+                    doCheck = if pkgs.stdenv.isDarwin then false else true;
+                  }))
                   (pkgs.haskell.lib.enableLibraryProfiling)
                 ];
-                check = true;
               };
               haskbike-server = { self, super, ... }: {
                 custom = pkg: pkgs.lib.pipe super.haskbike-server [
