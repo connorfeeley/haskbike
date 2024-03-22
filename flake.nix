@@ -90,6 +90,7 @@
                 custom = pkg: pkgs.lib.pipe super.haskbike-database [
                   (pkgs.haskell.lib.compose.addTestToolDepends [ pkgs.postgresql ])
                   (pkgs.haskell.lib.compose.overrideCabal (o: {
+                    # Flaky tests (under Nix) on darwin.
                     doCheck = if pkgs.stdenv.isDarwin then false else true;
                   }))
                   (pkgs.haskell.lib.enableLibraryProfiling)
@@ -112,11 +113,13 @@
               haskbike-cli = { self, super, ... }: {
                 custom = pkg: pkgs.lib.pipe super.haskbike-cli [
                   (pkgs.haskell.lib.compose.addTestToolDepends [ pkgs.postgresql ])
+                  (pkgs.haskell.lib.compose.overrideCabal (o: {
+                    doCheck = false; # Polling test makes network requests.
+                  }))
                   (pkgs.haskell.lib.enableLibraryProfiling)
                   # Add optparse-applicative completions to the derivation output.
                   (self.generateOptparseApplicativeCompletions [ "haskbike" ])
                 ];
-                check = false; # Polling test makes network requests.
               };
             };
 
