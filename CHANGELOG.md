@@ -73,3 +73,33 @@
 
 * Add CLI option for populating `station_status_changes` table from the existing `station_status` table.
 * Refactored `queryRowCount` to return an easier type to use.
+
+## 3.4.0 -- 2024-03-22
+
+* Fixes for ghc 9.6 compatibility.
+* Generic constraints are now utilized in environment monads.
+* API:
+  * Refactor of API implementation including endpoint implementations for vehicle_types and versions.
+  * Addition of system_regions and system_pricing_plans to the API.
+  * Addition of 'Fit' to TorontoVehicleType definitions.
+* CLI:
+  * Add logInfo and logDebug logging functionality.
+  * Run tests in parallel.
+  * Add PollClientEnv.
+  * Add polling test.
+* Client: Run tests in parallel.
+* Database:
+  * Introduce library for db test utilities.
+  * Add TestDatabaseRoundtrip functionality.
+  * Database tests have been improved with better exception logging.
+* Server:
+  * Show cabal version in side bar.
+* Nix:
+  * Add configuration for treefmt.
+  * Implement multi-package build fixes.
+  * Update tracking to nixpkgs-unstable branch.
+* Test:
+  * Assertion added for successful response decoding.
+  * Adjustments to tests when run under nix platform.
+* CI:
+  * Add licensing check
