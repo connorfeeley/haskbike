@@ -81,13 +81,10 @@
                     }))
                   (pkgs.haskell.lib.enableLibraryProfiling)
                 ];
-
-                extraBuildTools = [ pkgs.git ];
-
-                check = false; # Don't run checks as part of the build.
+                check = true;
               };
               haskbike-client = { self, super, ... }: {
-                check = pkgs.lib.mkIf pkgs.stdenv.isDarwin false;
+                check = false; # Makes network requests.
               };
               haskbike-database = { self, super, ... }: {
                 custom = pkg: pkgs.lib.pipe super.haskbike-database [
@@ -108,7 +105,7 @@
                   }))
                   (pkgs.haskell.lib.enableLibraryProfiling)
                 ];
-                check = false; # Don't run checks as part of the build.
+                check = true;
               };
               haskbike-cli = { self, super, ... }: {
                 custom = pkg: pkgs.lib.pipe super.haskbike-cli [
@@ -117,7 +114,7 @@
                   # Add optparse-applicative completions to the derivation output.
                   (self.generateOptparseApplicativeCompletions [ "haskbike" ])
                 ];
-                check = false; # Don't run checks as part of the build.
+                check = false; # Polling test makes network requests.
               };
             };
 
