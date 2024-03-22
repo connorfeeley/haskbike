@@ -65,20 +65,20 @@ bench:
     {{CABAL}} bench
 
 poll *ARGS:
-    {{CABAL}} run haskbike -- --plain poll {{ARGS}} -v
+    {{CABAL}} run haskbike-cli -- --plain poll {{ARGS}} -v
 
 reset *ARGS:
     #!/usr/bin/env bash
     source ./.env.local
-    {{CABAL}} run haskbike -- --plain reset --reset-only -v --log-database {{ARGS}}
+    {{CABAL}} run haskbike-cli -- --plain reset --reset-only -v --log-database {{ARGS}}
 
 migrate *ARGS:
     #!/usr/bin/env bash
     source ./.env.local
-    {{CABAL}} run haskbike -- --plain debug --enable-migrations -v --log-database
+    {{CABAL}} run haskbike-cli -- --plain debug --enable-migrations -v --log-database
 
 visualize *ARGS:
-    {{CABAL}} v2-run --enable-profiling --profiling-detail all-functions exes -- --plain visualize -v {{ARGS}}
+    {{CABAL}} v2-run --enable-profiling --profiling-detail all-functions haskbike-cli -- --plain visualize -v {{ARGS}}
 
 export-rds-table TABLE:
     #!/usr/bin/env bash
