@@ -61,8 +61,9 @@ test PACKAGE='all':
 test-one PACKAGE PATTERN:
     {{CABAL}} test {{PACKAGE}} --test-show-details=direct --test-options='--pattern /{{PATTERN}}/'
 
-bench:
-    {{CABAL}} bench
+bench PACKAGE='all':
+    {{CABAL}} bench {{PACKAGE}} --benchmark-options="--baseline=bench-baseline.csv --fail-if-slower=10 --fail-if-faster=10"
+    # Use --benchmark-option="--csv=bench-baseline.csv" to save the results to a CSV file.
 
 poll *ARGS:
     {{CABAL}} run haskbike-cli -- --plain poll {{ARGS}} -v
