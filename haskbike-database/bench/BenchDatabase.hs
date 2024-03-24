@@ -1,5 +1,3 @@
-{-# LANGUAGE PartialTypeSignatures #-}
-{-# OPTIONS_GHC -Wno-partial-type-signatures #-}
 -- | Benchmark suite.
 
 module BenchDatabase
@@ -16,14 +14,17 @@ import           Data.Int                                    ( Int32 )
 import           Data.Time
 
 import           Database.Beam
+import           Database.Beam.Postgres
 
 import           Haskbike.AppEnv
+import           Haskbike.Database.Expressions
 import           Haskbike.Database.Operations
 import           Haskbike.Database.Operations.Factors
 import           Haskbike.Database.Operations.StationEmpty
 import           Haskbike.Database.StatusVariationQuery
 import           Haskbike.Database.Tables.StationInformation
 import           Haskbike.Database.Test.Utils
+import           Haskbike.TimeInterval                       ( minsPerHourlyInterval )
 
 import           Test.Tasty.Bench
 
@@ -39,17 +40,29 @@ statusVariationAll = StatusVariationQuery Nothing
                      , LatestTime   (UTCTime (read "2024-01-01") (timeOfDayToTime midnight))
                      ]
 
+earliestTime, latestTime :: UTCTime
+earliestTime = UTCTime (read "2024-01-01") (timeOfDayToTime midnight)
+latestTime   = UTCTime (read "2024-01-01") (timeOfDayToTime midnight)
+
 
 -- * Benchmarks.
 
 -- | Benchmark group for database operations.
 bgroupDatabase :: Benchmark
 bgroupDatabase = bgroup "Database operations"
-  [ benchWithTmp "Query bike chargings" $ queryChargingEventsCount statusVariationAll
-  , benchWithTmp "Query status factors" $ queryStatusFactors statusVariationAll
+  [ benchWithTmp "Charging infrastructure"   . selectWithPostgres . selectWith $
+    queryChargingInfrastructure latestTime
+  , benchWithTmp "System status"             . withPostgres . runSelectReturningList . selectWith $
+    querySystemStatusAtRangeExpr earliestTime latestTime (minsPerHourlyInterval 4)
+  , benchWithTmp "Charging events"           $ queryChargingEventsCount statusVariationAll
+  , benchWithTmp "Query status factors"      $ queryStatusFactors statusVariationAll
+  , benchWithTmp "Docking/undocking events"  $ queryDockingEventsCount statusVariationAll
   , benchWithTmp "Station empty time (7001)" $ benchStationEmptyTime (Just 7001)
   , benchWithTmp "Station empty time (all)"  $ benchStationEmptyTime Nothing
   ]
+
+selectWithPostgres :: FromBackendRow Postgres a => SqlSelect Postgres a -> AppM [a]
+selectWithPostgres = withPostgres . runSelectReturningList
 
 benchStationEmptyTime :: (MonadCatch m, HasEnv env m) => Maybe Int -> m [(StationInformationT Identity, (Int32, Int32))]
 benchStationEmptyTime station =

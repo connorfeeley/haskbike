@@ -251,6 +251,8 @@ benchmark haskbike-database-bench
                     , haskbike-core
                     , haskbike-database
                     , beam-core
+                    , beam-postgres
                     , time
+                    , exceptions
 
     hs-source-dirs:   bench
