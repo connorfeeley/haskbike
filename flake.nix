@@ -229,7 +229,23 @@
             destination = "/etc/bash_completion.d/haskbike";
           };
 
-          packages.haskbike-cli-static = pkgs.haskell.lib.justStaticExecutables self'.packages.haskbike-cli;
+          packages.haskbike-server-files = pkgs.stdenv.mkDerivation {
+            pname = "haskbike-server-files";
+            version = rev;
+            src = ./static-files;
+            installPhase = ''
+              mkdir -p $out/share/haskbike/www/static
+              cp -r $src/* $out/share/haskbike/www/static/
+            '';
+          };
+
+          packages.haskbike-cli-static = pkgs.symlinkJoin {
+            name = "haskbike-cli-static";
+            paths = [
+              (pkgs.haskell.lib.justStaticExecutables self'.packages.haskbike-cli)
+              self'.packages.haskbike-server-files
+            ];
+          };
 
           # Display a graph of all modules and how they depend on each other
           packages.module-deps-with-filetype = pkgs.writeShellScript "mainserv-module-deps-with-filetype" ''
