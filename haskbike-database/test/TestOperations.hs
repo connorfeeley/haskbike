@@ -150,7 +150,7 @@ check :: (HasEnv env m, MonadIO m, MonadFail m, MonadUnliftIO m, MonadCatch m)
       => DayOfMonth -> CalendarDiffTime -> m ()
 check d expected = do
   empty <- withPostgres $ do
-    runSelectReturningList $ selectWith $
+    runSelectReturningList $ select $
       queryStationEmptyFullTime (Nothing :: Maybe Int)
       (UTCTime (fromGregorian 2023 01 d)      (timeOfDayToTime (TimeOfDay 0 0 0)))
       (UTCTime (fromGregorian 2023 01 (d +1)) (timeOfDayToTime (TimeOfDay 0 0 0)))

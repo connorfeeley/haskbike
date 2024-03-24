@@ -17,7 +17,7 @@ import           Haskbike.Database.Test.Utils
 
 benchStationEmptyTime :: Maybe Int -> IO ()
 benchStationEmptyTime station = withTempDbM Silent (setupTestDatabase >> initDBWithAllTestData) $ do
-  void $ withPostgres $ runSelectReturningList $ selectWith $ queryStationEmptyFullTime station
+  void $ withPostgres $ runSelectReturningList $ select $ queryStationEmptyFullTime station
     (UTCTime (fromGregorian 2023 11 01) (timeOfDayToTime midnight)) (UTCTime (fromGregorian 2023 11 02) (timeOfDayToTime midnight))
 
 

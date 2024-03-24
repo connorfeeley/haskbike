@@ -165,7 +165,7 @@ performanceCsvHandler stationId startTime endTime = do
 
   (integrals, emptyFullTup) <- concurrently
     (queryIntegratedStatus variation)
-    (withPostgres $ runSelectReturningList $ selectWith $
+    (withPostgres $ runSelectReturningList $ select $
      queryStationEmptyFullTime stationId (localTimeToUTC tz (earliestTime range)) (localTimeToUTC tz (latestTime range))
     )
   let emptyFull = head $ map (\(_i, (e, f))
@@ -237,7 +237,7 @@ handleEmptyFullData start end = do
   logInfo $ "Rendering station empty/full data for time [" <> tshow start <> " - " <> tshow end <> "]"
 
   (latest, emptyFull) <- concurrently (withPostgres $ runSelectReturningList $ select queryLatestStatuses)
-                                      (withPostgres $ runSelectReturningList $ selectWith $
+                                      (withPostgres $ runSelectReturningList $ select $
                                         queryStationEmptyFullTime (Nothing :: Maybe Integer) (start' currentUtc tz) (end' currentUtc tz))
 
   let combined = combineStations latest (resultToEmptyFull emptyFull)
