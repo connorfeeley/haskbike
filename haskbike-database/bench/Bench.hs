@@ -6,7 +6,7 @@ module Main
 
 import           BenchDatabase
 
-import           Criterion.Main
+import           Test.Tasty.Bench
 
 
 main :: IO ()

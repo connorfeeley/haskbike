@@ -247,7 +247,7 @@ benchmark haskbike-database-bench
     type:             exitcode-stdio-1.0
 
     build-depends:    base
-                    , criterion
+                    , tasty-bench
                     , haskbike-core
                     , haskbike-database
                     , beam-core
