@@ -4,6 +4,7 @@ module Haskbike.Server.Data.EmptyFullData
      ( EmptyFull (..)
      , EmptyFullRecord (..)
      , combineStations
+     , emptyFullFromSecs
      , formatDiffTime
      ) where
 
@@ -25,10 +26,16 @@ import qualified Haskbike.Database.Tables.StationStatus      as DB
 
 
 data EmptyFull where
-  EmptyFull :: { _emptyTime :: NominalDiffTime
-               , _fullTime  :: NominalDiffTime
+  EmptyFull :: { _emptyTime :: Maybe NominalDiffTime
+               , _fullTime  :: Maybe NominalDiffTime
                } -> EmptyFull
   deriving (Generic, Show, Eq)
+
+emptyFullFromSecs :: (Integral a1, Integral a2) => Maybe a2 -> Maybe a1 -> EmptyFull
+emptyFullFromSecs empty full = EmptyFull emptyTime fullTime
+  where
+    emptyTime = secondsToNominalDiffTime . fromIntegral <$> empty
+    fullTime  = secondsToNominalDiffTime . fromIntegral <$> full
 
 instance ToJSON EmptyFull where
   toJSON record =
@@ -62,8 +69,9 @@ combineStations latestStatuses empties = mapMaybe combine latestStatuses
     empties' = Map.fromList (map (first DB._infoStationId) empties)
 
 -- | Format a 'NominalDiffTime' as 'Text' with a human-readable format.
-formatDiffTime :: NominalDiffTime -> T.Text
-formatDiffTime dt = (T.pack . formatTime defaultTimeLocale (shortestFormatString dt)) dt
+formatDiffTime :: Maybe NominalDiffTime -> T.Text
+formatDiffTime (Just dt) = (T.pack . formatTime defaultTimeLocale (shortestFormatString dt)) dt
+formatDiffTime Nothing   = T.pack "No data"
 
 shortestFormatString :: IsString a => NominalDiffTime -> a
 shortestFormatString dt =
