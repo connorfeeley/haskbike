@@ -88,6 +88,16 @@ initDBWithExportedData :: (HasEnv env m, MonadIO m, MonadFail m, MonadUnliftIO m
 initDBWithExportedData = do
   importDbTestData "test/dumps/" "station_information_2023-10-30.json" "station_status_2023-10-30_2023-10-30.json"
 
+-- | Initialize empty database from exported station information and station status JSON.
+initDBWithExportedDataDate :: (HasEnv env m, MonadIO m, MonadFail m, MonadUnliftIO m, MonadCatch m)
+                       => Day -> Day -> m ([DB.StationInformation], [DB.StationStatus])
+initDBWithExportedDataDate startDay endDay = do
+  importDbTestData "test/dumps/" infoDumpPath statusDumpPath
+  where
+    infoDumpPath   = "station_information_" <> show startDay <> "_" <> show endDay <> ".json.zst"
+    statusDumpPath = "station_status_"      <> show startDay <> "_" <> show endDay <> ".json"
+
+
 
 -- | Initialize empty database from the test station information response and all 22 station status responses.
 initDBWithAllTestData :: (HasEnv env m, MonadIO m, MonadFail m, MonadUnliftIO m, MonadCatch m) => m ()

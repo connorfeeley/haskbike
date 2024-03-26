@@ -155,6 +155,7 @@ library
                     , time
                     , unliftio
                     , vector
+                    , zstd
 
                     , servant
                     , aeson

@@ -14,6 +14,7 @@ module TestOperations
      ( unit_queryFieldIntegrals
      , unit_queryStatusFactors
      , unit_stationEmptyTime
+     , unit_stationEmptyTimeExported
      ) where
 
 import           Control.Monad.Catch                       ( MonadCatch )
@@ -104,13 +105,13 @@ unit_stationEmptyTime = withTempDbM Silent setupTestDatabase $ do
   insertStationInformation ct [manualStationInformation]
   insertStationStatus statusInsert
 
-  check 1 (calendarTimeTime nominalDay)
-  check 2 (calendarTimeTime (nominalDay / 2))
-  check 3 (calendarTimeTime 0)
-  check 4 (calendarTimeTime nominalDay)
-  check 5 (calendarTimeTime (nominalDay / 4))
-  check 6 (calendarTimeTime (60*5))
-  check 7 (calendarTimeTime (60*5))
+  check 1 (Just (calendarTimeTime nominalDay))
+  check 2 (Just (calendarTimeTime (nominalDay / 2)))
+  check 3 (Just (calendarTimeTime 0))
+  check 4 (Just (calendarTimeTime nominalDay))
+  check 5 (Just (calendarTimeTime (nominalDay / 4)))
+  check 6 (Just (calendarTimeTime (60*5)))
+  check 7 (Just (calendarTimeTime (60*5)))
 
   where
     ct = UTCTime (fromGregorian 2023 01 01) (timeOfDayToTime (TimeOfDay 0 0 0))
@@ -124,6 +125,7 @@ unit_stationEmptyTime = withTempDbM Silent setupTestDatabase $ do
              StationStatusSimple 7001 (UTCTime d (timeOfDayToTime t)) 0 bikesAv 0 docksAv 0 bikesAv 0 0
           )
       [ (fromGregorian 2023 01 01, TimeOfDay  0 0 0,  (0, 0))
+      , (fromGregorian 2023 01 01, TimeOfDay 12 0 0,  (0, 0))
 
       , (fromGregorian 2023 01 02, TimeOfDay  0 0 0,  (0, 0))
       , (fromGregorian 2023 01 02, TimeOfDay 12 0 0,  (1, 0))
@@ -147,11 +149,30 @@ toDuration :: Pico -> CalendarDiffTime
 toDuration = calendarTimeTime . secondsToNominalDiffTime
 
 check :: (HasEnv env m, MonadIO m, MonadFail m, MonadUnliftIO m, MonadCatch m)
-      => DayOfMonth -> CalendarDiffTime -> m ()
+      => DayOfMonth -> Maybe CalendarDiffTime -> m ()
 check d expected = do
   empty <- withPostgres $ do
     runSelectReturningList $ select $
       queryStationEmptyFullTime (Nothing :: Maybe Int)
       (UTCTime (fromGregorian 2023 01 d)      (timeOfDayToTime (TimeOfDay 0 0 0)))
       (UTCTime (fromGregorian 2023 01 (d +1)) (timeOfDayToTime (TimeOfDay 0 0 0)))
-  liftIO $ assertEqual ("Station empty time " <> show d) expected ((toDuration . fromIntegral . fst . snd . head) empty)
+  liftIO $ assertEqual ("Station empty time " <> show d) expected ((secondsToDuration . fst . snd . head) empty)
+  where secondsToDuration Nothing  = Nothing
+        secondsToDuration (Just x) = Just ((toDuration . fromIntegral) x)
+
+
+unit_stationEmptyTimeExported :: IO ()
+unit_stationEmptyTimeExported = runWithAppM "haskbike-test" $ (setupTestDatabase >> initDBWithExportedDataDate startDay endDay) >> do -- withTempDbM Silent (setupTestDatabase >> initDBWithExportedDataDate startDay endDay) $ do
+  result <- withPostgres $ do
+    runSelectReturningOne $ select $
+      queryStationEmptyFullTime (Just 7001 :: Maybe Int)
+      (UTCTime (fromGregorian 2024 01 03) (timeOfDayToTime (TimeOfDay 0 0 0)))
+      (UTCTime (fromGregorian 2024 01 04) (timeOfDayToTime (TimeOfDay 0 0 0)))
+
+  case result of Nothing -> liftIO $ assertFailure "No result returned."
+                 Just (_stationInfo, (emptyTime, fullTime)) -> do
+                   liftIO $ assertEqual "Station empty time (exported)" emptyTime (Just 0)
+                   liftIO $ assertEqual "Station full time (exported)"  fullTime  (Just 0)
+  where
+    startDay = fromGregorian 2024 01 03
+    endDay   = fromGregorian 2024 01 04

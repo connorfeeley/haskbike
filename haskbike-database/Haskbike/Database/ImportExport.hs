@@ -5,13 +5,16 @@ module Haskbike.Database.ImportExport
      , importDbTestData
      ) where
 
-import           Colog                                       ( logError )
+import qualified Codec.Compression.Zstd                      as Z
+
+import           Colog                                       ( logError, logInfo )
 
 import           Control.Lens
 import           Control.Monad.Catch                         ( MonadCatch )
 
 import           Data.Aeson                                  ( eitherDecode, encode )
-import qualified Data.ByteString.Lazy                        as L
+import qualified Data.ByteString                             as B
+import qualified Data.ByteString.Lazy                        as BL
 import qualified Data.Text                                   as T
 import           Data.Time
 
@@ -35,63 +38,46 @@ Export table data to a JSON file.
 
 >>> exportDbTestData "test/dumps/" (fromGregorian 2023 10 30) (fromGregorian 2023 10 30)
 -}
-exportDbTestData :: FilePath -> Day -> Day -> IO FilePath
+exportDbTestData :: (MonadCatch m, HasEnv env m) => FilePath -> Day -> Day -> m (FilePath, FilePath)
 exportDbTestData outputDir startDay endDay = do
-  exportDbTestDataInfo   outputDir ("station_information_" <> show endDay <> ".json")
-
-  exportDbTestDataStatus outputDir ("station_status_" <> show startDay <> "_" <> show endDay <> ".json")
-    (UTCTime startDay (timeOfDayToTime midnight)) (UTCTime endDay (timeOfDayToTime (TimeOfDay 12 0 0)))
-
-  pure outputDir
-
-
-{- |
-Export station information to a JSON file.
-
->>> exportDbTestDataInfo "test/dumps/" "station_information_2023-10-30.json"
--}
-exportDbTestDataInfo :: FilePath -> FilePath -> IO FilePath
-exportDbTestDataInfo outputDir filePrefix = do
-  info <- runWithAppM "haskbike" $ do
-    withPostgres $ runSelectReturningList $ select $ do
-      all_ (bikeshareDb ^. bikeshareStationInformation)
+  logInfo "Querying station status in range and related station information."
+  result <- queryDbTestData (dayMidnight startDay) (dayNoon endDay)
 
   -- Convert to API type.
-  let info' = map fromBeamStationInformationToJSON info
+  let info'   = map (fromBeamStationInformationToJSON . fst) result
+  let status' = map (fromBeamStationStatusToJSON      . snd) result
 
-  let infoJson :: L.ByteString = encode info'
+  infoPath   <- liftIO $ writeDbTestData outputDir infoPrefix (encode info')
+  statusPath <- liftIO $ writeDbTestData outputDir statusPrefix (encode status')
+  pure (infoPath, statusPath)
+  where
+    dayMidnight day = UTCTime day (timeOfDayToTime midnight)
+    dayNoon     day = UTCTime day (timeOfDayToTime (TimeOfDay 12 0 0))
+    statusPrefix = "station_status_"      <> show startDay <> "_" <> show endDay <> ".json"
+    infoPrefix   = "station_information_" <> show startDay <> "_" <> show endDay <> ".json"
 
-  L.writeFile outputFile infoJson
+-- (UTCTime (fromGregorian 2023 10 29) (timeOfDayToTime midnight)) (UTCTime (fromGregorian 2023 10 30) (timeOfDayToTime midnight))
+queryDbTestData :: (HasEnv env m, MonadCatch m) => UTCTime -> UTCTime -> m [(StationInformation, StationStatus)]
+queryDbTestData startTime endTime = do
+  logInfo "Exporting station information."
+  withPostgres $ runSelectReturningList $ select $ do
+    status <- all_ (bikeshareDb ^. bikeshareStationStatus)
+    guard_' (sqlBool_ ((status ^. statusLastReported) >=. val_ startTime) &&?.
+             sqlBool_ ((status ^. statusLastReported) <=. val_ endTime))
+    info   <- related_ (bikeshareDb ^. bikeshareStationInformation) ((_statusInfoId . _statusCommon) status)
+    -- guard_' (sqlBool_ ((info ^. infoReported) <=. val_ endTime) &&?.
+    --          (_statusInfoId . _statusCommon) status `references_'` info)
+    -- guard_' ((info ^. infoStationId) ==?. (status ^. statusInfoId . unInformationStationId))
+    pure (info, status)
 
+
+writeDbTestData :: FilePath -> FilePath -> BL.ByteString -> IO FilePath
+writeDbTestData outputDir filePrefix jsonEncoded = do
+  BL.writeFile outputFile compressedJson
   pure outputFile
   where
-    outputFile = outputDir <> filePrefix
-
-
-{- |
-Export station status to a JSON file.
-
->>> exportDbTestDataStatus "test/dumps/" "station_status_2023-10-29_2023-10-30.json" (UTCTime (fromGregorian 2023 10 29) (timeOfDayToTime midnight)) (UTCTime (fromGregorian 2023 10 30) (timeOfDayToTime midnight))
--}
-exportDbTestDataStatus :: FilePath -> FilePath -> UTCTime -> UTCTime -> IO FilePath
-exportDbTestDataStatus outputDir filePrefix startTime endTime = do
-  status <- runWithAppM "haskbike" $ do
-    withPostgres $ runSelectReturningList $ select $ do
-      status <- all_ (bikeshareDb ^. bikeshareStationStatus)
-      guard_ ((status ^. statusLastReported) >=. val_ startTime &&.
-              (status ^. statusLastReported) <=. val_ endTime)
-      pure status
-
-  -- Convert to API type.
-  let status' = map fromBeamStationStatusToJSON status
-
-  let statusJson :: L.ByteString = encode status'
-
-  L.writeFile outputFile statusJson
-
-  pure outputFile
-  where
-    outputFile = outputDir <> filePrefix
+    outputFile = outputDir <> filePrefix <> ".zst"
+    compressedJson = BL.fromStrict (Z.compress 6 (BL.toStrict jsonEncoded))
 
 
 -- * Import functions.
@@ -104,7 +90,7 @@ Export table data to a JSON file.
 importDbTestData :: (HasEnv env m, MonadIO m, MonadFail m, MonadUnliftIO m, MonadCatch m)
                  => FilePath -> FilePath -> FilePath -> m ([StationInformationT Identity], [StationStatusT Identity])
 importDbTestData inputDir infoFile statusFile = do
-  info <- importDbTestDataInfo inputDir infoFile
+  info   <- importDbTestDataInfo inputDir infoFile
   status <- importDbTestDataStatus inputDir statusFile
 
   pure (info, status)
@@ -115,33 +101,36 @@ Import station information from a JSON file.
 
 >>> importDbTestDataInfo "test/dumps/" "station_information_2023-10-30.json"
 -}
-importDbTestDataInfo :: (HasEnv env m, MonadIO m, MonadFail m, MonadUnliftIO m, MonadCatch m)
+importDbTestDataInfo :: (MonadCatch m, HasEnv env m)
                      => FilePath -> FilePath -> m [StationInformationT Identity]
 importDbTestDataInfo inputDir filePrefix = do
-  infoJson <- (liftIO . L.readFile) (inputDir <> filePrefix)
-  let info = eitherDecode infoJson :: Either String [AT.StationInformation]
+  contents <- liftIO . B.readFile $ inputDir <> filePrefix
+  case Z.decompress contents of
+    Z.Skip                    -> error "Either frame was empty, or compression was done in streaming mode"
+    Z.Error   err             -> error err
+    Z.Decompress decompressed -> do
+      let status :: Either String [AT.StationInformation] = eitherDecode . BL.fromStrict $ decompressed
 
-  reported <- liftIO getCurrentTime
-
-  case info of
-    Left err -> do
-      (logError . T.pack) ("Error decoding JSON dump: " <> err)
-      pure []
-    Right info' -> insertStationInformation reported info'
+      reported <- liftIO getCurrentTime
+      case status of
+        Left err    -> error err
+        Right info' -> insertStationInformation reported info'
 
 {- |
 Import station status from a JSON file.
 
 >>> importDbTestDataStatus "test/dumps/" "station_status_2023-10-29_2023-10-30.json"
 -}
-importDbTestDataStatus :: (HasEnv env m, MonadIO m, MonadFail m, MonadUnliftIO m, MonadCatch m)
-                       => FilePath -> FilePath -> m [StationStatusT Identity]
+importDbTestDataStatus :: (MonadCatch m, HasEnv env m)
+                       => FilePath -> FilePath -> m [StationStatus]
 importDbTestDataStatus inputDir filePrefix = do
-  statusJson <- (liftIO . L.readFile) (inputDir <> filePrefix)
-  let status = eitherDecode statusJson :: Either String [AT.StationStatus]
+  contents <- liftIO . B.readFile $ inputDir <> filePrefix <> ".zst"
+  case Z.decompress contents of
+    Z.Skip                    -> error "Either frame was empty, or compression was done in streaming mode"
+    Z.Error   err             -> error err
+    Z.Decompress decompressed -> do
+      let status :: Either String [AT.StationStatus] = eitherDecode . BL.fromStrict $ decompressed
 
-  case status of
-    Left err -> do
-      (logError . T.pack) ("Error decoding JSON dump: " <> err)
-      pure []
-    Right status' -> insertStationStatus status'
+      case status of
+        Left err      -> (logError . T.pack) ("Error decoding JSON dump: " <> err) >> pure []
+        Right status' -> insertStationStatus status'
