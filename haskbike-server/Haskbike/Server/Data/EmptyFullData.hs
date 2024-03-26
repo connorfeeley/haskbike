@@ -71,7 +71,7 @@ combineStations latestStatuses empties = mapMaybe combine latestStatuses
 -- | Format a 'NominalDiffTime' as 'Text' with a human-readable format.
 formatDiffTime :: Maybe NominalDiffTime -> T.Text
 formatDiffTime (Just dt) = (T.pack . formatTime defaultTimeLocale (shortestFormatString dt)) dt
-formatDiffTime Nothing   = T.pack "No data"
+formatDiffTime Nothing   = T.pack "-"
 
 shortestFormatString :: IsString a => NominalDiffTime -> a
 shortestFormatString dt =
