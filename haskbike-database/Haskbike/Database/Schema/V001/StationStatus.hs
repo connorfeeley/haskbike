@@ -220,7 +220,7 @@ fromJSONToBeamStationStatus infId status
   where
     -- | Find the vehicle type in the list of vehicle types available; default to 0 if not found.
     vta = AT._statusVehicleTypesAvailable status
-    findByType vehicle_type = (maybe 0 fromIntegral . Map.lookup vehicle_type) vta
+    findByType vehicle_type = (maybe 0 (fromIntegral . AT.vehicleTypeCnt) . Map.lookup vehicle_type) vta
     num_boost   = findByType AT.Boost
     num_iconic  = findByType AT.Iconic
     num_efit    = findByType AT.EFit
@@ -243,10 +243,10 @@ fromBeamStationStatusToJSON status =
                    , AT._statusTraffic               = fmap T.unpack $ status ^. statusTraffic
                    , AT._statusVehicleDocksAvailable = [ AT.VehicleDock (map show [AT.Boost, AT.Iconic, AT.EFit, AT.EFitG5]) (fromIntegral $ status ^. statusVehicleDocksAvailable) ]
                    , AT._statusVehicleTypesAvailable =
-                     AT.listToMap [ AT.VehicleType AT.Boost  (fromIntegral (status ^. vehicleTypesAvailableBoost))
-                                  , AT.VehicleType AT.Iconic (fromIntegral (status ^. vehicleTypesAvailableIconic))
-                                  , AT.VehicleType AT.EFit   (fromIntegral (status ^. vehicleTypesAvailableEfit))
-                                  , AT.VehicleType AT.EFitG5 (fromIntegral (status ^. vehicleTypesAvailableEfitG5))
+                     Map.fromList [ (AT.Boost,  AT.VehicleType AT.Boost  (fromIntegral (status ^. vehicleTypesAvailableBoost)))
+                                  , (AT.Iconic, AT.VehicleType AT.Iconic (fromIntegral (status ^. vehicleTypesAvailableIconic)))
+                                  , (AT.EFit,   AT.VehicleType AT.EFit   (fromIntegral (status ^. vehicleTypesAvailableEfit)))
+                                  , (AT.EFitG5, AT.VehicleType AT.EFitG5 (fromIntegral (status ^. vehicleTypesAvailableEfitG5)))
                                   ]
                    }
 

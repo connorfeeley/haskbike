@@ -65,9 +65,6 @@ queryDbTestData startTime endTime = do
     guard_' (sqlBool_ ((status ^. statusLastReported) >=. val_ startTime) &&?.
              sqlBool_ ((status ^. statusLastReported) <=. val_ endTime))
     info   <- related_ (bikeshareDb ^. bikeshareStationInformation) ((_statusInfoId . _statusCommon) status)
-    -- guard_' (sqlBool_ ((info ^. infoReported) <=. val_ endTime) &&?.
-    --          (_statusInfoId . _statusCommon) status `references_'` info)
-    -- guard_' ((info ^. infoStationId) ==?. (status ^. statusInfoId . unInformationStationId))
     pure (info, status)
 
 

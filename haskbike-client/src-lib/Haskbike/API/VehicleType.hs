@@ -24,8 +24,8 @@ data VehicleType where
 instance ToJSON VehicleType where
   toJSON types_available =
     object [ "vehicle_type_id" .= show (vehicleTypeId types_available)
-            , "count"          .= vehicleTypeCnt      types_available
-            ]
+           , "count"           .= vehicleTypeCnt      types_available
+           ]
 instance FromJSON VehicleType where
   parseJSON = withObject "VehicleType" $ \v -> VehicleType
     <$> v .: "vehicle_type_id"
