@@ -47,8 +47,9 @@ module Haskbike.Database.Schema.V001.StationInformation
      , unInformationStationId
      ) where
 
-import           Control.Lens
+import           Control.Lens                               hiding ( (.=) )
 
+import           Data.Aeson
 import qualified Data.ByteString.Char8                      as B
 import           Data.Coerce                                ( coerce )
 import           Data.Int
@@ -100,6 +101,56 @@ data StationInformationT f where
                         , _infoReported              :: Columnar f UTCTime
                         } -> StationInformationT f
   deriving (Generic, Beamable)
+
+instance ToJSON StationInformation where
+  toJSON station =
+    object [ "info_id"                .= _infoId                    station
+           , "station_id"             .= _infoStationId             station
+           , "name"                   .= _infoName                  station
+           , "physical_configuration" .= _infoPhysicalConfiguration station
+           , "lat"                    .= _infoLat                   station
+           , "lon"                    .= _infoLon                   station
+           , "altitude"               .= _infoAltitude              station
+           , "address"                .= _infoAddress               station
+           , "capacity"               .= _infoCapacity              station
+           , "is_charging_station"    .= _infoIsChargingStation     station
+           , "rental_methods"         .= _infoRentalMethods         station
+           , "is_valet_station"       .= _infoIsValetStation        station
+           , "is_virtual_station"     .= _infoIsVirtualStation      station
+           , "groups"                 .= _infoGroups                station
+           , "obcn"                   .= _infoObcn                  station
+           , "nearby_distance"        .= _infoNearbyDistance        station
+           , "_bluetooth_id"          .= _infoBluetoothId           station
+           , "_ride_code_support"     .= _infoRideCodeSupport       station
+           , "rental_uris"            .= _infoRentalUris            station
+           , "active"                 .= _infoActive                station
+           , "reported"               .= _infoReported              station
+           ]
+
+instance FromJSON StationInformation where
+  parseJSON = withObject "StationInformation" $ \v -> StationInformation
+    <$> v .: "info_id"
+    <*> v .: "station_id"
+    <*> v .:  "name"
+    <*> v .:  "physical_configuration"
+    <*> v .:  "lat"
+    <*> v .:  "lon"
+    <*> v .:  "altitude"
+    <*> v .:? "address"
+    <*> v .:  "capacity"
+    <*> v .:  "is_charging_station"
+    <*> v .:  "rental_methods"
+    <*> v .:  "is_valet_station"
+    <*> v .:  "is_virtual_station"
+    <*> v .:  "groups"
+    <*> v .:  "obcn"
+    <*> v .:  "nearby_distance"
+    <*> v .:  "_bluetooth_id"
+    <*> v .:  "_ride_code_support"
+    <*> v .:  "rental_uris"
+    <*> v .:  "active"
+    <*> v .:  "reported"
+
 
 -- | Synonym for the table type.
 type StationInformation = StationInformationT Identity
@@ -179,6 +230,13 @@ newtype BeamRentalMethod where
   BeamRentalMethod :: AT.RentalMethod -> BeamRentalMethod
   deriving (Eq, Generic, Show, Read) via AT.RentalMethod
 
+instance ToJSON BeamRentalMethod where
+  toJSON (BeamRentalMethod method) = toJSON method
+
+instance FromJSON BeamRentalMethod where
+  parseJSON = parseJSON
+
+
 instance (BeamBackend be, FromBackendRow be T.Text) => FromBackendRow be BeamRentalMethod where
   fromBackendRow = do
     val <- fromBackendRow
@@ -214,6 +272,13 @@ rentalMethodType = DataType pgTextType
 newtype BeamPhysicalConfiguration where
   BeamPhysicalConfiguration :: AT.PhysicalConfiguration -> BeamPhysicalConfiguration
   deriving (Eq, Generic, Show, Read, Ord) via AT.PhysicalConfiguration
+
+instance ToJSON BeamPhysicalConfiguration where
+  toJSON (BeamPhysicalConfiguration configuration) = toJSON configuration
+
+instance FromJSON BeamPhysicalConfiguration where
+  parseJSON = parseJSON
+
 
 physicalConfigurationLabel :: BeamPhysicalConfiguration -> T.Text
 physicalConfigurationLabel (BeamPhysicalConfiguration AT.ElectricBikeStation) = "Electric Bike Station"
