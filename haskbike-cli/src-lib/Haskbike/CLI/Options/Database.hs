@@ -4,10 +4,13 @@
 
 module Haskbike.CLI.Options.Database
      ( DatabaseCommand (..)
+     , ExportOptions (..)
      , ResetOptions (..)
      , databaseCommandParser
      ) where
 
+import           Data.Kind                    ( Type )
+import           Data.String                  ( IsString )
 import           Data.Time
 
 import           Haskbike.CLI.Options.Command
@@ -22,7 +25,7 @@ data DatabaseCommand where
   deriving (Show)
 
 instance HasCommandDesc DatabaseCommand where
-  commandDesc = "Database operations. [DANGER]"
+  commandDesc = "Database operations."
 
 -- | Parser for 'DatabaseOptions'.
 databaseCommandParser :: Parser DatabaseCommand
@@ -59,7 +62,8 @@ resetOptionsParser = ResetOptions
 -- | Options for the 'Export' command.
 data ExportOptions where
   ExportOptions :: { optExportDir :: FilePath
-                   , optExportDay :: Day
+                   , optExportStartDay :: Day
+                   , optExportEndDay :: Day
                    } -> ExportOptions
   deriving (Show)
 
@@ -69,9 +73,13 @@ exportOptionsParser = ExportOptions
       ( long "export-dir"
      <> short 'd'
      <> metavar "DIR"
+     <> value "test/dumps/" -- default value
      <> help "Directory to save exported JSON to." )
-  <*> option auto
-      ( long "day"
-     <> short 't'
-     <> metavar "DAY"
-     <> help "Day to export data for." )
+  <*> argument auto ( metavar "START_DAY" <> helpWithFormat "Starting day to export data for." )
+  <*> argument auto ( metavar "END_DAY"   <> helpWithFormat "End day to export data for." )
+  where
+    formatHelp :: IsString a => a
+    formatHelp = "(format: YYYY-MM-DD)"
+
+    helpWithFormat :: forall (f :: Type -> Type) a. String -> Mod f a
+    helpWithFormat text = help (text <> " " <> formatHelp)
