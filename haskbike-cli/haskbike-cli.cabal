@@ -134,6 +134,7 @@ library
                    -- , API.DebugClient
                    , Haskbike.CLI.Events
                    , Haskbike.CLI.Options
+                   , Haskbike.CLI.Options.Database
                    , Haskbike.CLI.Poll
                    -- , CLI.Poll.PollClientEnv
                    , Haskbike.CLI.Poll.Utils
