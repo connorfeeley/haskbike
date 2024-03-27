@@ -1,8 +1,9 @@
 Name,Mean (ps),2*Stdev (ps)
-All.Database operations.Charging infrastructure,1685442600000,85425846584
-All.Database operations.System status,1760402400000,95078504830
-All.Database operations.Charging events,1778608400000,31152004634
-All.Database operations.Query status factors,1784454600000,56826537152
-All.Database operations.Docking/undocking events,1793608600000,39217054616
-All.Database operations.Station empty time (7001),1781622800000,74981620274
-All.Database operations.Station empty time (all),1798211200000,38350354668
+All.Database operations.Charging infrastructure,2136162400000,96227843770
+All.Database operations.System status,2145182000000,155938908614
+All.Database operations.Charging events,2157596800000,40292156100
+All.Database operations.Query status factors,2188705200000,102495095098
+All.Database operations.Docking/undocking events,2219854600000,48494947868
+All.Database operations.Station empty time (7001),2159524800000,83645042046
+All.Database operations.Station empty time (all),2218842600000,42631977630
+All.Database operations.Station information decoding,2202993000000,49667541916
