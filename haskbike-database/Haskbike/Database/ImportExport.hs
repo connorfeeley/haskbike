@@ -44,7 +44,7 @@ exportDbTestData outputDir startDay endDay = do
   result <- queryDbTestData (dayMidnight startDay) (dayNoon endDay)
 
   -- Convert to API type.
-  let info'   = map (fromBeamStationInformationToJSON . fst) result
+  let info'   = map fst result
   let status' = map (fromBeamStationStatusToJSON      . snd) result
 
   infoPath   <- liftIO $ writeDbTestData outputDir infoPrefix (encode info')
@@ -106,12 +106,14 @@ importDbTestDataInfo inputDir filePrefix = do
     Z.Skip                    -> error "Either frame was empty, or compression was done in streaming mode"
     Z.Error   err             -> error err
     Z.Decompress decompressed -> do
-      let status :: Either String [AT.StationInformation] = eitherDecode . BL.fromStrict $ decompressed
+      let info :: Either String [StationInformation] = eitherDecode . BL.fromStrict $ decompressed
 
       reported <- liftIO getCurrentTime
-      case status of
+      case info of
         Left err    -> error err
-        Right info' -> insertStationInformation reported info'
+        Right info' -> do
+          let infoWithReported = map (\i -> (_infoReported i, fromBeamStationInformationToJSON i)) info'
+          insertStationInformation infoWithReported
 
 {- |
 Import station status from a JSON file.

@@ -113,10 +113,10 @@ infoByIdExpr stationIds = do
     pure info'
 
 -- | Insert station information into the database.
-insertStationInformationExpr :: UTCTime -> [AT.StationInformation] -> SqlInsert Postgres StationInformationT
-insertStationInformationExpr reported stations =
+insertStationInformationExpr :: [(UTCTime, AT.StationInformation)] -> SqlInsert Postgres StationInformationT
+insertStationInformationExpr stations =
   insert (bikeshareDb ^. bikeshareStationInformation)
-  (insertExpressions (map (fromJSONToBeamStationInformation reported) stations))
+  (insertExpressions (map (uncurry fromJSONToBeamStationInformation) stations))
   -- (conflictingFields primaryKey) (onConflictUpdateInstead (\i -> ( _infoName                    i
   --                                                                , _infoPhysicalConfiguration   i
   --                                                                , _infoCapacity                i

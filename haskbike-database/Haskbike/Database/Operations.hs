@@ -118,20 +118,18 @@ queryStationInformationByIds ids =
 
 -- | Insert new station information into the database.
 insertStationInformation :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m)
-                         => UTCTime
-                         -> [AT.StationInformation]             -- ^ List of 'StationInformation' from the API response.
+                         => [(UTCTime, AT.StationInformation)]          -- ^ List of 'StationInformation' from the API response.
                          -> m [StationInformationT Identity] -- ^ List of 'StationInformation' that where inserted.
-insertStationInformation reported stations = do
-  (_, _, inserted) <- insertStationInformation' reported stations
+insertStationInformation stations = do
+  (_, _, inserted) <- insertStationInformation' stations
   pure inserted
 
 insertStationInformation' :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m)
-                          => UTCTime
-                          -> [AT.StationInformation]
+                          => [(UTCTime, AT.StationInformation)]
                           -- ^ List of 'StationInformation' from the API response.
                           -> m ([StationInformation], [StationInformation], [StationInformation])
                           -- ^ List of 'StationInformation' that were: (active, updated, inserted).
-insertStationInformation' reported stations =
+insertStationInformation' stations =
   -- Use a transaction to ensure that the database is not left in an inconsistent state.
   withPostgresTransaction $ do
     -- Retrieve all active stations
@@ -139,7 +137,7 @@ insertStationInformation' reported stations =
       filter_ (\inf -> _infoActive inf ==. val_ True)
       (all_ (bikeshareDb ^. bikeshareStationInformation))
 
-    -- Pairs of (StationInformation, AT.StationInformation) where the API data is meaningfully different from the database contents.
+    -- Pairs of (StationInformation, (UTCTime, AT.StationInformation)) where the API data is meaningfully different from the database contents.
     let newerInfo = infoHasNewer (apiInfoMap stations) (infoMap info)
     -- Station information from the API which is not already present in the database.
     let newInfo = infoNewStation (apiInfoMap stations) (infoMap info)
@@ -151,21 +149,21 @@ insertStationInformation' reported stations =
 
     -- Insert only the stations that are not already in the database.
     inserted <- runInsertReturningList $ do
-      insertStationInformationExpr reported (map snd newerInfo ++ newInfo)
+      insertStationInformationExpr (map snd newerInfo ++ newInfo)
     pure (info, updated, inserted)
-  where
-    infoMap    = Map.fromList . map (\inf -> ((fromIntegral . _infoStationId) inf, inf))
-    apiInfoMap = Map.fromList . map (\inf -> (AT.infoStationId inf, inf))
-    infoHasNewer apiInfo info = catMaybes . Map.elems $ Map.intersectionWith stationInfoChanged apiInfo info
-    infoNewStation apiInfo info = Map.elems (Map.difference apiInfo info)
-    idsToUpdate = map (fromIntegral . _infoId . fst)
 
-stationInfoChanged :: AT.StationInformation -> StationInformation -> Maybe (StationInformation, AT.StationInformation)
+infoMap    = Map.fromList . map (\inf -> ((fromIntegral . _infoStationId) inf, inf))
+apiInfoMap = Map.fromList . map (\inf -> ((AT.infoStationId . snd) inf, inf))
+infoHasNewer apiInfo info = catMaybes . Map.elems $ Map.intersectionWith stationInfoChanged apiInfo info
+infoNewStation apiInfo info = Map.elems (Map.difference apiInfo info)
+idsToUpdate = map (fromIntegral . _infoId . fst)
+
+stationInfoChanged :: (UTCTime, AT.StationInformation) -> StationInformation -> Maybe (StationInformation, (UTCTime, AT.StationInformation))
 stationInfoChanged apiInfo info
   | stationInfoMostlyEq apiInfo info = Nothing
   | otherwise = Just (info, apiInfo)
 
-stationInfoMostlyEq apiInfo dbInfo =
+stationInfoMostlyEq (reported, apiInfo) dbInfo =
   isEq AT.infoName a b
   && isEq AT.infoPhysicalConfiguration a b
   && isEq AT.infoLat a b

@@ -22,9 +22,9 @@ import           UnliftIO
 
 unit_roundtripStationInformation :: IO ()
 unit_roundtripStationInformation = withTempDbM Silent setupTestDatabase $ do
-  infoJson <- liftIO $ getDecodedFileInformation "test/json/station_information-8.json"
+  infoResp <- liftIO $ getDecodedFileInformation "test/json/station_information-8.json"
 
-  (selected, updated, inserted) <- insertStationInformation' (_respLastUpdated infoJson) (_respData infoJson)
+  (selected, updated, inserted) <- insertStationInformation' (map (_respLastUpdated infoResp, ) (_respData infoResp))
 
   liftIO $ assertEqual "Number of selected station information records" 0   (length selected)
   liftIO $ assertEqual "Number of updated  station information records" 0   (length updated)
@@ -32,15 +32,15 @@ unit_roundtripStationInformation = withTempDbM Silent setupTestDatabase $ do
 
   let insertedJson = map DB.fromBeamStationInformationToJSON inserted
 
-  let diff = Map.difference (apiMap (_respData infoJson)) (apiMap insertedJson)
+  let diff = Map.difference (apiMap (_respData infoResp)) (apiMap insertedJson)
 
   liftIO $ assertEqual "No difference between length of API map and DB map" 0 ((length . Map.elems) diff)
 
-  let intersected = Map.intersection (apiMap insertedJson) ((apiMap . _respData) infoJson)
+  let intersected = Map.intersection (apiMap insertedJson) ((apiMap . _respData) infoResp)
   liftIO $ assertEqual "Station information intersection length" 732 (length intersected)
 
   -- Zip inserted data and API data together and assert each element is equal; done per-element to make errors readable.
-  forM_ (zip (sortOn AT.infoStationId insertedJson) ((sortOn AT.infoStationId . _respData) infoJson)) $ \(ins, api) ->
+  forM_ (zip (sortOn AT.infoStationId insertedJson) ((sortOn AT.infoStationId . _respData) infoResp)) $ \(ins, api) ->
     liftIO $ assertEqual "Station information encoding roundtrip" api ins
 
 apiMap :: [AT.StationInformation] -> Map.Map Int AT.StationInformation

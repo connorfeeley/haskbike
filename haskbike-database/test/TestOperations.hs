@@ -102,7 +102,7 @@ unit_queryStatusFactors = withTempDbM Silent (setupTestDatabase >> initDBWithExp
 -- | Test station empty query.
 unit_stationEmptyTime :: IO ()
 unit_stationEmptyTime = withTempDbM Silent setupTestDatabase $ do
-  insertStationInformation ct [manualStationInformation]
+  insertStationInformation [(ct, manualStationInformation)]
   insertStationStatus statusInsert
 
   check 1 (Just (calendarTimeTime nominalDay))
@@ -151,23 +151,21 @@ toDuration = calendarTimeTime . secondsToNominalDiffTime
 check :: (HasEnv env m, MonadIO m, MonadFail m, MonadUnliftIO m, MonadCatch m)
       => DayOfMonth -> Maybe CalendarDiffTime -> m ()
 check d expected = do
-  empty <- withPostgres $ do
-    runSelectReturningList $ select $
-      queryStationEmptyFullTime (Nothing :: Maybe Int)
-      (UTCTime (fromGregorian 2023 01 d)      (timeOfDayToTime (TimeOfDay 0 0 0)))
-      (UTCTime (fromGregorian 2023 01 (d +1)) (timeOfDayToTime (TimeOfDay 0 0 0)))
+  empty <- withPostgres $ runSelectReturningList $ select $
+    queryStationEmptyFullTime (Nothing :: Maybe Int)
+    (UTCTime (fromGregorian 2023 01 d)      (timeOfDayToTime (TimeOfDay 0 0 0)))
+    (UTCTime (fromGregorian 2023 01 (d +1)) (timeOfDayToTime (TimeOfDay 0 0 0)))
   liftIO $ assertEqual ("Station empty time " <> show d) expected ((secondsToDuration . fst . snd . head) empty)
   where secondsToDuration Nothing  = Nothing
         secondsToDuration (Just x) = Just ((toDuration . fromIntegral) x)
 
 
 unit_stationEmptyTimeExported :: IO ()
-unit_stationEmptyTimeExported = runWithAppM "haskbike-test" $ (setupTestDatabase >> initDBWithExportedDataDate startDay endDay) >> do -- withTempDbM Silent (setupTestDatabase >> initDBWithExportedDataDate startDay endDay) $ do
-  result <- withPostgres $ do
-    runSelectReturningOne $ select $
-      queryStationEmptyFullTime (Just 7001 :: Maybe Int)
-      (UTCTime (fromGregorian 2024 01 03) (timeOfDayToTime (TimeOfDay 0 0 0)))
-      (UTCTime (fromGregorian 2024 01 04) (timeOfDayToTime (TimeOfDay 0 0 0)))
+unit_stationEmptyTimeExported = runWithAppM "haskbike-test" $ setupTestDatabase >> initDBWithExportedDataDate startDay endDay >> do -- withTempDbM Silent (setupTestDatabase >> initDBWithExportedDataDate startDay endDay) $ do
+  result <- withPostgres $ runSelectReturningOne $ select $
+    queryStationEmptyFullTime (Just 7001 :: Maybe Int)
+    (UTCTime (fromGregorian 2024 01 03) (timeOfDayToTime (TimeOfDay 0 0 0)))
+    (UTCTime (fromGregorian 2024 01 04) (timeOfDayToTime (TimeOfDay 0 0 0)))
 
   case result of Nothing -> liftIO $ assertFailure "No result returned."
                  Just (_stationInfo, (emptyTime, fullTime)) -> do

@@ -152,12 +152,12 @@ processValidResponse ep resp respQueue Nothing = do
 -- * Instances.
 
 instance APIPersistable [AT.StationInformation] DB.StationInformationT where
-  fromAPI resp = mapMaybe (Just . DB.fromJSONToBeamStationInformation (_respLastUpdated resp)) (_respData resp)
-  insertAPI resp = insertStationInformation (_respLastUpdated resp) (_respData resp)
+  fromAPI   resp     = mapMaybe (Just . DB.fromJSONToBeamStationInformation (_respLastUpdated resp)) (_respData resp)
+  insertAPI infoResp = insertStationInformation (map (_respLastUpdated infoResp, ) (_respData infoResp))
 
 
 instance APIPersistable [AT.StationStatus] DB.StationStatusT where
-  fromAPI _resp = undefined
+  fromAPI  _resp = undefined
   insertAPI resp = insertStationStatus (_respData resp)
 
 

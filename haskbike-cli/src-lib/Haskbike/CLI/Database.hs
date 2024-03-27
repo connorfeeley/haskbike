@@ -88,7 +88,7 @@ handleStationInformation = do
         let stations = response ^. respData
         let reported = response ^. respLastUpdated
         logDebug "Inserting station information into database."
-        insertStationInformation reported stations >>= report
+        insertStationInformation (map (reported, ) stations) >>= report
         logDebug "Inserted station information into database."
   where
     report = logInfo . ("Stations inserted: " <>) . Text.pack . show . length

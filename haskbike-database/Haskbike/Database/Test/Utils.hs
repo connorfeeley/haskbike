@@ -9,7 +9,23 @@
 
 -- |
 
-module Haskbike.Database.Test.Utils where
+module Haskbike.Database.Test.Utils
+     ( LogConfig (..)
+     , decodeFile
+     , getDecodedFile
+     , getDecodedFileInformation
+     , getDecodedFileStatus
+     , getDecodedFileSystemInformation
+     , initDBWithAllTestData
+     , initDBWithExportedData
+     , initDBWithExportedDataDate
+     , makeEnvForTest
+     , manualSimpleStatus
+     , manualStationInformation
+     , manualStatus
+     , setupTestDatabase
+     , withTempDbM
+     ) where
 
 import           Control.Exception                           ( displayException, toException )
 import           Control.Lens
@@ -102,8 +118,8 @@ initDBWithExportedDataDate startDay endDay = do
 -- | Initialize empty database from the test station information response and all 22 station status responses.
 initDBWithAllTestData :: (HasEnv env m, MonadIO m, MonadFail m, MonadUnliftIO m, MonadCatch m) => m ()
 initDBWithAllTestData = do
-  info <- liftIO $ getDecodedFileInformation  "test/json/station_information-1.json"
-  void $ insertStationInformation (_respLastUpdated info) (_respData info)
+  infoResp <- liftIO $ getDecodedFileInformation  "test/json/station_information-1.json"
+  void $ insertStationInformation (map (_respLastUpdated infoResp, ) (_respData infoResp))
 
   -- Insert test station status data 1-22.
   mapM_ (\i -> do

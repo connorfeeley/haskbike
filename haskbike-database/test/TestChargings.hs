@@ -65,7 +65,7 @@ unit_queryChargingsManual = withTempDbM Silent setupTestDatabase $ do
   let ct = UTCTime (fromGregorian 2023 01 01) (timeOfDayToTime midnight)
 
   -- Insert the single manually constructed station information.
-  void $ insertStationInformation ct [manualStationInformation]
+  void $ insertStationInformation [(ct, manualStationInformation)]
   -- Insert manually constructed station status.
   void $ insertStationStatus manualStatus
 
@@ -103,7 +103,7 @@ unit_queryChargingsManual = withTempDbM Silent setupTestDatabase $ do
 unit_queryDockingsManual :: IO ()
 unit_queryDockingsManual = withTempDbM Silent setupTestDatabase $ do
   -- Insert the single manually constructed station information.
-  void $ insertStationInformation ct [manualStationInformation]
+  void $ insertStationInformation [(ct, manualStationInformation)]
   -- Insert manually constructed station status.
   void $ insertStationStatus manualStatus
 
