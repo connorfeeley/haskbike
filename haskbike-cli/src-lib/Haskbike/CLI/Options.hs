@@ -4,13 +4,13 @@ module Haskbike.CLI.Options
      , module Haskbike.CLI.Options.Database
      , module Haskbike.CLI.Options.Debug
      , module Haskbike.CLI.Options.Events
+     , module Haskbike.CLI.Options.Server
      , MatchMethod (..)
      , Options (..)
      , PollOptions (..)
      , PopulateStatusChangesOpt (..)
      , QueryMethod (..)
      , QueryOptions (..)
-     , ServeVisualizeOptions (..)
      , commandParser
      , parseOptions
      , parseStationId
@@ -18,7 +18,6 @@ module Haskbike.CLI.Options
      , pollOptionsParser
      , populateStatusChangesParser
      , queryOptionsParser
-     , serveVisualizationParser
      , unMatchMethod
      ) where
 
@@ -30,6 +29,7 @@ import qualified Data.Text                     as T
 import           Haskbike.CLI.Options.Database
 import           Haskbike.CLI.Options.Debug
 import           Haskbike.CLI.Options.Events
+import           Haskbike.CLI.Options.Server
 import           Haskbike.Database.Utils
 
 import           Options.Applicative
@@ -230,16 +230,3 @@ populateStatusChangesParser = -- Relies on 'Read' instance.
   where
     allowedValues :: [PopulateStatusChangesOpt]
     allowedValues = [minBound..]
-
-data ServeVisualizeOptions where
-  ServeVisualizeOptions :: { optServeVisualizePort :: Int
-                           } -> ServeVisualizeOptions
-  deriving (Show, Read)
-
-serveVisualizationParser :: Parser ServeVisualizeOptions
-serveVisualizationParser = ServeVisualizeOptions
-  <$> argument auto
-  ( metavar "HTTP_PORT"
- <> showDefault
- <> value 8081
- <> help "Port to serve visualization interface on." )
