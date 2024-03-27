@@ -103,3 +103,13 @@
   * Adjustments to tests when run under nix platform.
 * CI:
   * Add licensing check
+
+## 3.4.1 -- 2024-03-27
+
+* Fix station empty/full calculation.
+* Add support for importing and exporting compressed database dumps.
+* Added `FromJSON` and `ToJSON` instances for `StationInformation` (database version).
+* Fix `StationInformation` (API client version) `vehicle_types_available` decoding.
+* Move `reset` CLI command to new `database` subcommand.
+* Move CLI options to submodules.
+* Updated benchmark baselines using M1 MBP.
