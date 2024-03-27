@@ -228,13 +228,7 @@ StationInformation _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (LensFor infoReported
 -- Don't want to implement database-specific code for the underlying RentalMethod type.
 newtype BeamRentalMethod where
   BeamRentalMethod :: AT.RentalMethod -> BeamRentalMethod
-  deriving (Eq, Generic, Show, Read) via AT.RentalMethod
-
-instance ToJSON BeamRentalMethod where
-  toJSON (BeamRentalMethod method) = toJSON method
-
-instance FromJSON BeamRentalMethod where
-  parseJSON = parseJSON
+  deriving (Eq, Generic, Show, Read, FromJSON, ToJSON) via AT.RentalMethod
 
 
 instance (BeamBackend be, FromBackendRow be T.Text) => FromBackendRow be BeamRentalMethod where
@@ -271,13 +265,7 @@ rentalMethodType = DataType pgTextType
 -- Don't want to implement database-specific code for the underlying PhysicalConfiguration type.
 newtype BeamPhysicalConfiguration where
   BeamPhysicalConfiguration :: AT.PhysicalConfiguration -> BeamPhysicalConfiguration
-  deriving (Eq, Generic, Show, Read, Ord) via AT.PhysicalConfiguration
-
-instance ToJSON BeamPhysicalConfiguration where
-  toJSON (BeamPhysicalConfiguration configuration) = toJSON configuration
-
-instance FromJSON BeamPhysicalConfiguration where
-  parseJSON = parseJSON
+  deriving (Eq, Generic, Show, Read, Ord, FromJSON, ToJSON) via AT.PhysicalConfiguration
 
 
 physicalConfigurationLabel :: BeamPhysicalConfiguration -> T.Text
