@@ -108,7 +108,7 @@ initDBWithExportedData = do
 initDBWithExportedDataDate :: (HasEnv env m, MonadIO m, MonadFail m, MonadUnliftIO m, MonadCatch m)
                            => Maybe Int -> Day -> Day -> m ([DB.StationInformation], [DB.StationStatus])
 initDBWithExportedDataDate stationId startDay endDay = do
-  importDbTestData "test/dumps/" infoDumpPath statusDumpPath
+  importDbTestDataNew "test/dumps/" infoDumpPath statusDumpPath
   where
     infoDumpPath   = "station_information_" <> stationIdPart stationId <> "_" <> show startDay <> "_" <> show endDay <> ".json"
     statusDumpPath = "station_status_"      <> stationIdPart stationId <> "_" <> show startDay <> "_" <> show endDay <> ".json"
