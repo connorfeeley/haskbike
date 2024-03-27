@@ -9,8 +9,6 @@ module Haskbike.CLI.Options.Database
 
 import           Options.Applicative
 
-import           Prelude             hiding ( log )
-
 
 -- | Options for the 'Database' command.
 data DatabaseCommand where
