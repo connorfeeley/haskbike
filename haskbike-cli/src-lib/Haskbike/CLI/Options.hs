@@ -4,31 +4,24 @@ module Haskbike.CLI.Options
      , module Haskbike.CLI.Options.Database
      , module Haskbike.CLI.Options.Debug
      , module Haskbike.CLI.Options.Events
+     , module Haskbike.CLI.Options.Poll
      , module Haskbike.CLI.Options.Server
      , MatchMethod (..)
      , Options (..)
-     , PollOptions (..)
-     , PopulateStatusChangesOpt (..)
      , QueryMethod (..)
      , QueryOptions (..)
      , commandParser
      , parseOptions
      , parseStationId
      , parseStationName
-     , pollOptionsParser
-     , populateStatusChangesParser
      , queryOptionsParser
      , unMatchMethod
      ) where
 
-import qualified Data.Attoparsec.Text          as A
-import           Data.Either                   ( fromRight )
-import           Data.Functor                  ( ($>) )
-import qualified Data.Text                     as T
-
 import           Haskbike.CLI.Options.Database
 import           Haskbike.CLI.Options.Debug
 import           Haskbike.CLI.Options.Events
+import           Haskbike.CLI.Options.Poll
 import           Haskbike.CLI.Options.Server
 import           Haskbike.Database.Utils
 
@@ -183,50 +176,3 @@ parseStationName = exact <|> prefix <|> suffix <|> wildcard where
   wildcard = WildcardMatch <$> argument str
     ( metavar "STATION_NAME"
    <> help "Query stations where STATION_NAME appears anywhere in the name." )
-
-
--- | Options for the 'Poll' command.
-data PollOptions where
-  PollOptions :: { optPollPopulateStatusChanges :: !PopulateStatusChangesOpt
-                 } -> PollOptions
-  deriving (Show)
-
--- | Parser for 'PollOptions'.
-pollOptionsParser :: Parser PollOptions
-pollOptionsParser = PollOptions <$> populateStatusChangesParser
-
--- | Valid options for populating the 'station status changes' table.
-data PopulateStatusChangesOpt where
-  AlwaysPopulate :: PopulateStatusChangesOpt
-  AutoPopulate   :: PopulateStatusChangesOpt
-  NeverPopulate  :: PopulateStatusChangesOpt
-  deriving (Enum, Bounded, Eq)
-
-instance Show PopulateStatusChangesOpt where
-  show AlwaysPopulate = "always"
-  show AutoPopulate   = "auto"
-  show NeverPopulate  = "never"
-
--- | Read instance for 'PopulateStatusChangesOpt'.
-instance Read PopulateStatusChangesOpt where
-  readsPrec _ = fromRight [] . A.parseOnly parser . T.pack
-    where
-    parser :: A.Parser [(PopulateStatusChangesOpt, String)]
-    parser = A.choice
-      [ A.asciiCI "always" $> [(AlwaysPopulate, "")]
-      , A.asciiCI "auto"   $> [(AutoPopulate,   "")]
-      , A.asciiCI "never"  $> [(NeverPopulate,  "")]
-      ]
-
--- | optparse-applicative 'Parser' instance for 'PopulateStatusChangesOpt'.
-populateStatusChangesParser :: Parser PopulateStatusChangesOpt
-populateStatusChangesParser = -- Relies on 'Read' instance.
-  option auto
-    ( long "populate-status-changes"
-   <> help ("Populate the 'station status changes' table with data from the 'station status' table. Allowed values: " <> show allowedValues)
-   <> value AutoPopulate
-   <> showDefault
-    )
-  where
-    allowedValues :: [PopulateStatusChangesOpt]
-    allowedValues = [minBound..]
