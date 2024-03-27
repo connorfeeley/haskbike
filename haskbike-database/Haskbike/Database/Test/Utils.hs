@@ -206,7 +206,7 @@ assertion failure with the error message is thrown.
 -}
 getDecodedFile :: FromJSON a => String -- ^ Path to the JSON file.
                              -> IO a     -- ^ Decoded value.
-getDecodedFile filePath = either (assertFailure . ("Error decoding JSON: " ++)) return =<< decodeFile =<< getDataFileName filePath
+getDecodedFile filePath = either (assertFailure . ("Error decoding JSON from " <> show filePath <> ": " ++)) return =<< decodeFile =<< getDataFileName filePath
 
 -- | Helper function to decode 'StationInformation' from a JSON file.
 getDecodedFileInformation :: FromJSON (ResponseWrapper [AT.StationInformation])
