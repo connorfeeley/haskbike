@@ -30,7 +30,7 @@ module Haskbike.API.StationStatus
 import           Control.Lens             hiding ( (.=) )
 
 import           Data.Aeson               ( FromJSON (parseJSON), KeyValue ((.=)), ToJSON (toJSON), Value (String),
-                                            object, withObject, withText, (.:), (.:?) )
+                                            object, withArray, withObject, withText, (.:), (.:?) )
 import           Data.Attoparsec.Text     ( Parser, choice, parseOnly, string )
 import           Data.Either              ( fromRight )
 import           Data.Functor             ( ($>) )
@@ -135,12 +135,12 @@ instance FromJSON StationStatus where
     <*> v .: "is_returning"
     <*> v .:? "traffic"
     <*> v .: "vehicle_docks_available"
-    <*> (Map.fromList <$> (v .: "vehicle_types_available"))
+    <*> (listToMap <$> (v .: "vehicle_types_available"))
 
 -- | A type representing a BikeShare station's vehicle dock status.
 data VehicleDock where
   VehicleDock :: { vehicle_type_ids :: [String]
-                 , dock_count :: Int
+                 , dock_count       :: Int
                  } -> VehicleDock
   deriving (Show, Generic, Eq, Ord)
 
