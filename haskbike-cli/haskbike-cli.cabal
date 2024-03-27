@@ -139,6 +139,7 @@ library
                    , Haskbike.CLI.Options.Debug
                    , Haskbike.CLI.Options.Server
                    , Haskbike.CLI.Options.Poll
+                   , Haskbike.CLI.Options.Query
                    , Haskbike.CLI.Poll
                    -- , CLI.Poll.PollClientEnv
                    , Haskbike.CLI.Poll.Utils
