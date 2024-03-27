@@ -3,6 +3,10 @@
 module Haskbike.Database.ImportExport
      ( exportDbTestData
      , importDbTestData
+     , importDbTestDataInfo
+     , importDbTestDataInfo'
+     , importDbTestDataStatus
+     , importDbTestDataStatus'
      ) where
 
 import qualified Codec.Compression.Zstd                      as Z
@@ -22,7 +26,6 @@ import           Data.Time
 import           Database.Beam
 import           Database.Beam.Postgres                      ( Postgres )
 
-import qualified Haskbike.API.StationInformation             as AT
 import qualified Haskbike.API.StationStatus                  as AT
 import           Haskbike.AppEnv
 import           Haskbike.Database.BikeShare
@@ -102,8 +105,8 @@ Export table data to a JSON file.
 importDbTestData :: (HasEnv env m, MonadIO m, MonadFail m, MonadUnliftIO m, MonadCatch m)
                  => FilePath -> FilePath -> FilePath -> m ([StationInformationT Identity], [StationStatusT Identity])
 importDbTestData inputDir infoFile statusFile = do
-  info   <- importDbTestDataInfo inputDir infoFile
-  status <- importDbTestDataStatus inputDir statusFile
+  info   <-   importDbTestDataInfo' inputDir infoFile
+  status <- importDbTestDataStatus' inputDir statusFile
 
   pure (info, status)
 
@@ -116,61 +119,65 @@ Import station information from a JSON file.
 importDbTestDataInfo :: (MonadCatch m, HasEnv env m)
                      => FilePath -> FilePath -> m [StationInformationT Identity]
 importDbTestDataInfo inputDir filePrefix = do
-  contents <- liftIO . BL.readFile $ inputDir <> filePrefix
+  contents <- liftIO . BL.readFile $ filePath
   let decompressed = ZL.decompress contents
   let info :: Either String [StationInformation] = eitherDecode decompressed
 
-  reported <- liftIO getCurrentTime
   case info of
     Left err    -> error err
     Right info' -> do
       let infoWithReported = map (\i -> (_infoReported i, fromBeamStationInformationToJSON i)) info'
       insertStationInformation infoWithReported
+  where
+    filePath = inputDir <> filePrefix <> ".zst"
 
 {- |
 Import station status from a JSON file.
 
->>> importDbTestDataStatus "test/dumps/" "station_status_2023-10-29_2023-10-30.json"
+>>> importDbTestDataStatus' "test/dumps/" "station_status_2023-10-29_2023-10-30.json"
 -}
 importDbTestDataStatus :: (MonadCatch m, HasEnv env m)
                        => FilePath -> FilePath -> m [StationStatus]
 importDbTestDataStatus inputDir filePrefix = do
-  contents <- liftIO . BL.readFile $ inputDir <> filePrefix <> ".zst"
+  contents <- liftIO . BL.readFile $ filePath
   let decompressed = ZL.decompress contents
   let status :: Either String [AT.StationStatus] = eitherDecode decompressed
 
   case status of
     Left err      -> (logError . T.pack) ("Error decoding JSON dump: " <> err) >> pure []
     Right status' -> insertStationStatus status'
+  where
+    filePath = inputDir <> filePrefix <> ".zst"
 
 importDbTestDataInfo' :: (MonadCatch m, HasEnv env m)
                       => FilePath -> FilePath -> m [StationInformationT Identity]
 importDbTestDataInfo' inputDir filePrefix = do
-  contents <- liftIO . B.readFile $ inputDir <> filePrefix
+  contents <- liftIO . B.readFile $ filePath
   case Z.decompress contents of
-    Z.Skip                    -> error "Either frame was empty, or compression was done in streaming mode"
+    Z.Skip                    -> error $ "StationInformation: either frame was empty, or compression was done in streaming mode for path: " <> filePath
     Z.Error   err             -> error err
     Z.Decompress decompressed -> do
       let info :: Either String [StationInformation] = eitherDecode . BL.fromStrict $ decompressed
 
-      reported <- liftIO getCurrentTime
       case info of
         Left err    -> error err
         Right info' -> do
           let infoWithReported = map (\i -> (_infoReported i, fromBeamStationInformationToJSON i)) info'
           insertStationInformation infoWithReported
+  where
+    filePath = inputDir <> filePrefix <> ".zst"
 
 {- |
 Import station status from a JSON file.
 
->>> importDbTestDataStatus "test/dumps/" "station_status_2023-10-29_2023-10-30.json"
+>>> importDbTestDataStatus' "test/dumps/" "station_status_2023-10-29_2023-10-30.json"
 -}
 importDbTestDataStatus' :: (MonadCatch m, HasEnv env m)
                         => FilePath -> FilePath -> m [StationStatus]
 importDbTestDataStatus' inputDir filePrefix = do
-  contents <- liftIO . B.readFile $ inputDir <> filePrefix <> ".zst"
+  contents <- liftIO . B.readFile $ filePath
   case Z.decompress contents of
-    Z.Skip                    -> error "Either frame was empty, or compression was done in streaming mode"
+    Z.Skip                    -> error $ "StationStatus: either frame was empty, or compression was done in streaming mode for path " <> filePath
     Z.Error   err             -> error err
     Z.Decompress decompressed -> do
       let status :: Either String [AT.StationStatus] = eitherDecode . BL.fromStrict $ decompressed
@@ -178,3 +185,5 @@ importDbTestDataStatus' inputDir filePrefix = do
       case status of
         Left err      -> (logError . T.pack) ("Error decoding JSON dump: " <> err) >> pure []
         Right status' -> insertStationStatus status'
+  where
+    filePath = inputDir <> filePrefix <> ".zst"

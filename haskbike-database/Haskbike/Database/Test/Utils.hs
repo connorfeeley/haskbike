@@ -110,8 +110,8 @@ initDBWithExportedDataDate :: (HasEnv env m, MonadIO m, MonadFail m, MonadUnlift
 initDBWithExportedDataDate stationId startDay endDay = do
   importDbTestData "test/dumps/" infoDumpPath statusDumpPath
   where
-    infoDumpPath   = "station_information_" <> stationIdPart stationId <> "_" <> show startDay <> "_" <> show endDay <> ".json.zst"
-    statusDumpPath = "station_status_"      <> stationIdPart stationId <> "_" <> show startDay <> "_" <> show endDay <> ".json.zst"
+    infoDumpPath   = "station_information_" <> stationIdPart stationId <> "_" <> show startDay <> "_" <> show endDay <> ".json"
+    statusDumpPath = "station_status_"      <> stationIdPart stationId <> "_" <> show startDay <> "_" <> show endDay <> ".json"
     stationIdPart Nothing    = "all"
     stationIdPart (Just sId) = show sId
 
