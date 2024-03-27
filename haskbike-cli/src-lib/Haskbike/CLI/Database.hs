@@ -60,13 +60,14 @@ handleExport options exportOptions = do
   logWarning . T.pack $ "Exporting system_information and system_status from database "
     <> wrapBrackets database <> " to " <> wrapBrackets exportDir <> " between "
     <> wrapBrackets (show startDay) <> " and " <> wrapBrackets (show endDay)
-  files <- exportDbTestData exportDir startDay endDay
+  files <- exportDbTestData exportDir stationId startDay endDay
   logWarning $ "Exported data to: " <> (T.pack . show) files
   where
-    database  = optDatabase       options
-    exportDir = optExportDir      exportOptions
-    startDay  = optExportStartDay exportOptions
-    endDay    = optExportEndDay   exportOptions
+    database  = optDatabase        options
+    exportDir = optExportDir       exportOptions
+    startDay  = optExportStartDay  exportOptions
+    endDay    = optExportEndDay    exportOptions
+    stationId = optExportStationId exportOptions
 
     wrapBrackets content = "[" <> content <> "]"
 

@@ -61,20 +61,25 @@ resetOptionsParser = ResetOptions
 
 -- | Options for the 'Export' command.
 data ExportOptions where
-  ExportOptions :: { optExportDir :: FilePath
-                   , optExportStartDay :: Day
-                   , optExportEndDay :: Day
+  ExportOptions :: { optExportDir       :: FilePath
+                   , optExportStationId :: Maybe Int
+                   , optExportStartDay  :: Day
+                   , optExportEndDay    :: Day
                    } -> ExportOptions
   deriving (Show)
 
 exportOptionsParser :: Parser ExportOptions
 exportOptionsParser = ExportOptions
-  <$> strOption
+  <$> option str
       ( long "export-dir"
      <> short 'd'
      <> metavar "DIR"
      <> value "test/dumps/" -- default value
      <> help "Directory to save exported JSON to." )
+  <*> optional (option auto
+      ( long "station-id"
+     <> metavar "STATION_ID"
+     <> help "Limit exported data to a single station." ))
   <*> argument auto ( metavar "START_DAY" <> helpWithFormat "Starting day to export data for." )
   <*> argument auto ( metavar "END_DAY"   <> helpWithFormat "End day to export data for." )
   where
