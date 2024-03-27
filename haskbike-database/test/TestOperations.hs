@@ -161,7 +161,7 @@ check d expected = do
 
 
 unit_stationEmptyTimeExported :: IO ()
-unit_stationEmptyTimeExported = runWithAppM "haskbike-test" $ setupTestDatabase >> initDBWithExportedDataDate startDay endDay >> do -- withTempDbM Silent (setupTestDatabase >> initDBWithExportedDataDate startDay endDay) $ do
+unit_stationEmptyTimeExported = runWithAppM "haskbike-test" $ initSteps >> do -- withTempDbM Silent (setupTestDatabase >> initDBWithExportedDataDate startDay endDay) $ do
   result <- withPostgres $ runSelectReturningOne $ select $
     queryStationEmptyFullTime (Just 7001 :: Maybe Int)
     (UTCTime (fromGregorian 2024 01 03) (timeOfDayToTime (TimeOfDay 0 0 0)))
@@ -172,5 +172,6 @@ unit_stationEmptyTimeExported = runWithAppM "haskbike-test" $ setupTestDatabase 
                    liftIO $ assertEqual "Station empty time (exported)" emptyTime (Just 0)
                    liftIO $ assertEqual "Station full time (exported)"  fullTime  (Just 0)
   where
+    initSteps = setupTestDatabase >> initDBWithExportedDataDate (Just 7001) startDay endDay
     startDay = fromGregorian 2024 01 03
     endDay   = fromGregorian 2024 01 04
