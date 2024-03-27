@@ -142,3 +142,39 @@ importDbTestDataStatus inputDir filePrefix = do
   case status of
     Left err      -> (logError . T.pack) ("Error decoding JSON dump: " <> err) >> pure []
     Right status' -> insertStationStatus status'
+
+importDbTestDataInfo' :: (MonadCatch m, HasEnv env m)
+                      => FilePath -> FilePath -> m [StationInformationT Identity]
+importDbTestDataInfo' inputDir filePrefix = do
+  contents <- liftIO . B.readFile $ inputDir <> filePrefix
+  case Z.decompress contents of
+    Z.Skip                    -> error "Either frame was empty, or compression was done in streaming mode"
+    Z.Error   err             -> error err
+    Z.Decompress decompressed -> do
+      let info :: Either String [StationInformation] = eitherDecode . BL.fromStrict $ decompressed
+
+      reported <- liftIO getCurrentTime
+      case info of
+        Left err    -> error err
+        Right info' -> do
+          let infoWithReported = map (\i -> (_infoReported i, fromBeamStationInformationToJSON i)) info'
+          insertStationInformation infoWithReported
+
+{- |
+Import station status from a JSON file.
+
+>>> importDbTestDataStatus "test/dumps/" "station_status_2023-10-29_2023-10-30.json"
+-}
+importDbTestDataStatus' :: (MonadCatch m, HasEnv env m)
+                        => FilePath -> FilePath -> m [StationStatus]
+importDbTestDataStatus' inputDir filePrefix = do
+  contents <- liftIO . B.readFile $ inputDir <> filePrefix <> ".zst"
+  case Z.decompress contents of
+    Z.Skip                    -> error "Either frame was empty, or compression was done in streaming mode"
+    Z.Error   err             -> error err
+    Z.Decompress decompressed -> do
+      let status :: Either String [AT.StationStatus] = eitherDecode . BL.fromStrict $ decompressed
+
+      case status of
+        Left err      -> (logError . T.pack) ("Error decoding JSON dump: " <> err) >> pure []
+        Right status' -> insertStationStatus status'
