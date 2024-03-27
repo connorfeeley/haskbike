@@ -7,10 +7,12 @@ module Haskbike.CLI.Options.Poll
      , populateStatusChangesParser
      ) where
 
-import qualified Data.Attoparsec.Text as A
-import           Data.Either          ( fromRight )
-import           Data.Functor         ( ($>) )
-import qualified Data.Text            as T
+import qualified Data.Attoparsec.Text         as A
+import           Data.Either                  ( fromRight )
+import           Data.Functor                 ( ($>) )
+import qualified Data.Text                    as T
+
+import           Haskbike.CLI.Options.Command
 
 import           Options.Applicative
 
@@ -20,6 +22,9 @@ data PollOptions where
   PollOptions :: { optPollPopulateStatusChanges :: !PopulateStatusChangesOpt
                  } -> PollOptions
   deriving (Show)
+
+instance HasCommandDesc PollOptions where
+  commandDesc = "Poll the API and insert new station status into database."
 
 -- | Parser for 'PollOptions'.
 pollOptionsParser :: Parser PollOptions

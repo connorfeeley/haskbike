@@ -17,6 +17,8 @@ module Haskbike.CLI.Options.Events
 
 import           Data.Time
 
+import           Haskbike.CLI.Options.Command
+
 import           Options.Applicative
 
 
@@ -26,6 +28,9 @@ data EventsOptions where
                    , optEventsLimit :: Maybe Int
                    } -> EventsOptions
   deriving (Show)
+
+instance HasCommandDesc EventsOptions where
+  commandDesc = "Docking and undocking events."
 
 data EventSubcommand where
   EventCounts :: EventCountOptions -> EventSubcommand

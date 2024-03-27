@@ -5,6 +5,8 @@ module Haskbike.CLI.Options.Server
      , serveVisualizationParser
      ) where
 
+import           Haskbike.CLI.Options.Command
+
 import           Options.Applicative
 
 
@@ -12,6 +14,9 @@ data ServeVisualizeOptions where
   ServeVisualizeOptions :: { optServeVisualizePort :: Int
                            } -> ServeVisualizeOptions
   deriving (Show, Read)
+
+instance HasCommandDesc ServeVisualizeOptions where
+  commandDesc = "Visualization HTTP server."
 
 serveVisualizationParser :: Parser ServeVisualizeOptions
 serveVisualizationParser = ServeVisualizeOptions

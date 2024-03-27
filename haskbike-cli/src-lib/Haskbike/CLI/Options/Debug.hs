@@ -5,6 +5,8 @@ module Haskbike.CLI.Options.Debug
      , debugMiscOptionsParser
      ) where
 
+import           Haskbike.CLI.Options.Command
+
 import           Options.Applicative
 
 
@@ -13,6 +15,9 @@ data DebugMiscOptions where
   DebugMiscOptions :: { optFoo :: Bool -- TODO: this is just a placeholder.
                       } -> DebugMiscOptions
   deriving (Show)
+
+instance HasCommandDesc DebugMiscOptions where
+  commandDesc = "Miscellaneous debugging faciilities."
 
 -- | Parser for 'DebugOptions'.
 debugMiscOptionsParser :: Parser DebugMiscOptions

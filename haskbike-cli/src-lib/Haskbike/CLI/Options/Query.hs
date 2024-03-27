@@ -10,6 +10,8 @@ module Haskbike.CLI.Options.Query
      , unMatchMethod
      ) where
 
+import           Haskbike.CLI.Options.Command
+
 import           Options.Applicative
 
 
@@ -19,6 +21,9 @@ data QueryOptions where
                   , optQueryBy :: QueryMethod
                   } -> QueryOptions
   deriving (Show)
+
+instance HasCommandDesc QueryOptions where
+  commandDesc = "Query the database."
 
 data QueryMethod where
   QueryByStationId   :: Int                  -> QueryMethod

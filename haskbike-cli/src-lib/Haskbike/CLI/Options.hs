@@ -1,4 +1,7 @@
+{-# LANGUAGE TypeApplications #-}
+
 -- | Command-line options.
+
 module Haskbike.CLI.Options
      ( Command (..)
      , module Haskbike.CLI.Options.Database
@@ -12,6 +15,7 @@ module Haskbike.CLI.Options
      , parseOptions
      ) where
 
+import           Haskbike.CLI.Options.Command
 import           Haskbike.CLI.Options.Database
 import           Haskbike.CLI.Options.Debug
 import           Haskbike.CLI.Options.Events
@@ -97,15 +101,15 @@ data Command where
 commandParser :: Parser Command
 commandParser = hsubparser
   (  command "poll"
-    (info (Poll <$> pollOptionsParser) (progDesc "Poll the API and insert new station status into database."))
+    (info (Poll           <$> pollOptionsParser)        (progDesc (commandDesc @PollOptions)))
   <> command "query"
-    (info (Query <$> queryOptionsParser) (progDesc "Query the database."))
+    (info (Query          <$> queryOptionsParser)       (progDesc (commandDesc @QueryOptions)))
   <> command "events"
-    (info (Events <$> eventsOptionsParser) (progDesc "Docking and undocking events."))
+    (info (Events         <$> eventsOptionsParser)      (progDesc (commandDesc @EventsOptions)))
   <> command "visualize"
-    (info (ServeVisualize <$> serveVisualizationParser) (progDesc "Visualization HTTP server."))
+    (info (ServeVisualize <$> serveVisualizationParser) (progDesc (commandDesc @ServeVisualizeOptions)))
   <> command "debug"
-    (info (DebugMisc <$> debugMiscOptionsParser) (progDesc "Miscellaneous debugging faciilities."))
+    (info (DebugMisc      <$> debugMiscOptionsParser)   (progDesc (commandDesc @DebugMiscOptions)))
   <> command "database"
-    (info (Database <$> databaseCommandParser) (progDesc "Database operations. [DANGER]"))
+    (info (Database       <$> databaseCommandParser)    (progDesc (commandDesc @DatabaseCommand)))
   )
