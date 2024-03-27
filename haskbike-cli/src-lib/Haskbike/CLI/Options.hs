@@ -1,8 +1,8 @@
 -- | Command-line options.
 module Haskbike.CLI.Options
      ( Command (..)
-     , DebugMiscOptions (..)
      , module Haskbike.CLI.Options.Database
+     , module Haskbike.CLI.Options.Debug
      , module Haskbike.CLI.Options.Events
      , MatchMethod (..)
      , Options (..)
@@ -12,8 +12,6 @@ module Haskbike.CLI.Options
      , QueryOptions (..)
      , ServeVisualizeOptions (..)
      , commandParser
-     , debugMiscOptionsParser
-     , eventsOptionsParser
      , parseOptions
      , parseStationId
      , parseStationName
@@ -30,6 +28,7 @@ import           Data.Functor                  ( ($>) )
 import qualified Data.Text                     as T
 
 import           Haskbike.CLI.Options.Database
+import           Haskbike.CLI.Options.Debug
 import           Haskbike.CLI.Options.Events
 import           Haskbike.Database.Utils
 
@@ -244,17 +243,3 @@ serveVisualizationParser = ServeVisualizeOptions
  <> showDefault
  <> value 8081
  <> help "Port to serve visualization interface on." )
-
--- | Options for the 'Debug' command.
-data DebugMiscOptions where
-  DebugMiscOptions :: { optFoo :: Bool -- TODO: this is just a placeholder.
-                      } -> DebugMiscOptions
-  deriving (Show)
-
--- | Parser for 'DebugOptions'.
-debugMiscOptionsParser :: Parser DebugMiscOptions
-debugMiscOptionsParser = DebugMiscOptions
-  <$> switch
-      ( long "foo"
-     <> help "Foo. Foo foo foo bar." )
-
