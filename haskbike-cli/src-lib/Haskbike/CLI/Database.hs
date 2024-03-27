@@ -47,7 +47,7 @@ dispatchDatabase :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadU
                  => Options -> m ()
 dispatchDatabase options = do
   case optCommand options of
-    Reset resetOptions -> handleReset options resetOptions
+    Database (Reset resetOptions) -> handleReset options resetOptions
     _ | optEnableMigration options -> do
           logInfo "Migrating database."
           migrateDB

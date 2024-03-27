@@ -113,7 +113,7 @@ appMain options = do
     QueryApi            -> logError "Not implemented."
     (Events e)          -> dispatchEvents (optEventsSubcommand e)
     (DebugMisc d)       -> dispatchDebug d
-    (Reset _)           -> pure ()
+    (Database _)        -> pure ()
     (ServeVisualize sv) -> dispatchVisualize sv
 
 -- Convert CLI options to a logging severity.

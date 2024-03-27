@@ -81,24 +81,36 @@ data Command where
   Events         :: !EventsOptions         -> Command
   ServeVisualize :: !ServeVisualizeOptions -> Command
   DebugMisc      :: !DebugMiscOptions      -> Command
-  Reset          :: !ResetOptions          -> Command
+  Database       :: !DatabaseCommand       -> Command
   deriving (Show)
 
 -- | Parser for 'Command'.
 commandParser :: Parser Command
 commandParser = hsubparser
-  (  command "poll"   (info (Poll <$> pollOptionsParser)
-                       (progDesc "Poll the API and insert new station status into database."))
-  <> command "query" (info (Query <$> queryOptionsParser)
-                      (progDesc "Query the database."))
-  <> command "events" (info (Events <$> eventsOptionsParser)
-                      (progDesc "Docking and undocking events."))
-  <> command "visualize" (info (ServeVisualize <$> serveVisualizationParser)
-                      (progDesc "Visualization HTTP server."))
-  <> command "debug" (info (DebugMisc <$> debugMiscOptionsParser)
-                      (progDesc "Miscellaneous debugging faciilities."))
-  <> command "reset" (info (Reset <$> resetOptionsParser)
-                      (progDesc "Reset the database. [DANGER]"))
+  (  command "poll"
+    (info (Poll <$> pollOptionsParser) (progDesc "Poll the API and insert new station status into database."))
+  <> command "query"
+    (info (Query <$> queryOptionsParser) (progDesc "Query the database."))
+  <> command "events"
+    (info (Events <$> eventsOptionsParser) (progDesc "Docking and undocking events."))
+  <> command "visualize"
+    (info (ServeVisualize <$> serveVisualizationParser) (progDesc "Visualization HTTP server."))
+  <> command "debug"
+    (info (DebugMisc <$> debugMiscOptionsParser) (progDesc "Miscellaneous debugging faciilities."))
+  <> command "database"
+    (info (Database <$> databaseCommandParser) (progDesc "Database operations. [DANGER]"))
+  )
+
+-- | Options for the 'Database' command.
+data DatabaseCommand where
+  Reset :: !ResetOptions -> DatabaseCommand
+  deriving (Show)
+
+-- | Parser for 'DatabaseOptions'.
+databaseCommandParser :: Parser DatabaseCommand
+databaseCommandParser = hsubparser
+  (  command "reset"
+    (info (Reset <$> resetOptionsParser) (progDesc "Reset the database. [DANGER]"))
   )
 
 -- | Options for the 'Reset' command.
