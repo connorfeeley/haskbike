@@ -82,18 +82,18 @@ analyzeStationStatusCapacityMismatch :: (HasEnv env m, MonadCatch m) => Maybe In
 analyzeStationStatusCapacityMismatch stationId startTime endTime = do
   _mismatched@(count, info, status) <- unzip3 <$> (withPostgres . runSelectReturningList . selectWith)
     (queryStationStatusCapacityMismatchE stationId startTime endTime)
-  processMismatched $ zip3 count info status
+  processMismatchedRecords $ zip3 count info status
   pure $ zip3 count info status
 
-processMismatched :: (Monad m, HasEnv env m) => [(Int32, StationInformation, StationStatus)] -> m ()
-processMismatched mismatched = do
+processMismatchedRecords :: (Monad m, HasEnv env m) => [(Int32, StationInformation, StationStatus)] -> m ()
+processMismatchedRecords mismatched = do
   logInfo $ "Queried " <> (T.pack . show . maximum) count <> " status rows total"
   logInfo $ (T.pack . show . length) mismatched <> " status rows didn't match capacity"
   logInfo $ "Min capacity: " <> (T.pack . show . minimum) (map _infoCapacity info)
   logInfo $ "Max capacity: " <> (T.pack . show . maximum) (map _infoCapacity info)
   logInfo "Frequency of sums: "
   forM_ frequencies $ \freq ->
-    logInfo . T.pack $ "    " <> showFreq freq
+    logInfo $ "    " <> showFreq freq
   -- Log the okay rows returned
   logInfo $ "    " <> (T.pack . show . maximum) (map _infoCapacity info) <> ": " <> (T.pack . show) rowsOkay <> " times"
 
@@ -112,8 +112,8 @@ processMismatched mismatched = do
     status = map (view _3) mismatched
     frequencies = frequency (map sumStatus status)
 
-showFreq :: (Ord a, Show a) => (Int, a) -> String
-showFreq (count, x) = show x <> ": " <> show count <> " times"
+showFreq :: (Ord a, Show a) => (Int, a) -> T.Text
+showFreq (count, x) = T.pack $ show x <> ": " <> show count <> " times"
 
 frequency :: Ord a => [a] -> [(Int,a)]
 frequency = map (length &&& head) . group . sort
