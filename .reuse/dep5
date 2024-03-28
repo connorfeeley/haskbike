@@ -14,7 +14,7 @@ Copyright: 2023 Connor Feeley <git@cfeeley.org>
 License: BSD-3-Clause
 
 ### Other files
-Files: .dir-locals.el .envrc .gitignore .builds/check.yml weeder.dhall .env.template justfile .github/workflows/checks.yml .stylish-haskell.yaml weeder.toml
+Files: .dir-locals.el .envrc .gitignore .builds/check.yml weeder.dhall .env.template justfile .github/workflows/checks.yml .stylish-haskell.yaml weeder.toml hie.yaml
 Copyright: 2023 Connor Feeley <git@cfeeley.org>
 License: BSD-3-Clause
 
