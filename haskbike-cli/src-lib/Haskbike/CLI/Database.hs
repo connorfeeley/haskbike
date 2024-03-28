@@ -10,7 +10,7 @@ module Haskbike.CLI.Database
 import           Colog                           ( logDebug, logInfo, logWarning )
 
 import           Control.Lens
-import           Control.Monad                   ( unless )
+import           Control.Monad                   ( unless, when )
 import           Control.Monad.Catch             ( MonadCatch, MonadThrow )
 
 import           Data.Foldable                   ( for_ )
@@ -43,15 +43,18 @@ import           UnliftIO                        ( MonadIO, MonadUnliftIO, liftI
 -- | Dispatch CLI arguments to the database interface.
 dispatchDatabase :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m)
                  => Options -> m ()
-dispatchDatabase options = dispatchDatabaseCmd options (databaseCmd . optCommand $ options)
-  where
-    databaseCmd (Database c) = c
-    databaseCmd _            = undefined
+dispatchDatabase options = do
+  when (optEnableMigration options) $ do
+    logInfo "Migrating database."
+    migrateDB
+    logInfo "Migrated database."
+  dispatchDatabaseCmd options (optCommand options)
 
 dispatchDatabaseCmd :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m)
-                 => Options -> DatabaseCommand -> m ()
-dispatchDatabaseCmd options (Export exportOptions) = handleExport options exportOptions
-dispatchDatabaseCmd options (Reset  resetOptions)  = handleReset options resetOptions
+                    => Options -> Command -> m ()
+dispatchDatabaseCmd options (Database (Export exportOptions)) = handleExport options exportOptions
+dispatchDatabaseCmd options (Database (Reset  resetOptions))  = handleReset options resetOptions
+dispatchDatabaseCmd _ _                                       = pure ()
 
 
 -- | Handle 'Export' command.
