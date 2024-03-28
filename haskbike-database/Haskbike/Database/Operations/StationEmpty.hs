@@ -18,6 +18,7 @@ import qualified Database.Beam.Postgres                      as Pg
 
 import           Haskbike.AppEnv
 import           Haskbike.Database.BikeShare
+import           Haskbike.Database.Operations.Utils
 import           Haskbike.Database.Tables.StationInformation
 import           Haskbike.Database.Tables.StationStatus
 
@@ -160,23 +161,3 @@ keepForFull row (_leadReported, _leadBikes, leadDocks) (_lagReported, _lagBikes,
         notFull     = not_ isFull
         prevFull    = lagDocks  ==. val_ 0
         nextNotFull = not_ (leadDocks ==. val_ 0)
-
--- | Possible filter condition for station ID.
-stationIdCond :: ( HaskellLiteralForQExpr (expr Bool) ~ Bool
-                 , SqlEq expr (Columnar f Int32)
-                 , Integral a
-                 , SqlValable (expr Bool)
-                 , SqlValable (Columnar f Int32)
-                 , Num (HaskellLiteralForQExpr (Columnar f Int32))
-                 )
-              => Maybe a
-              -> StationStatusT f
-              -> expr Bool
-stationIdCond (Just stationId') row = (_unInformationStationId . _statusInfoId . _statusCommon) row ==. val_ (fromIntegral stationId')
-stationIdCond Nothing           _   = val_ True
-
-
-infoStationIdCond :: (HaskellLiteralForQExpr (expr Bool) ~ Bool, SqlEq expr (Columnar f Int32), Integral a, SqlValable (expr Bool), SqlValable (Columnar f Int32), Num (HaskellLiteralForQExpr (Columnar f Int32)))
-                  => Maybe a -> StationInformationT f -> expr Bool
-infoStationIdCond (Just stationId') row = _infoStationId row ==. val_ (fromIntegral stationId')
-infoStationIdCond Nothing           _   = val_ True

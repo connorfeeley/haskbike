@@ -94,6 +94,7 @@ library
                     , Haskbike.Database.ImportExport
                     , Haskbike.Database.Maintenance
                     , Haskbike.Database.Operations
+                    , Haskbike.Database.Operations.Utils
                     , Haskbike.Database.Operations.Dockings
                     , Haskbike.Database.Operations.Factors
                     , Haskbike.Database.Operations.QueryLogs
