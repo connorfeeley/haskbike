@@ -13,6 +13,24 @@ GET https://toronto.publicbikesystem.net/ube/gbfs/v1/
 
 #+RESULTS:
 [[file:json/1.1/gbfs.json]]
+** v1.1 Station Status
+
+#+begin_src restclient :file json/1.1/station_status.json :noheaders :results value file
+GET https://toronto.publicbikesystem.net/customer/ube/gbfs/v1/en/station_status
+#+end_src
+
+#+RESULTS:
+[[file:json/1.1/station_status.json]]
+
+** v1.1 Station Information
+
+#+begin_src restclient :file json/1.1/station_information.json :noheaders :results value file
+GET https://toronto.publicbikesystem.net/customer/ube/gbfs/v1/en/station_information
+#+end_src
+
+#+RESULTS:
+[[file:json/1.1/station_information.json]]
+
 
 * GBFS 2.3
 ** GBFS 2.3 Entrypoint
