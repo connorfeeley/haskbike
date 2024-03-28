@@ -44,7 +44,7 @@ instance ToHtml (StationList [(StationInformation, StationStatus)]) where
   toHtmlRaw = toHtml
   toHtml params = do
     -- Station list JavaScript
-    script_ [src_ ("/" <> toUrlPiece (_staticLink params) <> "/js/station-list.js"), async_ mempty] ""
+    script_ [src_ ("/" <> toUrlPiece (_staticLink params) <> "/js/station-list.js"), defer_ mempty] ""
 
     div_ [class_ "header"] $ do
       h1_ [] (toHtml "Station List")
@@ -109,8 +109,8 @@ instance ToHtmlComponents (StationList [(StationInformation, StationStatus, Empt
   toHead params = do
 
     -- GridJS
-    script_ [src_ "https://cdn.jsdelivr.net/npm/gridjs/dist/gridjs.umd.js"] ""
-    stylesheet_ "https://cdn.jsdelivr.net/npm/gridjs/dist/theme/mermaid.min.css"
+    script_ [src_ "https://cdn.jsdelivr.net/npm/gridjs/dist/gridjs.umd.js", defer_ mempty] ""
+    stylesheet_ "https://cdn.jsdelivr.net/npm/gridjs/dist/theme/mermaid.min.css" [defer_ mempty]
 
     -- Station list JavaScript.
-    script_ [src_ ("/" <> toUrlPiece (_staticLink params) <> "/js/station-empty-full-list.js")] ""
+    script_ [src_ ("/" <> toUrlPiece (_staticLink params) <> "/js/station-empty-full-list.js"), defer_ mempty] ""

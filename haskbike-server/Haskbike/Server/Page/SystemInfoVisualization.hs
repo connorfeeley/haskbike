@@ -35,9 +35,9 @@ instance ToHtmlComponents SystemInfoVisualizationPage where
   toMenuHeading _ = menuHeading "#system-information" "System Info"
 
   toHead _ = do
-    script_ [src_ . TL.toStrict . vegaUrl      $ vegaSourceUrlsLocal] ("" :: String)
-    script_ [src_ . TL.toStrict . vegaLiteUrl  $ vegaSourceUrlsLocal] ("" :: String)
-    script_ [src_ . TL.toStrict . vegaEmbedUrl $ vegaSourceUrlsLocal] ("" :: String)
+    script_ [src_ . TL.toStrict . vegaUrl      $ vegaSourceUrlsLocal, defer_ mempty] ("" :: String)
+    script_ [src_ . TL.toStrict . vegaLiteUrl  $ vegaSourceUrlsLocal, defer_ mempty] ("" :: String)
+    script_ [src_ . TL.toStrict . vegaEmbedUrl $ vegaSourceUrlsLocal, defer_ mempty] ("" :: String)
 
 instance ToHtml SystemInfoVisualizationPage where
   toHtmlRaw = toHtml

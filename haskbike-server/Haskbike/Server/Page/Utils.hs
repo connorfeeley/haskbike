@@ -23,8 +23,8 @@ import           TextShow
 
 
 -- | Helper function to create a stylesheet link.
-stylesheet_ :: Applicative m => T.Text -> HtmlT m ()
-stylesheet_ url = link_ [rel_ "stylesheet", type_ "text/css", href_ url]
+stylesheet_ :: Applicative m => T.Text -> [Attribute] -> HtmlT m ()
+stylesheet_ url attrs = link_ ([rel_ "stylesheet", type_ "text/css", href_ url] ++ attrs)
 
 
 -- | Make link elements for a list of pixel sizes, pointing to a given path.
@@ -48,17 +48,17 @@ makeHeadElements staticPath statsPath = do
   -- Pure.CSS
   link_ [rel_ "stylesheet", href_ (staticPath <> "/css/pure/pure-min@3.0.0.css"), integrity_ "sha384-X38yfunGUhNzHpBaEBsWLO+A0HDYOQi8ufWDkZ0k9e0eXz/tH3II7uKZ9msv++Ls", crossorigin_ "anonymous"]
   -- link_ [rel_ "stylesheet", href_ "https://cdn.jsdelivr.net/npm/purecss@3.0.0/build/pure-min.css", integrity_ "sha384-X38yfunGUhNzHpBaEBsWLO+A0HDYOQi8ufWDkZ0k9e0eXz/tH3II7uKZ9msv++Ls", crossorigin_ "anonymous"]
-  stylesheet_ (staticPath <> "/css/pure/pure-grids-responsive-min@3.0.0.css")
+  stylesheet_ (staticPath <> "/css/pure/pure-grids-responsive-min@3.0.0.css") [defer_ mempty]
 
   -- HTMX
-  script_ [src_ (staticPath <> "/js/htmx/htmx.min.js"), integrity_ "sha384-QFjmbokDn2DjBjq+fM+8LUIVrAgqcNW2s0PjAxHETgRn9l4fvX31ZxDxvwQnyMOX", crossorigin_ "anonymous"] ("" :: T.Text)
+  script_ [src_ (staticPath <> "/js/htmx/htmx.min.js"), integrity_ "sha384-QFjmbokDn2DjBjq+fM+8LUIVrAgqcNW2s0PjAxHETgRn9l4fvX31ZxDxvwQnyMOX", crossorigin_ "anonymous", defer_ mempty] ("" :: T.Text)
 
   -- Project stylesheet
-  stylesheet_ (staticPath <> "/css/haskbike.css")
-  stylesheet_ (staticPath <> "/css/tooltips.css")
+  stylesheet_ (staticPath <> "/css/haskbike.css") [defer_ mempty]
+  stylesheet_ (staticPath <> "/css/tooltips.css") [defer_ mempty]
 
   -- TODO: get this from the server's environment.
-  script_ [mkData_ "goatcounter" "https://stats.bikes.cfeeley.org/count", async_ mempty, src_ statsPath] ("" :: T.Text)
+  script_ [mkData_ "goatcounter" "https://stats.bikes.cfeeley.org/count", defer_ mempty, src_ statsPath] ("" :: T.Text)
 
 
 -- | Make a "data-" attribute suffixed with the given 'Text'.

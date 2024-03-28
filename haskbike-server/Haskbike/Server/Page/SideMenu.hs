@@ -40,8 +40,8 @@ instance (ToHtml a, ToHtml LatestQueries, ToHtmlComponents a) => ToHtml (PureSid
         makeHeadElements ("/" <> toUrlPiece (staticLink c)) "//stats.bikes.cfeeley.org/count.js"
         toHead (visPageParams c)
 
-        stylesheet_ ("/" <> toUrlPiece (staticLink c) <> "/css/pure/side-menu.css")
-        script_ [src_ ("/" <> toUrlPiece (staticLink c) <> "/js/pure/ui.js"), async_ mempty] ""
+        stylesheet_ ("/" <> toUrlPiece (staticLink c) <> "/css/pure/side-menu.css") [defer_ mempty]
+        script_ [src_ ("/" <> toUrlPiece (staticLink c) <> "/js/pure/ui.js"), defer_ mempty] ""
       menuLink = a_ [href_ "#menu", id_ "menuLink", class_ "menu-link", makeAttribute "aria-label" "Toggle sidebar"] $ span_ mempty
       layoutElement c = div_ [id_ "layout"] $ do
         menuLink

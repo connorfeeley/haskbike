@@ -29,7 +29,7 @@ data IndexPage where
 instance ToHtml IndexPage where
   toHtmlRaw = toHtml
   toHtml params = do
-    -- script_ [src_ ("/" <> toUrlPiece (_staticLink params) <> "/js/station-list.js"), async_ mempty] ""
+    -- script_ [src_ ("/" <> toUrlPiece (_staticLink params) <> "/js/station-list.js"), defer_ mempty] ""
     div_ [class_ "header"] $ do
       h1_ [] (toHtml "Home")
     div_ [class_ "content"] $ do
