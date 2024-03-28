@@ -89,5 +89,4 @@ benchStationInformationDecoding filePath = do
         Left err    -> error err
         Right info' -> do
           let infoWithReported = map (\i -> (_infoReported i, fromBeamStationInformationToJSON i)) info'
-          pure infoWithReported
           insertStationInformation infoWithReported
