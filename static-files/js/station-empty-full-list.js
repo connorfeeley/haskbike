@@ -73,7 +73,6 @@ function constructLink(stationId) {
 }
 
 const grid = new gridjs.Grid({
-  // columns: ['Name', 'Language', 'Released At', 'Artist'],
   columns: [
     {
       name: "ID",
@@ -102,9 +101,9 @@ const grid = new gridjs.Grid({
         card.station_information.name,
         card.station_information.is_charging_station ? "Charging" : "Regular",
         card.station_information.capacity,
-        card.station_status.vehicle_types_available[1][1],
-        card.station_status.vehicle_types_available[2][1],
-        card.station_status.vehicle_types_available[3][1],
+        card.station_status.vehicle_types_available[1]['count'],
+        card.station_status.vehicle_types_available[2]['count'],
+        card.station_status.vehicle_types_available[3]['count'],
         card.station_status.num_bikes_disabled,
         card.station_status.num_docks_disabled,
         card.durations.empty,
