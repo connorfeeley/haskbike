@@ -91,6 +91,7 @@ library
                     , Haskbike.Database.EndpointQueried
                     , Haskbike.Database.EventCounts
                     , Haskbike.Database.Expressions
+                    , Haskbike.Database.Oddities
                     , Haskbike.Database.ImportExport
                     , Haskbike.Database.Maintenance
                     , Haskbike.Database.Operations
