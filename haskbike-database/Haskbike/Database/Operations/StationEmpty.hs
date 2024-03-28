@@ -16,7 +16,6 @@ import           Database.Beam.Backend                       ( BeamSqlBackend )
 import           Database.Beam.Postgres                      ( Postgres )
 import qualified Database.Beam.Postgres                      as Pg
 
-import           Haskbike.AppEnv
 import           Haskbike.Database.BikeShare
 import           Haskbike.Database.Operations.Utils
 import           Haskbike.Database.Tables.StationInformation
@@ -86,23 +85,9 @@ queryStationEmptyFullTime stationId startTime endTime = do
 
     pure (info, (empty, full))
 
-notEmptyRows stationId startTime endTime = do
-  rows <- runWithAppM "haskbike" . withPostgres . runSelectReturningList . select $
-    emptyFullRows stationId startTime endTime
-  let notEmpty = filter (\r -> 0 /= (_statusNumBikesAvailable . _statusCommon . (^. _1)) r) rows
-  pure notEmpty
 
-filterKeepRows = filter_ (\(row, lead, lag) -> keepRow row lead lag)
-
-emptyRows stationId startTime endTime = do
-  rows <- runWithAppM "haskbike" . withPostgres . runSelectReturningList . select . filterKeepRows $
-    emptyFullRows stationId startTime endTime
-  let empty = filter (\r -> 0 == (_statusNumBikesAvailable . _statusCommon . (^. _1)) r) rows
-  pure empty
-
-allRows stationId startTime endTime = do
-  runWithAppM "haskbike" $ withPostgres . runSelectReturningList . select $ emptyFullRows stationId startTime endTime
-
+emptyFullRows :: Integral a => Maybe a -> UTCTime -> UTCTime
+              -> Q Postgres BikeshareDb s (StationStatusT (QGenExpr QValueContext Postgres s), (QGenExpr QValueContext Postgres s UTCTime, QGenExpr QValueContext Postgres s Int32, QGenExpr QValueContext Postgres s Int32), (QGenExpr QValueContext Postgres s UTCTime, QGenExpr QValueContext Postgres s Int32, QGenExpr QValueContext Postgres s Int32))
 emptyFullRows stationId' startTime' endTime' =
   filter_ (\(row, (lead, _, _), (lag, _, _)) -> (row  ^. statusLastReported) <. val_ endTime' &&.
                                                 lead >=. val_ startTime' ||.
@@ -141,13 +126,10 @@ keepForEmpty :: ( BeamSqlBackend be, SqlValable b1, SqlValable b2, SqlValable a1
                 ) => StationStatusT f -> (t1, a1, b1) -> (t2, a2, b2) -> QGenExpr context be s Bool
 keepForEmpty row (_leadReported, leadBikes, _leadDocks) (_lagReported, lagBikes, _lagDocks) =
   isEmpty ||. (notEmpty &&. prevEmpty)
-  where isEmpty      = row ^. statusNumBikesAvailable ==. 0
-        notEmpty     = not_ isEmpty
-        prevEmpty    = lagBikes  ==. val_ 0
-        nextNotEmpty = not_ (leadBikes ==. val_ 0)
-
-testStartTime = UTCTime (fromGregorian 2024 01 03) (timeOfDayToTime midnight)
-testEndTime   = UTCTime (fromGregorian 2024 01 04) (timeOfDayToTime midnight)
+  where isEmpty       = row ^. statusNumBikesAvailable ==. 0
+        notEmpty      = not_ isEmpty
+        prevEmpty     = lagBikes  ==. val_ 0
+        _nextNotEmpty = not_ (leadBikes ==. val_ 0)
 
 -- Keep row if significant to docks available (full: == 0) query.
 keepForFull :: ( BeamSqlBackend be, SqlValable b1, SqlValable b2, SqlValable a1,  SqlValable a2
@@ -157,7 +139,7 @@ keepForFull :: ( BeamSqlBackend be, SqlValable b1, SqlValable b2, SqlValable a1,
                ) => StationStatusT f -> (t1, a1, b1) -> (t2, a2, b2) -> QGenExpr context be s Bool
 keepForFull row (_leadReported, _leadBikes, leadDocks) (_lagReported, _lagBikes, lagDocks) =
   isFull ||. (notFull &&. prevFull)
-  where isFull      = row ^. statusNumDocksAvailable ==. 0
-        notFull     = not_ isFull
-        prevFull    = lagDocks  ==. val_ 0
-        nextNotFull = not_ (leadDocks ==. val_ 0)
+  where isFull       = row ^. statusNumDocksAvailable ==. 0
+        notFull      = not_ isFull
+        prevFull     = lagDocks  ==. val_ 0
+        _nextNotFull = not_ (leadDocks ==. val_ 0)
