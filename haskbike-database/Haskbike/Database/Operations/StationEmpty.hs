@@ -130,8 +130,8 @@ keepRow :: ( BeamSqlBackend be, SqlValable b1, SqlValable b2, SqlValable a1,  Sq
            , Num (Columnar f Int32), Num (HaskellLiteralForQExpr b1), Num (HaskellLiteralForQExpr b2), Num (HaskellLiteralForQExpr a1), Num (HaskellLiteralForQExpr a2)
            ) => StationStatusT f -> (t1, a1, b1) -> (t2, a2, b2) -> QGenExpr context be s Bool
 keepRow row (leadReported, leadBikes, leadDocks) (lag, lagBikes, lagDocks) =
-  keepForEmpty row (leadReported, leadBikes, leadDocks) (lag, lagBikes, lagDocks) -- ||.
-  -- keepForFull  row (leadReported, leadBikes, leadDocks) (lag, lagBikes, lagDocks)
+  keepForEmpty row (leadReported, leadBikes, leadDocks) (lag, lagBikes, lagDocks) ||.
+  keepForFull  row (leadReported, leadBikes, leadDocks) (lag, lagBikes, lagDocks)
 
 -- Keep row if significant to bikes available (empty: == 0) query.
 keepForEmpty :: ( BeamSqlBackend be, SqlValable b1, SqlValable b2, SqlValable a1,  SqlValable a2
