@@ -26,6 +26,7 @@ module Haskbike.Database.Expressions
      , queryStationStatusExpr
      , querySystemStatusAtRangeExpr
      , statusBetweenExpr
+     , statusInfoBetweenExpr
      , systemStatusBetweenExpr
      ) where
 
@@ -96,6 +97,21 @@ statusBetweenExpr stationId startTime endTime = do
   guard_ ((_unInformationStationId . _statusInfoId . _statusCommon) status ==. val_ stationId &&.
           between_ (status ^. statusLastReported) (val_ startTime) (val_ endTime))
   pure status
+
+-- | Expression to query the station information and statuse for a station between two times.
+statusInfoBetweenExpr :: Int32 -> UTCTime -> UTCTime
+                      -> Q Postgres BikeshareDb s (StationInformationT (QGenExpr QValueContext Postgres s), StationStatusT (QGenExpr QValueContext Postgres s))
+statusInfoBetweenExpr stationId startTime endTime = do
+  -- Never return two statuses for the same (_statusLastReported, (_unInformationStationId . _statusInfoId . _statusCommon)) - this breaks the graph rendering.
+  -- This can happen if the station information changes (reported) without the status changing.
+  status <- Pg.pgNubBy_ (_statusLastReported . _statusCommon &&& (_unInformationStationId . _statusInfoId . _statusCommon)) $
+            orderBy_ (asc_ . _statusLastReported . _statusCommon)
+            (all_ (bikeshareDb ^. bikeshareStationStatus))
+  info   <- lateral_ status $ \status' -> do
+            nub_ $ related_ (bikeshareDb ^. bikeshareStationInformation) ((_statusInfoId . _statusCommon) status')
+  guard_ ((_unInformationStationId . _statusInfoId . _statusCommon) status ==. val_ stationId &&.
+          between_ (status ^. statusLastReported) (val_ startTime) (val_ endTime))
+  pure (info, status)
 
 -- | Expression to query information for stations by their IDs.
 infoByIdExpr :: [Int32] -> With Postgres BikeshareDb (Q Postgres BikeshareDb s (StationInformationT (QGenExpr QValueContext Postgres s)))
