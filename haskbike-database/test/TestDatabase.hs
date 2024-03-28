@@ -94,11 +94,11 @@ unit_insertSystemInformation = withTempDbM Silent setupTestDatabase $ do
 -- | HUnit test for inserting station information.
 unit_insertStationInformation :: IO ()
 unit_insertStationInformation = do
-  info <- getDecodedFileInformation "test/json/station_information.json"
+  infoResp <- getDecodedFileInformation "test/json/station_information.json"
 
   inserted_info <- withTempDbM Silent setupTestDatabase $ do
     -- Insert test data.
-    insertStationInformation (_respLastUpdated info) (_respData info)
+    insertStationInformation (map (_respLastUpdated infoResp, ) (_respData infoResp))
 
   assertEqual "Inserted station information" 7 (length inserted_info)
 
@@ -107,15 +107,15 @@ unit_insertStationInformation = do
 unit_insertStationInformationDuplicate :: IO ()
 unit_insertStationInformationDuplicate = withTempDbM Silent setupTestDatabase $ do
   -- Insert first record. Should insert.
-  insertedInfo <- insertStationInformation firstTime [testInfo]
+  insertedInfo <- insertStationInformation [(firstTime, testInfo)]
   liftIO $ assertEqual "Inserted station information" 1 (length insertedInfo)
 
   -- Insert first record again with same reported time (no other changes). Should not insert.
-  insertedInfo' <- insertStationInformation firstTime [testInfo]
+  insertedInfo' <- insertStationInformation [(firstTime, testInfo)]
   liftIO $ assertEqual "Inserted station information" 0 (length insertedInfo')
 
   -- Insert first record again with different reported time (no other changes). Should not insert.
-  insertedInfo'' <- insertStationInformation secondTime [testInfo]
+  insertedInfo'' <- insertStationInformation [(secondTime, testInfo)]
   liftIO $ assertEqual "Inserted station information" 0 (length insertedInfo'')
 
   -- TODO: bluetooth_id is flapping.
@@ -149,12 +149,12 @@ unit_insertStationInformationDuplicate = withTempDbM Silent setupTestDatabase $ 
 -- | HUnit test for inserting station status.
 unit_insertStationStatus :: IO ()
 unit_insertStationStatus = withTempDbM Silent setupTestDatabase $ do
-  info    <- liftIO $ getDecodedFileInformation "test/json/station_information-1.json"
-  status  <- liftIO $ getDecodedFileStatus      "test/json/station_status.json"
+  infoResp    <- liftIO $ getDecodedFileInformation "test/json/station_information-1.json"
+  statusResp  <- liftIO $ getDecodedFileStatus      "test/json/station_status.json"
 
   -- Insert test data.
-  insertedInfo   <- insertStationInformation (_respLastUpdated info) (_respData info)
-  insertedStatus <- insertStationStatus $ status ^. respData
+  insertedInfo   <- insertStationInformation (map (_respLastUpdated infoResp, ) (_respData infoResp))
+  insertedStatus <- insertStationStatus $ statusResp ^. respData
 
   liftIO $ assertEqual "Inserted station information" 704 (length insertedInfo)
   liftIO $ assertEqual "Inserted station status"        8 (length insertedStatus)
@@ -163,12 +163,12 @@ unit_insertStationStatus = withTempDbM Silent setupTestDatabase $ do
 -- | HUnit test for querying station status.
 unit_queryStationStatus :: IO ()
 unit_queryStationStatus = withTempDbM Silent setupTestDatabase $ do
-  info    <- liftIO $ getDecodedFileInformation  "test/json/station_information-1.json"
-  status  <- liftIO $ getDecodedFileStatus       "test/json/station_status.json"
+  infoResp    <- liftIO $ getDecodedFileInformation  "test/json/station_information-1.json"
+  statusResp  <- liftIO $ getDecodedFileStatus       "test/json/station_status.json"
 
   -- Insert test data.
-  insertedInfo   <- insertStationInformation (_respLastUpdated info) (_respData info)
-  insertedStatus <- insertStationStatus $ status ^. respData
+  insertedInfo   <- insertStationInformation (map (_respLastUpdated infoResp, ) (_respData infoResp))
+  insertedStatus <- insertStationStatus $ statusResp ^. respData
 
   liftIO $ assertEqual "Inserted station information" 704 (length insertedInfo)
   liftIO $ assertEqual "Inserted station status"        8 (length insertedStatus)
@@ -181,10 +181,10 @@ unit_queryStationStatus = withTempDbM Silent setupTestDatabase $ do
 -- | HUnit test for inserting station information, with data from the actual API.
 unit_insertStationInformationApi :: IO ()
 unit_insertStationInformationApi = withTempDbM Silent setupTestDatabase $ do
-  info <- liftIO $ getDecodedFileInformation "test/json/station_information-1.json"
+  infoResp <- liftIO $ getDecodedFileInformation "test/json/station_information-1.json"
 
   -- Insert test data.
-  void $ insertStationInformation (_respLastUpdated info) (_respData info)
+  void $ insertStationInformation (map (_respLastUpdated infoResp, ) (_respData infoResp))
 
 
 -- | HUnit test for inserting station status, with data from the actual API.
@@ -206,12 +206,12 @@ unit_insertStationStatusApi = withTempDbM Silent setupTestDatabase $ do
 -- | HUnit test for inserting station information and status, with data from the actual API.
 unit_insertStationApi :: IO ()
 unit_insertStationApi = withTempDbM Silent setupTestDatabase $ do
-  info    <- liftIO $ getDecodedFileInformation "test/json/station_information-1.json"
-  status  <- liftIO $ getDecodedFileStatus      "test/json/station_status-1.json"
+  infoResp    <- liftIO $ getDecodedFileInformation "test/json/station_information-1.json"
+  statusResp  <- liftIO $ getDecodedFileStatus      "test/json/station_status-1.json"
 
   -- Insert test data.
-  inserted_info   <- insertStationInformation (_respLastUpdated info) (_respData info)
-  inserted_status <- insertStationStatus $ status ^. respData
+  inserted_info   <- insertStationInformation (map (_respLastUpdated infoResp, ) (_respData infoResp))
+  inserted_status <- insertStationStatus $ statusResp ^. respData
 
   liftIO $ assertEqual "Inserted station information" 704 (length inserted_info)
   liftIO $ assertEqual "Inserted station status"      704 (length inserted_status)
@@ -244,16 +244,16 @@ unit_insertNewerStatusRecords = withTempDbM Silent setupTestDatabase $ do
 
 doInsertNewerStatusRecords :: (HasEnv env m, MonadCatch m) => m [StationStatus]
 doInsertNewerStatusRecords = do
-  info      <- liftIO $ getDecodedFileInformation "test/json/station_information-1.json"
-  status_1  <- liftIO $ getDecodedFileStatus      "test/json/station_status-1.json"
-  status_2  <- liftIO $ getDecodedFileStatus      "test/json/station_status-2.json"
+  infoResp    <- liftIO $ getDecodedFileInformation "test/json/station_information-1.json"
+  statusResp1 <- liftIO $ getDecodedFileStatus      "test/json/station_status-1.json"
+  statusResp2 <- liftIO $ getDecodedFileStatus      "test/json/station_status-2.json"
 
   -- Insert test data.
-  void $ insertStationInformation (_respLastUpdated info) (_respData info)
-  void $ insertStationStatus      $ status_1 ^. respData
+  void $ insertStationInformation (map (_respLastUpdated infoResp, ) (_respData infoResp))
+  void $ insertStationStatus      $ statusResp1 ^. respData
 
   -- Return inserted station status.
-  insertStationStatus $ status_2 ^. respData
+  insertStationStatus $ statusResp2 ^. respData
 
 
 -- | HUnit test to assert that changed station status are inserted.
@@ -274,16 +274,16 @@ unit_insertNewerStatusRecordsInsert = withTempDbM Silent setupTestDatabase $ do
 -- | Insert station statuses (1) into a database, then (2).
 doStatusInsertOnce :: (HasEnv env m, MonadCatch m) => m [StationStatus] -- ^ Result of inserting station statuses.
 doStatusInsertOnce = do
-  info      <- liftIO $ getDecodedFileInformation "test/json/station_information-1.json"
-  status_1  <- liftIO $ getDecodedFileStatus      "test/json/station_status-1.json"
-  status_2  <- liftIO $ getDecodedFileStatus      "test/json/station_status-2.json"
+  infoResp    <- liftIO $ getDecodedFileInformation "test/json/station_information-1.json"
+  statusResp1 <- liftIO $ getDecodedFileStatus      "test/json/station_status-1.json"
+  statusResp2 <- liftIO $ getDecodedFileStatus      "test/json/station_status-2.json"
 
   -- Insert test data.
-  void $ insertStationInformation (_respLastUpdated info) (_respData info)
-  void $ insertStationStatus      $ status_1 ^. respData
+  void $ insertStationInformation (map (_respLastUpdated infoResp, ) (_respData infoResp))
+  void $ insertStationStatus      $ statusResp1 ^. respData
 
   -- Insert second round of test data (some of which have reported since the first round was inserted).
-  insertStationStatus $ status_2 ^. respData
+  insertStationStatus $ statusResp2 ^. respData
 
 
 -- | HUnit test to assert that reinserting rows is a no-op.
@@ -298,27 +298,27 @@ unit_insertNewerStatusRecordsInsertTwice = withTempDbM Silent setupTestDatabase 
 -- | Insert station statuses (1) into a database, then (2), then (2) again.
 doStatusInsertTwice :: (HasEnv env m, MonadCatch m) => m [StationStatus] -- ^ Result of inserting updated station statuses.
 doStatusInsertTwice = do
-  info      <- liftIO $ getDecodedFileInformation "test/json/station_information-1.json"
-  status_1  <- liftIO $ getDecodedFileStatus "test/json/station_status-1.json"
-  status_2  <- liftIO $ getDecodedFileStatus "test/json/station_status-2.json"
+  infoResp    <- liftIO $ getDecodedFileInformation "test/json/station_information-1.json"
+  statusResp1 <- liftIO $ getDecodedFileStatus "test/json/station_status-1.json"
+  statusResp2 <- liftIO $ getDecodedFileStatus "test/json/station_status-2.json"
 
   -- Insert first round of test data.
-  void $ insertStationInformation (_respLastUpdated info) (_respData info)
-  void $ insertStationStatus      $ status_1 ^. respData
+  void $ insertStationInformation (map (_respLastUpdated infoResp, ) (_respData infoResp))
+  void $ insertStationStatus      $ statusResp1 ^. respData
 
   -- Insert second round of test data (some of which have reported since the first round was inserted).
-  void $ insertStationStatus $ status_2 ^. respData
+  void $ insertStationStatus $ statusResp2 ^. respData
 
   -- Insert second round of test data once again (nothing should have changed).
-  insertStationStatus $ status_2 ^. respData
+  insertStationStatus $ statusResp2 ^. respData
 
 
 -- | HUnit test to validate that a station ID can be looked up by its name, and vice-versa.
 unit_queryStationByIdAndName :: IO ()
 unit_queryStationByIdAndName = withTempDbM Silent setupTestDatabase $ do
-  info <- liftIO $ getDecodedFileInformation "test/json/station_information-1.json"
+  infoResp <- liftIO $ getDecodedFileInformation "test/json/station_information-1.json"
 
-  void $ insertStationInformation (_respLastUpdated info) (_respData info)
+  void $ insertStationInformation (map (_respLastUpdated infoResp, ) (_respData infoResp))
 
   liftIO . assertEqual "Station ID for 'King St W / Joe Shuster Way'" (Just 7148)  =<< queryStationId "King St W / Joe Shuster Way"
   liftIO . assertEqual "Station ID for 'Wellesley Station Green P'" (Just 7001)    =<< queryStationId "Wellesley Station Green P"
@@ -419,12 +419,12 @@ findInList key tuples = tuples ^? folded . filtered (\k -> k ^. eventsStation . 
 -- | HUnit test for inserting station status and asserting that the lookup table is accurate.
 unit_insertStationLookupLatest :: IO ()
 unit_insertStationLookupLatest = withTempDbM Silent setupTestDatabase $ do
-  info    <- liftIO $ getDecodedFileInformation "test/json/station_information-1.json"
-  status  <- liftIO $ getDecodedFileStatus      "test/json/station_status-1.json"
+  infoResp    <- liftIO $ getDecodedFileInformation "test/json/station_information-1.json"
+  statusResp  <- liftIO $ getDecodedFileStatus      "test/json/station_status-1.json"
 
   -- Insert test data.
-  insertedInfo   <- insertStationInformation (_respLastUpdated info) (_respData info)
-  insertedStatus <- insertStationStatus (status ^. respData)
+  insertedInfo   <- insertStationInformation (map (_respLastUpdated infoResp, ) (_respData infoResp))
+  insertedStatus <- insertStationStatus (statusResp ^. respData)
 
   statusLookup <- withPostgres $ runSelectReturningList $ selectWith $ queryLatestStatusLookup Nothing
   infoLookup   <- withPostgres $ runSelectReturningList $ selectWith $ queryLatestInfoLookup   Nothing

@@ -42,8 +42,8 @@ instance ToHtml PerformanceData where
         p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "Bike disabled:  " <> span_ [class_ "pure-u-1-2"] (elemIf strong_ (bikesDisabled  > 0.1)  (factorOf bikesDisabled  (Just 2)))
         p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "Dock available: " <> span_ [class_ "pure-u-1-2"] (elemIf strong_ (docksAvailable < 0.1)  (factorOf docksAvailable (Just 2)))
         p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "Dock available: " <> span_ [class_ "pure-u-1-2"] (elemIf strong_ (docksAvailable < 0.1)  (factorOf docksAvailable (Just 2)))
-        p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "Time empty: "     <> span_ [class_ "pure-u-1-2"] (elemIf strong_ (emptyTime      > minutes 100) ((toHtml . formatDiffTime) emptyTime))
-        p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "Time full: "      <> span_ [class_ "pure-u-1-2"] (elemIf strong_ (fullTime       > minutes 100) ((toHtml . formatDiffTime) fullTime))
+        p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "Time empty: "     <> span_ [class_ "pure-u-1-2"] (elemIf strong_ (timeGreaterThan emptyTime 100) ((toHtml . formatDiffTime) emptyTime))
+        p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "Time full: "      <> span_ [class_ "pure-u-1-2"] (elemIf strong_ (timeGreaterThan fullTime  100) ((toHtml . formatDiffTime) fullTime))
 
     where
       factorOf :: Monad m => Double -> Maybe Int -> HtmlT m ()
@@ -51,6 +51,10 @@ instance ToHtml PerformanceData where
         case truncateNum of
           Just decimals -> (toHtml . toPercentage decimals) factor <> "%"
           Nothing       ->  showth factor <> "%"
+
+      timeGreaterThan :: Maybe NominalDiffTime -> Int -> Bool
+      timeGreaterThan (Just t1) t2 = t1 > minutes t2
+      timeGreaterThan Nothing _t2  = False
 
       getFactor factor = (factor . performanceFactors) params
 

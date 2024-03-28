@@ -7,6 +7,7 @@ module Haskbike.API.Utils
      , stationStatusFromSimple
      ) where
 
+import qualified Data.Map                   as Map
 import           Data.Time
 
 import           GHC.Generics               ( Generic )
@@ -63,7 +64,7 @@ stationStatusFromSimple base status =
        , _statusNumDocksAvailable     = docksAvailable status
        , _statusNumDocksDisabled      = docksDisabled status
        , _statusVehicleDocksAvailable = [mkVehicleDock (docksAvailable status)]
-       , _statusVehicleTypesAvailable = listToMap availableList
+       , _statusVehicleTypesAvailable = Map.fromList availableList
        }
   where
     availableList = [ mkIconic (iconicAvailable status)
@@ -86,7 +87,7 @@ baseStatus =
                 -- Number of docks (must match above).
                 , _statusVehicleDocksAvailable = [mkVehicleDock 0]
                 -- Number of each bike type.
-                , _statusVehicleTypesAvailable = listToMap [VehicleType Iconic 0, VehicleType EFit 0, VehicleType EFitG5 0]
+                , _statusVehicleTypesAvailable = Map.fromList [(Iconic, VehicleType Iconic 0), (EFit, VehicleType EFit 0), (EFitG5, VehicleType EFitG5 0)]
                 -- Boring stuff.
                 , _statusStatus                = InService
                 , _statusIsInstalled           = True
@@ -100,7 +101,7 @@ mkVehicleDock :: Int -> VehicleDock
 mkVehicleDock = VehicleDock [ "ICONIC", "BOOST", "EFIT", "EFIT G5" ]
 
 -- | Smart constructors for 'VehicleType' data.
-mkIconic, mkEfit, mkEfitG5 :: Int -> VehicleType
-mkIconic = VehicleType Iconic
-mkEfit   = VehicleType EFit
-mkEfitG5 = VehicleType EFitG5
+-- mkIconic, mkEfit, mkEfitG5 :: Int -> VehicleType
+mkIconic count = (Iconic, VehicleType Iconic count)
+mkEfit   count = (EFit, VehicleType EFit count)
+mkEfitG5 count = (EFitG5, VehicleType EFitG5 count)

@@ -58,9 +58,9 @@ refreshStationData = do
   case (reqInfo, reqStatus) of
     (Left err, _) -> logException err >> throwM err
     (_, Left err) -> logException err >> throwM err
-    (Right info, Right status) -> do
-      insInfo   <- insertStationInformation (info ^. respLastUpdated) (info ^. respData)
-      insStatus <- insertStationStatus      (status ^. respData)
+    (Right infoResp, Right statusResp) -> do
+      insInfo   <- insertStationInformation (map (_respLastUpdated infoResp, ) (_respData infoResp))
+      insStatus <- insertStationStatus      (statusResp ^. respData)
       logDebug $ "Inserted " <> (T.pack . show) (length insInfo) <> " information records and " <> (T.pack . show) (length insStatus) <> " status records."
 
 

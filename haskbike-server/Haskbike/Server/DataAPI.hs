@@ -165,12 +165,10 @@ performanceCsvHandler stationId startTime endTime = do
 
   (integrals, emptyFullTup) <- concurrently
     (queryIntegratedStatus variation)
-    (withPostgres $ runSelectReturningList $ selectWith $
+    (withPostgres $ runSelectReturningList $ select $
      queryStationEmptyFullTime stationId (localTimeToUTC tz (earliestTime range)) (localTimeToUTC tz (latestTime range))
     )
-  let emptyFull = head $ map (\(_i, (e, f))
-                              -> EmptyFull ((secondsToNominalDiffTime . fromIntegral) e) ((secondsToNominalDiffTime . fromIntegral) f)
-                             ) emptyFullTup
+  let emptyFull = head $ map (\(_i, (e, f)) -> emptyFullFromSecs e f) emptyFullTup
 
   logDebug "Created performance data CSV payload"
 
@@ -237,14 +235,14 @@ handleEmptyFullData start end = do
   logInfo $ "Rendering station empty/full data for time [" <> tshow start <> " - " <> tshow end <> "]"
 
   (latest, emptyFull) <- concurrently (withPostgres $ runSelectReturningList $ select queryLatestStatuses)
-                                      (withPostgres $ runSelectReturningList $ selectWith $
+                                      (withPostgres $ runSelectReturningList $ select $
                                         queryStationEmptyFullTime (Nothing :: Maybe Integer) (start' currentUtc tz) (end' currentUtc tz))
 
   let combined = combineStations latest (resultToEmptyFull emptyFull)
 
   pure $ map (\(i, ss, ef) -> EmptyFullRecord i ss ef) combined
   where
-    resultToEmptyFull = map (\(i, (e, f)) -> (i, EmptyFull ((secondsToNominalDiffTime . fromIntegral) e) ((secondsToNominalDiffTime . fromIntegral) f)))
+    resultToEmptyFull = map (\(i, (e, f)) -> (i, emptyFullFromSecs e f))
     tshow = T.pack . show
     start' cUtc tz = maybe (addUTCTime (-60 * 60 * 24) cUtc) (localTimeToUTC tz) start
     end'   cUtc tz = maybe cUtc (localTimeToUTC tz) end

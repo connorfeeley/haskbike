@@ -59,10 +59,18 @@ test PACKAGE='all':
     {{CABAL}} test {{PACKAGE}} --test-show-details=direct
 
 test-one PACKAGE PATTERN:
-    {{CABAL}} test {{PACKAGE}} --test-show-details=direct --test-options='--pattern /{{PATTERN}}/'
+    {{CABAL}} test {{PACKAGE}} --test-show-details=direct --test-options='--pattern=/{{PATTERN}}/'
 
-bench:
-    {{CABAL}} bench
+# Benchmark and compare against a baseline.
+bench PACKAGE='all':
+    {{CABAL}} bench {{PACKAGE}} --benchmark-options="--baseline=bench-baseline.csv --fail-if-slower=10 --fail-if-faster=10"
+
+# Save benchmark results as a benchline.
+bench-baseline PACKAGE='all':
+    {{CABAL}} bench {{PACKAGE}} --benchmark-options="--csv=bench-baseline.csv --fail-if-slower=10 --fail-if-faster=10"
+
+bench-one PACKAGE PATTERN:
+    {{CABAL}} bench {{PACKAGE}} --benchmark-options="--baseline=bench-baseline.csv --fail-if-slower=10 --fail-if-faster=10 --pattern=/{{PATTERN}}/"
 
 poll *ARGS:
     {{CABAL}} run haskbike-cli -- --plain poll {{ARGS}} -v

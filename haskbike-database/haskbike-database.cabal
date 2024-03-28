@@ -155,6 +155,7 @@ library
                     , time
                     , unliftio
                     , vector
+                    , zstd
 
                     , servant
                     , aeson
@@ -249,8 +250,14 @@ benchmark haskbike-database-bench
     build-depends:    base
                     , tasty-bench
                     , haskbike-core
+                    , haskbike-client
                     , haskbike-database
                     , beam-core
+                    , beam-postgres
                     , time
+                    , exceptions
+                    , aeson
+                    , bytestring
+                    , zstd
 
     hs-source-dirs:   bench

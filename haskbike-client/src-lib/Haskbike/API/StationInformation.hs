@@ -131,6 +131,7 @@ instance ToJSON RentalURIs where
            , "ios"     .= rentalUrisIos     rentalURIs
            , "web"     .= rentalUrisWeb     rentalURIs
            ]
+
 instance FromJSON RentalURIs where
   parseJSON = withObject "RentalURIs" $ \v -> RentalURIs
     <$> fmap (fromMaybe "") (v .:? "android")

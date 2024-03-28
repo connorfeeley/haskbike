@@ -9,7 +9,23 @@
 
 -- |
 
-module Haskbike.Database.Test.Utils where
+module Haskbike.Database.Test.Utils
+     ( LogConfig (..)
+     , decodeFile
+     , getDecodedFile
+     , getDecodedFileInformation
+     , getDecodedFileStatus
+     , getDecodedFileSystemInformation
+     , initDBWithAllTestData
+     , initDBWithExportedData
+     , initDBWithExportedDataDate
+     , makeEnvForTest
+     , manualSimpleStatus
+     , manualStationInformation
+     , manualStatus
+     , setupTestDatabase
+     , withTempDbM
+     ) where
 
 import           Control.Exception                           ( displayException, toException )
 import           Control.Lens
@@ -88,12 +104,24 @@ initDBWithExportedData :: (HasEnv env m, MonadIO m, MonadFail m, MonadUnliftIO m
 initDBWithExportedData = do
   importDbTestData "test/dumps/" "station_information_2023-10-30.json" "station_status_2023-10-30_2023-10-30.json"
 
+-- | Initialize empty database from exported station information and station status JSON.
+initDBWithExportedDataDate :: (HasEnv env m, MonadIO m, MonadFail m, MonadUnliftIO m, MonadCatch m)
+                           => Maybe Int -> Day -> Day -> m ([DB.StationInformation], [DB.StationStatus])
+initDBWithExportedDataDate stationId startDay endDay = do
+  importDbTestDataNew "test/dumps/" infoDumpPath statusDumpPath
+  where
+    infoDumpPath   = "station_information_" <> stationIdPart stationId <> "_" <> show startDay <> "_" <> show endDay <> ".json"
+    statusDumpPath = "station_status_"      <> stationIdPart stationId <> "_" <> show startDay <> "_" <> show endDay <> ".json"
+    stationIdPart Nothing    = "all"
+    stationIdPart (Just sId) = show sId
+
+
 
 -- | Initialize empty database from the test station information response and all 22 station status responses.
 initDBWithAllTestData :: (HasEnv env m, MonadIO m, MonadFail m, MonadUnliftIO m, MonadCatch m) => m ()
 initDBWithAllTestData = do
-  info <- liftIO $ getDecodedFileInformation  "test/json/station_information-1.json"
-  void $ insertStationInformation (_respLastUpdated info) (_respData info)
+  infoResp <- liftIO $ getDecodedFileInformation  "test/json/station_information-1.json"
+  void $ insertStationInformation (map (_respLastUpdated infoResp, ) (_respData infoResp))
 
   -- Insert test station status data 1-22.
   mapM_ (\i -> do
@@ -178,7 +206,7 @@ assertion failure with the error message is thrown.
 -}
 getDecodedFile :: FromJSON a => String -- ^ Path to the JSON file.
                              -> IO a     -- ^ Decoded value.
-getDecodedFile filePath = either (assertFailure . ("Error decoding JSON: " ++)) return =<< decodeFile =<< getDataFileName filePath
+getDecodedFile filePath = either (assertFailure . ("Error decoding JSON from " <> show filePath <> ": " ++)) return =<< decodeFile =<< getDataFileName filePath
 
 -- | Helper function to decode 'StationInformation' from a JSON file.
 getDecodedFileInformation :: FromJSON (ResponseWrapper [AT.StationInformation])

@@ -14,6 +14,7 @@ import           Control.Monad                   ( unless )
 import           Control.Monad.Catch             ( MonadCatch, MonadThrow )
 
 import           Data.Foldable                   ( for_ )
+import qualified Data.Text                       as T
 import qualified Data.Text                       as Text
 
 import           Haskbike.API.Client
@@ -24,12 +25,9 @@ import           Haskbike.API.StationStatus
 import           Haskbike.AppEnv
 import           Haskbike.CLI.Options
 import           Haskbike.Database.BikeShare
+import           Haskbike.Database.ImportExport
 import           Haskbike.Database.Operations
 import           Haskbike.Database.Utils
-
-import           Options.Applicative
-
-import           Prelude                         hiding ( log )
 
 import           Servant.Client                  ( ClientError )
 
@@ -45,14 +43,33 @@ import           UnliftIO                        ( MonadIO, MonadUnliftIO, liftI
 -- | Dispatch CLI arguments to the database interface.
 dispatchDatabase :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m)
                  => Options -> m ()
-dispatchDatabase options = do
-  case optCommand options of
-    Reset resetOptions -> handleReset options resetOptions
-    _ | optEnableMigration options -> do
-          logInfo "Migrating database."
-          migrateDB
-          logInfo "Migrated database."
-      | otherwise -> pure ()
+dispatchDatabase options = dispatchDatabaseCmd options (databaseCmd . optCommand $ options)
+  where
+    databaseCmd (Database c) = c
+    databaseCmd _            = undefined
+
+dispatchDatabaseCmd :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m)
+                 => Options -> DatabaseCommand -> m ()
+dispatchDatabaseCmd options (Export exportOptions) = handleExport options exportOptions
+dispatchDatabaseCmd options (Reset  resetOptions)  = handleReset options resetOptions
+
+
+-- | Handle 'Export' command.
+handleExport :: (HasEnv env m, MonadCatch m) => Options -> ExportOptions -> m ()
+handleExport options exportOptions = do
+  logWarning . T.pack $ "Exporting system_information and system_status from database "
+    <> wrapBrackets database <> " to " <> wrapBrackets exportDir <> " between "
+    <> wrapBrackets (show startDay) <> " and " <> wrapBrackets (show endDay)
+  files <- exportDbTestData exportDir stationId startDay endDay
+  logWarning $ "Exported data to: " <> (T.pack . show) files
+  where
+    database  = optDatabase        options
+    exportDir = optExportDir       exportOptions
+    startDay  = optExportStartDay  exportOptions
+    endDay    = optExportEndDay    exportOptions
+    stationId = optExportStationId exportOptions
+
+    wrapBrackets content = "[" <> content <> "]"
 
 
 -- | Handle the 'Reset' command.
@@ -64,12 +81,11 @@ handleReset options resetOptions = do
   if optResetOnly resetOptions
     then logWarning "Only resetting database..." >> dropTables >> migrateDB >> logWarning "Database reset; exiting." >> liftIO exitSuccess
     else logWarning "Resetting database..."      >> dropTables >> logWarning "Database reset." >>
-         logWarning "Migrating database."        >> migrateDB >> logWarning "Migrations performed." >>
+         logWarning "Migrating database."        >> migrateDB  >> logWarning "Migrations performed." >>
          logInfo "Initializing database."     >> handleInformation >> liftIO exitSuccess
 
 -- | Helper for station information request.
-handleInformation :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m)
-                  => m ()
+handleInformation :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m) => m ()
 handleInformation = do
   logDebug "Querying station information from database."
   numInfoRows <- queryRowCount bikeshareStationInformation
@@ -77,8 +93,7 @@ handleInformation = do
   unless (0 == numInfoRows) handleStationInformation
 
 -- | Handle station information request.
-handleStationInformation :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m)
-                         => m ()
+handleStationInformation :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m) => m ()
 handleStationInformation = do
   logDebug "Requesting station information from API."
   stationInfo <- runQueryM stationInformation :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m) => m (Either ClientError (ResponseWrapper [StationInformation]))
@@ -88,7 +103,7 @@ handleStationInformation = do
         let stations = response ^. respData
         let reported = response ^. respLastUpdated
         logDebug "Inserting station information into database."
-        insertStationInformation reported stations >>= report
+        insertStationInformation (map (reported, ) stations) >>= report
         logDebug "Inserted station information into database."
   where
     report = logInfo . ("Stations inserted: " <>) . Text.pack . show . length
@@ -103,8 +118,7 @@ handleStatus = do
   unless (0 == numStatusRows) handleStationStatus
 
 -- | Handle station status request.
-handleStationStatus :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m)
-                    => m ()
+handleStationStatus :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m) => m ()
 handleStationStatus = do
   logDebug "Requesting station status from API."
   stationStatus' <- runQueryM stationStatus :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m) => m (Either ClientError (ResponseWrapper [StationStatus]))

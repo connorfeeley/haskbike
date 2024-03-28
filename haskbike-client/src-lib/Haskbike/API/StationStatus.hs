@@ -11,9 +11,6 @@ module Haskbike.API.StationStatus
      , addBikesDisabled
      , addDocksAvailable
      , addDocksDisabled
-     , addEfit
-     , addEfitG5
-     , addIconic
      , statusIsChargingStation
      , statusIsInstalled
      , statusIsRenting
@@ -28,13 +25,12 @@ module Haskbike.API.StationStatus
      , statusTraffic
      , statusVehicleDocksAvailable
      , statusVehicleTypesAvailable
-     , updateMap
      ) where
 
 import           Control.Lens             hiding ( (.=) )
 
 import           Data.Aeson               ( FromJSON (parseJSON), KeyValue ((.=)), ToJSON (toJSON), Value (String),
-                                            object, withObject, withText, (.:), (.:?) )
+                                            object, withArray, withObject, withText, (.:), (.:?) )
 import           Data.Attoparsec.Text     ( Parser, choice, parseOnly, string )
 import           Data.Either              ( fromRight )
 import           Data.Functor             ( ($>) )
@@ -102,7 +98,7 @@ data StationStatus where
                    , _statusIsReturning           :: Bool
                    , _statusTraffic               :: Maybe String -- PBSC doesn't seem to set this field
                    , _statusVehicleDocksAvailable :: [VehicleDock]
-                   , _statusVehicleTypesAvailable :: Map.Map TorontoVehicleType Int
+                   , _statusVehicleTypesAvailable :: Map.Map TorontoVehicleType VehicleType
                    } -> StationStatus
   deriving (Show, Generic, Eq)
 
@@ -121,8 +117,9 @@ instance ToJSON StationStatus where
            , "is_returning"             .= _statusIsReturning                         station
            , "traffic"                  .= _statusTraffic                             station
            , "vehicle_docks_available"  .= _statusVehicleDocksAvailable               station
-           , "vehicle_types_available"  .= Map.toList (_statusVehicleTypesAvailable   station)
+           , "vehicle_types_available"  .= Map.elems (_statusVehicleTypesAvailable    station)
            ]
+
 instance FromJSON StationStatus where
   parseJSON = withObject "StationStatus" $ \v -> StationStatus
     <$> fmap read (v .: "station_id")
@@ -143,7 +140,7 @@ instance FromJSON StationStatus where
 -- | A type representing a BikeShare station's vehicle dock status.
 data VehicleDock where
   VehicleDock :: { vehicle_type_ids :: [String]
-                 , dock_count :: Int
+                 , dock_count       :: Int
                  } -> VehicleDock
   deriving (Show, Generic, Eq, Ord)
 
@@ -163,14 +160,6 @@ instance HasDataField [StationStatus] where
 
 
 -- * Functions for updating 'StationStatus'.
-
-updateMap :: TorontoVehicleType -> Int -> StationStatus -> Map.Map TorontoVehicleType Int
-updateMap tvt inc status = Map.insertWith (+) tvt inc (_statusVehicleTypesAvailable status)
-
-addIconic, addEfit, addEfitG5 :: Int -> StationStatus -> StationStatus
-addIconic inc status = status { _statusVehicleTypesAvailable = updateMap Iconic inc status }
-addEfit inc status   = status { _statusVehicleTypesAvailable = updateMap EFit   inc status }
-addEfitG5 inc status = status { _statusVehicleTypesAvailable = updateMap EFitG5 inc status }
 
 addBikesAvailable, addBikesDisabled, addDocksAvailable, addDocksDisabled :: Int -> StationStatus -> StationStatus
 addBikesAvailable inc status = status { _statusNumBikesAvailable = _statusNumBikesAvailable status + inc }
