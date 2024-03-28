@@ -133,16 +133,16 @@ instance Table SystemInformationCountT where
 fromJSONToBeamSystemInformation :: UTCTime -> AT.SystemInformation -> SystemInformationT (QExpr Postgres s)
 fromJSONToBeamSystemInformation lastReported inf =
   SystemInformation { _sysInfKey                  = SystemInformationKey default_ (val_ lastReported)
-                    , _sysInfBuildHash            = val_ $ T.pack (AT._sysInfBuildHash    inf)
-                    , _sysInfBuildLabel           = val_ $ T.pack (AT._sysInfBuildLabel   inf)
-                    , _sysInfBuildNumber          = val_ $ T.pack (AT._sysInfBuildNumber  inf)
-                    , _sysInfBuildVersion         = val_ $ T.pack (AT._sysInfBuildVersion inf)
-                    , _sysInfLanguage             = val_ $ T.pack (AT._sysInfLanguage inf)
+                    , _sysInfBuildHash            = val_ $ AT._sysInfBuildHash    inf
+                    , _sysInfBuildLabel           = val_ $ AT._sysInfBuildLabel   inf
+                    , _sysInfBuildNumber          = val_ $ AT._sysInfBuildNumber  inf
+                    , _sysInfBuildVersion         = val_ $ AT._sysInfBuildVersion inf
+                    , _sysInfLanguage             = val_ $ AT._sysInfLanguage inf
                     , _sysInfMobileHeadVersion    = val_ $ fromIntegral $ AT._sysInfMobileHeadVersion    inf
                     , _sysInfMobileMinSuppVersion = val_ $ fromIntegral $ AT._sysInfMobileMinSuppVersion inf
-                    , _sysInfName                 = val_ $ T.pack (AT._sysInfName     inf)
-                    , _sysInfSysId                = val_ $ T.pack (AT._sysInfSysId    inf)
-                    , _sysInfTimeZone             = val_ $ T.pack (AT._sysInfTimeZone inf)
+                    , _sysInfName                 = val_ $ AT._sysInfName     inf
+                    , _sysInfSysId                = val_ $ AT._sysInfSysId    inf
+                    , _sysInfTimeZone             = val_ $ AT._sysInfTimeZone inf
                     }
 
 fromJSONToBeamSystemInformationCount :: forall s. UTCTime -> AT.SystemInformation -> SystemInformationCountT (QExpr Postgres s)
@@ -158,16 +158,16 @@ fromBeamSystemInformationToJSON :: SystemInformation -> SystemInformationCount -
 fromBeamSystemInformationToJSON inf infCnt = AT.SystemInformation
   { AT._sysInfStationCount         = fromIntegral $ _sysInfCntStationCount infCnt
   , AT._sysInfVehicleCount         = AT.SystemInformationVehicleCount (fromIntegral $ _sysInfCntMechanicalCount infCnt) (fromIntegral $ _sysInfCntEbikeCount infCnt)
-  , AT._sysInfBuildHash            = T.unpack (_sysInfBuildHash    inf)
-  , AT._sysInfBuildLabel           = T.unpack (_sysInfBuildLabel   inf)
-  , AT._sysInfBuildNumber          = T.unpack (_sysInfBuildNumber  inf)
-  , AT._sysInfBuildVersion         = T.unpack (_sysInfBuildVersion inf)
-  , AT._sysInfLanguage             = T.unpack (_sysInfLanguage inf)
+  , AT._sysInfBuildHash            = _sysInfBuildHash    inf
+  , AT._sysInfBuildLabel           = _sysInfBuildLabel   inf
+  , AT._sysInfBuildNumber          = _sysInfBuildNumber  inf
+  , AT._sysInfBuildVersion         = _sysInfBuildVersion inf
+  , AT._sysInfLanguage             = _sysInfLanguage inf
   , AT._sysInfMobileHeadVersion    = fromIntegral $ _sysInfMobileHeadVersion    inf
   , AT._sysInfMobileMinSuppVersion = fromIntegral $ _sysInfMobileMinSuppVersion inf
-  , AT._sysInfName                 = T.unpack (_sysInfName     inf)
-  , AT._sysInfSysId                = T.unpack (_sysInfSysId    inf)
-  , AT._sysInfTimeZone             = T.unpack (_sysInfTimeZone inf)
+  , AT._sysInfName                 = _sysInfName     inf
+  , AT._sysInfSysId                = _sysInfSysId    inf
+  , AT._sysInfTimeZone             = _sysInfTimeZone inf
   }
 
 -- * Table modifications and migrations.

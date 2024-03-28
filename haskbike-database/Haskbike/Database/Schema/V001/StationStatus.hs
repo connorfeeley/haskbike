@@ -212,7 +212,7 @@ fromJSONToBeamStationStatus infId status
                 , _statusIsInstalled           = val_ $ status ^. AT.statusIsInstalled
                 , _statusIsRenting             = val_ $ status ^. AT.statusIsRenting
                 , _statusIsReturning           = val_ $ status ^. AT.statusIsReturning
-                , _statusTraffic               = val_ $ fmap T.pack $ status ^. AT.statusTraffic
+                , _statusTraffic               = val_ $ status ^. AT.statusTraffic
                 , _statusVehicleDocksAvailable = maybe 0 (fromIntegral . AT.dock_count) $ listToMaybe $ status ^. AT.statusVehicleDocksAvailable
                 , _statusVehicleTypesAvailable = val_ $ VehicleType num_boost num_iconic num_efit num_efit_g5
                 }
@@ -240,8 +240,11 @@ fromBeamStationStatusToJSON status =
                    , AT._statusIsInstalled           = status ^. statusIsInstalled
                    , AT._statusIsRenting             = status ^. statusIsRenting
                    , AT._statusIsReturning           = status ^. statusIsReturning
-                   , AT._statusTraffic               = fmap T.unpack $ status ^. statusTraffic
-                   , AT._statusVehicleDocksAvailable = [ AT.VehicleDock (map show [AT.Boost, AT.Iconic, AT.EFit, AT.EFitG5]) (fromIntegral $ status ^. statusVehicleDocksAvailable) ]
+                   , AT._statusTraffic               = status ^. statusTraffic
+                   , AT._statusVehicleDocksAvailable = [ AT.VehicleDock
+                                                         (map (T.pack . show) [AT.Boost, AT.Iconic, AT.EFit, AT.EFitG5])
+                                                         (fromIntegral $ status ^. statusVehicleDocksAvailable)
+                                                       ]
                    , AT._statusVehicleTypesAvailable =
                      Map.fromList [ (AT.Boost,  AT.VehicleType AT.Boost  (fromIntegral (status ^. vehicleTypesAvailableBoost)))
                                   , (AT.Iconic, AT.VehicleType AT.Iconic (fromIntegral (status ^. vehicleTypesAvailableIconic)))

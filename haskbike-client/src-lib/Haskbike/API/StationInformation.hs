@@ -21,6 +21,7 @@ import           Data.Either          ( fromRight )
 import           Data.Functor         ( ($>) )
 import           Data.Maybe           ( fromMaybe )
 import           Data.Text            ( pack )
+import qualified Data.Text            as T
 import qualified Data.Text            as Text
 
 import           GHC.Generics
@@ -119,9 +120,9 @@ instance FromJSON RentalMethod where
 
 -- | A type representing a BikeShare rental_uris record.
 data RentalURIs where
-  RentalURIs :: { rentalUrisAndroid :: String
-                , rentalUrisIos     :: String
-                , rentalUrisWeb     :: String
+  RentalURIs :: { rentalUrisAndroid :: T.Text
+                , rentalUrisIos     :: T.Text
+                , rentalUrisWeb     :: T.Text
                 } -> RentalURIs
   deriving (Show, Eq, Generic)
 
@@ -141,21 +142,21 @@ instance FromJSON RentalURIs where
 -- | A type representing a BikeShare station.
 data StationInformation where
   StationInformation :: { infoStationId               :: Int
-                        , infoName                    :: String
+                        , infoName                    :: T.Text
                         , infoPhysicalConfiguration   :: PhysicalConfiguration
                         , infoLat                     :: Double
                         , infoLon                     :: Double
                         , infoAltitude                :: Maybe Double
-                        , infoAddress                 :: Maybe String
+                        , infoAddress                 :: Maybe T.Text
                         , infoCapacity                :: Int
                         , infoIsChargingStation       :: Bool
                         , infoRentalMethods           :: [RentalMethod]
                         , infoIsValetStation          :: Bool
                         , infoIsVirtualStation        :: Bool
-                        , infoGroups                  :: [String]
-                        , infoObcn                    :: String
+                        , infoGroups                  :: [T.Text]
+                        , infoObcn                    :: T.Text
                         , infoNearbyDistance          :: Double
-                        , infoBluetoothId             :: String
+                        , infoBluetoothId             :: T.Text
                         , infoRideCodeSupport         :: Bool
                         , infoRentalUris              :: RentalURIs
                         } -> StationInformation

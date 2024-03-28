@@ -53,6 +53,7 @@ import           Data.Aeson
 import qualified Data.ByteString.Char8                      as B
 import           Data.Coerce                                ( coerce )
 import           Data.Int
+import           Data.Maybe
 import           Data.String                                ( IsString )
 import qualified Data.Text                                  as T
 import qualified Data.Text.Lazy                             as TL
@@ -333,19 +334,19 @@ fromJSONToBeamStationInformation
   ) =
   StationInformation { _infoId                    = default_
                      , _infoStationId             = fromIntegral station_id
-                     , _infoName                  = val_ $ T.pack name
+                     , _infoName                  = val_ name
                      , _infoPhysicalConfiguration = val_ (coerce physical_configuration :: BeamPhysicalConfiguration)
                      , _infoLat                   = val_ lat
                      , _infoLon                   = val_ lon
                      , _infoAltitude              = val_ altitude
-                     , _infoAddress               = val_ $ T.pack <$> address
+                     , _infoAddress               = val_ address
                      , _infoCapacity              = fromIntegral capacity
                      , _infoIsChargingStation     = val_ is_charging_station
                      , _infoRentalMethods         = val_ $ fromList (coerce rental_methods :: [BeamRentalMethod])
                      , _infoIsValetStation        = val_ is_valet_station
                      , _infoIsVirtualStation      = val_ is_virtual_station
-                     , _infoGroups                = val_ $ fromList $ fmap T.pack groups
-                     , _infoObcn                  = val_ . Just . T.pack $ obcn
+                     , _infoGroups                = val_ $ fromList groups
+                     , _infoObcn                  = val_ . Just $ obcn
                      , _infoNearbyDistance        = val_ nearby_distance
                      , _infoBluetoothId           = val_ bluetoothId
                      , _infoRideCodeSupport       = val_ ride_code_support
@@ -354,10 +355,12 @@ fromJSONToBeamStationInformation
                      , _infoReported              = val_ reported
                      }
   where
-    uriAndroid = T.pack (AT.rentalUrisAndroid rental_uris)
-    uriIos     = T.pack (AT.rentalUrisIos rental_uris)
-    uriWeb     = T.pack (AT.rentalUrisWeb rental_uris)
-    bluetoothId = if not (null bluetooth_id) then Just . T.pack $ bluetooth_id else Nothing
+    uriAndroid = AT.rentalUrisAndroid rental_uris
+    uriIos     = AT.rentalUrisIos rental_uris
+    uriWeb     = AT.rentalUrisWeb rental_uris
+    bluetoothId = if not (T.null bluetooth_id)
+                  then Just bluetooth_id
+                  else Nothing
 
 -- | Convert from the Beam StationInformation type to the JSON StationInformation
 fromBeamStationInformationToJSON :: StationInformation -> AT.StationInformation
@@ -385,25 +388,25 @@ fromBeamStationInformationToJSON (StationInformation
                                   _reported
                                  ) =
   AT.StationInformation { AT.infoStationId               = fromIntegral stationId
-                        , AT.infoName                    = T.unpack name
+                        , AT.infoName                    = name
                         , AT.infoPhysicalConfiguration   = coerce physicalConfiguration' :: AT.PhysicalConfiguration
                         , AT.infoLat                     = lat
                         , AT.infoLon                     = lon
                         , AT.infoAltitude                = altitude
-                        , AT.infoAddress                 = T.unpack <$> address
+                        , AT.infoAddress                 = address
                         , AT.infoCapacity                = fromIntegral capacity
                         , AT.infoIsChargingStation       = isChargingStation
                         , AT.infoRentalMethods           = coerce (toList rentalMethods) :: [AT.RentalMethod]
                         , AT.infoIsValetStation          = isValetStation
                         , AT.infoIsVirtualStation        = isVirtualStation
-                        , AT.infoGroups                  = T.unpack <$> toList groups
-                        , AT.infoObcn                    = maybe "" T.unpack obcn
+                        , AT.infoGroups                  = toList groups
+                        , AT.infoObcn                    = fromMaybe "" obcn
                         , AT.infoNearbyDistance          = nearbyDistance
-                        , AT.infoBluetoothId             = maybe "" T.unpack bluetoothId
+                        , AT.infoBluetoothId             = fromMaybe "" bluetoothId
                         , AT.infoRideCodeSupport         = rideCodeSupport
-                        , AT.infoRentalUris              = AT.RentalURIs { AT.rentalUrisAndroid = maybe "" T.unpack (rentalUrisList ^? element 1)
-                                                                         , AT.rentalUrisIos     = maybe "" T.unpack (rentalUrisList ^? element 2)
-                                                                         , AT.rentalUrisWeb     = maybe "" T.unpack (rentalUrisList ^? element 3)
+                        , AT.infoRentalUris              = AT.RentalURIs { AT.rentalUrisAndroid = fromMaybe "" (rentalUrisList ^? element 1)
+                                                                         , AT.rentalUrisIos     = fromMaybe "" (rentalUrisList ^? element 2)
+                                                                         , AT.rentalUrisWeb     = fromMaybe "" (rentalUrisList ^? element 3)
                                                                          }
                         }
   where

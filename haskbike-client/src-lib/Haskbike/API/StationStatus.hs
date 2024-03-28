@@ -35,7 +35,7 @@ import           Data.Attoparsec.Text     ( Parser, choice, parseOnly, string )
 import           Data.Either              ( fromRight )
 import           Data.Functor             ( ($>) )
 import qualified Data.Map                 as Map
-import qualified Data.Text                as Text
+import qualified Data.Text                as T
 import           Data.Time
 import           Data.Time.Extras
 
@@ -60,7 +60,7 @@ instance Show StationStatusString where
   show EndOfLife   = "END_OF_LIFE"
 
 instance Read StationStatusString where
-  readsPrec _ = fromRight [] . parseOnly parser . Text.pack
+  readsPrec _ = fromRight [] . parseOnly parser . T.pack
     where
     parser :: Parser [(StationStatusString, String)]
     parser = choice
@@ -70,10 +70,10 @@ instance Read StationStatusString where
       ]
 
 instance ToJSON StationStatusString where
-  toJSON InService   = String (Text.pack "IN_SERVICE")
-  toJSON Maintenance = String (Text.pack "MAINTENANCE")
-  toJSON Planned     = String (Text.pack "PLANNED")
-  toJSON EndOfLife   = String (Text.pack "END_OF_LIFE")
+  toJSON InService   = String (T.pack "IN_SERVICE")
+  toJSON Maintenance = String (T.pack "MAINTENANCE")
+  toJSON Planned     = String (T.pack "PLANNED")
+  toJSON EndOfLife   = String (T.pack "END_OF_LIFE")
 
 instance FromJSON StationStatusString where
   parseJSON = withText "StationStatusString" $ \t -> case t of
@@ -96,7 +96,7 @@ data StationStatus where
                    , _statusIsInstalled           :: Bool
                    , _statusIsRenting             :: Bool
                    , _statusIsReturning           :: Bool
-                   , _statusTraffic               :: Maybe String -- PBSC doesn't seem to set this field
+                   , _statusTraffic               :: Maybe T.Text -- PBSC doesn't seem to set this field
                    , _statusVehicleDocksAvailable :: [VehicleDock]
                    , _statusVehicleTypesAvailable :: Map.Map TorontoVehicleType VehicleType
                    } -> StationStatus
@@ -139,7 +139,7 @@ instance FromJSON StationStatus where
 
 -- | A type representing a BikeShare station's vehicle dock status.
 data VehicleDock where
-  VehicleDock :: { vehicle_type_ids :: [String]
+  VehicleDock :: { vehicle_type_ids :: [T.Text]
                  , dock_count       :: Int
                  } -> VehicleDock
   deriving (Show, Generic, Eq, Ord)

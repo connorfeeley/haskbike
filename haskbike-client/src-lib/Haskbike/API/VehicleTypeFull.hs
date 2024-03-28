@@ -7,6 +7,7 @@ module Haskbike.API.VehicleTypeFull
      ) where
 
 import           Data.Aeson
+import qualified Data.Text                as T
 
 import           GHC.Generics
 
@@ -16,11 +17,11 @@ import           Haskbike.API.VehicleType
 -- | Data type for core response object of 'versions' API.
 data VehicleTypeFull where
   VehicleTypeFull :: { vehicleTypeFullId          :: TorontoVehicleType
-                     , vehicleTypeFullFormFactor  :: String
-                     , vehicleTypeFullPropulsion  :: String
+                     , vehicleTypeFullFormFactor  :: T.Text
+                     , vehicleTypeFullPropulsion  :: T.Text
                      , vehicleTypeFullMaxRange    :: Double -- In meters
-                     , vehicleTypeFullName        :: String
-                     , vehicleTypeFullPricingPlan :: String -- Default pricing plan string
+                     , vehicleTypeFullName        :: T.Text
+                     , vehicleTypeFullPricingPlan :: T.Text -- Default pricing plan string
                      } -> VehicleTypeFull
   deriving (Show, Eq, Generic)
 

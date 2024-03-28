@@ -8,6 +8,7 @@ import           Control.Lens         hiding ( (.=) )
 
 import           Data.Aeson           ( FromJSON (parseJSON), KeyValue ((.=)), ToJSON (toJSON), Value (Object), object,
                                         withObject, (.:) )
+import qualified Data.Text            as T
 
 import           GHC.Generics         ( Generic )
 
@@ -37,16 +38,16 @@ instance FromJSON SystemInformationVehicleCount where
 data SystemInformation where
   SystemInformation :: { _sysInfStationCount         :: Int
                        , _sysInfVehicleCount         :: SystemInformationVehicleCount
-                       , _sysInfBuildHash            :: String
-                       , _sysInfBuildLabel           :: String
-                       , _sysInfBuildNumber          :: String
-                       , _sysInfBuildVersion         :: String
-                       , _sysInfLanguage             :: String
+                       , _sysInfBuildHash            :: T.Text
+                       , _sysInfBuildLabel           :: T.Text
+                       , _sysInfBuildNumber          :: T.Text
+                       , _sysInfBuildVersion         :: T.Text
+                       , _sysInfLanguage             :: T.Text
                        , _sysInfMobileHeadVersion    :: Int
                        , _sysInfMobileMinSuppVersion :: Int
-                       , _sysInfName                 :: String
-                       , _sysInfSysId                :: String
-                       , _sysInfTimeZone             :: String
+                       , _sysInfName                 :: T.Text
+                       , _sysInfSysId                :: T.Text
+                       , _sysInfTimeZone             :: T.Text
                        } -> SystemInformation
   deriving (Eq, Generic, Show)
 
