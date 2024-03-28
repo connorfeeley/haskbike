@@ -21,7 +21,7 @@ import           Haskbike.Server.Routes
 import           Haskbike.ServerEnv
 
 import           Network.Wai.Handler.Warp    as Warp
-import           Network.Wai.Middleware.Gzip ( GzipSettings, def, gzip )
+import           Network.Wai.Middleware.Gzip ( GzipFiles (..), GzipSettings (..), def, defaultGzipSettings, gzip )
 
 import           Prelude                     ()
 import           Prelude.Compat
@@ -53,7 +53,12 @@ serveVisualization = do
 
 
 gzipSettings :: GzipSettings
-gzipSettings = def
+gzipSettings =
+  defaultGzipSettings
+  { gzipFiles = GzipCompress
+  , gzipSizeThreshold = 860
+  }
+
 
 serverSettings :: ServerEnv m -> Settings
 serverSettings env = defaultSettings
