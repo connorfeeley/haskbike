@@ -151,19 +151,19 @@ insertStationInformation' stations =
     inserted <- runInsertReturningList $ do
       insertStationInformationExpr (map snd newerInfo ++ newInfo)
     pure (info, updated, inserted)
-
-infoMap    = Map.fromList . map (\inf -> ((fromIntegral . _infoStationId) inf, inf))
-apiInfoMap = Map.fromList . map (\inf -> ((AT.infoStationId . snd) inf, inf))
-infoHasNewer apiInfo info = catMaybes . Map.elems $ Map.intersectionWith stationInfoChanged apiInfo info
-infoNewStation apiInfo info = Map.elems (Map.difference apiInfo info)
-idsToUpdate = map (fromIntegral . _infoId . fst)
+   where
+     infoMap    = Map.fromList . map (\inf -> ((fromIntegral . _infoStationId) inf, inf))
+     apiInfoMap = Map.fromList . map (\inf -> ((AT.infoStationId . snd) inf, inf))
+     infoHasNewer apiInfo info = catMaybes . Map.elems $ Map.intersectionWith stationInfoChanged apiInfo info
+     infoNewStation apiInfo info = Map.elems (Map.difference apiInfo info)
+     idsToUpdate = map (fromIntegral . _infoId . fst)
 
 stationInfoChanged :: (UTCTime, AT.StationInformation) -> StationInformation -> Maybe (StationInformation, (UTCTime, AT.StationInformation))
 stationInfoChanged apiInfo info
   | stationInfoMostlyEq apiInfo info = Nothing
   | otherwise = Just (info, apiInfo)
 
-stationInfoMostlyEq (reported, apiInfo) dbInfo =
+stationInfoMostlyEq (_reported, apiInfo) dbInfo =
   isEq AT.infoName a b
   && isEq AT.infoPhysicalConfiguration a b
   && isEq AT.infoLat a b

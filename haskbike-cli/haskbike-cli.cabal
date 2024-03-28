@@ -146,7 +146,7 @@ library
                    , Haskbike.CLI.Poll.Utils
                    , Haskbike.CLI.Query
                    , Haskbike.CLI.QueryFormat
-                   , Haskbike.CLI.ServeVisualize
+                   , Haskbike.CLI.Server
                    , Haskbike.CLI.Utils
 
                    , Haskbike.API.APIEntity

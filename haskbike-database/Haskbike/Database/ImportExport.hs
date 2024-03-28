@@ -28,7 +28,7 @@ import qualified Data.Text                                   as T
 import           Data.Time
 
 import           Database.Beam
-import           Database.Beam.Postgres                      ( Postgres, pgNubBy_ )
+import           Database.Beam.Postgres                      ( Postgres )
 import           Database.Beam.Postgres.Full                 ( lateral_ )
 
 import qualified Haskbike.API.StationInformation             as AT

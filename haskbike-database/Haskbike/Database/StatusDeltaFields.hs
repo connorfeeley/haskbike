@@ -6,7 +6,7 @@ module Haskbike.Database.StatusDeltaFields
      ) where
 
 import qualified Data.Map                   as Map
-import           Data.Maybe                 ( fromMaybe, listToMaybe )
+import           Data.Maybe                 ( listToMaybe )
 import           Data.Time
 
 import           Haskbike.API.StationStatus

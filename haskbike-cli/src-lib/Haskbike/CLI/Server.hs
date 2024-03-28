@@ -1,6 +1,6 @@
 -- | CLI handler for visualization HTTP server.
-module Haskbike.CLI.ServeVisualize
-     ( dispatchVisualize
+module Haskbike.CLI.Server
+     ( dispatchServer
      ) where
 
 import           Colog                hiding ( getLogAction )
@@ -18,15 +18,15 @@ import           UnliftIO             ( liftIO )
 
 
 -- | Dispatch CLI arguments to the visualization server.
-dispatchVisualize :: (HasEnv (Env AppM) m)
-                  => ServeVisualizeOptions -> m ()
-dispatchVisualize options = do
+dispatchServer :: (HasEnv (Env AppM) m)
+               => ServerOptions -> m ()
+dispatchServer options = do
   env <- ask
 
-  logInfo $ "Launching visualization web server on port " <> (T.pack . show) (optServeVisualizePort options)
+  logInfo $ "Launching visualization web server on port " <> (T.pack . show) (optServerPort options)
 
   let serverEnv = ServerEnv { serverEnvBase         = env
-                            , serverPort            = optServeVisualizePort options
+                            , serverPort            = optServerPort options
                             , serverTimeoutSeconds  = 5 * 60
                             , serverGzipCompression = True
                             , serverMaxIntervals    = 20

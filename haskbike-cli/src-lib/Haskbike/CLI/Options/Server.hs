@@ -1,8 +1,8 @@
 -- | Options for the server commands.
 
 module Haskbike.CLI.Options.Server
-     ( ServeVisualizeOptions (..)
-     , serveVisualizationParser
+     ( ServerOptions (..)
+     , serverOptionsParser
      ) where
 
 import           Haskbike.CLI.Options.Command
@@ -10,16 +10,16 @@ import           Haskbike.CLI.Options.Command
 import           Options.Applicative
 
 
-data ServeVisualizeOptions where
-  ServeVisualizeOptions :: { optServeVisualizePort :: Int
-                           } -> ServeVisualizeOptions
+data ServerOptions where
+  ServerOptions :: { optServerPort :: Int
+                   } -> ServerOptions
   deriving (Show, Read)
 
-instance HasCommandDesc ServeVisualizeOptions where
+instance HasCommandDesc ServerOptions where
   commandDesc = "Visualization HTTP server."
 
-serveVisualizationParser :: Parser ServeVisualizeOptions
-serveVisualizationParser = ServeVisualizeOptions
+serverOptionsParser :: Parser ServerOptions
+serverOptionsParser = ServerOptions
   <$> argument auto
   ( metavar "HTTP_PORT"
  <> showDefault

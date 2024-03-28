@@ -6,16 +6,16 @@ module Main
 
 import           Colog
 
-import           Control.Monad               ( unless, when )
-import           Control.Monad.Reader        ( runReaderT )
+import           Control.Monad             ( unless, when )
+import           Control.Monad.Reader      ( runReaderT )
 
-import qualified Data.Text                   as T
-import qualified Data.Text                   as Text
-import           Data.Text.Lazy              ( toStrict )
-import qualified Data.Text.Lazy              as TL
-import           Data.Time                   ( getCurrentTimeZone )
+import qualified Data.Text                 as T
+import qualified Data.Text                 as Text
+import           Data.Text.Lazy            ( toStrict )
+import qualified Data.Text.Lazy            as TL
+import           Data.Time                 ( getCurrentTimeZone )
 
-import           Database.Beam.Postgres      ( ConnectInfo (connectPassword) )
+import           Database.Beam.Postgres    ( ConnectInfo (connectPassword) )
 
 import           Haskbike.AppEnv
 import           Haskbike.CLI.Database
@@ -24,22 +24,22 @@ import           Haskbike.CLI.Events
 import           Haskbike.CLI.Options
 import           Haskbike.CLI.Poll
 import           Haskbike.CLI.Query
-import           Haskbike.CLI.ServeVisualize
+import           Haskbike.CLI.Server
 import           Haskbike.Version
 
-import           Network.HTTP.Client         ( newManager )
-import           Network.HTTP.Client.TLS     ( tlsManagerSettings )
+import           Network.HTTP.Client       ( newManager )
+import           Network.HTTP.Client.TLS   ( tlsManagerSettings )
 
 import           Options.Applicative
 
-import           Prelude                     hiding ( log, unwords )
+import           Prelude                   hiding ( log, unwords )
 
-import           System.Exit                 ( exitSuccess )
+import           System.Exit               ( exitSuccess )
 import           System.IO
 
 import           Text.Pretty.Simple.Extras
 
-import           UnliftIO                    ( liftIO )
+import           UnliftIO                  ( liftIO )
 
 
 main :: IO ()
@@ -108,13 +108,13 @@ appMain options = do
   -- Dispatch to appropriate command.
   dispatchDatabase options
   case optCommand options of
-    (Poll p)            -> dispatchPoll p
-    (Query q)           -> dispatchQuery q
-    QueryApi            -> logError "Not implemented."
-    (Events e)          -> dispatchEvents (optEventsSubcommand e)
-    (DebugMisc d)       -> dispatchDebug d
-    (Database _)        -> pure ()
-    (ServeVisualize sv) -> dispatchVisualize sv
+    (Poll p)      -> dispatchPoll p
+    (Query q)     -> dispatchQuery q
+    QueryApi      -> logError "Not implemented."
+    (Events e)    -> dispatchEvents (optEventsSubcommand e)
+    (DebugMisc d) -> dispatchDebug d
+    (Database _)  -> pure ()
+    (Server sv)   -> dispatchServer sv
 
 -- Convert CLI options to a logging severity.
 logLevel :: Options -> Severity

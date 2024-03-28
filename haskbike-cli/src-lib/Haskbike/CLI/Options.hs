@@ -92,7 +92,7 @@ data Command where
   Query          :: !QueryOptions          -> Command
   QueryApi       :: Command
   Events         :: !EventsOptions         -> Command
-  ServeVisualize :: !ServeVisualizeOptions -> Command
+  Server         :: !ServerOptions -> Command
   DebugMisc      :: !DebugMiscOptions      -> Command
   Database       :: !DatabaseCommand       -> Command
   deriving (Show)
@@ -101,15 +101,15 @@ data Command where
 commandParser :: Parser Command
 commandParser = hsubparser
   (  command "poll"
-    (info (Poll           <$> pollOptionsParser)        (progDesc (commandDesc @PollOptions)))
+    (info (Poll          <$> pollOptionsParser)      (progDesc (commandDesc @PollOptions)))
   <> command "query"
-    (info (Query          <$> queryOptionsParser)       (progDesc (commandDesc @QueryOptions)))
+    (info (Query         <$> queryOptionsParser)     (progDesc (commandDesc @QueryOptions)))
   <> command "events"
-    (info (Events         <$> eventsOptionsParser)      (progDesc (commandDesc @EventsOptions)))
-  <> command "visualize"
-    (info (ServeVisualize <$> serveVisualizationParser) (progDesc (commandDesc @ServeVisualizeOptions)))
+    (info (Events        <$> eventsOptionsParser)    (progDesc (commandDesc @EventsOptions)))
+  <> command "serve"
+    (info (Server        <$> serverOptionsParser)    (progDesc (commandDesc @ServerOptions)))
   <> command "debug"
-    (info (DebugMisc      <$> debugMiscOptionsParser)   (progDesc (commandDesc @DebugMiscOptions)))
+    (info (DebugMisc     <$> debugMiscOptionsParser) (progDesc (commandDesc @DebugMiscOptions)))
   <> command "database"
-    (info (Database       <$> databaseCommandParser)    (progDesc (commandDesc @DatabaseCommand)))
+    (info (Database      <$> databaseCommandParser)  (progDesc (commandDesc @DatabaseCommand)))
   )

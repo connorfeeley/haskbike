@@ -85,8 +85,8 @@ migrate *ARGS:
     source ./.env.local
     {{CABAL}} run haskbike-cli -- --plain debug --enable-migrations -v --log-database
 
-visualize *ARGS:
-    {{CABAL}} v2-run --enable-profiling --profiling-detail all-functions haskbike-cli -- --plain visualize -v {{ARGS}}
+serve *ARGS:
+    {{CABAL}} v2-run --enable-profiling --profiling-detail all-functions haskbike-cli -- --plain serve -v {{ARGS}}
 
 export-rds-table TABLE:
     #!/usr/bin/env bash
