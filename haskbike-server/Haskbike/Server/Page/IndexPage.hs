@@ -32,7 +32,7 @@ instance ToHtml IndexPage where
     -- script_ [src_ ("/" <> toUrlPiece (_staticLink params) <> "/js/station-list.js"), async_ mempty] ""
     div_ [class_ "header"] $ do
       h1_ [] (toHtml "Home")
-    div_ [class_ "content content-centered pure-g"] $ do
+    div_ [class_ "content"] $ do
       div_ [class_ "pure-u-1 pure-u-md-2-3"] $ do
         contentSubhead "Get Started"
         p_ $ "Pick a station from the " <> a_ [href_ "/visualization/station-list"] "station list" <> ", then select the time range you want to view."
