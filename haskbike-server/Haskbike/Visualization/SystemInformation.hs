@@ -21,7 +21,7 @@ systemInformationProps label dataUrl timeKey =
     -- Setup the `area` mark type with its encoding and interactive features
     areaLayer  = asSpec [ mark Area  [MInterpolate StepAfter]
                         , (encoding
-                           . position X [ PTitle "Time",  PName timeKey,  PmType Temporal,      PTimeUnit (TU MonthDateHoursMinutes), PAxis [AxLabelAngle (-90)]]
+                           . position X [ PTitle "Time",  PName timeKey,  PmType Temporal,      PTimeUnit (TU YearMonthDateHoursMinutes), PAxis [AxLabelAngle (-90)]]
                            . position Y [ PTitle "Count", PName "Count", PmType Quantitative, PStack StZero ]
                            . color [ MName "Type"
                                    , MmType Nominal -- Data are also categories, but ones which have some natural order.
@@ -39,8 +39,8 @@ systemInformationProps label dataUrl timeKey =
                         ]
     lineLayer  = asSpec [ mark Line  [MInterpolate StepAfter, MStrokeWidth 5]
                         , ( encoding
-                            . position X [ PTitle "Time",  PName timeKey,  PmType Temporal,     PTimeUnit (TU MonthDateHoursMinutes), PAxis [AxLabelAngle (-90)]]
-                            . position Y [ PTitle "Station Count", PName "Station Count", PmType Quantitative, PStack StZero ]
+                            . position X [ PTitle "Time",  PName timeKey,  PmType Temporal,     PTimeUnit (TU YearMonthDateHoursMinutes), PAxis [AxLabelAngle (-90)]]
+                            . position Y [ PTitle "Station Count", PName "Station Count", PmType Quantitative ]
                             . color [ MString "orange"
                                     ]
                             . tooltips [ [TTitle "Time",  TName timeKey, TmType Temporal, TTimeUnit (TU YearMonthDate)]
