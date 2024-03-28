@@ -47,7 +47,7 @@ The content `<div>` is where all your content goes.
   line-height: 1.6em;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  /* align-items: center; */
   width: 100%;
   height: 100%;
 }
@@ -184,6 +184,7 @@ small screens.
   width: 2em;
   height: auto;
   padding: 2.1em 1.6em;
+  box-sizing: unset;
 }
 
 .menu-link:hover,

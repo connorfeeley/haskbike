@@ -59,7 +59,7 @@ instance ToHtmlComponents (StationList [(StationInformation, StationStatus)]) wh
 -- | Table displaying station information.
 toStationListTable :: Monad m => StationList [(StationInformation, StationStatus)] -> HtmlT m ()
 toStationListTable params = do
-  table_ [id_ "station-list-table", class_ "pure-table pure-table-horizontal pure-table-striped"] $ do
+  table_ [id_ "station-list-table", class_ "pure-table pure-table-horizontal pure-table-striped station-list-table"] $ do
     thead_ [] $ tr_ $ do
       th_ [id_ "station-id-col"] "ID"
       th_ [id_ "station-name-col"] "Name"
@@ -91,7 +91,9 @@ toStationListTable params = do
 -- | Table displaying station information.
 toStationEmptyFullTable :: Monad m => StationList [(StationInformation, StationStatus, EmptyFull)] -> HtmlT m ()
 toStationEmptyFullTable _ = do
-  div_ [id_ "station-list-table"] mempty
+  div_ [id_ "station-list-table-too-small", style_ "display: none"]
+    "Screen too small to display table. Rotate your device or resize your browser window."
+  div_ [id_ "station-list-table", class_ " empty-full-table"] mempty
 
 instance ToHtml (StationList [(StationInformation, StationStatus, EmptyFull)]) where
   toHtmlRaw = toHtml
