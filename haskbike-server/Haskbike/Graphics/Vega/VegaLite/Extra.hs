@@ -140,23 +140,13 @@ toHtmlWithUrls urls mopts vl =
   let spec = A.encodeToLazyText (VL.fromVL vl)
       opts = maybe "" (\o -> "," <> A.encodeToLazyText o) mopts
 
+  -- FIXME: use Lucid for this.
   in TL.unlines
-    [ "<!DOCTYPE html>"
-    , "<html>"
-    , "<head>"
-      -- versions are fixed at vega 5, vega-lite 4
-    , "  <script src=" <> vegaUrl urls <> "></script>"
-    , "  <script src=" <> vegaLiteUrl urls <> "></script>"
-    , "  <script src=" <> vegaEmbedUrl urls <> "></script>"
-    , "</head>"
-    , "<body>"
-    , "<div id=\"vis\"></div>"
+    [ "<div id=\"vis\"></div>"
     , "<script type=\"text/javascript\">"
     , "  var spec = " <> spec <> ";"
     , "  vegaEmbed(\'#vis\', spec" <> opts <> ").then(function(result) {"
     , "  // Access the Vega view instance (https://vega.github.io/vega/docs/api/view/) as result.view"
     , "  }).catch(console.error);"
     , "</script>"
-    , "</body>"
-    , "</html>"
     ]

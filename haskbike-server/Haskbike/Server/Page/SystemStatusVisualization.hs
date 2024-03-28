@@ -10,6 +10,7 @@ module Haskbike.Server.Page.SystemStatusVisualization
 
 import           Data.Default.Class
 import qualified Data.Text                                as T
+import qualified Data.Text.Lazy                           as TL
 import           Data.Time
 import           Data.Time.Extras
 
@@ -80,6 +81,11 @@ data SystemStatusVisualizationPage where
 
 instance ToHtmlComponents SystemStatusVisualizationPage where
   toMenuHeading _ = menuHeading "#visualization" "System Status"
+
+  toHead _ = do
+    script_ [src_ . TL.toStrict . vegaUrl      $ vegaSourceUrlsLocal] ("" :: String)
+    script_ [src_ . TL.toStrict . vegaLiteUrl  $ vegaSourceUrlsLocal] ("" :: String)
+    script_ [src_ . TL.toStrict . vegaEmbedUrl $ vegaSourceUrlsLocal] ("" :: String)
 
 instance ToHtml SystemStatusVisualizationPage where
   toHtmlRaw = toHtml

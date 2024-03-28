@@ -7,6 +7,7 @@ module Haskbike.Server.Page.SystemInfoVisualization
      ) where
 
 
+import qualified Data.Text.Lazy                           as TL
 import           Data.Time
 import           Data.Time.Extras
 
@@ -32,6 +33,11 @@ data SystemInfoVisualizationPage where
 
 instance ToHtmlComponents SystemInfoVisualizationPage where
   toMenuHeading _ = menuHeading "#system-information" "System Info"
+
+  toHead _ = do
+    script_ [src_ . TL.toStrict . vegaUrl      $ vegaSourceUrlsLocal] ("" :: String)
+    script_ [src_ . TL.toStrict . vegaLiteUrl  $ vegaSourceUrlsLocal] ("" :: String)
+    script_ [src_ . TL.toStrict . vegaEmbedUrl $ vegaSourceUrlsLocal] ("" :: String)
 
 instance ToHtml SystemInfoVisualizationPage where
   toHtmlRaw = toHtml

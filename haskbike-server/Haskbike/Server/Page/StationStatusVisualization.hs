@@ -9,6 +9,7 @@ module Haskbike.Server.Page.StationStatusVisualization
 
 import           Data.Maybe                                  ( catMaybes )
 import qualified Data.Text                                   as T
+import qualified Data.Text.Lazy                              as TL
 import           Data.Time
 import           Data.Time.Extras
 
@@ -38,6 +39,11 @@ data StationStatusVisualizationPage where
 
 instance ToHtmlComponents StationStatusVisualizationPage where
   toMenuHeading _ = menuHeading "#visualization" "Available Bikes"
+
+  toHead _ = do
+    script_ [src_ . TL.toStrict . vegaUrl      $ vegaSourceUrlsLocal] ("" :: String)
+    script_ [src_ . TL.toStrict . vegaLiteUrl  $ vegaSourceUrlsLocal] ("" :: String)
+    script_ [src_ . TL.toStrict . vegaEmbedUrl $ vegaSourceUrlsLocal] ("" :: String)
 
 instance ToHtml StationStatusVisualizationPage where
   toHtmlRaw = toHtml
