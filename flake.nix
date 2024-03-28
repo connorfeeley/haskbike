@@ -162,7 +162,7 @@
 
             devShell =
               let
-                postgres = pkgs.postgresql_16.withPackages (ps: with ps; [ pg_partman postgis timescaledb ]);
+                postgres = lib.hiPrio (pkgs.postgresql_16.withPackages (ps: with ps; [ pg_partman postgis timescaledb ]));
               in
               {
                 # Enabled by default
@@ -218,6 +218,12 @@
                 } // config.treefmt.build.programs;
 
                 hlsCheck.enable = false;
+
+                # Extra arguments to pass to mkShell.
+                mkShellArgs = {
+                  inputsFrom = [ postgres ];
+                  nativeBuildInputs = [ postgres ];
+                };
               };
           };
 
