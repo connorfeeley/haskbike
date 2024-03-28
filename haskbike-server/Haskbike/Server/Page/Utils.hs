@@ -45,6 +45,8 @@ makeHeadElements staticPath statsPath = do
 
   meta_ [name_ "viewport", content_ "width=device-width, initial-scale=1"]
 
+  meta_ [name_ "description", content_ "Toronto Bike Share data explorer."]
+
   -- Pure.CSS
   link_ [rel_ "stylesheet", href_ (staticPath <> "/css/pure/pure-min@3.0.0.css"), integrity_ "sha384-X38yfunGUhNzHpBaEBsWLO+A0HDYOQi8ufWDkZ0k9e0eXz/tH3II7uKZ9msv++Ls", crossorigin_ "anonymous"]
   -- link_ [rel_ "stylesheet", href_ "https://cdn.jsdelivr.net/npm/purecss@3.0.0/build/pure-min.css", integrity_ "sha384-X38yfunGUhNzHpBaEBsWLO+A0HDYOQi8ufWDkZ0k9e0eXz/tH3II7uKZ9msv++Ls", crossorigin_ "anonymous"]
