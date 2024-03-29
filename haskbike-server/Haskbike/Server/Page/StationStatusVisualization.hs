@@ -38,7 +38,8 @@ data StationStatusVisualizationPage where
                                     } -> StationStatusVisualizationPage
 
 instance ToHtmlComponents StationStatusVisualizationPage where
-  toMenuHeading _ = menuHeading "#visualization" "Available Bikes"
+  pageAnchor _ = "#available-bikes"
+  pageName   _ = "Available Bikes"
 
   toHead _ = do
     script_ [src_ . TL.toStrict . vegaUrl      $ vegaSourceUrlsLocal, defer_ mempty] ("" :: String)
@@ -50,7 +51,7 @@ instance ToHtml StationStatusVisualizationPage where
   toHtml params = do
     -- Injected into 'SideMenu'
     div_ [class_ "header"] $ do
-      h1_ [] (toHtml (pageTitle (_statusVisPageStationId params) (_infoName inf)))
+      h1_ [] (toHtml (mkPageTitle (_statusVisPageStationId params) (_infoName inf)))
       h2_ [] ((toHtml . dateHeader) times')
     br_ []
     div_ [class_ "content"] $ do
@@ -83,8 +84,8 @@ instance ToHtml StationStatusVisualizationPage where
 
       inf = _statusVisPageStationInfo params
 
-      pageTitle :: Int -> T.Text -> T.Text
-      pageTitle a b = "Station #" <> (T.pack . show) a <> ": "<>b
+      mkPageTitle :: Int -> T.Text -> T.Text
+      mkPageTitle a b = "Station #" <> (T.pack . show) a <> ": "<>b
 
       capacityHeader :: Monad m => HtmlT m ()
       capacityHeader = div_ $ do

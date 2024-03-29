@@ -91,7 +91,8 @@ data VisualizationAPI mode where
 
 -- * Handlers.
 
-visualizationHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m, MonadError ServerError m) => VisualizationAPI (AsServerT m)
+visualizationHandler :: ( HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m, MonadError ServerError m )
+                     => VisualizationAPI (AsServerT m)
 visualizationHandler = VisualizationAPI
   { pageForStation       = stationStatusVisualizationPage
   , systemStatus         = systemStatusVisualizationPage
@@ -102,7 +103,8 @@ visualizationHandler = VisualizationAPI
   }
 
 -- | Create the station status visualization page record.
-stationStatusVisualizationPage :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m, MonadError ServerError m) => Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> m (PureSideMenu StationStatusVisualizationPage)
+stationStatusVisualizationPage :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m, MonadError ServerError m)
+                               => Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> m (PureSideMenu StationStatusVisualizationPage)
 stationStatusVisualizationPage (Just stationId) startTime endTime = do
   tz <- getTz
   currentUtc <- liftIO getCurrentTime

@@ -6,7 +6,8 @@
 -- | This module defines the data types used to render the station status visualization page.
 
 module Haskbike.Server.Page.List.StationList
-     ( StationList (..)
+     ( HasStationListPage (..)
+     , StationList (..)
      ) where
 
 import           Data.Time
@@ -44,16 +45,11 @@ instance ToHtml (StationList [(StationInformation, StationStatus)]) where
       toHtml (StationListForm (_stationListInputs params))
       toHtml (toStationListTable params)
 
-instance ToHtmlComponents (StationList [(StationInformation, StationStatus)]) where
-  toMenuHeading _ = menuHeading "#station-list" "Station List"
-  toHead params = do
-    -- GridJS
-    script_ [src_ "https://cdn.jsdelivr.net/npm/gridjs/dist/gridjs.umd.js", defer_ mempty] ""
-    stylesheet_ "https://cdn.jsdelivr.net/npm/gridjs/dist/theme/mermaid.min.css" [defer_ mempty]
-
-    -- Station list JavaScript.
-    script_ [src_ ("/" <> toUrlPiece (_staticLink params) <> "/js/station-list-table.js"), defer_ mempty] ""
-    script_ [src_ ("/" <> toUrlPiece (_staticLink params) <> "/js/station-list.js"), defer_ mempty] ""
+instance HasStationListPage [(StationInformation, StationStatus)] =>
+         ToHtmlComponents (StationList [(StationInformation, StationStatus)]) where
+  pageAnchor _ = "#station-list"
+  pageName   _ = "Station List"
+  toHead       = pageHead
 
 
 -- | Table displaying station info, status, etc.
@@ -75,14 +71,27 @@ instance ToHtml (StationList [(StationInformation, StationStatus, EmptyFull)]) w
       toHtml (StationListForm (_stationListInputs params))
       toHtml (toStationListTable params)
 
-instance ToHtmlComponents (StationList [(StationInformation, StationStatus, EmptyFull)]) where
-  toMenuHeading _ = menuHeading "#station-occupancy" "Station Occupancy"
-  toHead params = do
+class HasStationListPage a where
+  pageScript :: Monad m => StationList a -> HtmlT m ()
 
+  pageHead :: Monad m => StationList a -> HtmlT m ()
+  pageHead page = do
     -- GridJS
     script_ [src_ "https://cdn.jsdelivr.net/npm/gridjs/dist/gridjs.umd.js", defer_ mempty] ""
     stylesheet_ "https://cdn.jsdelivr.net/npm/gridjs/dist/theme/mermaid.min.css" [defer_ mempty]
 
     -- Station list JavaScript.
-    script_ [src_ ("/" <> toUrlPiece (_staticLink params) <> "/js/station-list-table.js"), defer_ mempty] ""
-    script_ [src_ ("/" <> toUrlPiece (_staticLink params) <> "/js/station-occupancy.js"), defer_ mempty] ""
+    script_ [src_ ("/" <> toUrlPiece (_staticLink page) <> "/js/station-list-table.js"), defer_ mempty] ""
+    pageScript page
+
+instance HasStationListPage [(StationInformation, StationStatus)] where
+  pageScript page = script_ [src_ ("/" <> toUrlPiece (_staticLink page) <> "/js/station-list.js"), defer_ mempty] ""
+
+instance HasStationListPage [(StationInformation, StationStatus, EmptyFull)] where
+  pageScript page = script_ [src_ ("/" <> toUrlPiece (_staticLink page) <> "/js/station-occupancy.js"), defer_ mempty] ""
+
+instance HasStationListPage [(StationInformation, StationStatus, EmptyFull)] =>
+         ToHtmlComponents (StationList [(StationInformation, StationStatus, EmptyFull)]) where
+  pageAnchor _ = "#station-occupancy"
+  pageName   _ = "Station Occupancy"
+  toHead       = pageHead

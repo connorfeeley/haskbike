@@ -25,7 +25,8 @@ data PerformanceCSV where
   deriving (Show)
 
 instance ToHtmlComponents PerformanceCSV where
-  toMenuHeading _ = menuHeading "#performance-csv" "Performance Data (CSV)"
+  pageAnchor _ = "#performance-csv"
+  pageName   _ = "Performance Data (CSV)"
 
 instance ToHtml PerformanceCSV where
   toHtmlRaw = toHtml

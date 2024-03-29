@@ -80,8 +80,8 @@ data SystemStatusVisualizationPage where
   deriving (Show)
 
 instance ToHtmlComponents SystemStatusVisualizationPage where
-  toMenuHeading _ = menuHeading "#visualization" "System Status"
-
+  pageAnchor _ = "#system-status"
+  pageName   _ = "System Status"
   toHead _ = do
     script_ [src_ . TL.toStrict . vegaUrl      $ vegaSourceUrlsLocal, defer_ mempty] ("" :: String)
     script_ [src_ . TL.toStrict . vegaLiteUrl  $ vegaSourceUrlsLocal, defer_ mempty] ("" :: String)

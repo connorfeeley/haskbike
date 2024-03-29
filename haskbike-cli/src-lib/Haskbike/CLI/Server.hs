@@ -18,7 +18,7 @@ import           UnliftIO             ( liftIO )
 
 
 -- | Dispatch CLI arguments to the visualization server.
-dispatchServer :: (HasEnv (Env AppM) m)
+dispatchServer :: ( HasEnv (Env AppM) m )
                => ServerOptions -> m ()
 dispatchServer options = do
   env <- ask

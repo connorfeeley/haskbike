@@ -21,7 +21,7 @@ import           Haskbike.Server.Routes
 import           Haskbike.ServerEnv
 
 import           Network.Wai.Handler.Warp    as Warp
-import           Network.Wai.Middleware.Gzip ( GzipFiles (..), GzipSettings (..), def, defaultGzipSettings, gzip )
+import           Network.Wai.Middleware.Gzip ( GzipFiles (..), GzipSettings (..), defaultGzipSettings, gzip )
 
 import           Prelude                     ()
 import           Prelude.Compat
