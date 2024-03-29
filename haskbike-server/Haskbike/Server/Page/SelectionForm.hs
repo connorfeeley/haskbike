@@ -200,7 +200,7 @@ instance ToHtml SelectionFormInput where
 
 -- | A form to select various 'SelectionFormInput' parameters.
 data SelectionForm where
-  SelectionForm :: { selectionFormLegend :: T.Text
+  SelectionForm :: { selectionFormLegend :: Maybe T.Text
                    , selectionFormInputs :: [SelectionFormInput]
                    } -> SelectionForm
 
@@ -214,8 +214,8 @@ instance ToHtml SelectionForm where
             forM_ inputs $
                 div_ [class_ inputWrapperClass] . toHtml
     where
-      toLegend ""  = mempty
-      toLegend leg = legend_ $ h3_ (toHtml leg)
+      toLegend Nothing    = mempty
+      toLegend (Just leg) = legend_ $ h3_ (toHtml leg)
       inputWrapperClass = T.pack ("station-list-input-column pure-u-1-" <> (show . length) inputs)
 
 

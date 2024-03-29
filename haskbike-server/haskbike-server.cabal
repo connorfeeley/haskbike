@@ -96,6 +96,7 @@ library
                     , Haskbike.Server.ComponentsAPI
                     , Haskbike.Server.Data.StationStatusVisualization
                     , Haskbike.Server.Data.SystemInformationVisualization
+                    , Haskbike.Server.Data.StationList
                     , Haskbike.Server.Data.EmptyFullData
                     , Haskbike.Server.Data.FactorsCSV
                     , Haskbike.Server.DataAPI

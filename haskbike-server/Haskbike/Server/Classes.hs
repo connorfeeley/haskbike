@@ -13,9 +13,18 @@ import           Lucid
 -- | Can be converted to HTML.
 class ToHtmlComponents a where
   toMenuHeading :: Monad m => a -> HtmlT m ()
+  toMenuHeading p = menuHeading (pageAnchor p) (pageName p)
 
   toHead        :: Monad m => a -> HtmlT m ()
   toHead _      = mempty
+
+  -- | Page name (used in sidebar)
+  pageName      :: a -> Text
+  -- | Page anchor link (used in sidebar)
+  pageAnchor    :: a -> Text
+  -- | Page title (used on page itself). Defaults to 'pageName'.
+  pageTitle     :: a -> Text
+  pageTitle     = pageName
 
 -- -- | @since 2.9.8
 -- instance (a ~ (), m ~ Identity) => ToHtmlComponents (HtmlT m a) where

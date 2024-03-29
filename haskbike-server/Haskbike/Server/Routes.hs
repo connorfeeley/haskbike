@@ -51,7 +51,8 @@ type BikeShareExplorerAPI = NamedRoutes API
 -- routesLinks = allFieldLinks
 
 -- | The API handlers.
-server :: (WithServerEnv m, WithEnv (ServerEnv ServerAppM) m) => API (AsServerT m)
+server :: ( WithServerEnv m, WithEnv (ServerEnv ServerAppM) m )
+       => API (AsServerT m)
 server = API { debugApi         = debugApiHandler
              , homePage         = homePageHandler
              , dataApi          = statusHandler

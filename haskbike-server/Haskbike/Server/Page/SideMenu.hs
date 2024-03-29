@@ -65,7 +65,7 @@ renderMenu params =
       ul_ [class_ "pure-menu-list"] $ do
         navLink "/" "Home"
         navLink "/visualization/station-list" "Station List"
-        navLink "/visualization/station-empty-full-list" "Station Empty/Full List"
+        navLink "/visualization/station-occupancy" "Station Occupancy"
         navLink "/visualization/system-status" "System Status"
         navLink "/visualization/system-information" "System Information"
         navLink "/visualization/system-status/performance/csv" "Performance Data (CSV)"

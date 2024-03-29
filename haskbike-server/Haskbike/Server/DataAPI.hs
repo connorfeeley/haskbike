@@ -25,7 +25,7 @@ import           Database.Beam
 
 import           Haskbike.API.VehicleType
 import           Haskbike.Database.EventCounts
-import           Haskbike.Database.Expressions                       ( queryLatestStatuses )
+import           Haskbike.Database.Expressions                       ( queryLatestStatuses, queryStationBeforeExpr )
 import           Haskbike.Database.Operations.Dockings
 import           Haskbike.Database.Operations.Factors
 import           Haskbike.Database.Operations.StationEmpty
@@ -33,6 +33,7 @@ import           Haskbike.Database.StatusVariationQuery
 import           Haskbike.Server.Components.PerformanceData
 import           Haskbike.Server.Data.EmptyFullData
 import           Haskbike.Server.Data.FactorsCSV
+import           Haskbike.Server.Data.StationList
 import           Haskbike.Server.Data.StationStatusVisualization
 import           Haskbike.Server.Data.SystemInformationVisualization
 import           Haskbike.Server.StatusDataParams
@@ -95,9 +96,14 @@ data DataAPI mode where
           :> QueryParam "start-time" LocalTime
           :> QueryParam "end-time" LocalTime
           :> Get '[JSON] [ChargingEvent]
+    , stationListData :: mode :-
+      "data" :>
+        "station-list"
+          :> QueryParam "time"     LocalTime
+          :> Get '[JSON] [StationListRecord]
     , emptyFullData :: mode :-
       "data" :>
-        "empty-full"
+        "station-occupancy"
           :> QueryParam "start-time"   LocalTime
           :> QueryParam "end-time"     LocalTime
           :> Get '[JSON] [EmptyFullRecord]
@@ -115,6 +121,7 @@ statusHandler =  DataAPI { dataForStation       = stationStatusData
                          , performanceCsv       = performanceCsvHandler
                          , dockingEventsData    = handleDockingEventsData
                          , chargingEventsData   = handleChargingEventsData
+                         , stationListData      = handleStationListData
                          , emptyFullData        = handleEmptyFullData
                          }
 
@@ -227,7 +234,23 @@ handleChargingEventsData stationId startTime endTime = do
   pure $ concat result
 
 
-handleEmptyFullData :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m) => Maybe LocalTime -> Maybe LocalTime -> m [EmptyFullRecord]
+handleStationListData :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m)
+                      => Maybe LocalTime -> m [StationListRecord]
+handleStationListData latestTime = do
+  tz <- getTz
+  currentUtc <- liftIO getCurrentTime
+
+  logInfo $ "Rendering station list data for time [" <> tshow latestTime <> "]"
+
+  latest <- withPostgres . runSelectReturningList . select $ queryStationBeforeExpr (maybe currentUtc (localTimeToUTC tz) latestTime)
+
+  pure $ map (uncurry StationListRecord) latest
+  where
+    tshow = T.pack . show
+
+
+handleEmptyFullData :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m)
+                    => Maybe LocalTime -> Maybe LocalTime -> m [EmptyFullRecord]
 handleEmptyFullData start end = do
   tz <- getTz
   currentUtc <- liftIO getCurrentTime

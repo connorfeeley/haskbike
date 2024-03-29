@@ -66,4 +66,5 @@ instance ToHtml IndexPage where
           a_ [href_ ("mailto:" <> (T.pack . _contactEmail) params)] "Over e-mail"
 
 instance ToHtmlComponents IndexPage where
-  toMenuHeading _ = menuHeading "/" "Home"
+  pageAnchor _ = "/"
+  pageName   _ = "Home"

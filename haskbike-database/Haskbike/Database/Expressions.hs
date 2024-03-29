@@ -21,6 +21,7 @@ module Haskbike.Database.Expressions
      , queryLatestStatusLookup
      , queryLatestStatuses
      , queryLatestSystemInfo
+     , queryStationBeforeExpr
      , queryStationIdExpr
      , queryStationIdLikeExpr
      , queryStationStatusExpr
@@ -188,9 +189,24 @@ queryLatestStatusBetweenExpr earliestTime latestTime = do
   join_'
     (bikeshareDb ^. bikeshareStationStatus)
     (\status ->
+       sqlBool_ (between_ (status ^. statusLastReported) (val_ earliestTime) (val_ latestTime)) &&?.
        (stationId ==?. (_unInformationStationId . _statusInfoId . _statusCommon) status            ) &&?.
        (maxTime ==?. just_ (status ^. statusLastReported))
     )
+
+
+-- | Expression to query the latest statuses not later than a given time for each station.
+queryStationBeforeExpr :: UTCTime
+                       -> Q Postgres BikeshareDb s (StationInformationT (QGenExpr QValueContext Postgres s), StationStatusT (QExpr Postgres s))
+queryStationBeforeExpr latestTime = do
+  -- Get latest statuses before the given time (excluding status records older than a day prior).
+  status <- queryLatestStatusBetweenExpr (addUTCTime (-60*60*24) latestTime) latestTime
+
+  -- Query all station information.
+  info   <- -- lateral_ status $ \status' -> do
+              related_ (bikeshareDb ^. bikeshareStationInformation) ((_statusInfoId . _statusCommon) status)
+  guard_' ((_statusInfoId . _statusCommon) status `references_'` info)
+  pure (info, status)
 
 mkTime :: UTCTime -> QGenExpr ctxt Postgres s b
 mkTime  = (`cast_` (DataType $ timestampType Nothing True)) . val_

@@ -33,7 +33,6 @@ import           Haskbike.Server.Data.EmptyFullData
 import           Haskbike.Server.DataAPI
 import           Haskbike.Server.Page.List.StationList
 import           Haskbike.Server.Page.PerformanceCSV
-import           Haskbike.Server.Page.SelectionForm              ( SelectionFormInput (..), StationListFilter (..) )
 import           Haskbike.Server.Page.SideMenu
 import           Haskbike.Server.Page.StationStatusVisualization
 import           Haskbike.Server.Page.SystemInfoVisualization
@@ -66,11 +65,11 @@ data VisualizationAPI mode where
     , stationList :: mode :-
         "visualization" :>
           "station-list"
-          :> QueryParam "station-type" StationListFilter
+          :> QueryParam "end-time"     LocalTime
           :> Get '[HTML] (PureSideMenu (StationList [(StationInformation, StationStatus)]))
     , stationEmptyFullList :: mode :-
         "visualization" :>
-          "station-empty-full-list"
+          "station-occupancy"
           :> QueryParam "start-time"   LocalTime
           :> QueryParam "end-time"     LocalTime
           :> Get '[HTML] (PureSideMenu (StationList [(StationInformation, StationStatus, EmptyFull)]))
@@ -92,7 +91,8 @@ data VisualizationAPI mode where
 
 -- * Handlers.
 
-visualizationHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m, MonadError ServerError m) => VisualizationAPI (AsServerT m)
+visualizationHandler :: ( HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m, MonadError ServerError m )
+                     => VisualizationAPI (AsServerT m)
 visualizationHandler = VisualizationAPI
   { pageForStation       = stationStatusVisualizationPage
   , systemStatus         = systemStatusVisualizationPage
@@ -103,7 +103,8 @@ visualizationHandler = VisualizationAPI
   }
 
 -- | Create the station status visualization page record.
-stationStatusVisualizationPage :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m, MonadError ServerError m) => Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> m (PureSideMenu StationStatusVisualizationPage)
+stationStatusVisualizationPage :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m, MonadError ServerError m)
+                               => Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> m (PureSideMenu StationStatusVisualizationPage)
 stationStatusVisualizationPage (Just stationId) startTime endTime = do
   tz <- getTz
   currentUtc <- liftIO getCurrentTime
@@ -161,11 +162,9 @@ systemStatusVisualizationPage startTime endTime = do
                                   }
 
 -- | Display a list of stations.
-stationListPageHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m) => Maybe StationListFilter -> m (PureSideMenu (StationList [(StationInformation, StationStatus)]))
-stationListPageHandler stations  = stationListPage (defaultStationFilter stations)
-
-stationListPage :: (HasEnv env m, MonadIO m, MonadCatch m) => StationListFilter -> m (PureSideMenu (StationList [(StationInformation, StationStatus)]))
-stationListPage filterSelection = do
+stationListPageHandler :: (HasEnv env m, MonadIO m, MonadCatch m)
+                       => Maybe LocalTime -> m (PureSideMenu (StationList [(StationInformation, StationStatus)]))
+stationListPageHandler _end = do
   logInfo "Rendering station list"
 
   latest <- withPostgres $ runSelectReturningList $ select queryLatestStatuses
@@ -176,18 +175,13 @@ stationListPage filterSelection = do
     { _stationList           = sorted
     , _stationTimeRange      = (Nothing, Nothing)
     , _staticLink            = fieldLink staticApi
-    , _stationListInputs     = [ StationTypeInput filterSelection
-                               , SearchInput "station-filter-input" "Type a station name, ID, or address"
-                               ]
+    , _stationListInputs     = []
     , _visualizationPageLink = fieldLink pageForStation
     }
 
 -- | Display a list of stations with their empty/full status.
-defaultStationFilter :: Maybe StationListFilter -> StationListFilter
-defaultStationFilter (Just stations) = stations
-defaultStationFilter Nothing         = AllStations
-
-stationEmptyFullListPage :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m) => Maybe LocalTime -> Maybe LocalTime -> m (PureSideMenu (StationList [(StationInformation, StationStatus, EmptyFull)]))
+stationEmptyFullListPage :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m)
+                         => Maybe LocalTime -> Maybe LocalTime -> m (PureSideMenu (StationList [(StationInformation, StationStatus, EmptyFull)]))
 stationEmptyFullListPage start end = do
   logInfo $ "Rendering station empty/full list for time [" <> tshow start <> " - " <> tshow end <> "]"
 

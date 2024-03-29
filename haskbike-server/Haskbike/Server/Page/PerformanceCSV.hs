@@ -25,7 +25,8 @@ data PerformanceCSV where
   deriving (Show)
 
 instance ToHtmlComponents PerformanceCSV where
-  toMenuHeading _ = menuHeading "#performance-csv" "Performance Data (CSV)"
+  pageAnchor _ = "#performance-csv"
+  pageName   _ = "Performance Data (CSV)"
 
 instance ToHtml PerformanceCSV where
   toHtmlRaw = toHtml
@@ -42,7 +43,7 @@ instance ToHtml PerformanceCSV where
       div_ [class_ "pure-g", style_ "text-align: center"] mempty
 
       -- Selection form
-      toHtml (SelectionForm "Time Range Selection"
+      toHtml (SelectionForm (Just "Time Range Selection")
               [ TimeInput TimeInputStart (Just earliest)
               , TimeInput TimeInputEnd   (Just latest)
               , SubmitInput "Download CSV"

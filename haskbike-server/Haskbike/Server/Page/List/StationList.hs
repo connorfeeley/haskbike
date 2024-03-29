@@ -1,17 +1,16 @@
 {-# OPTIONS_GHC -Wno-type-defaults #-}
 {-# OPTIONS_GHC -Wno-unused-local-binds #-}
-{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingStrategies   #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 -- | This module defines the data types used to render the station status visualization page.
 
 module Haskbike.Server.Page.List.StationList
-     ( StationList (..)
+     ( HasStationListPage (..)
+     , StationList (..)
      ) where
 
-import           Control.Lens
-
-import           Data.Maybe                                  ( fromMaybe )
 import           Data.Time
 
 import           Haskbike.Database.Tables.StationInformation
@@ -28,9 +27,11 @@ import           Prelude                                     hiding ( null )
 
 import           Servant
 
-import           TextShow
 
+-- - ---------------------------------------------------------------------------
+-- * Common type, type class, and instances.
 
+-- | Parametric station list type.
 data StationList a where
   StationList :: { _stationList           :: a
                  , _stationTimeRange      :: (Maybe LocalTime, Maybe LocalTime)
@@ -40,77 +41,63 @@ data StationList a where
                  } -> StationList a
 
 
-instance ToHtml (StationList [(StationInformation, StationStatus)]) where
-  toHtmlRaw = toHtml
-  toHtml params = do
-    -- Station list JavaScript
-    script_ [src_ ("/" <> toUrlPiece (_staticLink params) <> "/js/station-list.js"), defer_ mempty] ""
+-- | Type class for pages that display a list of stations.
+class HasStationListPage a where
+  pageScript :: Monad m => StationList a -> HtmlT m ()
 
-    div_ [class_ "header"] $ do
-      h1_ [] (toHtml "Station List")
-    div_ [class_ "content"] $ do
-      toHtml (StationListForm (_stationListInputs params))
-      toHtml (toStationListTable params)
-
-instance ToHtmlComponents (StationList [(StationInformation, StationStatus)]) where
-  toMenuHeading _ = menuHeading "#station-list" "Station List"
-
-
--- | Table displaying station information.
-toStationListTable :: Monad m => StationList [(StationInformation, StationStatus)] -> HtmlT m ()
-toStationListTable params = do
-  table_ [id_ "station-list-table", class_ "pure-table pure-table-horizontal pure-table-striped station-list-table"] $ do
-    thead_ [] $ tr_ $ do
-      th_ [id_ "station-id-col"] "ID"
-      th_ [id_ "station-name-col"] "Name"
-      th_ [id_ "station-type-col",         style_ "text-align: center"] "Type"
-      th_ [id_ "station-capacity-col",     style_ "text-align: center"] "Capacity"
-      th_ [id_ "mechanical-available-col", style_ "text-align: center"] "# Mechanical"
-      th_ [id_ "efit-available-col",       style_ "text-align: center"] "# E-Fit"
-      th_ [id_ "efit-g5-available-col",    style_ "text-align: center"] "# E-Fit G5"
-      th_ [id_ "bikes-disabled-col",       style_ "text-align: center"] "# Bikes Disabled"
-      th_ [id_ "docks-disabled-col",       style_ "text-align: center"] "# Docks Disabled"
-      th_ [id_ "station-address-col"] "Address"
-    tbody_ [] $ do
-      mapM_ (\(info, status) -> tr_ $ do
-              td_ [columnId_ "station-id-col"] (stationIdLink (_visualizationPageLink params) info Nothing Nothing)
-              td_ [columnId_ "station-name-col"] (toHtml (_infoName info))
-              td_ [columnId_ "station-type-col",         style_ "text-align: center"] (stationTypeText info)
-              td_ [columnId_ "station-capacity-col",     style_ "text-align: center"] (toHtml (showt (_infoCapacity info)))
-              td_ [columnId_ "mechanical-available-col", style_ "text-align: center"] (toHtml (showt (status ^. vehicleTypesAvailableIconic)))
-              td_ [columnId_ "efit-available-col",       style_ "text-align: center"] (toHtml (showt (status ^. vehicleTypesAvailableEfit)))
-              td_ [columnId_ "efit-g5-available-col",    style_ "text-align: center"] (toHtml (showt (status ^. vehicleTypesAvailableEfitG5)))
-              td_ [columnId_ "bikes-disabled-col",       style_ "text-align: center"] (toHtml (showt (status ^. statusNumBikesDisabled)))
-              td_ [columnId_ "docks-disabled-col",       style_ "text-align: center"] (toHtml (showt (status ^. statusNumDocksDisabled)))
-              td_ [columnId_ "station-address-col"] (toHtml (fromMaybe "" (_infoAddress info)))
-            ) (_stationList params)
-
-
--- * Station empty/full list.
-
--- | Table displaying station information.
-toStationEmptyFullTable :: Monad m => StationList [(StationInformation, StationStatus, EmptyFull)] -> HtmlT m ()
-toStationEmptyFullTable _ = do
-  div_ [id_ "station-list-table-too-small", style_ "display: none"]
-    "Screen too small to display table. Rotate your device or resize your browser window."
-  div_ [id_ "station-list-table", class_ " empty-full-table"] mempty
-
-instance ToHtml (StationList [(StationInformation, StationStatus, EmptyFull)]) where
-  toHtmlRaw = toHtml
-  toHtml params = do
-    div_ [class_ "header"] $ do
-      h1_ [] (toHtml "Station Empty/Full List")
-    div_ [class_ "content"] $ do
-      toHtml (StationListForm (_stationListInputs params))
-      toHtml (toStationEmptyFullTable params)
-
-instance ToHtmlComponents (StationList [(StationInformation, StationStatus, EmptyFull)]) where
-  toMenuHeading _ = menuHeading "#station-empty-full" "Station Empty/Full"
-  toHead params = do
-
+  pageHead :: Monad m => StationList a -> HtmlT m ()
+  pageHead page = do
     -- GridJS
     script_ [src_ "https://cdn.jsdelivr.net/npm/gridjs/dist/gridjs.umd.js", defer_ mempty] ""
     stylesheet_ "https://cdn.jsdelivr.net/npm/gridjs/dist/theme/mermaid.min.css" [defer_ mempty]
 
     -- Station list JavaScript.
-    script_ [src_ ("/" <> toUrlPiece (_staticLink params) <> "/js/station-empty-full-list.js"), defer_ mempty] ""
+    script_ [src_ ("/" <> toUrlPiece (_staticLink page) <> "/js/station-list-table.js"), defer_ mempty] ""
+    pageScript page
+
+
+-- | Define instance used by both regular station list and station occupancy list.
+instance ToHtmlComponents (StationList a) => ToHtml (StationList a) where
+  toHtmlRaw = toHtml
+  toHtml params = do
+    div_ [class_ "header"] $ do
+      h1_ [] (toHtml (pageTitle params))
+    div_ [class_ "content"] $ do
+      toHtml (StationListForm Nothing (_stationListInputs params))
+      toHtml (toStationListTable params)
+
+
+-- | Table displaying station info, status, etc. Rendered using GridJS.
+toStationListTable :: (ToHtmlComponents (StationList a), Monad m)
+                   => StationList a -> HtmlT m ()
+toStationListTable _ = do
+  div_ [id_ "station-list-table-too-small", style_ "display: none"]
+    "Screen too small to display table. Rotate your device or resize your browser window."
+  div_ [id_ "station-list-table", class_ "station-list-table"] mempty
+
+
+-- - ---------------------------------------------------------------------------
+-- * Regular station list instances.
+
+instance HasStationListPage [(StationInformation, StationStatus)] where
+  pageScript page = script_ [src_ ("/" <> toUrlPiece (_staticLink page) <> "/js/station-list.js"), defer_ mempty] ""
+
+instance HasStationListPage [(StationInformation, StationStatus)] =>
+         ToHtmlComponents (StationList [(StationInformation, StationStatus)]) where
+  pageAnchor _ = "#station-list"
+  pageName   _ = "Station List"
+  toHead       = pageHead
+
+
+-- - ---------------------------------------------------------------------------
+-- * Station occupancy list instances.
+
+instance HasStationListPage [(StationInformation, StationStatus, EmptyFull)] where
+  pageScript page = script_ [src_ ("/" <> toUrlPiece (_staticLink page) <> "/js/station-occupancy.js"), defer_ mempty] ""
+
+instance HasStationListPage [(StationInformation, StationStatus, EmptyFull)] =>
+         ToHtmlComponents (StationList [(StationInformation, StationStatus, EmptyFull)]) where
+  pageAnchor _ = "#station-occupancy"
+  pageName   _ = "Station Occupancy"
+  pageTitle  _ = "Station List with Occupancy Time"
+  toHead       = pageHead
