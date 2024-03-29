@@ -136,7 +136,7 @@ toHtmlWithUrls ::
   -> VL.VegaLite
   -- ^ The Vega-Lite specification to display.
   -> TL.Text
-toHtmlWithUrls urls mopts vl =
+toHtmlWithUrls _urls mopts vl =
   let spec = A.encodeToLazyText (VL.fromVL vl)
       opts = maybe "" (\o -> "," <> A.encodeToLazyText o) mopts
 
@@ -144,9 +144,13 @@ toHtmlWithUrls urls mopts vl =
   in TL.unlines
     [ "<div id=\"vis\"></div>"
     , "<script type=\"text/javascript\">"
-    , "  var spec = " <> spec <> ";"
-    , "  vegaEmbed(\'#vis\', spec" <> opts <> ").then(function(result) {"
-    , "  // Access the Vega view instance (https://vega.github.io/vega/docs/api/view/) as result.view"
-    , "  }).catch(console.error);"
+    , "  window.addEventListener('DOMContentLoaded', function() {"
+    , "  (function($) {"
+    , "    var spec = " <> spec <> ";"
+    , "    vegaEmbed(\'#vis\', spec" <> opts <> ").then(function(result) {"
+    , "    // Access the Vega view instance (https://vega.github.io/vega/docs/api/view/) as result.view"
+    , "    }).catch(console.error);"
+    , "  })();"
+    , "});"
     , "</script>"
     ]
