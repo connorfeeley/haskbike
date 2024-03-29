@@ -1,49 +1,42 @@
-// This function converts a duration string into seconds.
-function parseDuration(durationString) {
-  // Define regular expressions for days, hours, minutes, and seconds.
-  const dayRegex = /(\d+)(d)/;
-  const hourRegex = /(\d+)(h)/;
-  const minuteRegex = /(\d+)(m)/;
-  const secondRegex = /(\d+)(s)/;
+// Convert a string representing seconds to the shortest representation of 'DD:HH:MM:SS'.
+String.prototype.toDDHHMMSS = function () {
+    var sec_num = parseInt(this, 10);
+    var days = Math.floor(sec_num / (3600 * 24));
+    var hours = Math.floor((sec_num - (days * 3600 * 24)) / 3600);
+    var minutes = Math.floor((sec_num - (days * 3600 * 24) - (hours * 3600)) / 60);
+    var seconds = sec_num - (days * 3600 * 24) - (hours * 3600) - (minutes * 60);
 
-  // Extract each unit from the duration string.
-  const days =
-    durationString.match(dayRegex) != null
-      ? parseInt(durationString.match(dayRegex)[1])
-      : 0;
-  const hours =
-    durationString.match(hourRegex) != null
-      ? parseInt(durationString.match(hourRegex)[1])
-      : 0;
-  const minutes =
-    durationString.match(minuteRegex) != null
-      ? parseInt(durationString.match(minuteRegex)[1])
-      : 0;
-  const seconds =
-    durationString.match(secondRegex) != null
-      ? parseInt(durationString.match(secondRegex)[1])
-      : 0;
+    if (days < 10) {days = "0" + days;}
+    if (hours < 10) {hours = "0" + hours;}
+    if (minutes < 10) {minutes = "0" + minutes;}
+    if (seconds < 10) {seconds = "0" + seconds;}
 
-  // Compute the total duration in seconds.
-  const totalSeconds = seconds + minutes * 60 + hours * 3600 + days * 86400;
-
-  // Return total duration in seconds.
-  return totalSeconds;
+    if (days > 0)         {fmt = days + ':' + hours + ':' + minutes + ':' + seconds;}
+    else if (hours > 0)   {fmt =              hours + ':' + minutes + ':' + seconds;}
+    else if (minutes > 0) {fmt =                            minutes + ':' + seconds;}
+    else if (seconds > 0) {fmt =                                            seconds;}
+    else                  {fmt =                                                 '';}
+    return fmt;
 }
 
-function durationComparator(duration1, duration2) {
-  // Convert each duration string to an equivalent number of seconds.
-  const duration1InSeconds = parseDuration(duration1);
-  const duration2InSeconds = parseDuration(duration2);
+Number.prototype.toDDHHMMSS = function () {
+    var sec_num = this;
+    var days = Math.floor(sec_num / (3600 * 24));
+    var hours = Math.floor((sec_num - (days * 3600 * 24)) / 3600);
+    var minutes = Math.floor((sec_num - (days * 3600 * 24) - (hours * 3600)) / 60);
+    var seconds = sec_num - (days * 3600 * 24) - (hours * 3600) - (minutes * 60);
 
-  // Compare the two durations and return the comparison result.
-  if (duration1InSeconds > duration2InSeconds) {
-    return 1;
-  } else if (duration2InSeconds > duration1InSeconds) {
-    return -1;
-  } else {
-    return 0;
-  }
+    if (days < 10) {days = "0" + days;}
+    if (hours < 10) {hours = "0" + hours;}
+    if (minutes < 10) {minutes = "0" + minutes;}
+    if (seconds < 10) {seconds = "0" + seconds;}
+
+    if (days > 0)         {fmt = days + ':' + hours + ':' + minutes + ':' + seconds;}
+    else if (hours > 0)   {fmt =              hours + ':' + minutes + ':' + seconds;}
+    else if (minutes > 0) {fmt =                            minutes + ':' + seconds;}
+    else if (seconds > 0) {fmt =                                            seconds;}
+    else                  {fmt =                                                 '';}
+    return fmt;
 }
 
 function constructLink(stationId) {

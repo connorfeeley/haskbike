@@ -12,9 +12,9 @@ const grid = new gridjs.Grid({...tableBase,
     "# Docks",
     {name: 'Bikes Available', columns: ['Mechanical', 'E-Fit', 'E-Fit G5']},
     {name: 'Disabled', columns: ['Bikes', 'Docks']},
-    { name: "Duration", columns: [
-      { name: "Empty", sort: { compare: (a, b) => { return durationComparator(a, b) }}},
-      { name: "Full",  sort: { compare: (a, b) => { return durationComparator(a, b) }}},
+    { name: "Duration (DD:HH:MM:SS)", columns: [
+      { name: "Empty", formatter: (cell) => `${cell?.toDDHHMMSS() || ''}`, attributes: { 'style':  'text-align: right'}},
+      { name: "Full",  formatter: (cell) => `${cell?.toDDHHMMSS() || ''}`, attributes: { 'style':  'text-align: right'}},
     ] },
   ],
   server: {

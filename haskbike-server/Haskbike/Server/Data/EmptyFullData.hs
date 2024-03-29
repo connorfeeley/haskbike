@@ -39,8 +39,8 @@ emptyFullFromSecs empty full = EmptyFull emptyTime fullTime
 
 instance ToJSON EmptyFull where
   toJSON record =
-    object [ "empty"       .= (formatDiffTime . _emptyTime) record
-           , "full"        .= (formatDiffTime . _fullTime)  record
+    object [ "empty" .= _emptyTime record
+           , "full"  .= _fullTime  record
            ]
 
 -- | Type for serializing to JSON for the station empty/full list.
