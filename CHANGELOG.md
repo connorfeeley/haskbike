@@ -113,3 +113,20 @@
 * Move `reset` CLI command to new `database` subcommand.
 * Move CLI options to submodules.
 * Updated benchmark baselines using M1 MBP.
+
+## 3.5.0 -- 2024-03-29
+
+* Database
+  * Added `Oddities` module for various queries which analyze odd patterns in the station data.
+  * Fixed station occupancy calculation.
+  * Use `Data.Text` more pervasively, instead of `String`.
+* CLI
+  * Fixed abort caused by `undefined` in database dispatch.
+* Server
+  * Load assets asynchronously using HTML's `defer`
+  * Added `<meta>` `description`.
+  * Fixed rendering on mobile.
+  * Use GridJS for the station list table.
+  * Consolidate station list and station occupancy tables.
+  * Use DD:HH:MM:SS format for station occupancy time formats.
+  * Make selection form label optional.
