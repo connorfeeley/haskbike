@@ -43,7 +43,7 @@ instance ToJSON EmptyFull where
            , "full"        .= (formatDiffTime . _fullTime)  record
            ]
 
-
+-- | Type for serializing to JSON for the station empty/full list.
 data EmptyFullRecord where
   EmptyFullRecord :: { _emptyFullInformation :: DB.StationInformation
                      , _emptyFullStatus      :: DB.StationStatus
@@ -57,6 +57,7 @@ instance ToJSON EmptyFullRecord where
            , "durations"           .= _emptyFullDurations   record
            ]
 
+-- | Combine station information with their corresponding statuses and empty/full data.
 combineStations :: [(DB.StationInformation, DB.StationStatus)]
                 -> [(DB.StationInformation, EmptyFull)]
                 -> [(DB.StationInformation, DB.StationStatus, EmptyFull)]
@@ -65,7 +66,6 @@ combineStations latestStatuses empties = mapMaybe combine latestStatuses
     combine (info, status) = do
       emptyFull <- Map.lookup (DB._infoStationId info) empties'
       return (info, status, emptyFull)
-
     empties' = Map.fromList (map (first DB._infoStationId) empties)
 
 -- | Format a 'NominalDiffTime' as 'Text' with a human-readable format.
@@ -73,6 +73,7 @@ formatDiffTime :: Maybe NominalDiffTime -> T.Text
 formatDiffTime (Just dt) = (T.pack . formatTime defaultTimeLocale (shortestFormatString dt)) dt
 formatDiffTime Nothing   = T.pack "-"
 
+-- | Determine the shortest format string for a given 'NominalDiffTime'.
 shortestFormatString :: IsString a => NominalDiffTime -> a
 shortestFormatString dt =
   case (days, hours, minutes, dt) of -- if dt >= nominalDay then "%dd %Hh %Mm %Ss" else "%Hh %Mm %Ss"
