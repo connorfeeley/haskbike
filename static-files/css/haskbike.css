@@ -161,10 +161,7 @@ body {
   text-align: left;
 }
 
-@media screen and (max-width: 375px) {
-  * {
-    font-size: small;
-  }
+@media screen and (max-width: 500px) {
   .station-list-table {
         display: none !important;
   }
@@ -173,7 +170,7 @@ body {
   }
 }
 
-@media screen and (min-width: 375px) and (max-width: 600px) and (orientation:landscape) {
+@media screen and (max-width: 1000px) and (orientation:landscape) {
   .station-list-table {
     width: 1600px;
     overflow: scroll;
