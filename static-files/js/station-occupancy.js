@@ -18,7 +18,7 @@ const grid = new gridjs.Grid({...tableBase,
     ] },
   ],
   server: {
-    url: "/data/empty-full",
+    url: "/data/station-occupancy",
     then: (data) =>
       data.map((card) => [
         card.station_information.station_id,

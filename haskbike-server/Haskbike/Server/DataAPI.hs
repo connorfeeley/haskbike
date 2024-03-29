@@ -103,7 +103,7 @@ data DataAPI mode where
           :> Get '[JSON] [StationListRecord]
     , emptyFullData :: mode :-
       "data" :>
-        "empty-full"
+        "station-occupancy"
           :> QueryParam "start-time"   LocalTime
           :> QueryParam "end-time"     LocalTime
           :> Get '[JSON] [EmptyFullRecord]
