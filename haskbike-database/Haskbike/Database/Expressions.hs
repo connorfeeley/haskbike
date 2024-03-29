@@ -188,6 +188,7 @@ queryLatestStatusBetweenExpr earliestTime latestTime = do
   join_'
     (bikeshareDb ^. bikeshareStationStatus)
     (\status ->
+       sqlBool_ (between_ (status ^. statusLastReported) (val_ earliestTime) (val_ latestTime)) &&?.
        (stationId ==?. (_unInformationStationId . _statusInfoId . _statusCommon) status            ) &&?.
        (maxTime ==?. just_ (status ^. statusLastReported))
     )
