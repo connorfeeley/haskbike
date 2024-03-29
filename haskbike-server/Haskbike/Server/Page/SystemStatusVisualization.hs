@@ -108,7 +108,7 @@ instance ToHtml SystemStatusVisualizationPage where
         mconcat $ map (`with` [class_ ("pure-u-md-1-" <> showt (length headers))]) headers
 
       -- Selection form
-      toHtml (SelectionForm "Query Parameters"
+      toHtml (SelectionForm (Just "Query Parameters")
               [ TimeInput TimeInputStart (Just earliest)
               , TimeInput TimeInputEnd   (Just latest)
               , SubmitInput "Or hit Enter"

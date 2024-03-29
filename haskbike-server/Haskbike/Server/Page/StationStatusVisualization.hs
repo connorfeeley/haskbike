@@ -63,7 +63,7 @@ instance ToHtml StationStatusVisualizationPage where
       br_ []
 
       -- Selection form
-      toHtml (SelectionForm "Query Parameters"
+      toHtml (SelectionForm (Just "Query Parameters")
               [ StationIdInput ((Just . _statusVisPageStationId) params)
               , TimeInput TimeInputStart (Just earliest)
               , TimeInput TimeInputEnd   (Just latest)

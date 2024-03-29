@@ -63,7 +63,7 @@ instance ToHtmlComponents (StationList a) => ToHtml (StationList a) where
     div_ [class_ "header"] $ do
       h1_ [] (toHtml (pageTitle params))
     div_ [class_ "content"] $ do
-      toHtml (StationListForm (_stationListInputs params))
+      toHtml (StationListForm Nothing (_stationListInputs params))
       toHtml (toStationListTable params)
 
 

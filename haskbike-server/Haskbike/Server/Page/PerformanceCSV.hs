@@ -43,7 +43,7 @@ instance ToHtml PerformanceCSV where
       div_ [class_ "pure-g", style_ "text-align: center"] mempty
 
       -- Selection form
-      toHtml (SelectionForm "Time Range Selection"
+      toHtml (SelectionForm (Just "Time Range Selection")
               [ TimeInput TimeInputStart (Just earliest)
               , TimeInput TimeInputEnd   (Just latest)
               , SubmitInput "Download CSV"
