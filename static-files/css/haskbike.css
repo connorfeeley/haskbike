@@ -172,7 +172,7 @@ body {
   }
 }
 
-@media screen and (min-width: 375px) and (orientation:landscape) {
+@media screen and (min-width: 375px) and (max-width: 600px) and (orientation:landscape) {
   .empty-full-table {
     width: 1600px;
   }
