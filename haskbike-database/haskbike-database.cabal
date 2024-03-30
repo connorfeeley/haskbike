@@ -120,6 +120,9 @@ library
                     , Haskbike.Database.Schema.V002.StationLookup
                     , Haskbike.Database.Schema.V003.BikeShare
                     , Haskbike.Database.Schema.V003.Migrations
+                    , Haskbike.Database.Schema.V004.BikeShare
+                    , Haskbike.Database.Schema.V004.Migrations
+                    , Haskbike.Database.Schema.V004.StationOccupancy
                     -- Final table definitions:
                     , Haskbike.Database.Tables.Diagnostics
                     , Haskbike.Database.Tables.QueryLogs
@@ -127,6 +130,7 @@ library
                     , Haskbike.Database.Tables.StationLookup
                     , Haskbike.Database.Tables.StationStatus
                     , Haskbike.Database.Tables.SystemInformation
+                    , Haskbike.Database.Tables.StationOccupancy
 
                     , Haskbike.LatestQueries
 
