@@ -74,7 +74,7 @@ selectWithPostgres = withPostgres . runSelectReturningList
 
 benchStationEmptyTime :: (MonadCatch m, HasEnv env m) => Maybe Int -> m [(StationInformationT Identity, (Maybe Int32, Maybe Int32))]
 benchStationEmptyTime station =
-  withPostgres . runSelectReturningList . select $ queryStationEmptyFullTime station
+  withPostgres . runSelectReturningList . select $ stationOccupancyE station
     (UTCTime (fromGregorian 2023 11 01) (timeOfDayToTime midnight)) (UTCTime (fromGregorian 2023 11 02) (timeOfDayToTime midnight))
 
 benchStationInformationDecoding :: (HasEnv env m, MonadCatch m) => FilePath -> m [StationInformationT Identity]

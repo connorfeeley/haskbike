@@ -1,7 +1,7 @@
 -- | Database queries and expressions for station occupancy.
 
 module Haskbike.Database.Operations.StationOccupancy
-     ( queryStationEmptyFullTime
+     ( stationOccupancyE
      , toStationOccupancy
      ) where
 
@@ -32,12 +32,12 @@ timeDelta :: (HasSqlTime tgt1, HasSqlTime tgt2, Integral b) => QGenExpr ctxt1 Po
 timeDelta a b = cast_ (extract_ Pg.epoch_ a - extract_ Pg.epoch_ b) int
 
 -- | Query how long each station has been both empty and full for.
-queryStationEmptyFullTime :: (Integral a)
-                          => Maybe a -> UTCTime -> UTCTime
-                          -> Q Postgres BikeshareDb s ( StationInformationT (QGenExpr QValueContext Postgres s)
-                                                      , (QGenExpr QValueContext Postgres s (Maybe Int32), QGenExpr QValueContext Postgres s (Maybe Int32))
-                                                      )
-queryStationEmptyFullTime stationId startTime endTime = do
+stationOccupancyE :: (Integral a)
+                  => Maybe a -> UTCTime -> UTCTime
+                  -> Q Postgres BikeshareDb s ( StationInformationT (QGenExpr QValueContext Postgres s)
+                                              , (QGenExpr QValueContext Postgres s (Maybe Int32), QGenExpr QValueContext Postgres s (Maybe Int32))
+                                              )
+stationOccupancyE stationId startTime endTime = do
   let statusCount = aggregate_ (\row -> ( group_ ((_unInformationStationId . _statusInfoId . _statusCommon) row)
                                         , as_ @Int32 countAll_
                                         )

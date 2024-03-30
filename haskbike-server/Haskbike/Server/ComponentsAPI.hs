@@ -23,7 +23,7 @@ import           Database.Beam
 import           Haskbike.Database.Expressions                           ( queryChargingInfrastructure )
 import           Haskbike.Database.Operations.Dockings
 import           Haskbike.Database.Operations.Factors
-import           Haskbike.Database.Operations.StationOccupancy           ( queryStationEmptyFullTime )
+import           Haskbike.Database.Operations.StationOccupancy
 import           Haskbike.Database.StatusVariationQuery                  ( StatusThreshold (..),
                                                                            StatusVariationQuery (..) )
 import qualified Haskbike.Database.Tables.StationOccupancy               as DB
@@ -158,7 +158,7 @@ performanceHeaderHandler stationId startTime endTime = do
       ]
     ))
     (withPostgres $ runSelectReturningList $ select $
-     queryStationEmptyFullTime stationId (localTimeToUTC tz (earliestTime range)) (localTimeToUTC tz (latestTime range))
+     stationOccupancyE stationId (localTimeToUTC tz (earliestTime range)) (localTimeToUTC tz (latestTime range))
     )
   let emptyFull = head $ map (\(_i, (e, f)) -> DB.emptyFullFromSecs e f) emptyFullTup
 
