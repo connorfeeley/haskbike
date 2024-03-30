@@ -28,8 +28,8 @@ import           Database.Beam
 import           Haskbike.Database.Expressions
 import           Haskbike.Database.Operations
 import           Haskbike.Database.Tables.StationInformation
+import qualified Haskbike.Database.Tables.StationOccupancy       as DB
 import           Haskbike.Database.Tables.StationStatus
-import           Haskbike.Server.Data.EmptyFullData
 import           Haskbike.Server.DataAPI
 import           Haskbike.Server.Page.List.StationList
 import           Haskbike.Server.Page.PerformanceCSV
@@ -72,7 +72,7 @@ data VisualizationAPI mode where
           "station-occupancy"
           :> QueryParam "start-time"   LocalTime
           :> QueryParam "end-time"     LocalTime
-          :> Get '[HTML] (PureSideMenu (StationList [(StationInformation, StationStatus, EmptyFull)]))
+          :> Get '[HTML] (PureSideMenu (StationList [(StationInformation, StationStatus, DB.EmptyFull)]))
     , systemInfo :: mode :-
         "visualization" :>
           "system-information"
@@ -181,7 +181,7 @@ stationListPageHandler _end = do
 
 -- | Display a list of stations with their empty/full status.
 stationEmptyFullListPage :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m)
-                         => Maybe LocalTime -> Maybe LocalTime -> m (PureSideMenu (StationList [(StationInformation, StationStatus, EmptyFull)]))
+                         => Maybe LocalTime -> Maybe LocalTime -> m (PureSideMenu (StationList [(StationInformation, StationStatus, DB.EmptyFull)]))
 stationEmptyFullListPage start end = do
   logInfo $ "Rendering station empty/full list for time [" <> tshow start <> " - " <> tshow end <> "]"
 

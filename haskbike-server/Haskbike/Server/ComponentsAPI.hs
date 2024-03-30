@@ -23,14 +23,14 @@ import           Database.Beam
 import           Haskbike.Database.Expressions                           ( queryChargingInfrastructure )
 import           Haskbike.Database.Operations.Dockings
 import           Haskbike.Database.Operations.Factors
-import           Haskbike.Database.Operations.StationOccupancy               ( queryStationEmptyFullTime )
+import           Haskbike.Database.Operations.StationOccupancy           ( queryStationEmptyFullTime )
 import           Haskbike.Database.StatusVariationQuery                  ( StatusThreshold (..),
                                                                            StatusVariationQuery (..) )
+import qualified Haskbike.Database.Tables.StationOccupancy               as DB
 import           Haskbike.Server.Components.ChargingHeader
 import           Haskbike.Server.Components.ChargingInfrastructureHeader
 import           Haskbike.Server.Components.DockingHeader
 import           Haskbike.Server.Components.PerformanceData
-import           Haskbike.Server.Data.EmptyFullData
 import           Haskbike.Server.StatusDataParams
 import           Haskbike.ServerEnv
 
@@ -160,6 +160,6 @@ performanceHeaderHandler stationId startTime endTime = do
     (withPostgres $ runSelectReturningList $ select $
      queryStationEmptyFullTime stationId (localTimeToUTC tz (earliestTime range)) (localTimeToUTC tz (latestTime range))
     )
-  let emptyFull = head $ map (\(_i, (e, f)) -> emptyFullFromSecs e f) emptyFullTup
+  let emptyFull = head $ map (\(_i, (e, f)) -> DB.emptyFullFromSecs e f) emptyFullTup
 
   pure $ (head . map (integralToPerformanceData emptyFull)) perf

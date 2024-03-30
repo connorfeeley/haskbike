@@ -29,6 +29,7 @@ import           Haskbike.Database.Expressions                       ( queryLate
 import           Haskbike.Database.Operations.Dockings
 import           Haskbike.Database.Operations.Factors
 import           Haskbike.Database.Operations.StationOccupancy
+import qualified Haskbike.Database.Schema.V004.StationOccupancy      as DB
 import           Haskbike.Database.StatusVariationQuery
 import           Haskbike.Server.Components.PerformanceData
 import           Haskbike.Server.Data.EmptyFullData
@@ -106,7 +107,7 @@ data DataAPI mode where
         "station-occupancy"
           :> QueryParam "start-time"   LocalTime
           :> QueryParam "end-time"     LocalTime
-          :> Get '[JSON] [EmptyFullRecord]
+          :> Get '[JSON] [DB.EmptyFullRecord]
     } -> DataAPI mode
   deriving stock Generic
 
@@ -175,7 +176,7 @@ performanceCsvHandler stationId startTime endTime = do
     (withPostgres $ runSelectReturningList $ select $
      queryStationEmptyFullTime stationId (localTimeToUTC tz (earliestTime range)) (localTimeToUTC tz (latestTime range))
     )
-  let emptyFull = head $ map (\(_i, (e, f)) -> emptyFullFromSecs e f) emptyFullTup
+  let emptyFull = head $ map (\(_i, (e, f)) -> DB.emptyFullFromSecs e f) emptyFullTup
 
   logDebug "Created performance data CSV payload"
 
@@ -250,7 +251,7 @@ handleStationListData latestTime = do
 
 
 handleEmptyFullData :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m)
-                    => Maybe LocalTime -> Maybe LocalTime -> m [EmptyFullRecord]
+                    => Maybe LocalTime -> Maybe LocalTime -> m [DB.EmptyFullRecord]
 handleEmptyFullData start end = do
   tz <- getTz
   currentUtc <- liftIO getCurrentTime
@@ -263,9 +264,9 @@ handleEmptyFullData start end = do
 
   let combined = combineStations latest (resultToEmptyFull emptyFull)
 
-  pure $ map (\(i, ss, ef) -> EmptyFullRecord i ss ef) combined
+  pure $ map (\(i, ss, ef) -> DB.EmptyFullRecord i ss ef) combined
   where
-    resultToEmptyFull = map (\(i, (e, f)) -> (i, emptyFullFromSecs e f))
+    resultToEmptyFull = map (\(i, (e, f)) -> (i, DB.emptyFullFromSecs e f))
     tshow = T.pack . show
     start' cUtc tz = maybe (addUTCTime (-60 * 60 * 24) cUtc) (localTimeToUTC tz) start
     end'   cUtc tz = maybe cUtc (localTimeToUTC tz) end

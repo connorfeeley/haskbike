@@ -5,11 +5,14 @@
 -- | Table to store station occupancy calculations.
 
 module Haskbike.Database.Schema.V004.StationOccupancy
-     ( PrimaryKey (..)
+     ( EmptyFull (..)
+     , EmptyFullRecord (..)
+     , PrimaryKey (..)
      , StationOccupancy
      , StationOccupancyId
      , StationOccupancyT (..)
      , createStationOccupancy
+     , emptyFullFromSecs
      , extraOccupancyMigrations
      , stnOccCalculated
      , stnOccEmptySec
@@ -22,8 +25,9 @@ module Haskbike.Database.Schema.V004.StationOccupancy
      , stnOccupancyModification
      ) where
 
-import           Control.Lens
+import           Control.Lens                                     hiding ( (.=) )
 
+import           Data.Aeson
 import           Data.Int                                         ( Int32 )
 import           Data.String                                      ( IsString )
 import           Data.Time
@@ -34,6 +38,7 @@ import           Database.Beam.Migrate
 import           Database.Beam.Postgres
 
 import           Haskbike.Database.Schema.V001.StationInformation as V001
+import           Haskbike.Database.Tables.StationStatus
 
 
 data StationOccupancyT f where
@@ -116,3 +121,38 @@ createStationOccupancy =
 
 extraOccupancyMigrations :: IsString a => [a]
 extraOccupancyMigrations = ["ALTER TABLE public.station_occupancy ADD CONSTRAINT IF NOT EXISTS fk_station_occupancy FOREIGN KEY (info_station_id, info_reported) REFERENCES public.station_information (station_id, reported) ON UPDATE CASCADE"]
+
+
+-- * Associated utility types and functions.
+
+data EmptyFull where
+  EmptyFull :: { _emptyTime :: Maybe NominalDiffTime
+               , _fullTime  :: Maybe NominalDiffTime
+               } -> EmptyFull
+  deriving (Generic, Show, Eq)
+
+emptyFullFromSecs :: (Integral a1, Integral a2) => Maybe a2 -> Maybe a1 -> EmptyFull
+emptyFullFromSecs empty full = EmptyFull emptyTime fullTime
+  where
+    emptyTime = secondsToNominalDiffTime . fromIntegral <$> empty
+    fullTime  = secondsToNominalDiffTime . fromIntegral <$> full
+
+instance ToJSON EmptyFull where
+  toJSON record =
+    object [ "empty" .= _emptyTime record
+           , "full"  .= _fullTime  record
+           ]
+
+-- | Type for serializing to JSON for the station empty/full list.
+data EmptyFullRecord where
+  EmptyFullRecord :: { _emptyFullInformation :: StationInformation
+                     , _emptyFullStatus      :: StationStatus
+                     , _emptyFullDurations   :: EmptyFull
+                     } -> EmptyFullRecord
+
+instance ToJSON EmptyFullRecord where
+  toJSON record =
+    object [ "station_information" .= fromBeamStationInformationToJSON  (_emptyFullInformation record)
+           , "station_status"      .= fromBeamStationStatusToJSON       (_emptyFullStatus   record)
+           , "durations"           .= _emptyFullDurations   record
+           ]

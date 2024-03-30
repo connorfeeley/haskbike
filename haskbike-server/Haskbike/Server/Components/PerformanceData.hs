@@ -3,12 +3,13 @@
 module Haskbike.Server.Components.PerformanceData where
 
 
-import qualified Data.Text                            as T
+import qualified Data.Text                                 as T
 import           Data.Time
 
-import           GHC.Generics                         ( Generic )
+import           GHC.Generics                              ( Generic )
 
-import           Haskbike.Database.Operations.Factors
+import qualified Haskbike.Database.Operations.Factors      as DB
+import qualified Haskbike.Database.Tables.StationOccupancy as DB
 import           Haskbike.Server.Data.EmptyFullData
 import           Haskbike.Server.Page.Utils
 
@@ -17,14 +18,14 @@ import           Lucid
 
 -- | Combination of status integrals and factors.
 data PerformanceData where
-  PerformanceData :: { performanceIntegrals :: StatusIntegral
-                     , performanceFactors   :: StatusFactor
-                     , performanceEmptyFull :: EmptyFull
+  PerformanceData :: { performanceIntegrals :: DB.StatusIntegral
+                     , performanceFactors   :: DB.StatusFactor
+                     , performanceEmptyFull :: DB.EmptyFull
                      } -> PerformanceData
   deriving (Generic, Show, Eq)
 
-integralToPerformanceData :: EmptyFull -> StatusIntegral -> PerformanceData
-integralToPerformanceData emptyFull integral = PerformanceData integral (integralToFactor integral) emptyFull
+integralToPerformanceData :: DB.EmptyFull -> DB.StatusIntegral -> PerformanceData
+integralToPerformanceData emptyFull integral = PerformanceData integral (DB.integralToFactor integral) emptyFull
 
 instance ToHtml PerformanceData where
   toHtmlRaw = toHtml
@@ -58,12 +59,12 @@ instance ToHtml PerformanceData where
 
       getFactor factor = (factor . performanceFactors) params
 
-      bikesAvailable = getFactor statusFactorBikesAvailable
-      bikesDisabled  = getFactor statusFactorBikesDisabled
-      docksAvailable = getFactor statusFactorDocksAvailable
-      docksDisabled  = getFactor statusFactorDocksDisabled
-      emptyTime      = (_emptyTime . performanceEmptyFull) params
-      fullTime       = (_fullTime  . performanceEmptyFull) params
+      bikesAvailable = getFactor DB.statusFactorBikesAvailable
+      bikesDisabled  = getFactor DB.statusFactorBikesDisabled
+      docksAvailable = getFactor DB.statusFactorDocksAvailable
+      docksDisabled  = getFactor DB.statusFactorDocksDisabled
+      emptyTime      = (DB._emptyTime . performanceEmptyFull) params
+      fullTime       = (DB._fullTime  . performanceEmptyFull) params
       minutes :: Int -> NominalDiffTime
       minutes m      = fromIntegral m * 60
 

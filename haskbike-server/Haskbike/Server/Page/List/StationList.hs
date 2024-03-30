@@ -13,10 +13,10 @@ module Haskbike.Server.Page.List.StationList
 
 import           Data.Time
 
-import           Haskbike.Database.Tables.StationInformation
-import           Haskbike.Database.Tables.StationStatus
+import qualified Haskbike.Database.Tables.StationInformation as DB
+import qualified Haskbike.Database.Tables.StationOccupancy   as DB
+import qualified Haskbike.Database.Tables.StationStatus      as DB
 import           Haskbike.Server.Classes
-import           Haskbike.Server.Data.EmptyFullData
 import           Haskbike.Server.Page.List.Common
 import           Haskbike.Server.Page.SelectionForm
 import           Haskbike.Server.Page.Utils                  ( stylesheet_ )
@@ -79,11 +79,11 @@ toStationListTable _ = do
 -- - ---------------------------------------------------------------------------
 -- * Regular station list instances.
 
-instance HasStationListPage [(StationInformation, StationStatus)] where
+instance HasStationListPage [(DB.StationInformation, DB.StationStatus)] where
   pageScript page = script_ [src_ ("/" <> toUrlPiece (_staticLink page) <> "/js/station-list.js"), defer_ mempty] ""
 
-instance HasStationListPage [(StationInformation, StationStatus)] =>
-         ToHtmlComponents (StationList [(StationInformation, StationStatus)]) where
+instance HasStationListPage [(DB.StationInformation, DB.StationStatus)] =>
+         ToHtmlComponents (StationList [(DB.StationInformation, DB.StationStatus)]) where
   pageAnchor _ = "#station-list"
   pageName   _ = "Station List"
   toHead       = pageHead
@@ -92,11 +92,11 @@ instance HasStationListPage [(StationInformation, StationStatus)] =>
 -- - ---------------------------------------------------------------------------
 -- * Station occupancy list instances.
 
-instance HasStationListPage [(StationInformation, StationStatus, EmptyFull)] where
+instance HasStationListPage [(DB.StationInformation, DB.StationStatus, DB.EmptyFull)] where
   pageScript page = script_ [src_ ("/" <> toUrlPiece (_staticLink page) <> "/js/station-occupancy.js"), defer_ mempty] ""
 
-instance HasStationListPage [(StationInformation, StationStatus, EmptyFull)] =>
-         ToHtmlComponents (StationList [(StationInformation, StationStatus, EmptyFull)]) where
+instance HasStationListPage [(DB.StationInformation, DB.StationStatus, DB.EmptyFull)] =>
+         ToHtmlComponents (StationList [(DB.StationInformation, DB.StationStatus, DB.EmptyFull)]) where
   pageAnchor _ = "#station-occupancy"
   pageName   _ = "Station Occupancy"
   pageTitle  _ = "Station List with Occupancy Time"
