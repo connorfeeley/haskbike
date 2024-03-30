@@ -1,8 +1,6 @@
-{-# LANGUAGE PartialTypeSignatures #-}
-{-# OPTIONS_GHC -Wno-type-defaults #-}
--- | Database operations to determine how long a station is empty for.
+-- | Database queries and expressions for station occupancy.
 
-module Haskbike.Database.Operations.StationEmpty
+module Haskbike.Database.Operations.StationOccupancy
      ( queryStationEmptyFullTime
      ) where
 
@@ -44,7 +42,7 @@ queryStationEmptyFullTime stationId startTime endTime = do
                                ) $
                     filter_ (\row -> between_ (row ^. statusLastReported) (val_ startTime) (val_ endTime)) $
                     all_ (bikeshareDb ^. bikeshareStationStatus)
-  let infoStations = Pg.pgNubBy_ (\inf -> cast_ (_infoStationId inf) int) $
+  let infoStations = Pg.pgNubBy_ (\inf -> cast_ (_infoStationId inf) (int :: DataType Postgres Int32)) $
                      orderBy_ (\inf -> (asc_ (_infoStationId inf), desc_ (_infoReported inf))) $
                      filter_ (\inf -> _infoReported inf <=. val_ endTime) $
                      filter_ (infoStationIdCond stationId) $
@@ -95,13 +93,13 @@ emptyFullRows stationId' startTime' endTime' =
           ) $
     withWindow_ (\row -> frame_ (partitionBy_ ((_unInformationStationId . _statusInfoId . _statusCommon) row)) (orderPartitionBy_ ((asc_ . _statusLastReported . _statusCommon) row)) noBounds_)
                 (\row w -> ( row
-                           , ( leadWithDefault_ (row ^. statusLastReported     ) (val_ 1) (val_ endTime')  `over_` w
-                             , leadWithDefault_ (row ^. statusNumBikesAvailable) (val_ 1) (val_ 0) `over_` w
-                             , leadWithDefault_ (row ^. statusNumDocksAvailable) (val_ 1) (val_ 0) `over_` w
+                           , ( leadWithDefault_ (row ^. statusLastReported     ) (val_ (1 :: Int32)) (val_ endTime')  `over_` w
+                             , leadWithDefault_ (row ^. statusNumBikesAvailable) (val_ (1 :: Int32)) (val_ 0) `over_` w
+                             , leadWithDefault_ (row ^. statusNumDocksAvailable) (val_ (1 :: Int32)) (val_ 0) `over_` w
                              )
-                           , ( lagWithDefault_ (row ^. statusLastReported     ) (val_ 1) (val_ startTime') `over_` w
-                             , lagWithDefault_ (row ^. statusNumBikesAvailable) (val_ 1) (val_ 0) `over_` w
-                             , lagWithDefault_ (row ^. statusNumDocksAvailable) (val_ 1) (val_ 0) `over_` w
+                           , ( lagWithDefault_ (row ^. statusLastReported     ) (val_ (1 :: Int32)) (val_ startTime') `over_` w
+                             , lagWithDefault_ (row ^. statusNumBikesAvailable) (val_ (1 :: Int32)) (val_ 0) `over_` w
+                             , lagWithDefault_ (row ^. statusNumDocksAvailable) (val_ (1 :: Int32)) (val_ 0) `over_` w
                              )
                            )
                 ) $

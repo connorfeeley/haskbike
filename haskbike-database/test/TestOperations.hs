@@ -17,19 +17,19 @@ module TestOperations
      , unit_stationEmptyTimeExported
      ) where
 
-import           Control.Monad.Catch                       ( MonadCatch )
+import           Control.Monad.Catch                           ( MonadCatch )
 
-import           Data.Fixed                                ( Pico )
+import           Data.Fixed                                    ( Pico )
 import           Data.Time
 
 import           Database.Beam
 
-import qualified Haskbike.API.StationStatus                as AT
+import qualified Haskbike.API.StationStatus                    as AT
 import           Haskbike.API.Utils
 import           Haskbike.AppEnv
 import           Haskbike.Database.Operations
 import           Haskbike.Database.Operations.Factors
-import           Haskbike.Database.Operations.StationEmpty
+import           Haskbike.Database.Operations.StationOccupancy
 import           Haskbike.Database.StatusVariationQuery
 import           Haskbike.Database.Test.Utils
 

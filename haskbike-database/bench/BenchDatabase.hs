@@ -7,16 +7,16 @@ module BenchDatabase
      , statusVariationAll
      ) where
 
-import qualified Codec.Compression.Zstd                      as Z
+import qualified Codec.Compression.Zstd                        as Z
 
-import           Control.Monad                               ( void )
-import           Control.Monad.Catch                         ( MonadCatch )
+import           Control.Monad                                 ( void )
+import           Control.Monad.Catch                           ( MonadCatch )
 
 import           Data.Aeson
-import qualified Data.ByteString                             as B
-import qualified Data.ByteString.Lazy                        as BL
-import           Data.Int                                    ( Int32 )
-import           Data.Maybe                                  ( fromMaybe )
+import qualified Data.ByteString                               as B
+import qualified Data.ByteString.Lazy                          as BL
+import           Data.Int                                      ( Int32 )
+import           Data.Maybe                                    ( fromMaybe )
 import           Data.Time
 
 import           Database.Beam
@@ -27,11 +27,11 @@ import           Haskbike.AppEnv
 import           Haskbike.Database.Expressions
 import           Haskbike.Database.Operations
 import           Haskbike.Database.Operations.Factors
-import           Haskbike.Database.Operations.StationEmpty
+import           Haskbike.Database.Operations.StationOccupancy
 import           Haskbike.Database.StatusVariationQuery
 import           Haskbike.Database.Tables.StationInformation
 import           Haskbike.Database.Test.Utils
-import           Haskbike.TimeInterval                       ( minsPerHourlyInterval )
+import           Haskbike.TimeInterval                         ( minsPerHourlyInterval )
 
 import           Test.Tasty.Bench
 

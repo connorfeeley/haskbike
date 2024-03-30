@@ -23,7 +23,7 @@ import           Database.Beam
 import           Haskbike.Database.Expressions                           ( queryChargingInfrastructure )
 import           Haskbike.Database.Operations.Dockings
 import           Haskbike.Database.Operations.Factors
-import           Haskbike.Database.Operations.StationEmpty               ( queryStationEmptyFullTime )
+import           Haskbike.Database.Operations.StationOccupancy               ( queryStationEmptyFullTime )
 import           Haskbike.Database.StatusVariationQuery                  ( StatusThreshold (..),
                                                                            StatusVariationQuery (..) )
 import           Haskbike.Server.Components.ChargingHeader

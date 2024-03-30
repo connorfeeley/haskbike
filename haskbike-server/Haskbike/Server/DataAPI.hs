@@ -28,7 +28,7 @@ import           Haskbike.Database.EventCounts
 import           Haskbike.Database.Expressions                       ( queryLatestStatuses, queryStationBeforeExpr )
 import           Haskbike.Database.Operations.Dockings
 import           Haskbike.Database.Operations.Factors
-import           Haskbike.Database.Operations.StationEmpty
+import           Haskbike.Database.Operations.StationOccupancy
 import           Haskbike.Database.StatusVariationQuery
 import           Haskbike.Server.Components.PerformanceData
 import           Haskbike.Server.Data.EmptyFullData

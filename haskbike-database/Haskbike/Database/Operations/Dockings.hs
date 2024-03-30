@@ -31,7 +31,7 @@ import           Haskbike.API.VehicleType
 import           Haskbike.AppEnv
 import           Haskbike.Database.BikeShare
 import           Haskbike.Database.EventCounts
-import           Haskbike.Database.Operations.StationEmpty
+import           Haskbike.Database.Operations.StationOccupancy
 import           Haskbike.Database.StatusVariationQuery
 import           Haskbike.Database.Tables.StationInformation
 import           Haskbike.Database.Tables.StationStatus

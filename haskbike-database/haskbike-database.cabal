@@ -99,7 +99,7 @@ library
                     , Haskbike.Database.Operations.Dockings
                     , Haskbike.Database.Operations.Factors
                     , Haskbike.Database.Operations.QueryLogs
-                    , Haskbike.Database.Operations.StationEmpty
+                    , Haskbike.Database.Operations.StationOccupancy
                     , Haskbike.Database.Operations.StatusChanges
                     , Haskbike.Database.StatusDeltaFields
                     , Haskbike.Database.StatusVariationQuery
