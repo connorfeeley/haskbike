@@ -56,16 +56,17 @@ allowDestructive = defaultUpToDateHooks
 
 migrateDB :: AppM (Maybe (CheckedDatabaseSettings Postgres BikeshareDb))
 migrateDB = do
-  withPostgres $ bringUpToDateWithHooks
+  checkedDbSettings <- withPostgres $
+    bringUpToDateWithHooks
     allowDestructive
     PG.migrationBackend
     initialSetupStep
 
   -- pool <- withConnPool
   -- void . liftIO . withResource pool $ \conn -> do
-  --   forM_ extraInfoMigrations $ \migration -> do
+  --   forM_ V001.extraInfoMigrations $ \migration -> do
   --     execute_ conn migration
-  -- pure db
+  pure checkedDbSettings
 
 enumSetupStep :: MigrationSteps Postgres () (CheckedDatabaseEntity Postgres db (PgType EndpointQueried))
 enumSetupStep = migrationStep

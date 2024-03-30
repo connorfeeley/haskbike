@@ -29,7 +29,8 @@ import           Control.Lens                                     hiding ( (.=) 
 
 import           Data.Aeson
 import           Data.Int                                         ( Int32 )
-import           Data.String                                      ( IsString )
+import           Data.String                                      ( IsString, fromString )
+import qualified Data.Text                                        as T
 import           Data.Time
 
 import           Database.Beam
@@ -39,6 +40,7 @@ import           Database.Beam.Postgres
 
 import           Haskbike.Database.Schema.V001.StationInformation as V001
 import           Haskbike.Database.Tables.StationStatus
+
 
 
 data StationOccupancyT f where
@@ -100,15 +102,17 @@ StationOccupancy _ _ _ _ _ _ _ (LensFor stnOccFullSec)     = tableLenses
 stnOccupancyModification :: EntityModification (DatabaseEntity be db) be (TableEntity StationOccupancyT)
 stnOccupancyModification =
   setEntityName "station_occupancy" <> modifyTableFields tableModification
-  { _stnOccInfo = V001.StationInformationId "info_station_id" "info_reported"
+  { _stnOccInfo = V001.StationInformationId "station_id" "reported"
   }
 
 -- | Migration for the StationOccupancy table.
 createStationOccupancy :: Migration Postgres (CheckedDatabaseEntity Postgres db (TableEntity StationOccupancyT))
 createStationOccupancy =
   createTable "station_occupancy" $ StationOccupancy
-  { _stnOccInfo = V001.StationInformationId (field "info_station_id" int notNull)
-                                            (field "info_reported" (DataType (timestampType Nothing True)) notNull)
+  { _stnOccInfo = V001.StationInformationId (field "station_id" int notNull
+                                            )
+                                            (field "reported" (DataType (timestampType Nothing True)) notNull
+                                            )
   , _stnOccCalculated  = field "calculated"   (DataType (timestampType Nothing True)) notNull
   , _stnOccRangeStart  = field "range_start"  (DataType (timestampType Nothing True)) notNull
   , _stnOccRangeEnd    = field "range_end"    (DataType (timestampType Nothing True)) notNull
@@ -120,7 +124,20 @@ createStationOccupancy =
 
 
 extraOccupancyMigrations :: IsString a => [a]
-extraOccupancyMigrations = ["ALTER TABLE public.station_occupancy ADD CONSTRAINT IF NOT EXISTS fk_station_occupancy FOREIGN KEY (info_station_id, info_reported) REFERENCES public.station_information (station_id, reported) ON UPDATE CASCADE"]
+extraOccupancyMigrations = [ extraOccupancyConstraint "station_occupancy" "station_information" "fk_station_occupancy" ["station_id", "reported"] ["station_id", "reported"]
+                           ]
+
+extraOccupancyConstraint :: IsString a => T.Text -> T.Text -> T.Text -> [T.Text] -> [T.Text] -> a
+extraOccupancyConstraint tableName foreignTableName constraintName columns foreignColumns =
+  fromString . T.unpack $
+  "ALTER TABLE " <> qualifiedTable <> " ADD CONSTRAINT " <> constraintName <>
+  " FOREIGN KEY (" <> columnsList <> ") REFERENCES " <>
+  qualifiedForeignTable <> " (" <> foreignColumnsList <> ") ON UPDATE CASCADE"
+  where
+    qualifiedTable        = "public." <> tableName
+    qualifiedForeignTable = "public." <> foreignTableName
+    columnsList           = T.intercalate ", " columns
+    foreignColumnsList    = T.intercalate ", " foreignColumns
 
 
 -- * Associated utility types and functions.

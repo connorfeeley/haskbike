@@ -2,6 +2,7 @@
 
 module Haskbike.Database.Operations.StationOccupancy
      ( queryStationEmptyFullTime
+     , toStationOccupancy
      ) where
 
 import           Control.Lens                                hiding ( reuse, (<.) )
@@ -17,6 +18,7 @@ import qualified Database.Beam.Postgres                      as Pg
 import           Haskbike.Database.BikeShare
 import           Haskbike.Database.Operations.Utils
 import           Haskbike.Database.Tables.StationInformation
+import           Haskbike.Database.Tables.StationOccupancy
 import           Haskbike.Database.Tables.StationStatus
 
 -- | PostgreSQL GREATEST and LEAST.
@@ -141,3 +143,29 @@ keepForFull row (_leadReported, _leadBikes, leadDocks) (_lagReported, _lagBikes,
         notFull      = not_ isFull
         prevFull     = lagDocks  ==. val_ 0
         _nextNotFull = not_ (leadDocks ==. val_ 0)
+
+
+-- insertStationOccupancy :: MonadBeam Postgres m => m [(StationInformationT Identity, (Maybe Int32, Maybe Int32))]
+-- insertStationOccupancy = do
+--     insert (bikeshareDb ^. bikeshareStationOccupancy)
+--     (insertExpressions [])
+
+toStationOccupancy :: StationInformationT Identity
+                   -> UTCTime -- ^ Time calculation was done
+                   -> UTCTime -- ^ Starting bound of range considered.
+                   -> UTCTime -- ^ Ending   bound of range considered.
+                   -> Int32   -- ^ Minimum number of available bikes to be considered empty.
+                   -> Int32   -- ^ Minimum number of available docks to be considered full.
+                   -> Int32   -- ^ Number of seconds the station was empty.
+                   -> Int32   -- ^ Number of seconds the station was full.
+                   -> StationOccupancy
+toStationOccupancy info calcT startT endT emptyThr fullThr secEmpty secFull =
+  StationOccupancy { _stnOccInfo        = primaryKey info
+                   , _stnOccCalculated  = calcT
+                   , _stnOccRangeStart  = startT
+                   , _stnOccRangeEnd    = endT
+                   , _stnOccEmptyThresh = emptyThr
+                   , _stnOccFullThresh  = fullThr
+                   , _stnOccEmptySec    = secEmpty
+                   , _stnOccFullSec     = secFull
+                   }

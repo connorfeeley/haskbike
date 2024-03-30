@@ -6,12 +6,16 @@ module Haskbike.Database.Schema.V004.Migrations
      ) where
 
 import           Control.Arrow                                  ( (>>>) )
+import           Control.Monad
 import           Control.Monad.Catch                            ( MonadCatch, MonadThrow )
+
+import           Data.Pool                                      ( withResource )
 
 import           Database.Beam.Migrate
 import           Database.Beam.Migrate.Simple
 import           Database.Beam.Postgres
 import qualified Database.Beam.Postgres.Migrate                 as Pg
+import           Database.PostgreSQL.Simple
 
 import           Haskbike.AppEnv
 import           Haskbike.Database.Schema.V001.Migrations       ( allowDestructive )
@@ -20,7 +24,7 @@ import qualified Haskbike.Database.Schema.V003.Migrations       as V003
 import qualified Haskbike.Database.Schema.V004.BikeShare        as V004
 import qualified Haskbike.Database.Schema.V004.StationOccupancy as V004
 
-import           UnliftIO                                       ( MonadIO, MonadUnliftIO )
+import           UnliftIO
 
 migrationStationOccupancy :: CheckedDatabaseSettings Postgres V003.BikeshareDb
                           -> Migration Postgres (CheckedDatabaseSettings Postgres V004.BikeshareDb)
@@ -47,7 +51,14 @@ migration =
 migrateDB :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m)
           => m (Maybe (CheckedDatabaseSettings Postgres V004.BikeshareDb))
 migrateDB = do
-  withPostgres $ bringUpToDateWithHooks
+  checkedDbSettings <- withPostgres $
+    bringUpToDateWithHooks
     allowDestructive
     Pg.migrationBackend
     migration
+
+  pool <- withConnPool
+  void . liftIO . withResource pool $ \conn -> do
+    forM_ V004.extraOccupancyMigrations $ \migration -> do
+      execute_ conn migration
+  pure checkedDbSettings
