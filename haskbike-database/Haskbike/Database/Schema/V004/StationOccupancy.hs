@@ -102,7 +102,14 @@ StationOccupancy _ _ _ _ _ _ _ (LensFor stnOccFullSec)     = tableLenses
 stnOccupancyModification :: EntityModification (DatabaseEntity be db) be (TableEntity StationOccupancyT)
 stnOccupancyModification =
   setEntityName "station_occupancy" <> modifyTableFields tableModification
-  { _stnOccInfo = V001.StationInformationId "station_id" "reported"
+  { _stnOccInfo        = V001.StationInformationId "station_id" "reported"
+  , _stnOccCalculated  = "calculated"
+  , _stnOccRangeStart  = "range_start"
+  , _stnOccRangeEnd    = "range_end"
+  , _stnOccEmptyThresh = "empty_thresh"
+  , _stnOccFullThresh  = "full_thresh"
+  , _stnOccEmptySec    = "empty_sec"
+  , _stnOccFullSec     = "full_sec"
   }
 
 -- | Migration for the StationOccupancy table.
