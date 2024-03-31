@@ -20,8 +20,9 @@ import           Options.Applicative
 
 -- | Options for the 'Database' command.
 data DatabaseCommand where
-  Export :: !ExportOptions -> DatabaseCommand
-  Reset  :: !ResetOptions  -> DatabaseCommand
+  Migrate :: DatabaseCommand
+  Export  :: !ExportOptions -> DatabaseCommand
+  Reset   :: !ResetOptions  -> DatabaseCommand
   deriving (Show)
 
 instance HasCommandDesc DatabaseCommand where
@@ -30,10 +31,9 @@ instance HasCommandDesc DatabaseCommand where
 -- | Parser for 'DatabaseOptions'.
 databaseCommandParser :: Parser DatabaseCommand
 databaseCommandParser = hsubparser
-  (  command "export"
-    (info (Export <$> exportOptionsParser) (progDesc "Export data from the database."))
-  <> command "reset"
-    (info (Reset  <$> resetOptionsParser)  (progDesc "Reset the database. [DANGER]"))
+  (  command "migrate" (info (pure Migrate)                   (progDesc "Run database migrations."))
+  <> command "export"  (info (Export <$> exportOptionsParser) (progDesc "Export data from the database."))
+  <> command "reset"   (info (Reset  <$> resetOptionsParser)  (progDesc "Reset the database. [DANGER]"))
   )
 
 

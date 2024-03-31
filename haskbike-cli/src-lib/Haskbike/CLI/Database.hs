@@ -52,10 +52,19 @@ dispatchDatabase options = do
 
 dispatchDatabaseCmd :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m)
                     => Options -> Command -> m ()
-dispatchDatabaseCmd options (Database (Export exportOptions)) = handleExport options exportOptions
-dispatchDatabaseCmd options (Database (Reset  resetOptions))  = handleReset options resetOptions
-dispatchDatabaseCmd _ _                                       = pure ()
+dispatchDatabaseCmd options (Database Migrate)                 = handleMigrate options
+dispatchDatabaseCmd options (Database (Export  exportOptions)) = handleExport  options exportOptions
+dispatchDatabaseCmd options (Database (Reset   resetOptions))  = handleReset   options resetOptions
+dispatchDatabaseCmd _ _                                        = pure ()
 
+
+-- | Handle 'Migrate' command.
+handleMigrate :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m)
+              => Options -> m ()
+handleMigrate _options = do
+  logWarning "Migrating database."
+  migrateDB
+  logWarning "Migrated database."
 
 -- | Handle 'Export' command.
 handleExport :: (HasEnv env m, MonadCatch m) => Options -> ExportOptions -> m ()
