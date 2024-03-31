@@ -58,6 +58,9 @@ sum-ebike-v1:
 test PACKAGE='all':
     {{CABAL}} test {{PACKAGE}} --test-show-details=direct
 
+run *ARGS:
+    {{CABAL}} run haskbike-cli -- --plain -v {{ARGS}}
+
 test-one PACKAGE PATTERN:
     {{CABAL}} test {{PACKAGE}} --test-show-details=direct --test-options='--pattern=/{{PATTERN}}/'
 
