@@ -85,6 +85,7 @@ library
 
     -- Modules exported by the library.
     exposed-modules:  Haskbike.Database.BikeShare
+                    , Haskbike.Database.CustomExpressions
                     , Haskbike.Database.BeamConvertable
                     , Haskbike.Database.Connection
                     , Haskbike.Database.DaysAgo

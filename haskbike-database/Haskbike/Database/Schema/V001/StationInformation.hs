@@ -67,14 +67,14 @@ import           Database.Beam.Backend                      ( BeamBackend, HasSq
 import           Database.Beam.Migrate
 import           Database.Beam.Postgres                     ( Postgres )
 import qualified Database.Beam.Postgres                     as Pg
-import           Database.Beam.Postgres.Syntax              ( PgExpressionSyntax (PgExpressionSyntax), emit,
-                                                              pgTextType )
+import           Database.Beam.Postgres.Syntax              ( pgTextType )
 import           Database.PostgreSQL.Simple.FromField       ( Field (typeOid), FromField (..), ResultError (..),
                                                               returnError, typoid )
 import           Database.PostgreSQL.Simple.ToField         ( ToField (..) )
 import           Database.PostgreSQL.Simple.TypeInfo.Static ( text )
 
 import qualified Haskbike.API.StationInformation            as AT
+import           Haskbike.Database.CustomExpressions
 
 
 -- | Declare a (Beam) table for the 'StationInformation' type.
@@ -470,10 +470,3 @@ createStationInformation =
 
 extraInfoMigrations :: IsString a => [a]
 extraInfoMigrations = ["ALTER TABLE public.station_status ADD CONSTRAINT fk_station_information FOREIGN KEY (info_station_id, info_reported) REFERENCES public.station_information (station_id, reported) ON UPDATE CASCADE"]
-
--- | Postgres @NOW()@ function. Returns the server's timestamp in UTC.
--- nowUtc_ :: QExpr Postgres s UTCTime
--- nowUtc_ = QExpr (\_ -> PgExpressionSyntax (emit "NOW() at time zone 'UTC'"))
-
-currentTimestampUtc_ :: QExpr Postgres s UTCTime
-currentTimestampUtc_ = QExpr (\_ -> PgExpressionSyntax (emit "CURRENT_TIMESTAMP"))
