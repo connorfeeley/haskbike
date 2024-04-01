@@ -16,13 +16,13 @@ module Haskbike.Database.Operations.Dockings
      ) where
 
 
-import           Control.Lens                                hiding ( reuse, (.=), (<.) )
-import           Control.Monad.Catch                         ( MonadCatch, MonadThrow )
+import           Control.Lens                                  hiding ( reuse, (.=), (<.) )
+import           Control.Monad.Catch                           ( MonadCatch, MonadThrow )
 
-import           Data.Bifunctor                              ( first )
-import           Data.Int                                    ( Int32 )
-import           Data.List                                   ( sortOn )
-import           Data.Ord                                    ( Down (..) )
+import           Data.Bifunctor                                ( first )
+import           Data.Int                                      ( Int32 )
+import           Data.List                                     ( sortOn )
+import           Data.Ord                                      ( Down (..) )
 import           Data.Time
 
 import           Database.Beam
@@ -38,7 +38,7 @@ import           Haskbike.Database.Tables.StationStatus
 
 import           Text.Pretty.Simple.Extras
 
-import           UnliftIO                                    ( MonadUnliftIO )
+import           UnliftIO                                      ( MonadUnliftIO )
 
 _eventsDeltas = do
   events <- (runWithAppMDebug "haskbike" . queryDockingEventsCount) $
