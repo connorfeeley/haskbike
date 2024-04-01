@@ -14,15 +14,12 @@ import           Control.Monad.Catch                           ( MonadCatch )
 
 import           Data.Aeson
 import qualified Data.ByteString                               as B
-import qualified Data.ByteString.Lazy                          as BL
 import           Data.Int                                      ( Int32 )
-import           Data.Maybe                                    ( fromMaybe )
 import           Data.Time
 
 import           Database.Beam
 import           Database.Beam.Postgres
 
-import           Haskbike.API.ResponseWrapper
 import           Haskbike.AppEnv
 import           Haskbike.Database.Expressions
 import           Haskbike.Database.Operations
