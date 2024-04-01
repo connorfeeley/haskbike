@@ -57,8 +57,9 @@ migrateDB = do
     Pg.migrationBackend
     migration
 
-  pool <- withConnPool
-  void . liftIO . withResource pool $ \conn -> do
+  -- Execute extra migrations.
+  withConnPool >>= \pool -> void . liftIO . withResource pool $ \conn ->  withTransaction conn $
     forM_ V004.extraOccupancyMigrations $ \mig -> do
       execute_ conn mig
+
   pure checkedDbSettings
