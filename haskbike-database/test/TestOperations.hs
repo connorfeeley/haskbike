@@ -17,7 +17,6 @@ module TestOperations
      , unit_stationEmptyTimeExported
      ) where
 
-import           Control.Monad
 import           Control.Monad.Catch                           ( MonadCatch )
 
 import           Data.Fixed                                    ( Pico )
@@ -33,6 +32,8 @@ import           Haskbike.Database.Operations
 import           Haskbike.Database.Operations.Factors
 import           Haskbike.Database.Operations.StationOccupancy
 import           Haskbike.Database.StatusVariationQuery
+import           Haskbike.Database.Tables.StationInformation
+import           Haskbike.Database.Tables.StationOccupancy
 import           Haskbike.Database.Test.Utils
 
 import           Test.Tasty.HUnit
@@ -177,15 +178,31 @@ unit_stationEmptyTimeExported = withTempDbM Silent initSteps $ do
       assertEqual "Station full time (exported)"  (Just 0) fullTime
   where
     initSteps = setupTestDatabase >> initDBWithExportedDataDate (Just 7001) startDay endDay
-    startDay = fromGregorian 2024 01 03
-    endDay   = fromGregorian 2024 01 04
+    startDay  = fromGregorian 2024 01 03
+    endDay    = fromGregorian 2024 01 04
 
 unit_cacheStationOccupancy :: IO ()
-unit_cacheStationOccupancy = withTempDbM Silent setupTestDatabase $ do
+unit_cacheStationOccupancy = withTempDbM Silent initSteps $ do
   occ <- withPostgres $
     cacheStationOccupancy 0 0
     Nothing
-    (UTCTime (fromGregorian 2023 10 30) (timeOfDayToTime midnight))
-    (UTCTime (fromGregorian 2023 10 31) (timeOfDayToTime midnight))
+    (UTCTime startDay (timeOfDayToTime midnight))
+    (UTCTime endDay   (timeOfDayToTime midnight))
   liftIO $ do
     assertEqual "Expected number of station occupancy records" 1 (length occ)
+    assertEqual "Cached 1 station occupancy record" (expectedOccupancy ((_stnOccCalculated . head) occ)) occ
+  where
+    initSteps = setupTestDatabase >> initDBWithExportedDataDate (Just 7001) startDay endDay
+    startDay  = fromGregorian 2024 01 03
+    endDay    = fromGregorian 2024 01 04
+    expectedOccupancy calculated =
+      [ StationOccupancy { _stnOccInfo        = StationInformationId 7001 (UTCTime (fromGregorian 2023 09 24) (timeOfDayToTime (TimeOfDay 17 58 22)))
+                         , _stnOccCalculated  = calculated -- Use calculated time from returned record (since it defaults to the current time).
+                         , _stnOccRangeStart  = UTCTime (fromGregorian 2024 01 03) (timeOfDayToTime (TimeOfDay 00 00 00))
+                         , _stnOccRangeEnd    = UTCTime (fromGregorian 2024 01 04) (timeOfDayToTime (TimeOfDay 00 00 00))
+                         , _stnOccEmptyThresh = 0
+                         , _stnOccFullThresh  = 0
+                         , _stnOccEmptySec    = 51104
+                         , _stnOccFullSec     = 0
+                         }
+      ]
