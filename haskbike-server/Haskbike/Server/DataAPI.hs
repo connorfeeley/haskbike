@@ -29,8 +29,8 @@ import           Haskbike.Database.Expressions                       ( queryLate
 import           Haskbike.Database.Operations.Dockings
 import           Haskbike.Database.Operations.Factors
 import           Haskbike.Database.Operations.StationOccupancy
-import qualified Haskbike.Database.Schema.V004.StationOccupancy      as DB
 import           Haskbike.Database.StatusVariationQuery
+import qualified Haskbike.Database.Tables.StationOccupancy           as DB
 import           Haskbike.Server.Components.PerformanceData
 import           Haskbike.Server.Data.EmptyFullData
 import           Haskbike.Server.Data.FactorsCSV
