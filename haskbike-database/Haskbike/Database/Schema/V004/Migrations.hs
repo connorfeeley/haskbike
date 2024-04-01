@@ -59,6 +59,6 @@ migrateDB = do
 
   pool <- withConnPool
   void . liftIO . withResource pool $ \conn -> do
-    forM_ V004.extraOccupancyMigrations $ \migration -> do
-      execute_ conn migration
+    forM_ V004.extraOccupancyMigrations $ \mig -> do
+      execute_ conn mig
   pure checkedDbSettings

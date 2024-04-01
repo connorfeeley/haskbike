@@ -1,7 +1,8 @@
 -- | Utility functions for database operations.
 
 module Haskbike.Database.Utils
-     ( connectDbName
+     ( addConstraintIfNotExists
+     , connectDbName
      , connectProductionDb
      , connectTestDb
      , dbnameProduction
@@ -38,6 +39,7 @@ dropTables = do
   pool <- withConnPool
   void . liftIO . withResource pool $ \conn -> do
   -- Drop all tables.
+    execute_ conn $ dropCascade "station_occupancy"
     execute_ conn $ dropCascade "station_lookup"
     execute_ conn $ dropCascade "queries"
     execute_ conn $ dropCascade "station_status"

@@ -174,7 +174,22 @@ cacheStationOccupancy :: (MonadBeamInsertReturning Postgres m)
                       -> m [StationOccupancyT Identity]
 cacheStationOccupancy emptyThresh fullThresh stationId startT endT = do
   runInsertReturningList $
-    insert (bikeshareDb ^. bikeshareStationOccupancy) $
+    insertOnly (bikeshareDb ^. bikeshareStationOccupancy)
+               (\occ -> ( _stnOccInfo         occ
+                        , _stnOccRangeStart   occ
+                        , _stnOccRangeEnd     occ
+                        , _stnOccEmptyThresh  occ
+                        , _stnOccFullThresh   occ
+                        , _stnOccEmptySec     occ
+                        , _stnOccFullSec      occ
+                        )) $
     insertFrom $ do
-      (info, (empty, full)) <- stationOccupancyThreshE 0 0 stationId startT endT
-      pure $ StationOccupancy (primaryKey info) default_ (val_ startT) (val_ endT) (val_ emptyThresh) (val_ fullThresh) (fromMaybe_ 0 empty) (fromMaybe_ 0 full)
+      (info, (empty, full)) <- stationOccupancyThreshE emptyThresh fullThresh stationId startT endT
+      pure ( primaryKey info
+           , as_ @UTCTime $ val_ startT
+           , as_ @UTCTime $ val_ endT
+           , as_ @Int32   $ val_ emptyThresh
+           , as_ @Int32   $ val_ fullThresh
+           , fromMaybe_ 0 empty
+           , fromMaybe_ 0 full
+           )

@@ -38,9 +38,9 @@ import           Database.Beam.Backend                            ( IsSql92DataT
 import           Database.Beam.Migrate
 import           Database.Beam.Postgres
 
+import           Haskbike.Database.CustomExpressions
 import           Haskbike.Database.Schema.V001.StationInformation as V001
 import           Haskbike.Database.Tables.StationStatus
-
 
 
 data StationOccupancyT f where
@@ -59,6 +59,8 @@ type StationOccupancy   = StationOccupancyT Identity
 type StationOccupancyId = PrimaryKey StationOccupancyT Identity
 deriving instance Show StationOccupancyId
 deriving instance Show StationOccupancy
+deriving instance Eq StationOccupancyId
+deriving instance Eq StationOccupancy
 
 instance Table StationOccupancyT where
   data PrimaryKey StationOccupancyT f =
@@ -98,6 +100,7 @@ StationOccupancy _ _ _ _ _ _ _ (LensFor stnOccFullSec)     = tableLenses
 
 -- * Table modifications and migrations.
 
+
 -- | Table modifications for 'StationOccupancy' table.
 stnOccupancyModification :: EntityModification (DatabaseEntity be db) be (TableEntity StationOccupancyT)
 stnOccupancyModification =
@@ -120,7 +123,7 @@ createStationOccupancy =
                                             )
                                             (field "reported" (DataType (timestampType Nothing True)) notNull
                                             )
-  , _stnOccCalculated  = field "calculated"   (DataType (timestampType Nothing True)) notNull
+  , _stnOccCalculated  = field "calculated"   (DataType (timestampType Nothing True)) notNull (defaultTo_ currentTimestampUtc_)
   , _stnOccRangeStart  = field "range_start"  (DataType (timestampType Nothing True)) notNull
   , _stnOccRangeEnd    = field "range_end"    (DataType (timestampType Nothing True)) notNull
   , _stnOccEmptyThresh = field "empty_thresh" int notNull
@@ -131,15 +134,16 @@ createStationOccupancy =
 
 
 extraOccupancyMigrations :: IsString a => [a]
-extraOccupancyMigrations = [ extraOccupancyConstraint "station_occupancy" "station_information" "fk_station_occupancy" ["station_id", "reported"] ["station_id", "reported"]
-                           ]
+extraOccupancyMigrations = extraOccupancyConstraint "station_occupancy" "station_information" "fk_station_occupancy" ["station_id", "reported"] ["station_id", "reported"]
 
-extraOccupancyConstraint :: IsString a => T.Text -> T.Text -> T.Text -> [T.Text] -> [T.Text] -> a
+extraOccupancyConstraint :: IsString a => T.Text -> T.Text -> T.Text -> [T.Text] -> [T.Text] -> [a]
 extraOccupancyConstraint tableName foreignTableName constraintName columns foreignColumns =
-  fromString . T.unpack $
-  "ALTER TABLE " <> qualifiedTable <> " ADD CONSTRAINT " <> constraintName <>
-  " FOREIGN KEY (" <> columnsList <> ") REFERENCES " <>
-  qualifiedForeignTable <> " (" <> foreignColumnsList <> ") ON UPDATE CASCADE"
+  map (fromString . T.unpack)
+  [ "ALTER TABLE " <> qualifiedTable <> " DROP CONSTRAINT IF EXISTS " <> constraintName
+  , "ALTER TABLE " <> qualifiedTable <> " ADD CONSTRAINT " <> constraintName <>
+    " FOREIGN KEY (" <> columnsList <> ") REFERENCES " <>
+    qualifiedForeignTable <> " (" <> foreignColumnsList <> ") ON UPDATE CASCADE"
+  ]
   where
     qualifiedTable        = "public." <> tableName
     qualifiedForeignTable = "public." <> foreignTableName

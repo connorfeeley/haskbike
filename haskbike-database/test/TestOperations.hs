@@ -10,12 +10,14 @@
 -- | Test the database's charging count calculations and docking/undocking counts.
 
 module TestOperations
-     ( unit_queryFieldIntegrals
+     ( unit_cacheStationOccupancy
+     , unit_queryFieldIntegrals
      , unit_queryStatusFactors
      , unit_stationEmptyTime
      , unit_stationEmptyTimeExported
      ) where
 
+import           Control.Monad
 import           Control.Monad.Catch                           ( MonadCatch )
 
 import           Data.Fixed                                    ( Pico )
@@ -177,3 +179,13 @@ unit_stationEmptyTimeExported = withTempDbM Silent initSteps $ do
     initSteps = setupTestDatabase >> initDBWithExportedDataDate (Just 7001) startDay endDay
     startDay = fromGregorian 2024 01 03
     endDay   = fromGregorian 2024 01 04
+
+unit_cacheStationOccupancy :: IO ()
+unit_cacheStationOccupancy = withTempDbM Silent setupTestDatabase $ do
+  occ <- withPostgres $
+    cacheStationOccupancy 0 0
+    Nothing
+    (UTCTime (fromGregorian 2023 10 30) (timeOfDayToTime midnight))
+    (UTCTime (fromGregorian 2023 10 31) (timeOfDayToTime midnight))
+  liftIO $ do
+    assertEqual "Expected number of station occupancy records" 1 (length occ)
