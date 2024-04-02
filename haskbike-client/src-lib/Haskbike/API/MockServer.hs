@@ -33,21 +33,6 @@ import           Servant.Server.Generic
 import           UnliftIO
 
 
-mockRoutes :: BikeShareAPIRoutes AsServer
-mockRoutes = BikeShareAPIRoutes { _versions           = mkResponseWrapper mockVersions
-                                , _vehicleTypes       = mkResponseWrapper []
-                                , _stationInformation = mkResponseWrapper []
-                                , _stationStatus      = mkResponseWrapper []
-                                , _systemRegions      = mkResponseWrapper []
-                                , _systemInformation  = mkResponseWrapper mockSysInf
-                                , _systemPricingPlans = mkResponseWrapper []
-                                }
-
-
--- handleAPI = do
---   ct <- liftIO getCurrentTime
---   pure mockSysInf
-
 mkResponseWrapper dat = do
   ct <- liftIO getCurrentTime
   pure $
@@ -81,7 +66,7 @@ mockSysInf =
 
 mockServer :: ( WithEnv (Env m) m, WithEnv (Env m) m )
            => BikeShareAPIRoutes (AsServerT m)
-mockServer = BikeShareAPIRoutes { _versions           = mkResponseWrapper []
+mockServer = BikeShareAPIRoutes { _versions           = mkResponseWrapper mockVersions
                                 , _vehicleTypes       = mkResponseWrapper []
                                 , _stationInformation = mkResponseWrapper []
                                 , _stationStatus      = mkResponseWrapper []
