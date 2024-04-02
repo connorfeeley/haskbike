@@ -59,7 +59,7 @@ mockServer = BikeShareAPIRoutes { _versions           = mkResponseWrapper mockVe
                                 , _stationStatus      = mkResponseWrapper []
                                 , _systemRegions      = mkResponseWrapper []
                                 , _systemInformation  = mkResponseWrapper mockSysInf
-                                , _systemPricingPlans = mkResponseWrapper []
+                                , _systemPricingPlans = mkResponseWrapper mockSysPricingPlans
                                 }
 
 -- | Run the mock server.
@@ -177,3 +177,50 @@ mockSysInf =
   , _sysInfSysId                = "bike_share_toronto"
   , _sysInfTimeZone             = "America/Toronto"
   }
+
+
+-- | Mock response for 'SystemPricingPlans'
+mockSysPricingPlans = map mkSystemPricingPlan
+  [ ("186",    "Annual 30",                      105.0,  "Unlimited 30-min trips on classic bikes")
+  , ("186-1",  "Annual 30",                      105.0,  "Unlimited 30-min trips on classic bikes")
+  , ("186-2",  "Annual 30",                      105.0,  "Unlimited 30-min trips on classic bikes")
+  , ("191",    "CMP-City of Toronto",             90.0,  "CMP-City of Toronto")
+  , ("191-2",  "CMP-City of Toronto",             90.0,  "CMP-City of Toronto")
+  , ("208",    "Annual 45",                      120.0,  "Unlimited 45-min trips on classic bikes")
+  , ("208-1",  "Annual 45",                      120.0,  "Unlimited 45-min trips on classic bikes")
+  , ("208-2",  "Annual 45",                      120.0,  "Unlimited 45-min trips on classic bikes")
+  , ("209",    "Corporate 30",                    84.0,  "Corporate 30")
+  , ("209-1",  "Corporate 30",                    84.0,  "Corporate 30")
+  , ("209-2",  "Corporate 30",                    84.0,  "Corporate 30")
+  , ("210-1",  "Corporate 45",                    96.0,  "Corporate 45")
+  , ("210-2",  "Corporate 45",                    96.0,  "Corporate 45")
+  , ("210",    "Corporate 45",                    96.0,  "Corporate 45")
+  , ("211",    "OPTION 2 TEST",                    0.0,  "")
+  , ("211-1",  "OPTION 2 TEST",                    0.0,  "")
+  , ("211-2",  "OPTION 2 TEST",                    0.0,  "")
+  , ("224",    "VIP Trial",                        0.0,  "VIP Trial")
+  , ("224-1",  "VIP Trial",                        0.0,  "VIP Trial")
+  , ("224-2",  "VIP Trial",                        0.0,  "VIP Trial")
+  , ("251",    "Classic Bike DayPass",            15.0,  "90 min rides on classic bikes")
+  , ("251-1",  "Classic Bike DayPass",            15.0,  "90 min rides on classic bikes")
+  , ("251-2",  "Classic Bike DayPass",            15.0,  "90 min rides on classic bikes")
+  , ("252-1",  "Pay-As-You-Go ($1 Unlock Fee)",    0.0,  "+Classic bike $0.12/min; Ebike $0.20/min  ")
+  , ("252-2",  "Pay-As-You-Go ($1 Unlock Fee)",    0.0,  "+Classic bike $0.12/min; Ebike $0.20/min  ")
+  , ("252",    "Pay-As-You-Go ($1 Unlock Fee)",    0.0,  "+Classic bike $0.12/min; Ebike $0.20/min  ")
+  , ("258",    "Annual 30 - ODSP",               105.0,  "Unlimited 30-min trips with any bike")
+  , ("258-1",  "Annual 30 - ODSP",               105.0,  "Unlimited 30-min trips with any bike")
+  , ("258-2",  "Annual 30 - ODSP",               105.0,  "Unlimited 30-min trips with any bike")
+  , ("259-1",  "Annual 45 - ODSP",               120.0,  "Unlimited 45-min trips with any bike")
+  , ("259-2",  "Annual 45 - ODSP",               120.0,  "Unlimited 45-min trips with any bike")
+  , ("259",    "Annual 45 - ODSP",               120.0,  "Unlimited 45-min trips with any bike")
+  , ("264",    "Annual 30 3 Install",            105.0,  "3 monthly installments of $35 + tax")
+  , ("264-1",  "Annual 30 3 Install",            105.0,  "3 monthly installments of $35 + tax")
+  , ("264-2",  "Annual 30 3 Install",            105.0,  "3 monthly installments of $35 + tax")
+  , ("265",    "Annual 45 3 Install",            120.0,  "3 monthly installments of $40 + tax")
+  , ("265-1",  "Annual 45 3 Install",            120.0,  "3 monthly installments of $40 + tax")
+  , ("265-2",  "Annual 45 3 Install",            120.0,  "3 monthly installments of $40 + tax")
+  ]
+  where
+    mkSystemPricingPlan (sysPricingPlanId, sysPricingPlanName, sysPricingPlanPrice, sysPricingPlanDescription) = SystemPricingPlan {..}
+    sysPricingPlanCurrency = "CAD"
+    sysPricingPlanTaxable  = True
