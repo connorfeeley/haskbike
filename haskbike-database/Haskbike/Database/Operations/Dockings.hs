@@ -16,10 +16,10 @@ module Haskbike.Database.Operations.Dockings
      ) where
 
 
-import           Control.Lens                                  hiding ( reuse, (.=), (<.) )
-import           Control.Monad.Catch                           ( MonadCatch, MonadThrow )
+import           Control.Lens                                hiding ( reuse, (.=), (<.) )
+import           Control.Monad.Catch                         ( MonadCatch, MonadThrow )
 
-import           Data.Int                                      ( Int32 )
+import           Data.Int                                    ( Int32 )
 
 import           Database.Beam
 
@@ -31,7 +31,7 @@ import           Haskbike.Database.StatusVariationQuery
 import           Haskbike.Database.Tables.StationInformation
 import           Haskbike.Database.Tables.StationStatus
 
-import           UnliftIO                                      ( MonadUnliftIO )
+import           UnliftIO                                    ( MonadUnliftIO )
 
 
 -- | Query the number of dockings and undockings for a station.

@@ -1,8 +1,8 @@
 -- | Options for the debug commands.
 
 module Haskbike.CLI.Options.Debug
-     ( DebugMockServerOptions (..)
-     , DebugCommand (..)
+     ( DebugCommand (..)
+     , DebugMockServerOptions (..)
      , debugCommandParser
      ) where
 

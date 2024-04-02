@@ -24,6 +24,7 @@ import           Data.Int                                      ( Int32 )
 import           Data.Time
 
 import           Database.Beam
+import           Database.Beam.Backend.SQL.BeamExtensions
 
 import qualified Haskbike.API.StationStatus                    as AT
 import           Haskbike.API.Utils
@@ -39,7 +40,6 @@ import           Haskbike.Database.Test.Utils
 import           Test.Tasty.HUnit
 
 import           UnliftIO
-import Database.Beam.Backend.SQL.BeamExtensions
 
 
 -- * Test units.

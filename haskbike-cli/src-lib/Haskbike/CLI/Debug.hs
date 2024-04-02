@@ -10,13 +10,13 @@ import           Colog                                  ( logDebug )
 
 import           Control.Monad.Catch                    ( MonadCatch )
 
-import Haskbike.API.MockServer
 import           Data.Maybe                             ( fromMaybe )
 import           Data.Proxy
 import           Data.Text.Lazy                         ( Text, pack )
 
 import           Database.Beam.Schema.Tables
 
+import           Haskbike.API.MockServer
 import           Haskbike.AppEnv
 import           Haskbike.CLI.Options
 import           Haskbike.CLI.QueryFormat

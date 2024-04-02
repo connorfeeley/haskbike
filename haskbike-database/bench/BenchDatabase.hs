@@ -9,7 +9,6 @@ module BenchDatabase
 
 import qualified Codec.Compression.Zstd                        as Z
 
-import           Database.Beam.Backend.SQL.BeamExtensions
 import           Control.Monad                                 ( void )
 import           Control.Monad.Catch                           ( MonadCatch )
 
@@ -18,6 +17,7 @@ import qualified Data.ByteString                               as B
 import           Data.Time
 
 import           Database.Beam
+import           Database.Beam.Backend.SQL.BeamExtensions
 import           Database.Beam.Postgres
 
 import           Haskbike.AppEnv
@@ -27,11 +27,11 @@ import           Haskbike.Database.Operations.Factors
 import           Haskbike.Database.Operations.StationOccupancy
 import           Haskbike.Database.StatusVariationQuery
 import           Haskbike.Database.Tables.StationInformation
+import           Haskbike.Database.Tables.StationOccupancy
 import           Haskbike.Database.Test.Utils
 import           Haskbike.TimeInterval                         ( minsPerHourlyInterval )
 
 import           Test.Tasty.Bench
-import Haskbike.Database.Tables.StationOccupancy
 
 
 -- * Common helpers.
