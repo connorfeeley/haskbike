@@ -162,8 +162,11 @@ library
                     , lucid
                     , servant-lucid
                     , servant-server
+                    , wai
                     , wai-extra
+                    , wai-logger
                     , warp
+                    , http-types
 
                     , beam-core
                     , postgresql-simple
