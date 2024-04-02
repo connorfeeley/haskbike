@@ -79,6 +79,7 @@ library
                     , Haskbike.API.BikeShareAPI
                     , Haskbike.API.ClientLifted
                     , Haskbike.API.ClientUtils
+                    , Haskbike.API.MockServer
                     -- , API.Pollable
                     , Haskbike.API.ResponseWrapper
                     , Haskbike.API.APIVersion
@@ -107,6 +108,7 @@ library
                     , text
                     , time
                     , unliftio
+                    , mtl
 
                     , aeson
                     , http-client
@@ -114,6 +116,11 @@ library
                     , servant
                     , servant-client
                     , servant-client-core
+
+                    , servant-server
+                    , wai
+                    , wai-extra
+                    , warp
 
     -- Directories containing source files.
     hs-source-dirs: src-lib
