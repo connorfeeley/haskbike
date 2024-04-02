@@ -208,7 +208,7 @@ test-suite haskbike-cli-test
 
     hs-source-dirs:   test
 
-    main-is:          Driver.hs
+    main-is:          Main.hs
 
     build-depends:    base
                     , haskbike-core
@@ -217,5 +217,3 @@ test-suite haskbike-cli-test
                     , tasty
                     , tasty-hunit
                     , unliftio
-
-    build-tool-depends: tasty-discover:tasty-discover

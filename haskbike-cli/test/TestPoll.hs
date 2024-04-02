@@ -1,5 +1,8 @@
 -- | Test the client functions.
-module TestPoll where
+
+module TestPoll
+     ( tests
+     ) where
 
 import           Control.Monad                ( void )
 
@@ -11,11 +14,20 @@ import           Haskbike.Database.Test.Utils
 
 import           Prelude                      hiding ( log, unwords )
 
+import           Test.Tasty
+import           Test.Tasty.HUnit
+
 import           UnliftIO                     ( timeout )
 
 
-unit_poll :: IO ()
-unit_poll = do
+tests :: TestTree
+tests = testGroup "Poll tests"
+  [ testCase "Poll" poll
+  ]
+
+
+poll :: IO ()
+poll = do
   withTempDbM Silent migrateDB doPoll
   where
     pollOpts = PollOptions NeverPopulate
