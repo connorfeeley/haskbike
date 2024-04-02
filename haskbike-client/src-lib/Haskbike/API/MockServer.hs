@@ -6,7 +6,7 @@ module Haskbike.API.MockServer
 
 import           Colog
 
-import           Control.Monad.Catch                  ( throwM )
+import           Control.Monad.Catch                  ( MonadCatch, throwM )
 import           Control.Monad.Except
 import           Control.Monad.Reader
 
@@ -15,6 +15,7 @@ import           Data.Proxy                           ( Proxy (..) )
 import qualified Data.Text                            as T
 import           Data.Time
 
+import           Haskbike.API.APIVersion
 import           Haskbike.API.BikeShareAPI
 import           Haskbike.API.ResponseWrapper
 import           Haskbike.API.SystemInformation
@@ -33,7 +34,7 @@ import           UnliftIO
 
 
 mockRoutes :: BikeShareAPIRoutes AsServer
-mockRoutes = BikeShareAPIRoutes { _versions           = mkResponseWrapper []
+mockRoutes = BikeShareAPIRoutes { _versions           = mkResponseWrapper mockVersions
                                 , _vehicleTypes       = mkResponseWrapper []
                                 , _stationInformation = mkResponseWrapper []
                                 , _stationStatus      = mkResponseWrapper []
@@ -55,6 +56,8 @@ mkResponseWrapper dat = do
                     , _respVer         = "2.3"
                     , _respData        = dat
                     }
+
+mockVersions = [ APIVersion { _apiVersion = 2.3, _apiUrl = "localhost" } ]
 
 mockSysInf =
   SystemInformation
@@ -87,25 +90,19 @@ mockServer = BikeShareAPIRoutes { _versions           = mkResponseWrapper []
                                 , _systemPricingPlans = mkResponseWrapper []
                                 }
 
-runMockServer :: (Monad m, MonadReader (Env m) m, MonadUnliftIO m, HasEnv (Env m) m, HasEnv (Env m) m)
-              => m ()
-runMockServer = do
-  serverHoisted <- withRunInIO $ \toIo ->
-    pure $ hoistServer apiProxy (S.Handler . ExceptT . try . toIo) mockServer
-
-  -- Run Warp/Wai server using specific settings.
-  logInfo $ "Spawning mock bikeshare API server on port " <> (T.pack . show) port
-  liftIO $ runSettings serverSettings (logStdoutDev (serve apiProxy serverHoisted))
+runMockServer :: (HasEnv (Env AppM) m, MonadCatch m, MonadUnliftIO m, MonadFail m)
+              => Int -> m ()
+runMockServer port = do
+  env <- ask
+  liftIO $ runSettings serverSettings (logStdoutDev (serverApp env))
   where
     apiProxy :: Proxy BikeShareAPI
     apiProxy = Proxy
 
-    port = 8080
-
     serverSettings :: Settings
     serverSettings = defaultSettings
                   & setPort port
-                  & setTimeout 60
+                  & setTimeout 5
 
 -- | Natural transformation between server monad and Servant 'Handler' monad.
 serverNt :: Env AppM -> AppM a -> S.Handler a
