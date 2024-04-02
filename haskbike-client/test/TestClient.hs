@@ -1,5 +1,8 @@
 -- | Test the client functions.
-module TestClient where
+
+module TestClient
+     ( tests
+     ) where
 
 import           Control.Exception   ( SomeException, try )
 import           Control.Monad       ( void )
@@ -10,6 +13,7 @@ import           Haskbike.API.Client
 
 import           Prelude             hiding ( log, unwords )
 
+import           Test.Tasty
 import           Test.Tasty.HUnit
 
 
@@ -22,21 +26,43 @@ checkResponse = assertBool "Response decoding failed" . isRight
 
 
 -- | Mark a test as expected to fail.
-markAsExpectedFailure :: IO () -> IO ()
-markAsExpectedFailure testFunc = do
+_markAsExpectedFailure :: IO () -> IO ()
+_markAsExpectedFailure testFunc = do
   result <- try testFunc :: IO (Either SomeException ())
   case result of
     Left _  -> return ()
     Right _ -> assertFailure "Expected failure, but test passed"
 
 
+tests :: TestTree
+tests = testGroup "Client tests"
+  [ parseVersions
+  , parseVehicleTypes
+  , parseStationInformation
+  , parseStationStatus
+  , parseSystemInformation
+  , parseSystemRegions
+  , parseSystemPricingPlans
+  ]
+
 -- | Test the client functions.
-unit_parseVersions, unit_parseVehicleTypes, unit_parseStationInformation, unit_parseStationStatus :: IO ()
-unit_parseSystemInformation, unit_parseSystemRegions, unit_parseSystemPricingPlans :: IO ()
-unit_parseVersions           = void . checkResponse =<< runQueryWithEnv versions
-unit_parseVehicleTypes       = void . checkResponse =<< runQueryWithEnv vehicleTypes
-unit_parseStationInformation = void . checkResponse =<< runQueryWithEnv stationInformation
-unit_parseStationStatus      = void . checkResponse =<< runQueryWithEnv stationStatus
-unit_parseSystemInformation  = void . checkResponse =<< runQueryWithEnv systemInformation
-unit_parseSystemRegions      = void . checkResponse =<< runQueryWithEnv systemRegions
-unit_parseSystemPricingPlans = void . checkResponse =<< runQueryWithEnv systemPricingPlans
+parseVersions           :: TestTree
+parseVersions           = testCase "Parse versions"             (void . checkResponse =<< runQueryWithEnv versions)
+
+parseVehicleTypes       :: TestTree
+parseVehicleTypes       = testCase "Parse vehicle types"        (void . checkResponse =<< runQueryWithEnv vehicleTypes)
+
+parseStationInformation :: TestTree
+parseStationInformation = testCase "Parse station information"  (void . checkResponse =<< runQueryWithEnv stationInformation)
+
+parseStationStatus      :: TestTree
+parseStationStatus      = testCase "Parse station status"       (void . checkResponse =<< runQueryWithEnv stationStatus)
+
+parseSystemInformation  :: TestTree
+parseSystemInformation  = testCase "Parse system information"   (void . checkResponse =<< runQueryWithEnv systemInformation)
+
+parseSystemRegions      :: TestTree
+parseSystemRegions      = testCase "Parse system regions"       (void . checkResponse =<< runQueryWithEnv systemRegions)
+
+parseSystemPricingPlans :: TestTree
+parseSystemPricingPlans = testCase "Parse system pricing plans" (void . checkResponse =<< runQueryWithEnv systemPricingPlans)

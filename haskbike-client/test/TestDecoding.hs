@@ -1,11 +1,5 @@
 module TestDecoding
-     ( unit_stationInformation
-     , unit_stationStatus
-     , unit_systemInformation
-     , unit_systemPricingPlans
-     , unit_systemRegions
-     , unit_vehicleTypes
-     , unit_versions
+     ( tests
      ) where
 
 import           Data.Aeson                      ( FromJSON, eitherDecode )
@@ -23,6 +17,7 @@ import           Haskbike.API.SystemPricingPlan
 import           Haskbike.API.SystemRegion
 import           Haskbike.API.VehicleTypeFull
 
+import           Test.Tasty
 import           Test.Tasty.HUnit
 
 import           Utils
@@ -46,12 +41,23 @@ buildTestCase (_ :: a) file = testParse (undefined :: a) (Maybe.fromMaybe "" $ l
 
 -- | Test decoding of JSON files.
 
-unit_versions, unit_vehicleTypes, unit_stationInformation, unit_stationStatus, unit_systemInformation, unit_systemRegions, unit_systemPricingPlans :: IO ()
+tests :: TestTree
+tests = testGroup "Decoding tests"
+  [ versions
+  , vehicleTypes
+  , stationInformation
+  , stationStatus
+  , systemInformation
+  , systemRegions
+  , systemPricingPlans
+  ]
 
-unit_versions           = buildTestCase (undefined :: ResponseWrapper [APIVersion])         "gbfs_versions.json"
-unit_vehicleTypes       = buildTestCase (undefined :: ResponseWrapper [VehicleTypeFull])    "vehicle_types.json"
-unit_stationInformation = buildTestCase (undefined :: ResponseWrapper [StationInformation]) "station_information.json"
-unit_stationStatus      = buildTestCase (undefined :: ResponseWrapper [StationStatus])      "station_status.json"
-unit_systemRegions      = buildTestCase (undefined :: ResponseWrapper [SystemRegion])       "system_regions.json"
-unit_systemInformation  = buildTestCase (undefined :: ResponseWrapper SystemInformation)    "system_information.json"
-unit_systemPricingPlans = buildTestCase (undefined :: ResponseWrapper [SystemPricingPlan])  "system_pricing_plans.json"
+versions, vehicleTypes, stationInformation, stationStatus, systemInformation, systemRegions, systemPricingPlans :: TestTree
+
+versions           = testCase "Decode versions"             (buildTestCase (undefined :: ResponseWrapper [APIVersion])         "gbfs_versions.json")
+vehicleTypes       = testCase "Decode vehicle types"        (buildTestCase (undefined :: ResponseWrapper [VehicleTypeFull])    "vehicle_types.json")
+stationInformation = testCase "Decode station information"  (buildTestCase (undefined :: ResponseWrapper [StationInformation]) "station_information.json")
+stationStatus      = testCase "Decode station status"       (buildTestCase (undefined :: ResponseWrapper [StationStatus])      "station_status.json")
+systemRegions      = testCase "Decode system regions"       (buildTestCase (undefined :: ResponseWrapper [SystemRegion])       "system_regions.json")
+systemInformation  = testCase "Decode system information"   (buildTestCase (undefined :: ResponseWrapper SystemInformation)    "system_information.json")
+systemPricingPlans = testCase "Decode system pricing plans" (buildTestCase (undefined :: ResponseWrapper [SystemPricingPlan])  "system_pricing_plans.json")
