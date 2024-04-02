@@ -12,8 +12,7 @@ import           Options.Applicative
 
 -- | Options for the 'Debug' command.
 data DebugMiscOptions where
-  DebugMiscOptions :: { optFoo :: Bool -- TODO: this is just a placeholder.
-                      } -> DebugMiscOptions
+  DebugMiscOptions :: { } -> DebugMiscOptions
   deriving (Show)
 
 instance HasCommandDesc DebugMiscOptions where
@@ -22,6 +21,3 @@ instance HasCommandDesc DebugMiscOptions where
 -- | Parser for 'DebugOptions'.
 debugMiscOptionsParser :: Parser DebugMiscOptions
 debugMiscOptionsParser = DebugMiscOptions
-  <$> switch
-      ( long "foo"
-     <> help "Foo. Foo foo foo bar." )
