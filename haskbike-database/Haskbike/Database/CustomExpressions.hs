@@ -3,6 +3,7 @@
 module Haskbike.Database.CustomExpressions
      ( currentTimestampUtc_
      ) where
+
 import           Data.Time
 
 import           Database.Beam

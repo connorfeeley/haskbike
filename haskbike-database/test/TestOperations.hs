@@ -175,7 +175,7 @@ unit_stationEmptyTimeExported = withTempDbM Silent initSteps $ do
     Just (_stationInfo, (emptyTime, fullTime)) -> do
       -- FIXME: calculated in excel we should be expecting 51104 seconds empty.
       assertEqual "Station empty time (exported)" (Just 51104) emptyTime
-      assertEqual "Station full time (exported)"  (Just 0) fullTime
+      assertEqual "Station full time  (exported)" (Just 0)     fullTime
   where
     initSteps = setupTestDatabase >> initDBWithExportedDataDate (Just 7001) startDay endDay
     startDay  = fromGregorian 2024 01 03
@@ -183,14 +183,11 @@ unit_stationEmptyTimeExported = withTempDbM Silent initSteps $ do
 
 unit_cacheStationOccupancy :: IO ()
 unit_cacheStationOccupancy = withTempDbM Silent initSteps $ do
-  occ <- withPostgres $
-    cacheStationOccupancy 0 0
-    Nothing
-    (UTCTime startDay (timeOfDayToTime midnight))
-    (UTCTime endDay   (timeOfDayToTime midnight))
-  liftIO $ do
-    assertEqual "Expected number of station occupancy records" 1 (length occ)
-    assertEqual "Cached 1 station occupancy record" (expectedOccupancy ((_stnOccCalculated . head) occ)) occ
+  occ1 <- queryAndCacheOccupancy
+  assertOccupancy 1 ((_stnOccCalculated . head) occ1) occ1
+
+  occ2 <- queryAndCacheOccupancy
+  assertOccupancy 1 ((_stnOccCalculated . head) occ2) occ2
   where
     initSteps = setupTestDatabase >> initDBWithExportedDataDate (Just 7001) startDay endDay
     startDay  = fromGregorian 2024 01 03
@@ -206,3 +203,12 @@ unit_cacheStationOccupancy = withTempDbM Silent initSteps $ do
                          , _stnOccFullSec     = 0
                          }
       ]
+    queryAndCacheOccupancy = withPostgres $
+      cacheStationOccupancy 0 0
+      Nothing
+      (UTCTime startDay (timeOfDayToTime midnight))
+      (UTCTime endDay   (timeOfDayToTime midnight))
+
+    assertOccupancy expectedLength expectedCalculated occ = liftIO $ do
+      assertEqual "Expected number of station occupancy records" expectedLength (length occ)
+      assertEqual "Cached 1 station occupancy record" (expectedOccupancy expectedCalculated) occ

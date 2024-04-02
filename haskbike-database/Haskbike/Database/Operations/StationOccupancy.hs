@@ -11,9 +11,11 @@ import           Data.Int                                    ( Int32 )
 import           Data.Time
 
 import           Database.Beam
-import           Database.Beam.Backend.SQL.BeamExtensions    ( MonadBeamInsertReturning (runInsertReturningList) )
+import           Database.Beam.Backend.SQL.BeamExtensions    ( MonadBeamInsertReturning (runInsertReturningList),
+                                                               conflictingFields )
 import           Database.Beam.Postgres                      ( Postgres )
 import qualified Database.Beam.Postgres                      as Pg
+import qualified Database.Beam.Postgres.Full                 as Pg
 
 import           Haskbike.Database.BikeShare
 import           Haskbike.Database.Operations.Utils
@@ -174,16 +176,17 @@ cacheStationOccupancy :: (MonadBeamInsertReturning Postgres m)
                       -> m [StationOccupancyT Identity]
 cacheStationOccupancy emptyThresh fullThresh stationId startT endT = do
   runInsertReturningList $
-    insertOnly (bikeshareDb ^. bikeshareStationOccupancy)
-               (\occ -> ( _stnOccInfo         occ
-                        , _stnOccRangeStart   occ
-                        , _stnOccRangeEnd     occ
-                        , _stnOccEmptyThresh  occ
-                        , _stnOccFullThresh   occ
-                        , _stnOccEmptySec     occ
-                        , _stnOccFullSec      occ
-                        )) $
-    insertFrom $ do
+    -- Can't return 'default_' from a query, so have to only insert specific columns with 'insertOnly'
+    Pg.insertOnlyOnConflict (bikeshareDb ^. bikeshareStationOccupancy)
+                            (\occ -> ( _stnOccInfo         occ
+                                     , _stnOccRangeStart   occ
+                                     , _stnOccRangeEnd     occ
+                                     , _stnOccEmptyThresh  occ
+                                     , _stnOccFullThresh   occ
+                                     , _stnOccEmptySec     occ
+                                     , _stnOccFullSec      occ
+                                     ))
+    (insertFrom (do
       (info, (empty, full)) <- stationOccupancyThreshE emptyThresh fullThresh stationId startT endT
       pure ( primaryKey info
            , as_ @UTCTime $ val_ startT
@@ -192,4 +195,5 @@ cacheStationOccupancy emptyThresh fullThresh stationId startT endT = do
            , as_ @Int32   $ val_ fullThresh
            , fromMaybe_ 0 empty
            , fromMaybe_ 0 full
-           )
+           )))
+    (conflictingFields primaryKey) Pg.onConflictUpdateAll
