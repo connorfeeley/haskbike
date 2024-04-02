@@ -39,6 +39,7 @@ import           Haskbike.Database.Test.Utils
 import           Test.Tasty.HUnit
 
 import           UnliftIO
+import Database.Beam.Backend.SQL.BeamExtensions
 
 
 -- * Test units.
@@ -154,28 +155,27 @@ toDuration = calendarTimeTime . secondsToNominalDiffTime
 check :: (HasEnv env m, MonadIO m, MonadFail m, MonadUnliftIO m, MonadCatch m)
       => DayOfMonth -> Maybe CalendarDiffTime -> m ()
 check d expected = do
-  empty <- withPostgres $ runSelectReturningList $ select $
-    stationOccupancyE (Nothing :: Maybe Int32)
+  empty <- withPostgres . runInsertReturningList $ cacheStationOccupancy 0 0 (Nothing :: Maybe Int32)
     (UTCTime (fromGregorian 2023 01 d)      (timeOfDayToTime (TimeOfDay 0 0 0)))
     (UTCTime (fromGregorian 2023 01 (d +1)) (timeOfDayToTime (TimeOfDay 0 0 0)))
-  liftIO $ assertEqual ("Station empty time " <> show d) expected ((secondsToDuration . fst . snd . head) empty)
+  liftIO $ assertEqual ("Station empty time " <> show d) expected ((secondsToDuration . _stnOccEmptySec . head) empty)
   where secondsToDuration Nothing  = Nothing
         secondsToDuration (Just x) = Just ((toDuration . fromIntegral) x)
 
 
 unit_stationEmptyTimeExported :: IO ()
 unit_stationEmptyTimeExported = withTempDbM Silent initSteps $ do
-  result <- withPostgres $ runSelectReturningOne $ select $
-    stationOccupancyE (Just 7001 :: Maybe Int32)
+  result <- withPostgres . runInsertReturningList $ cacheStationOccupancy 0 0 (Nothing :: Maybe Int32)
     (UTCTime (fromGregorian 2024 01 03) (timeOfDayToTime (TimeOfDay 0 0 0)))
     (UTCTime (fromGregorian 2024 01 04) (timeOfDayToTime (TimeOfDay 0 0 0)))
 
   liftIO $ case result of
-    Nothing -> assertFailure "No result returned."
-    Just (_stationInfo, (emptyTime, fullTime)) -> do
-      -- FIXME: calculated in excel we should be expecting 51104 seconds empty.
-      assertEqual "Station empty time (exported)" (Just 51104) emptyTime
-      assertEqual "Station full time  (exported)" (Just 0)     fullTime
+    [occ] -> do
+      -- FIXME: calculated in excel that we should be expecting 50595 seconds empty.
+      assertEqual "Station empty time (exported)" (Just 51104) (_stnOccEmptySec occ)
+      assertEqual "Station full time  (exported)" (Just 0)     (_stnOccFullSec  occ)
+    [] -> assertFailure "No result returned."
+    _ -> assertFailure "Multiple results returned."
   where
     initSteps = setupTestDatabase >> initDBWithExportedDataDate (Just 7001) startDay endDay
     startDay  = fromGregorian 2024 01 03
@@ -205,7 +205,7 @@ unit_cacheStationOccupancy = withTempDbM Silent initSteps $ do
       ]
     queryAndCacheOccupancy = withPostgres . runInsertReturningList $
       cacheStationOccupancy 0 0
-      Nothing
+      (Nothing :: Maybe Int32)
       (UTCTime startDay (timeOfDayToTime midnight))
       (UTCTime endDay   (timeOfDayToTime midnight))
 
