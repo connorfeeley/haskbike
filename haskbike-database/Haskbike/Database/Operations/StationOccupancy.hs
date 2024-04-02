@@ -193,7 +193,7 @@ cacheStationOccupancy emptyThresh fullThresh stationId startT endT = do
            , as_ @UTCTime $ val_ endT
            , as_ @Int32   $ val_ emptyThresh
            , as_ @Int32   $ val_ fullThresh
-           , fromMaybe_ 0 empty
-           , fromMaybe_ 0 full
+           , empty
+           , full
            )))
     (conflictingFields primaryKey) Pg.onConflictUpdateAll

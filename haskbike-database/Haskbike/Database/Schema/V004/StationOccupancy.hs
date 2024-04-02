@@ -45,13 +45,13 @@ import           Haskbike.Database.Tables.StationStatus
 
 data StationOccupancyT f where
   StationOccupancy :: { _stnOccInfo        :: PrimaryKey V001.StationInformationT f
-                      , _stnOccCalculated  :: C f UTCTime -- ^ The time the calculation was done.
-                      , _stnOccRangeStart  :: C f UTCTime -- ^ The start time of the occupancy calculation.
-                      , _stnOccRangeEnd    :: C f UTCTime -- ^ The end time of the occupancy calculation.
-                      , _stnOccEmptyThresh :: C f Int32   -- ^ The threshold (0 + x) for the station to be considered empty.
-                      , _stnOccFullThresh  :: C f Int32   -- ^ The threshold (capacity - x) for the station to be considered full.
-                      , _stnOccEmptySec    :: C f Int32   -- ^ The number of seconds the station was empty.
-                      , _stnOccFullSec     :: C f Int32   -- ^ The number of seconds the station was full.
+                      , _stnOccCalculated  :: C f UTCTime        -- ^ The time the calculation was done.
+                      , _stnOccRangeStart  :: C f UTCTime        -- ^ The start time of the occupancy calculation.
+                      , _stnOccRangeEnd    :: C f UTCTime        -- ^ The end time of the occupancy calculation.
+                      , _stnOccEmptyThresh :: C f Int32          -- ^ The threshold (0 + x) for the station to be considered empty.
+                      , _stnOccFullThresh  :: C f Int32          -- ^ The threshold (capacity - x) for the station to be considered full.
+                      , _stnOccEmptySec    :: C f (Maybe Int32)  -- ^ The number of seconds the station was empty.
+                      , _stnOccFullSec     :: C f (Maybe Int32)  -- ^ The number of seconds the station was full.
                       } -> StationOccupancyT f
   deriving (Generic, Beamable)
 
@@ -84,8 +84,8 @@ stnOccRangeStart  :: Lens' (StationOccupancyT f) (C f UTCTime)
 stnOccRangeEnd    :: Lens' (StationOccupancyT f) (C f UTCTime)
 stnOccEmptyThresh :: Lens' (StationOccupancyT f) (C f Int32)
 stnOccFullThresh  :: Lens' (StationOccupancyT f) (C f Int32)
-stnOccEmptySec    :: Lens' (StationOccupancyT f) (C f Int32)
-stnOccFullSec     :: Lens' (StationOccupancyT f) (C f Int32)
+stnOccEmptySec    :: Lens' (StationOccupancyT f) (C f (Maybe Int32))
+stnOccFullSec     :: Lens' (StationOccupancyT f) (C f (Maybe Int32))
 stnOccInfo = to _stnOccInfo
 StationOccupancy _ (LensFor stnOccCalculated)  _ _ _ _ _ _ = tableLenses
 StationOccupancy _ _ (LensFor stnOccRangeStart)  _ _ _ _ _ = tableLenses
@@ -126,8 +126,8 @@ createStationOccupancy =
   , _stnOccRangeEnd    = field "range_end"    (DataType (timestampType Nothing True)) notNull
   , _stnOccEmptyThresh = field "empty_thresh" int notNull
   , _stnOccFullThresh  = field "full_thresh"  int notNull
-  , _stnOccEmptySec    = field "empty_sec"    int notNull
-  , _stnOccFullSec     = field "full_sec"     int notNull
+  , _stnOccEmptySec    = field "empty_sec"    (maybeType int)
+  , _stnOccFullSec     = field "full_sec"     (maybeType int)
   }
 
 

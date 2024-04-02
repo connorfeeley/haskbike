@@ -199,8 +199,8 @@ unit_cacheStationOccupancy = withTempDbM Silent initSteps $ do
                          , _stnOccRangeEnd    = UTCTime (fromGregorian 2024 01 04) (timeOfDayToTime (TimeOfDay 00 00 00))
                          , _stnOccEmptyThresh = 0
                          , _stnOccFullThresh  = 0
-                         , _stnOccEmptySec    = 51104
-                         , _stnOccFullSec     = 0
+                         , _stnOccEmptySec    = Just 51104
+                         , _stnOccFullSec     = Just 0
                          }
       ]
     queryAndCacheOccupancy = withPostgres $
