@@ -37,4 +37,4 @@ instance FromJSON APIVersion where
 
 instance HasDataField [APIVersion] where
   -- For a list of APIVersion, we expect to find them under the 'versions' key
-  getDataField obj = obj .: "versions"
+  dataFieldKey = "versions"

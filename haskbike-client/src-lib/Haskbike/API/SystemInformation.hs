@@ -96,7 +96,9 @@ instance FromJSON SystemInformation where
 
 instance HasDataField SystemInformation where
   -- For SystemInformation, since it's directly under 'data', we pass the parser through
+  dataFieldKey = "" -- FIXME: possibly unsafe
   getDataField obj = parseJSON (Object obj)
+  putDataField = toJSON
 
 -- | Lenses
 makeLenses ''SystemInformation
