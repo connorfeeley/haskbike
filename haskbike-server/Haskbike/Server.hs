@@ -23,10 +23,7 @@ import           Haskbike.ServerEnv
 import           Network.Wai.Handler.Warp    as Warp
 import           Network.Wai.Middleware.Gzip ( GzipFiles (..), GzipSettings (..), defaultGzipSettings, gzip )
 
-import           Prelude                     ()
-import           Prelude.Compat
-
-import           Servant                     as S
+import qualified Servant                     as S
 
 import           UnliftIO
 
@@ -43,13 +40,13 @@ serveVisualization = do
     ]
 
   serverHoisted <- withRunInIO $ \toIo ->
-    pure $ hoistServer apiProxy (S.Handler . ExceptT . try . toIo) server
+    pure $ S.hoistServer apiProxy (S.Handler . ExceptT . try . toIo) server
 
   -- Run Warp/Wai server using specific settings.
-  liftIO $ runSettings (serverSettings env) $ gzipM (serve apiProxy serverHoisted)
+  liftIO $ runSettings (serverSettings env) $ gzipM (S.serve apiProxy serverHoisted)
   where
-    apiProxy :: Proxy BikeShareExplorerAPI
-    apiProxy = Proxy
+    apiProxy :: S.Proxy BikeShareExplorerAPI
+    apiProxy = S.Proxy
 
 
 gzipSettings :: GzipSettings
