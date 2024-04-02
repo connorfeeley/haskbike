@@ -65,7 +65,6 @@ deriving instance Eq StationOccupancy
 instance Table StationOccupancyT where
   data PrimaryKey StationOccupancyT f =
     StationOccupancyId { _unStnOccInfo        :: PrimaryKey StationInformationT f
-                       , _unStnOccCalculated  :: C f UTCTime
                        , _unStnOccRangeStart  :: C f UTCTime
                        , _unStnOccRangeEnd    :: C f UTCTime
                        , _unStnOccEmptyThresh :: C f Int32
@@ -73,7 +72,6 @@ instance Table StationOccupancyT where
                        }
     deriving (Generic, Beamable)
   primaryKey = StationOccupancyId <$> _stnOccInfo
-                                  <*> _stnOccCalculated
                                   <*> _stnOccRangeStart
                                   <*> _stnOccRangeEnd
                                   <*> _stnOccEmptyThresh
