@@ -1,7 +1,12 @@
+{-# LANGUAGE RecordWildCards #-}
+
 -- | Mock server for the PBSC bikeshare API.
 
 module Haskbike.API.MockServer
-     ( runMockServer
+     ( mockServerBaseUrl
+     , runMockQuery
+     , runMockQueryWithEnv
+     , runMockServer
      ) where
 
 import           Colog
@@ -17,29 +22,37 @@ import           Data.Time
 
 import           Haskbike.API.APIVersion
 import           Haskbike.API.BikeShareAPI
+import           Haskbike.API.Classes                 ( HasDataField )
+import           Haskbike.API.Client                  ( mkClientManager )
 import           Haskbike.API.ResponseWrapper
+import           Haskbike.API.StationInformation
 import           Haskbike.API.SystemInformation
 import           Haskbike.API.VehicleTypeFull
 import           Haskbike.AppEnv
 
+import           Network.HTTP.Client                  ( Manager )
 import           Network.Wai.Handler.Warp             as Warp
 import           Network.Wai.Middleware.Gzip          ( GzipFiles (..), GzipSettings (..), defaultGzipSettings, gzip )
 import           Network.Wai.Middleware.RequestLogger ( logStdoutDev )
 
 import qualified Servant                              as S
 import           Servant
+import           Servant.Client                       ( BaseUrl (BaseUrl), ClientError, ClientM, Scheme (Http),
+                                                        mkClientEnv, runClientM )
 import qualified Servant.Server.Generic               as S
 import           Servant.Server.Generic
 
 import           UnliftIO
 
 
+-- * Mock server implementation.
+
 -- | Mock server handlers.
 mockServer :: ( WithEnv (Env m) m, WithEnv (Env m) m )
            => BikeShareAPIRoutes (AsServerT m)
 mockServer = BikeShareAPIRoutes { _versions           = mkResponseWrapper mockVersions
                                 , _vehicleTypes       = mkResponseWrapper mockVehicleTypes
-                                , _stationInformation = mkResponseWrapper []
+                                , _stationInformation = mkResponseWrapper mockStationInformation
                                 , _stationStatus      = mkResponseWrapper []
                                 , _systemRegions      = mkResponseWrapper []
                                 , _systemInformation  = mkResponseWrapper mockSysInf
@@ -79,9 +92,25 @@ serverApp :: Env AppM -> S.Application
 serverApp state = S.genericServeT (serverNt state) mockServer
 
 
+-- * Helpers
+
+runMockQuery :: Manager -> ClientM a -> IO (Either ClientError a)
+runMockQuery clientManager endpoint = runClientM endpoint (mkClientEnv clientManager mockServerBaseUrl)
+
+runMockQueryWithEnv :: ClientM a -> IO (Either ClientError a)
+runMockQueryWithEnv query = do
+  clientManager <- mkClientManager
+  runMockQuery clientManager query
+
+-- | Default 'BaseUrl' of mock server (NOTE: port can be configured via CLI).
+mockServerBaseUrl :: BaseUrl
+mockServerBaseUrl = BaseUrl Http "localhost" 8082 ""
+
+
 -- * Mock data.
 
 -- | Create a 'ResponseWrapper' with some defaults.
+mkResponseWrapper :: MonadIO m => a -> m (ResponseWrapper a)
 mkResponseWrapper dat = do
   ct <- liftIO getCurrentTime
   pure $
@@ -92,7 +121,8 @@ mkResponseWrapper dat = do
                     }
 
 -- | Mock response for 'APIVersion' endpoint.
-mockVersions = [ APIVersion { _apiVersion = 2.3, _apiUrl = "localhost" } ]
+mockVersions :: [APIVersion]
+mockVersions = [APIVersion { _apiVersion = 2.3, _apiUrl = "localhost" }]
 
 mockVehicleTypes =
   [ VehicleTypeFull Iconic "bicycle"           "human"     0.0 "ICONIC"  "186-1"
@@ -101,6 +131,29 @@ mockVehicleTypes =
   , VehicleTypeFull EFit   "bicycle" "electric_assist"     0.0 "EFIT"    "186-2"
   , VehicleTypeFull EFitG5 "bicycle" "electric_assist" 60000.0 "EFIT G5" "186-2"
   ]
+
+mockStationInformation = map mkStationInformation [7000..8000]
+
+mkStationInformation infoStationId =
+  StationInformation { .. }
+  where
+    infoName                  = (T.pack . show) infoStationId
+    infoPhysicalConfiguration = Regular
+    infoLat                   =  43.639832
+    infoLon                   = -79.395954
+    infoAltitude              = Just 0.0
+    infoAddress               = (Just . T.pack . show) infoStationId
+    infoCapacity              = 35
+    infoIsChargingStation     = False
+    infoRentalMethods         = [ Key, TransitCard, CreditCard, Phone ]
+    infoIsValetStation        = False
+    infoIsVirtualStation      = False
+    infoGroups                = []
+    infoObcn                  = "647-643-9607"
+    infoNearbyDistance        = 500.0
+    infoBluetoothId           = ""
+    infoRideCodeSupport       = True
+    infoRentalUris            = RentalURIs "" "" ""
 
 -- | Mock response for 'SystemInformation' endpoint.
 mockSysInf =
