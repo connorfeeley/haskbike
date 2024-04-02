@@ -9,12 +9,12 @@ module BenchDatabase
 
 import qualified Codec.Compression.Zstd                        as Z
 
+import           Database.Beam.Backend.SQL.BeamExtensions
 import           Control.Monad                                 ( void )
 import           Control.Monad.Catch                           ( MonadCatch )
 
 import           Data.Aeson
 import qualified Data.ByteString                               as B
-import           Data.Int                                      ( Int32 )
 import           Data.Time
 
 import           Database.Beam
@@ -31,6 +31,7 @@ import           Haskbike.Database.Test.Utils
 import           Haskbike.TimeInterval                         ( minsPerHourlyInterval )
 
 import           Test.Tasty.Bench
+import Haskbike.Database.Tables.StationOccupancy
 
 
 -- * Common helpers.
@@ -69,16 +70,16 @@ bgroupDatabase = bgroup "Database operations"
 selectWithPostgres :: FromBackendRow Postgres a => SqlSelect Postgres a -> AppM [a]
 selectWithPostgres = withPostgres . runSelectReturningList
 
-benchStationEmptyTime :: (MonadCatch m, HasEnv env m) => Maybe Int -> m [(StationInformationT Identity, (Maybe Int32, Maybe Int32))]
+benchStationEmptyTime :: (MonadCatch m, HasEnv env m) => Maybe Int -> m [StationOccupancy]
 benchStationEmptyTime station =
-  withPostgres . runSelectReturningList . select $ stationOccupancyE station
+  withPostgres . runInsertReturningList $ cacheStationOccupancy 0 0 station
     (UTCTime (fromGregorian 2023 11 01) (timeOfDayToTime midnight)) (UTCTime (fromGregorian 2023 11 02) (timeOfDayToTime midnight))
 
 benchStationInformationDecoding :: (HasEnv env m, MonadCatch m) => FilePath -> m [StationInformationT Identity]
 benchStationInformationDecoding filePath = do
   contents <- liftIO . B.readFile $ filePath
   case Z.decompress contents of
-    Z.Skip                    -> error $ "StationInformation: either frame was empty, or compression was done in streaming mode for path: "
+    Z.Skip                    -> error "StationInformation: either frame was empty, or compression was done in streaming mode for path: "
     Z.Error   err             -> error err
     Z.Decompress decompressed -> do
       let info :: Either String [StationInformation] = eitherDecodeStrict decompressed

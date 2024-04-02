@@ -167,15 +167,10 @@ keepForFull _emptyThresh fullThresh row (_leadReported, _leadBikes, leadDocks) (
 
 -- * Functions for querying station occupancy and caching results.
 
-cacheStationOccupancy :: (MonadBeamInsertReturning Postgres m)
-                      => Int32
-                      -> Int32
-                      -> Maybe Int32
-                      -> UTCTime
-                      -> UTCTime
-                      -> m [StationOccupancyT Identity]
-cacheStationOccupancy emptyThresh fullThresh stationId startT endT = do
-  runInsertReturningList $
+cacheStationOccupancy :: Integral a
+                      => Int32 -> Int32 -> Maybe a -> UTCTime -> UTCTime
+                      -> SqlInsert Postgres StationOccupancyT
+cacheStationOccupancy emptyThresh fullThresh stationId startT endT =
     -- Can't return 'default_' from a query, so have to only insert specific columns with 'insertOnly'
     Pg.insertOnlyOnConflict (bikeshareDb ^. bikeshareStationOccupancy)
                             (\occ -> ( _stnOccInfo         occ

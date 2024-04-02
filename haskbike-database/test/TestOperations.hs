@@ -203,7 +203,7 @@ unit_cacheStationOccupancy = withTempDbM Silent initSteps $ do
                          , _stnOccFullSec     = Just 0
                          }
       ]
-    queryAndCacheOccupancy = withPostgres $
+    queryAndCacheOccupancy = withPostgres . runInsertReturningList $
       cacheStationOccupancy 0 0
       Nothing
       (UTCTime startDay (timeOfDayToTime midnight))
