@@ -113,6 +113,7 @@ library
                     , http-client-tls
                     , servant
                     , servant-client
+                    , servant-client-core
 
     -- Directories containing source files.
     hs-source-dirs: src-lib
