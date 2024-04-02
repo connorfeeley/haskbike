@@ -95,11 +95,11 @@ mkResponseWrapper dat = do
 mockVersions = [ APIVersion { _apiVersion = 2.3, _apiUrl = "localhost" } ]
 
 mockVehicleTypes =
-  [ VehicleTypeFull { vehicleTypeFullId = Iconic, vehicleTypeFullFormFactor = "bicycle", vehicleTypeFullPropulsion = "human",           vehicleTypeFullMaxRange = 0.0,     vehicleTypeFullName = "ICONIC",  vehicleTypeFullPricingPlan = "186-1" }
-  , VehicleTypeFull { vehicleTypeFullId = Fit   , vehicleTypeFullFormFactor = "bicycle", vehicleTypeFullPropulsion = "human",           vehicleTypeFullMaxRange = 0.0,     vehicleTypeFullName = "FIT",     vehicleTypeFullPricingPlan = "186-1" }
-  , VehicleTypeFull { vehicleTypeFullId = Boost , vehicleTypeFullFormFactor = "bicycle", vehicleTypeFullPropulsion = "electric_assist", vehicleTypeFullMaxRange = 0.0,     vehicleTypeFullName = "BOOST",   vehicleTypeFullPricingPlan = "186-2" }
-  , VehicleTypeFull { vehicleTypeFullId = EFit  , vehicleTypeFullFormFactor = "bicycle", vehicleTypeFullPropulsion = "electric_assist", vehicleTypeFullMaxRange = 0.0,     vehicleTypeFullName = "EFIT",    vehicleTypeFullPricingPlan = "186-2" }
-  , VehicleTypeFull { vehicleTypeFullId = EFitG5, vehicleTypeFullFormFactor = "bicycle", vehicleTypeFullPropulsion = "electric_assist", vehicleTypeFullMaxRange = 60000.0, vehicleTypeFullName = "EFIT G5", vehicleTypeFullPricingPlan = "186-2" }
+  [ VehicleTypeFull Iconic "bicycle"           "human"     0.0 "ICONIC"  "186-1"
+  , VehicleTypeFull Fit    "bicycle"           "human"     0.0 "FIT"     "186-1"
+  , VehicleTypeFull Boost  "bicycle" "electric_assist"     0.0 "BOOST"   "186-2"
+  , VehicleTypeFull EFit   "bicycle" "electric_assist"     0.0 "EFIT"    "186-2"
+  , VehicleTypeFull EFitG5 "bicycle" "electric_assist" 60000.0 "EFIT G5" "186-2"
   ]
 
 -- | Mock response for 'SystemInformation' endpoint.
