@@ -48,7 +48,7 @@ instance (ToJSON a, HasDataField a) => ToJSON (ResponseWrapper a) where
     object [ "last_updated" .= utcToPosix _respLastUpdated
            , "ttl"          .= _respTtl
            , "version"      .= _respVer
-           , "data"         .= _respData
+           , "data"         .= putDataField _respData
            ]
 
 -- | Lenses

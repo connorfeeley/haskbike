@@ -26,7 +26,10 @@ import           Haskbike.API.Classes                 ( HasDataField )
 import           Haskbike.API.Client                  ( mkClientManager )
 import           Haskbike.API.ResponseWrapper
 import           Haskbike.API.StationInformation
+import           Haskbike.API.StationStatus
 import           Haskbike.API.SystemInformation
+import           Haskbike.API.SystemPricingPlan
+import           Haskbike.API.SystemRegion
 import           Haskbike.API.VehicleTypeFull
 import           Haskbike.AppEnv
 
