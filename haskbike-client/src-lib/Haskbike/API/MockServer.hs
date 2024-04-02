@@ -16,6 +16,7 @@ import           Control.Monad.Except
 import           Control.Monad.Reader
 
 import           Data.Function                        ( (&) )
+import qualified Data.Map                             as Map
 import           Data.Proxy                           ( Proxy (..) )
 import qualified Data.Text                            as T
 import           Data.Time
@@ -30,6 +31,7 @@ import           Haskbike.API.StationStatus
 import           Haskbike.API.SystemInformation
 import           Haskbike.API.SystemPricingPlan
 import           Haskbike.API.SystemRegion
+import           Haskbike.API.VehicleType
 import           Haskbike.API.VehicleTypeFull
 import           Haskbike.AppEnv
 
@@ -56,11 +58,15 @@ mockServer :: ( WithEnv (Env m) m, WithEnv (Env m) m )
 mockServer = BikeShareAPIRoutes { _versions           = mkResponseWrapper mockVersions
                                 , _vehicleTypes       = mkResponseWrapper mockVehicleTypes
                                 , _stationInformation = mkResponseWrapper mockStationInformation
-                                , _stationStatus      = mkResponseWrapper []
-                                , _systemRegions      = mkResponseWrapper []
+                                , _stationStatus      = mkResponseWrapper mockStationStatus
+                                , _systemRegions      = mkResponseWrapper [] -- Toronto's API returns empty data.
                                 , _systemInformation  = mkResponseWrapper mockSysInf
                                 , _systemPricingPlans = mkResponseWrapper mockSysPricingPlans
                                 }
+
+
+routesLinks :: BikeShareAPIRoutes (AsLink Link)
+routesLinks = allFieldLinks
 
 -- | Run the mock server.
 runMockServer :: (HasEnv (Env AppM) m, MonadCatch m, MonadUnliftIO m, MonadFail m)
@@ -177,6 +183,30 @@ mockSysInf =
   , _sysInfSysId                = "bike_share_toronto"
   , _sysInfTimeZone             = "America/Toronto"
   }
+
+
+mockStationStatus =
+  [ StationStatus { _statusStationId             = 7001
+                  , _statusNumBikesAvailable     = 1
+                  , _statusNumBikesDisabled      = 1
+                  , _statusNumDocksAvailable     = 21
+                  , _statusNumDocksDisabled      = 1
+                  , _statusLastReported          = Just (UTCTime (fromGregorian 2024 04 02) (timeOfDayToTime (TimeOfDay 23 41 45)))
+                  , _statusIsChargingStation     = True
+                  , _statusStatus                = InService
+                  , _statusIsInstalled           = True
+                  , _statusIsRenting             = True
+                  , _statusIsReturning           = True
+                  , _statusTraffic               = Nothing
+                  , _statusVehicleDocksAvailable = [ VehicleDock [ "ICONIC", "BOOST", "EFIT", "EFIT G5" ] 21 ]
+                  , _statusVehicleTypesAvailable =
+                    Map.fromList [ ( Boost,  VehicleType Boost   0 )
+                                 , ( Iconic, VehicleType Iconic  1 )
+                                 , ( EFit,   VehicleType EFit    0 )
+                                 , ( EFitG5, VehicleType EFitG5  0 )
+                                 ]
+                  }
+  ]
 
 
 -- | Mock response for 'SystemPricingPlans'
