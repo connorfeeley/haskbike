@@ -3,7 +3,8 @@
 -- | Types for "versions" endpoint.
 
 module Haskbike.API.VehicleTypeFull
-     ( VehicleTypeFull (..)
+     ( TorontoVehicleType (..)
+     , VehicleTypeFull (..)
      ) where
 
 import           Data.Aeson
