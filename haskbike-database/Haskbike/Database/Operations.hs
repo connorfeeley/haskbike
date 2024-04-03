@@ -20,6 +20,7 @@ module Haskbike.Database.Operations
      , insertStationInformation'
      , insertStationStatus
      , insertSystemInformation
+     , lockTableAndSleep
      , printDisabledDocks
      , queryDisabledDocks
      , queryRowCount
@@ -51,9 +52,11 @@ import           Data.Time
 import           Database.Beam
 import           Database.Beam.Backend.SQL.BeamExtensions
 import           Database.Beam.Postgres
-import           Database.PostgreSQL.Simple                  ( Only (..), query_ )
+import           Database.PostgreSQL.Simple                  ( Only (..), execute_, query_ )
+import           Database.PostgreSQL.Simple.Transaction      ( withTransaction )
 
 import           GHC.Exts                                    ( fromString )
+import           GHC.Int                                     ( Int64 )
 
 import qualified Haskbike.API.StationInformation             as AT
 import qualified Haskbike.API.StationStatus                  as AT
@@ -374,10 +377,23 @@ insertSystemInformation reported inf = do
     (insertExpressions [fromJSONToBeamSystemInformationCount reported inf])
   pure (insertedInfo, insertedInfoCount)
 
+-- | Sleep the database for a given number of seconds.
 sleepDatabaseFor :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m) => Int -> m ()
 sleepDatabaseFor seconds = do
-  -- throwString "This will print last as an error message"
-  --   `finally` logInfo "This will print second"
   pool <- getDBConnectionPool
-  _ :: [Only ()] <- liftIO $ withResource pool (\conn -> query_ conn (fromString ("SELECT pg_sleep(" ++ show seconds ++ ")")))
+  _ :: [Only ()] <- liftIO $ withResource pool $ \conn ->
+    withTransaction conn $
+        query_ conn (fromString ("SELECT pg_sleep(" ++ show seconds ++ ")"))
+  pure ()
+
+
+-- | Lock a table and then for a given number of seconds.
+lockTableAndSleep :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m) => String -> Int -> m ()
+lockTableAndSleep tableName seconds = do
+  pool <- getDBConnectionPool
+  _ :: () <- liftIO $ withResource pool $ \conn ->
+    withTransaction conn $ do
+        _ :: Int64 <- execute_ conn (fromString ("LOCK TABLE " <> tableName <> " IN ACCESS EXCLUSIVE MODE"))
+        _ :: [Only ()] <- query_ conn (fromString ("SELECT pg_sleep(" ++ show seconds ++ ")"))
+        pure ()
   pure ()
