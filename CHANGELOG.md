@@ -131,7 +131,7 @@
   * Use DD:HH:MM:SS format for station occupancy time formats.
   * Make selection form label optional.
 
-## 3.6.0 -- TBD
+## 3.6.1 -- TBD
 
 * Database
   * Add `station_occupancy `table to store cached occupancy query results.
