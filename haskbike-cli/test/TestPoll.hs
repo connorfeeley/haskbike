@@ -5,7 +5,9 @@ module TestPoll
      ) where
 
 import           Control.Monad                ( void )
+import           Control.Monad.Reader         ( runReaderT )
 
+import           Haskbike.API.MockServer      ( mockServerBaseUrl, runMockServer )
 import           Haskbike.AppEnv
 import           Haskbike.CLI.Options         ( PollOptions (..), PopulateStatusChangesOpt (..) )
 import qualified Haskbike.CLI.Poll            as Poll
@@ -17,12 +19,13 @@ import           Prelude                      hiding ( log, unwords )
 import           Test.Tasty
 import           Test.Tasty.HUnit
 
-import           UnliftIO                     ( timeout )
+import           UnliftIO                     ( concurrently, liftIO, timeout )
 
 
 tests :: TestTree
-tests = testGroup "Poll tests"
-  [ testCase "Poll" poll
+tests = testGroup "Polling tests"
+  [ testCase "Poll API"      poll
+  , testCase "Poll mock API" pollMock
   ]
 
 
@@ -33,5 +36,18 @@ poll = do
     pollOpts = PollOptions NeverPopulate
 
     doPoll :: AppM ()
-    doPoll = void $ timeout 1000000 $ do -- Terminate after 1 second
-      (void . Poll.pollClient) pollOpts
+    doPoll = void $ timeout (5 * 1000000) $ -- Terminate after 5 seconds
+             Poll.pollClient pollOpts
+
+pollMock :: IO ()
+pollMock = do
+  withTempDbM Silent migrateDB $ do
+    env <- ask
+    liftIO $ runReaderT (unAppM doPoll) (env { envBaseUrl = mockServerBaseUrl })
+  where
+    pollOpts = PollOptions NeverPopulate
+
+    doPoll :: AppM ()
+    doPoll = void $ timeout (5 * 1000000) $ -- Terminate after 5 seconds
+             concurrently (runMockServer 8082)
+                          (Poll.pollClient pollOpts)

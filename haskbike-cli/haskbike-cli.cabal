@@ -212,8 +212,10 @@ test-suite haskbike-cli-test
 
     build-depends:    base
                     , haskbike-core
+                    , haskbike-client
                     , haskbike-database
                     , haskbike-cli
                     , tasty
                     , tasty-hunit
                     , unliftio
+                    , mtl
