@@ -219,3 +219,7 @@ test-suite haskbike-cli-test
                     , tasty-hunit
                     , unliftio
                     , mtl
+                    , beam-core
+                    , exceptions
+                    , text
+                    , co-log
