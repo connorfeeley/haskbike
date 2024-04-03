@@ -16,6 +16,7 @@ import           Control.Exception                           ( throw )
 import           Control.Lens
 import           Control.Monad
 import           Control.Monad.Catch                         ( MonadCatch, MonadThrow )
+import           Control.Monad.Reader                        ( MonadReader )
 
 import           Data.Maybe                                  ( mapMaybe )
 import qualified Data.Text                                   as T
@@ -43,22 +44,32 @@ import           Servant.Client                              ( ClientError, Clie
 
 import           System.Directory.Internal.Prelude           ( exitFailure )
 
-import           TextShow                                    ( showt )
-
 import           UnliftIO
 import           UnliftIO.Concurrent
 
 
+-- | Exceptions thrown by the polling/insertion threads.
 data PollException where
   FullQueue :: EndpointQueried -> PollException
   deriving (Show, Typeable, Exception)
 
 
-data PollResult where
-  PollClientError :: ClientError -> PollResult
-  WentBackwards   :: Int -> PollResult
-  Success         :: (ResponseWrapper apiType) -> PollResult
+-- | Result of a poll operation.
+data PollResult a where
+  -- | Error querying the API. Abort.
+  PollClientError :: ClientError -> PollResult a
+  -- | Response successfully decoded.
+  Decoded         :: ResponseValid a -> PollResult a
 
+
+-- | Result of enqueuing a response.
+data EnqueueResult where
+  QueueFull     :: EnqueueResult
+  QueueNotEmpty :: Int -> EnqueueResult
+  QueueNominal  :: EnqueueResult
+
+
+-- | Typeclass for API entities that can be persisted to the database.
 class APIPersistable apiType dbType | apiType -> dbType where
   fromAPI :: ResponseWrapper apiType -> [dbType (QExpr Postgres s)]
   fromAPI _   = []
@@ -67,17 +78,23 @@ class APIPersistable apiType dbType | apiType -> dbType where
             => ResponseWrapper apiType -> m [dbType Identity]
   insertAPI _ = pure []
 
-  pollThread :: ( HasEnv env m
-                -- , HasPollEnv env apiType m
-                , MonadIO m
-                , MonadThrow m
-                , MonadCatch m
-                ) => EndpointQueried -> ClientM (ResponseWrapper apiType) -> TVar Int -> TBQueue (ResponseWrapper apiType) -> m PollResult
+  pollThread :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m)
+             => EndpointQueried -> ClientM (ResponseWrapper apiType) -> TVar Int -> TBQueue (ResponseWrapper apiType)
+             -> m (PollResult (ResponseWrapper apiType))
   pollThread ep apiFetch lastUpdatedVar respQueue = do
     lastUpdated <- liftIO $ readTVarIO lastUpdatedVar
-    runQueryM apiFetch >>=
-      processResponse ep lastUpdated respQueue >>=
-      handleFetchPersistResult ep lastUpdatedVar
+    resp <- runQueryM apiFetch
+    pollResult <- attemptDecoding ep lastUpdated resp
+    case pollResult of
+      PollClientError _err  -> liftIO $ delaySecs 10    >> exitFailure
+      Decoded (StaleResponse delay)   -> liftIO $ delaySecs delay >> pure pollResult
+      Decoded (ValidResponse respDecoded)   -> do
+        queueResult <- processResponse respDecoded ep lastUpdatedVar respQueue
+        case queueResult of
+          -- Abort if response queue is full.
+          QueueFull       -> throw (FullQueue ep)
+          QueueNotEmpty _ -> pure pollResult
+          QueueNominal    -> pure pollResult
 
   insertThread :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m)
                => EndpointQueried -> TBQueue (ResponseWrapper apiType) -> m [dbType Identity]
@@ -95,82 +112,75 @@ class APIPersistable apiType dbType | apiType -> dbType where
       message inserted = "Inserted " <> (T.pack . show . length) inserted <> " records into database."
 
 
+-- * Functions for proccessing response.
+
+-- | Sleep thread for seconds.
 delaySecs :: MonadIO m => Int -> m ()
 delaySecs secs = threadDelay (secs * msPerS)
   where msPerS = 1000000
 
--- | Handle the result of fetching, decoding, and processing the API response.
-handleFetchPersistResult :: (HasEnv env m, MonadIO m, MonadThrow m, Show a)
-                         => a
-                         -> TVar Int
-                         -> PollResult
-                         -> m PollResult
--- Handle a client error.
-handleFetchPersistResult _ _ result@(PollClientError _err) = liftIO $ delaySecs 10 >> exitFailure >> pure result
-
--- Handle the API returning stale data.
-handleFetchPersistResult _ _ result@(WentBackwards extendByMs) = liftIO (delaySecs extendByMs) >> pure result
-
--- Handle a successfully decoded response, with a non-stale "last_reported" value.
-handleFetchPersistResult ep lastUpdatedVar result@(Success resp) = do
-  liftIO $ atomically $ writeTVar lastUpdatedVar (utcToPosix (_respLastUpdated resp) + timeToLiveS resp)
-  logInfo $ "[" <> epName <> "] Queued records for insertion - sleeping for " <> ttlTxt
-  -- Sleep for requisite TTL.
-  liftIO $ delaySecs (timeToLiveS resp)
-  pure result
-  where
-    epName = (T.pack . show) ep
-    ttlTxt = (showt . timeToLiveS) resp <> "s"
-    timeToLiveS = _respTtl
 
 -- | Process a (undecoded) response from the API.
-processResponse :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m)
-                => EndpointQueried -> Int -> TBQueue (ResponseWrapper apiType) -> Either ClientError (ResponseWrapper apiType)
-                -> m PollResult
-processResponse ep lastUpdated respQueue resp = do
+attemptDecoding :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m)
+                => EndpointQueried -> Int -> Either ClientError (ResponseWrapper apiType)
+                -> m (PollResult (ResponseWrapper apiType))
+attemptDecoding ep lastUpdated resp = do
+  void $ persistQueryLog ep resp
+
   case resp of
-    Left err          -> persistQueryLog ep (Left err) >> pure (PollClientError err)
-    Right respDecoded -> handleResponseWrapper ep respDecoded lastUpdated >>=
-                         processValidResponse  ep respDecoded respQueue
+    Left err          -> pure (PollClientError err)
+    Right respDecoded -> do
+      valid <- processWrapper  ep respDecoded lastUpdated
+      case valid of
+        StaleResponse delay   -> pure (Decoded (StaleResponse delay))
+        ValidResponse decoded -> pure (Decoded (ValidResponse decoded))
 
 
--- | Process a (decoded) response from the API.
-processValidResponse :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m)
-                     => EndpointQueried -> ResponseWrapper apiType -> TBQueue (ResponseWrapper apiType) -> Maybe Int
-                     -> m PollResult
--- Went backwards - return early with amount of time to extend poll period by.
-processValidResponse _ _ _ (Just extendByMs) = pure (WentBackwards extendByMs)
--- Went forwards - handle response.
-processValidResponse ep resp respQueue Nothing = do
-  -- Insert query log.
-  persistQueryLog ep ((Right . _respLastUpdated) resp)
+-- | Handle the result of fetching, decoding, and processing the API response.
+processResponse :: (MonadReader env m, HasLog env Message m, MonadIO m, HasEnv env m, MonadCatch m)
+                => ResponseWrapper apiType -> EndpointQueried -> TVar Int -> TBQueue (ResponseWrapper apiType)
+                -> m EnqueueResult
+processResponse resp ep lstUpdV  respQueue = do
+  queueResult <- enqueueResponse respQueue resp
+  logQueueResult ep queueResult
+  logInfo $ logBraces epName <> " Queued records for insertion - sleeping for " <> ttlTxt
+  liftIO $ do
+    -- Write last updated variable.
+    atomically (writeTVar lstUpdV (utcToPosix (_respLastUpdated resp) + timeToLiveS resp))
+    delaySecs (timeToLiveS resp)
+  pure queueResult
+  where
+    epName      = (T.pack . show) ep
+    ttlTxt      = (T.pack . show . timeToLiveS) resp <> "s"
+    timeToLiveS = _respTtl
 
-  -- Enqueue response data for handling by insertion thread.
-  enqueueResponse respQueue resp ep
 
-  pure (Success resp)
+-- | Log the result of enqueing a response.
+logQueueResult :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m) => EndpointQueried -> EnqueueResult -> m EnqueueResult
+logQueueResult ep result = do
+  case result of
+    QueueFull        -> logError "Tried enqueueing response but queue was full!" >> throw (FullQueue ep)
+    QueueNotEmpty sz -> logWarning ("Enqueued response, but queue was not empty! Queue length: " <> (T.pack . show) sz)
+    QueueNominal     -> pure ()
+  pure result
+
 
 enqueueResponse :: (HasEnv env m, MonadIO m)
-                => TBQueue (ResponseWrapper apiType) -> ResponseWrapper apiType -> EndpointQueried
-                -> m ()
-enqueueResponse respQueue resp ep = do
+                => TBQueue (ResponseWrapper apiType) -> ResponseWrapper apiType
+                -> m EnqueueResult
+enqueueResponse respQueue resp = do
   (isFull, queueLen) <- atomically $ do
-    isFull <- isFullTBQueue respQueue
-    -- Enqueue response if not full.
-    unless isFull $ do
-      writeTBQueue respQueue resp
-
-    -- Return new length of TBQueue.
     queueLen <- lengthTBQueue respQueue
+    isFull <- isFullTBQueue respQueue
+    unless isFull $ -- Enqueue response if not full.
+      writeTBQueue respQueue resp
     pure (isFull, queueLen)
 
-  -- Log a warning if the queue wasn't already empty (indicating the consumer is not draining it quickly enough).
-  when isFull $ do
-    logError "Tried enqueued response but queue was full!"
-    throw (FullQueue ep)
-  -- Log a warning if the queue wasn't already empty (indicating the consumer is not draining it quickly enough).
-  when (queueLen > 1) $
-    logWarning . T.pack $ "Enqueued response, but queue was not empty! Queue length: " <> show queueLen
+  pure $ case (isFull, queueLen) of
+    (True, _) -> QueueFull
+    (_,    0) -> QueueNominal
+    (_,   sz) -> QueueNotEmpty (fromIntegral sz)
+
 
 
 -- * Instances.

@@ -38,7 +38,7 @@ tests :: TestTree
 tests = testGroup "Polling tests"
   [ testCase "Poll API"      pollApi
   , testCase "Poll mock API" pollMock
-  , testCase "Queued records are inserted after table is unlocked" pollMockAndTestQueueing
+  , testCase "Queued records inserted after table lock released" pollMockAndTestQueueing
   ]
 
 

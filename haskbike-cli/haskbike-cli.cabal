@@ -177,6 +177,7 @@ library
                     , text-show
                     , time
                     , unliftio
+                    , mtl
 
                     , aeson
                     , servant-client
