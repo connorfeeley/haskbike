@@ -4,12 +4,8 @@
 -- | Utility functions for polling the API.
 
 module Haskbike.CLI.Poll.Utils
-     ( errToQueryLog
-     , handleResponse
-     , handleResponseBackwards
-     , handleResponseForwards
-     , handleResponseWrapper
-     , maybeDecodeFailure
+     ( handleResponseWrapper
+     , persistQueryLog
      ) where
 
 import           Colog
@@ -65,10 +61,10 @@ handleResponseForwards ep _resp pLastUpdated lastUpdated timeElapsed = do
 -- * Functions for handling and inserting the appropriate query log records.
 
 -- | Handle the response from the API and insert the appropriate query log record.
-handleResponse :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m)
+persistQueryLog :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m)
                => EndpointQueried -> Either ClientError UTCTime -> m [QueryLog]
-handleResponse ep (Right timestamp) = insertQueryLog (QuerySuccess timestamp ep)
-handleResponse ep (Left err) = do
+persistQueryLog ep (Right timestamp) = insertQueryLog (QuerySuccess timestamp ep)
+persistQueryLog ep (Left err) = do
   curTime <- liftIO getCurrentTime
   logException err
   insertQueryLog $ QueryFailure curTime ep (errTxt err) jsonForDecodeFailure
