@@ -34,6 +34,7 @@ module Haskbike.Database.Operations
      , queryStationStatusLatest
      , querySystemStatusAtRange
      , queryTableSize
+     , sleepDatabaseFor
      ) where
 
 import           Control.Lens                                hiding ( reuse, (<.) )
@@ -372,3 +373,11 @@ insertSystemInformation reported inf = do
     insert (bikeshareDb ^. bikeshareSystemInformationCount)
     (insertExpressions [fromJSONToBeamSystemInformationCount reported inf])
   pure (insertedInfo, insertedInfoCount)
+
+sleepDatabaseFor :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m) => Int -> m ()
+sleepDatabaseFor seconds = do
+  -- throwString "This will print last as an error message"
+  --   `finally` logInfo "This will print second"
+  pool <- getDBConnectionPool
+  _ :: [Only ()] <- liftIO $ withResource pool (\conn -> query_ conn (fromString ("SELECT pg_sleep(" ++ show seconds ++ ")")))
+  pure ()
