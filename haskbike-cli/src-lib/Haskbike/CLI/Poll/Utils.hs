@@ -35,27 +35,27 @@ import           UnliftIO
 handleResponseWrapper :: (HasEnv env m, MonadIO m)
                       => EndpointQueried -> ResponseWrapper a -> Int -> m (Maybe Int)
 handleResponseWrapper ep resp pLastUpdated = do
-  if timeElapsed < 0 -- Crappy API returned stale data.
-    then do
-      extendMs <- handleResponseBackwards ep resp pLastUpdated lastUpdated timeElapsed
-      pure (Just extendMs)
-  else do
-    handleResponseForwards ep resp pLastUpdated lastUpdated timeElapsed >> pure Nothing
+  logDebug (responseUpdatedLog ep pLastUpdated lastUpdated timeElapsed)
+  if timeElapsed < 0
+    then pure (Just (-timeElapsed))
+    else pure Nothing
+  -- Crappy API returned stale data.
   where lastUpdated = (utcToPosix . _respLastUpdated) resp
         -- Time elapsed since last poll; also amount to extend poll by when negative.
         timeElapsed = lastUpdated - pLastUpdated
 
-handleResponseBackwards :: (HasEnv env m, MonadIO m)
-                        => EndpointQueried -> ResponseWrapper a -> Int -> Int -> Int -> m Int
-handleResponseBackwards ep _resp pLastUpdated lastUpdated timeElapsed = do
-  logDebug $ (T.pack . show) ep <> " last updated went backwards: [" <> (T.pack . show . posixToUtc) pLastUpdated <> "] -> [" <> (T.pack . show) (posixToUtc lastUpdated) <> "] | " <> (T.pack . show) timeElapsed <> "s"
-  pure (-timeElapsed)
 
-handleResponseForwards :: (HasEnv env m, MonadIO m)
-                       => EndpointQueried -> ResponseWrapper a -> Int -> Int -> Int -> m Int
-handleResponseForwards ep _resp pLastUpdated lastUpdated timeElapsed = do
-  logDebug $ "(" <> (T.pack . show) ep <> ") last updated: [" <> (T.pack . show) (posixToUtc pLastUpdated) <> "] -> [" <> (T.pack . show . posixToUtc) lastUpdated <> "] | " <> (T.pack . show) timeElapsed <> "s"
-  pure (-timeElapsed)
+responseUpdatedLog :: (Show a1, Show a2) => a1 -> Int -> Int -> a2 -> T.Text
+responseUpdatedLog ep pLastUpdated lastUpdated timeElapsed = T.pack $
+  epTxt <> lastUpdatedMessage <> logBraces pLastUpdatedTxt <> " -> " <> logBraces lastUpdatedTxt <> " | " <> timeElapsedTxt
+  where
+    epTxt = show ep
+    lastUpdatedMessage = if lastUpdated - pLastUpdated < 0 then "last updated went backwards: " else " last updated: "
+    logBraces txt = "[" <> txt <> "]"
+    pLastUpdatedTxt = (show . posixToUtc) pLastUpdated
+    lastUpdatedTxt  = (show . posixToUtc) lastUpdated
+    timeElapsedTxt  = show timeElapsed <> "s"
+
 
 
 -- * Functions for handling and inserting the appropriate query log records.
