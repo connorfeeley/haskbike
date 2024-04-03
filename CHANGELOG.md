@@ -135,3 +135,64 @@
 
 * Database
   * Add `station_occupancy `table to store cached occupancy query results.
+  * Rename ops to StationOccupancy
+  * Move EmptyFull and EmptyFullRecord to StationOccupancy
+  * Print migrations compactly
+  * Add foreign key constraint
+  * Rename station occupancy expr
+  * Add function to cache occupancy
+  * Fix table names
+  * Move currentTimestampUtc_ to custom expr module
+  * Add fn to insert cached occupancy
+  * Add occupancy insertion test
+  * Unused imports
+  * Run migrations in transaction
+  * Don't export schema versions, only final tables
+  * Insert from SELECT w/ on conflict update
+  * Remove calculated from PK
+  * Make empty and full columns nullable
+  * Defer runInsertReturningList to callsite
+  * Use cached occupancy query
+  * Remove unused
+  * Add operation for pg_sleep
+  * Add operation to lock table and sleep
+  * Always use cached occupancy table
+  * Update benchmark baseline
+
+* Client
+  * Fix incorrect JSON schema when re-serializing API responses.
+
+* CLI
+  * Add `database migrate` command
+  * Remove unused option
+  * Add mock-server command
+  * Manual test tree instead of autodiscover
+  * Query mock server
+  * Add test for poll queue insertion
+  * Add log before attempting db insert
+  * Move thread creation to function
+  * Use bounded queue
+  * Rename function and cleanup
+  * Consolidate logging for response wrapper
+  * Simplify and cleanup
+
+* Client
+  * Use BaseUrl from environment
+  * Simplify vehicle types
+  * Convert to NamedRoutes
+  * Add mock pricing plans
+  * Add mock PBSC API server
+  * Add mock versions data
+  * Add mock vehicle type data
+  * Add mock station info
+  * Add mock station status
+  * Add putDataField to HasDataField class
+  * Use putDataField in ResponseWrapper ToJSON
+  * Use test tree instead of tasty-discover
+
+* Server
+  * Refactor server to launch using natural transformation function
+
+* Nix
+  * Use fork of beam packages with support for `insertOnlyOnConflict`
+  * Fix module graph generation script
