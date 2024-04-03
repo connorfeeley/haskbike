@@ -262,7 +262,8 @@
           };
 
           # Display a graph of all modules and how they depend on each other
-          packages.module-deps-with-filetype = pkgs.writeShellScript "mainserv-module-deps-with-filetype" ''
+          # Run with: nix run .#module-deps-with-filetype -- pdf > /tmp/haskbike.pdf
+          packages.module-deps-with-filetype = pkgs.writeShellScriptBin "mainserv-module-deps-with-filetype" ''
             shopt -s globstar
             filetype="$1"
             ${config.haskellProjects.default.basePackages.graphmod}/bin/graphmod \
@@ -270,7 +271,7 @@
             --quiet \
             ${/*applies some kind of import simplification*/""} \
             --prune-edges \
-            ./src-*/**/*.hs \
+            ./haskbike-*/**/*.hs \
             | ${pkgs.graphviz}/bin/dot \
               ${/*otherwise it’s a bit cramped*/""} \
               -Gsize="20,20!" \
