@@ -58,7 +58,7 @@ mockServer :: ( WithEnv (Env m) m, WithEnv (Env m) m )
            => BikeShareAPIRoutes (AsServerT m)
 mockServer = BikeShareAPIRoutes { _versions           = mkResponseWrapper mockVersions
                                 , _vehicleTypes       = mkResponseWrapper mockVehicleTypes
-                                , _stationInformation = mkResponseWrapper mockStationInformation
+                                , _stationInformation = mockStationInformation -- Dynamic station info.
                                 , _stationStatus      = mkResponseWrapper mockStationStatus
                                 , _systemRegions      = mkResponseWrapper [] -- Toronto's API returns empty data.
                                 , _systemInformation  = mkResponseWrapper mockSysInf
@@ -150,9 +150,12 @@ mockVehicleTypes =
   , VehicleTypeFull EFitG5 "bicycle" "electric_assist" 60000.0 "EFIT G5" "186-2"
   ]
 
-mockStationInformation = map mkStationInformation [7000..8000]
+-- | Generate mock station information.
+mockStationInformation :: MonadIO m => m (ResponseWrapper [StationInformation])
+mockStationInformation = liftIO getCurrentTime >>= \ct -> mkResponseWrapper (map (mkStationInformation ct) [7000..7999])
 
-mkStationInformation infoStationId =
+-- | Create mock station information with bluetooth ID set to current time.
+mkStationInformation currentTime infoStationId =
   StationInformation { .. }
   where
     infoName                  = (T.pack . show) infoStationId
@@ -169,7 +172,7 @@ mkStationInformation infoStationId =
     infoGroups                = []
     infoObcn                  = "647-643-9607"
     infoNearbyDistance        = 500.0
-    infoBluetoothId           = ""
+    infoBluetoothId           = (T.pack . show) currentTime
     infoRideCodeSupport       = True
     infoRentalUris            = RentalURIs "" "" ""
 
