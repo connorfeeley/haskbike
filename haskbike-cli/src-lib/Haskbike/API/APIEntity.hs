@@ -5,6 +5,7 @@
 
 module Haskbike.API.APIEntity
      ( APIPersistable (..)
+     , PollResult (..)
      ) where
 
 import           Colog
@@ -86,6 +87,7 @@ class APIPersistable apiType dbType | apiType -> dbType where
     -- Read the response queue.
     resp <- (atomically . readTQueue) respQueue
     -- Insert the response into the database.
+    logThread logDebug "Preparing to insert records into database."
     inserted <- insertAPI resp
     logThread logInfo (message inserted)
     pure inserted
