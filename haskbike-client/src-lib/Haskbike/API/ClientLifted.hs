@@ -42,7 +42,8 @@ import           UnliftIO
 runQueryM :: (HasEnv env m, MonadIO m, MonadThrow m) => ClientM a -> m (Either ClientError a)
 runQueryM query = do
   clientManager <- getClientManager
-  liftIO $ runClientM query (mkClientEnv clientManager bikeshareBaseUrl)
+  baseUrl <- getBaseUrl
+  liftIO $ runClientM query (mkClientEnv clientManager baseUrl)
 
 
 liftClientM :: (HasEnv env m, MonadIO m, MonadThrow m) => ClientM a -> m a
