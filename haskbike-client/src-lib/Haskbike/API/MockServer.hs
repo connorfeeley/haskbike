@@ -133,7 +133,7 @@ mkResponseWrapper dat = do
   ct <- liftIO getCurrentTime
   pure $
     ResponseWrapper { _respLastUpdated = ct
-                    , _respTtl         = 35
+                    , _respTtl         = 1
                     , _respVer         = "2.3"
                     , _respData        = dat
                     }
