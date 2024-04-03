@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveAnyClass         #-}
 {-# LANGUAGE FlexibleContexts       #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE StarIsType             #-}
@@ -5,13 +6,15 @@
 
 module Haskbike.API.APIEntity
      ( APIPersistable (..)
+     , PollException (..)
      , PollResult (..)
      ) where
 
 import           Colog
 
+import           Control.Exception                           ( throw )
 import           Control.Lens
-import           Control.Monad                               ( void )
+import           Control.Monad
 import           Control.Monad.Catch                         ( MonadCatch, MonadThrow )
 
 import           Data.Maybe                                  ( mapMaybe )
@@ -46,6 +49,11 @@ import           UnliftIO
 import           UnliftIO.Concurrent
 
 
+data PollException where
+  FullQueue :: EndpointQueried -> PollException
+  deriving (Show, Typeable, Exception)
+
+
 data PollResult where
   PollClientError :: ClientError -> PollResult
   WentBackwards   :: Int -> PollResult
@@ -65,7 +73,7 @@ class APIPersistable apiType dbType | apiType -> dbType where
                   -- ^ The function to fetch data from the API.
                   -> Int
                   -- ^ Last updated field of previous successful query.
-                  -> TQueue (ResponseWrapper apiType)
+                  -> TBQueue (ResponseWrapper apiType)
                   -> m PollResult
                   -- ^ Return either an error or inserted DB items.
   fetchAndPersist ep apiFetch lastUpdated respQueue =
@@ -76,16 +84,16 @@ class APIPersistable apiType dbType | apiType -> dbType where
                 , MonadIO m
                 , MonadThrow m
                 , MonadCatch m
-                ) => EndpointQueried -> ClientM (ResponseWrapper apiType) -> TVar Int -> TQueue (ResponseWrapper apiType) -> m PollResult
+                ) => EndpointQueried -> ClientM (ResponseWrapper apiType) -> TVar Int -> TBQueue (ResponseWrapper apiType) -> m PollResult
   pollThread ep apiFetch lastUpdatedVar respQueue = do
     lastUpdated <- liftIO $ readTVarIO lastUpdatedVar
     fetchAndPersist ep apiFetch lastUpdated respQueue >>= handleFetchPersistResult ep lastUpdatedVar
 
   insertThread :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m)
-               => EndpointQueried -> TQueue (ResponseWrapper apiType) -> m [dbType Identity]
+               => EndpointQueried -> TBQueue (ResponseWrapper apiType) -> m [dbType Identity]
   insertThread ep respQueue = do
     -- Read the response queue.
-    resp <- (atomically . readTQueue) respQueue
+    resp <- (atomically . readTBQueue) respQueue
     -- Insert the response into the database.
     logThread logDebug "Preparing to insert records into database."
     inserted <- insertAPI resp
@@ -128,7 +136,8 @@ handleFetchPersistResult ep lastUpdatedVar result@(Success resp) = do
 
 -- | Process a (undecoded) response from the API.
 processResponse :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m)
-                => EndpointQueried -> Int -> TQueue (ResponseWrapper apiType) -> Either ClientError (ResponseWrapper apiType) -> m PollResult
+                => EndpointQueried -> Int -> TBQueue (ResponseWrapper apiType) -> Either ClientError (ResponseWrapper apiType)
+                -> m PollResult
 processResponse ep _ _ (Left err) =
   handleResponse ep (Left err) >> pure (PollClientError err)
 processResponse ep lastUpdated respQueue (Right respDecoded) =
@@ -137,7 +146,8 @@ processResponse ep lastUpdated respQueue (Right respDecoded) =
 
 -- | Process a (decoded) response from the API.
 processValidResponse :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m)
-                     => EndpointQueried -> ResponseWrapper apiType -> TQueue (ResponseWrapper apiType) -> Maybe Int -> m PollResult
+                     => EndpointQueried -> ResponseWrapper apiType -> TBQueue (ResponseWrapper apiType) -> Maybe Int
+                     -> m PollResult
 -- Went backwards - return early with amount of time to extend poll period by.
 processValidResponse _ _ _ (Just extendByMs) = pure (WentBackwards extendByMs)
 -- Went forwards - handle response.
@@ -146,9 +156,31 @@ processValidResponse ep resp respQueue Nothing = do
   handleResponse ep ((Right . _respLastUpdated) resp)
 
   -- Enqueue response data for handling by insertion thread.
-  (void . atomically) (writeTQueue respQueue resp)
+  enqueueResponse respQueue resp ep
 
   pure (Success resp)
+
+enqueueResponse :: (HasEnv env m, MonadIO m)
+                => TBQueue (ResponseWrapper apiType) -> ResponseWrapper apiType -> EndpointQueried
+                -> m ()
+enqueueResponse respQueue resp ep = do
+  (isFull, queueLen) <- atomically $ do
+    isFull <- isFullTBQueue respQueue
+    -- Enqueue response if not full.
+    unless isFull $ do
+      writeTBQueue respQueue resp
+
+    -- Return new length of TBQueue.
+    queueLen <- lengthTBQueue respQueue
+    pure (isFull, queueLen)
+
+  -- Log a warning if the queue wasn't already empty (indicating the consumer is not draining it quickly enough).
+  when isFull $ do
+    logError "Tried enqueued response but queue was full!"
+    throw (FullQueue ep)
+  -- Log a warning if the queue wasn't already empty (indicating the consumer is not draining it quickly enough).
+  when (queueLen > 1) $
+    logWarning . T.pack $ "Enqueued response, but queue was not empty! Queue length: " <> show queueLen
 
 
 -- * Instances.

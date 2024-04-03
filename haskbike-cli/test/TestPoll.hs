@@ -74,7 +74,8 @@ pollMockAndTestQueueing = withTempDbM Silent migrateDB $ do
                                 )
                   )
 
-lockInfoTable :: (HasEnv env m, MonadUnliftIO m, MonadCatch m) => Int -> m ()
+lockInfoTable :: (HasEnv env m, MonadUnliftIO m, MonadCatch m)
+              => Int -> m ()
 lockInfoTable duration = do
   logWarning . T.pack $ "Locking " <> tableName <> " for " <> show duration <> " seconds."
   lockTableAndSleep tableName duration
@@ -85,7 +86,7 @@ pollInfoOnly = do
   -- Create insertion and polling threads.
   logInfo "Initializing insertion and polling threads."
   lastUpdated  <- liftIO $ newTVarIO 0
-  queue        <- liftIO newTQueueIO
+  queue        <- liftIO (newTBQueueIO 240)
   -- Run each action 5 times.
   insertThreadInfo <- (async . replicateM_ iterations) (insertThread StationInformationEP queue)
   pollThreadInfo   <- (async . replicateM_ iterations) (pollThread StationInformationEP C.stationInformation lastUpdated queue)

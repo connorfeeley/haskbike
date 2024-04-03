@@ -7,8 +7,9 @@ module Haskbike.CLI.Poll
      , pollClient
      ) where
 
-import           Colog                             ( logInfo, logWarning )
+import           Colog                             ( logError, logInfo, logWarning )
 
+import           Control.Exception                 ( throw )
 import           Control.Monad                     ( forever, void )
 import           Control.Monad.Catch               ( MonadCatch, MonadThrow )
 
@@ -36,16 +37,29 @@ import           UnliftIO
 dispatchPoll :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m)
              => PollOptions
              -> m ()
-dispatchPoll = pollClient
+dispatchPoll opts = pollClient opts `catch` handlePollException
+
+
+-- | Handle a polling exception.
+handlePollException :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m)
+                    => PollException
+                    -> m ()
+handlePollException e = logError ("Poll exception: " <> (T.pack . show) e) >> throw e
+
 
 makePollThreadPair :: (HasEnv env m, APIPersistable apiType dbType, MonadUnliftIO m, MonadCatch m)
                    => EndpointQueried -> ClientM (ResponseWrapper apiType) -> m (Async a1, Async a2)
 makePollThreadPair endpoint endpointFn = do
-  lastUpdated  <- liftIO $ newTVarIO 0
-  queue        <- liftIO newTQueueIO
+  lastUpdated  <- liftIO (newTVarIO 0)
+  queue        <- liftIO (newTBQueueIO queueDepth)
   newInsertThread <- (async . forever) (insertThread endpoint queue)
   newPollThread   <- (async . forever) (pollThread endpoint endpointFn lastUpdated queue)
   pure (newInsertThread, newPollThread)
+  where
+    -- Queue depth is set to hold two hours worth of data.
+    queueDepth = 2 * secondsInHour `div` averagePollSeconds
+    secondsInHour = 3600
+    averagePollSeconds = 30
 
 pollClient :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m)
            => PollOptions -> m ()
