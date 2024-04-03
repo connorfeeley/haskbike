@@ -118,7 +118,6 @@ library
                     , servant-client-core
 
                     , servant-server
-                    , wai
                     , wai-extra
                     , warp
 

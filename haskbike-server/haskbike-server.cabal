@@ -164,7 +164,6 @@ library
                     , servant-server
                     , wai
                     , wai-extra
-                    , wai-logger
                     , warp
                     , http-types
 
