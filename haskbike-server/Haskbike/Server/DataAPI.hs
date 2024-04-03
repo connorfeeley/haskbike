@@ -173,10 +173,10 @@ performanceCsvHandler stationId startTime endTime = do
 
   (integrals, emptyFullTup) <- concurrently
     (queryIntegratedStatus variation)
-    (withPostgres $ runSelectReturningList $ select $
-     stationOccupancyE stationId (localTimeToUTC tz (earliestTime range)) (localTimeToUTC tz (latestTime range))
+    (withPostgresTransaction $ queryStationOccupancy 0 0 stationId
+      (localTimeToUTC tz (earliestTime range)) (localTimeToUTC tz (latestTime range))
     )
-  let emptyFull = head $ map (\(_i, (e, f)) -> DB.emptyFullFromSecs e f) emptyFullTup
+  let emptyFull = head $ map (\(_inf, occ) -> DB.emptyFullFromSecs (DB._stnOccEmptySec occ) (DB._stnOccFullSec occ)) emptyFullTup
 
   logDebug "Created performance data CSV payload"
 

@@ -24,7 +24,6 @@ import           Data.Int                                      ( Int32 )
 import           Data.Time
 
 import           Database.Beam
-import           Database.Beam.Backend.SQL.BeamExtensions
 
 import qualified Haskbike.API.StationStatus                    as AT
 import           Haskbike.API.Utils
@@ -155,22 +154,22 @@ toDuration = calendarTimeTime . secondsToNominalDiffTime
 check :: (HasEnv env m, MonadIO m, MonadFail m, MonadUnliftIO m, MonadCatch m)
       => DayOfMonth -> Maybe CalendarDiffTime -> m ()
 check d expected = do
-  empty <- withPostgres . runInsertReturningList $ cacheStationOccupancy 0 0 (Nothing :: Maybe Int32)
+  empty <- withPostgresTransaction $ queryStationOccupancy 0 0 (Nothing :: Maybe Int32)
     (UTCTime (fromGregorian 2023 01 d)      (timeOfDayToTime (TimeOfDay 0 0 0)))
     (UTCTime (fromGregorian 2023 01 (d +1)) (timeOfDayToTime (TimeOfDay 0 0 0)))
-  liftIO $ assertEqual ("Station empty time " <> show d) expected ((secondsToDuration . _stnOccEmptySec . head) empty)
+  liftIO $ assertEqual ("Station empty time " <> show d) expected ((secondsToDuration . _stnOccEmptySec . snd . head) empty)
   where secondsToDuration Nothing  = Nothing
         secondsToDuration (Just x) = Just ((toDuration . fromIntegral) x)
 
 
 unit_stationEmptyTimeExported :: IO ()
 unit_stationEmptyTimeExported = withTempDbM Silent initSteps $ do
-  result <- withPostgres . runInsertReturningList $ cacheStationOccupancy 0 0 (Nothing :: Maybe Int32)
+  result <- withPostgresTransaction $ queryStationOccupancy 0 0 (Nothing :: Maybe Int32)
     (UTCTime (fromGregorian 2024 01 03) (timeOfDayToTime (TimeOfDay 0 0 0)))
     (UTCTime (fromGregorian 2024 01 04) (timeOfDayToTime (TimeOfDay 0 0 0)))
 
   liftIO $ case result of
-    [occ] -> do
+    [(_inf, occ)] -> do
       -- FIXME: calculated in excel that we should be expecting 50595 seconds empty.
       assertEqual "Station empty time (exported)" (Just 51104) (_stnOccEmptySec occ)
       assertEqual "Station full time  (exported)" (Just 0)     (_stnOccFullSec  occ)
@@ -184,10 +183,10 @@ unit_stationEmptyTimeExported = withTempDbM Silent initSteps $ do
 unit_cacheStationOccupancy :: IO ()
 unit_cacheStationOccupancy = withTempDbM Silent initSteps $ do
   occ1 <- queryAndCacheOccupancy
-  assertOccupancy 1 ((_stnOccCalculated . head) occ1) occ1
+  assertOccupancy 1 ((_stnOccCalculated . snd . head) occ1) occ1
 
   occ2 <- queryAndCacheOccupancy
-  assertOccupancy 1 ((_stnOccCalculated . head) occ2) occ2
+  assertOccupancy 1 ((_stnOccCalculated . snd . head) occ2) occ2
   where
     initSteps = setupTestDatabase >> initDBWithExportedDataDate (Just 7001) startDay endDay
     startDay  = fromGregorian 2024 01 03
@@ -203,12 +202,13 @@ unit_cacheStationOccupancy = withTempDbM Silent initSteps $ do
                          , _stnOccFullSec     = Just 0
                          }
       ]
-    queryAndCacheOccupancy = withPostgres . runInsertReturningList $
-      cacheStationOccupancy 0 0
+    queryAndCacheOccupancy = withPostgresTransaction $
+      queryStationOccupancy 0 0
       (Nothing :: Maybe Int32)
       (UTCTime startDay (timeOfDayToTime midnight))
       (UTCTime endDay   (timeOfDayToTime midnight))
 
+    assertOccupancy :: MonadIO m => Int -> UTCTime -> [(StationInformation, StationOccupancy)] -> m ()
     assertOccupancy expectedLength expectedCalculated occ = liftIO $ do
       assertEqual "Expected number of station occupancy records" expectedLength (length occ)
-      assertEqual "Cached 1 station occupancy record" (expectedOccupancy expectedCalculated) occ
+      assertEqual "Cached 1 station occupancy record" (expectedOccupancy expectedCalculated) (map snd occ)

@@ -1,18 +1,20 @@
 -- | Database queries and expressions for station occupancy.
 
 module Haskbike.Database.Operations.StationOccupancy
-     ( cacheStationOccupancy
+     ( lookupStationOccupancy
+     , queryStationOccupancy
      , stationOccupancyE
      ) where
 
 import           Control.Lens                                hiding ( reuse, (<.) )
+import           Control.Monad
 
 import           Data.Int                                    ( Int32 )
 import           Data.Time
 
 import           Database.Beam
-import           Database.Beam.Backend.SQL.BeamExtensions    ( MonadBeamInsertReturning (runInsertReturningList),
-                                                               conflictingFields )
+import           Database.Beam.Backend.SQL.BeamExtensions    ( MonadBeamInsertReturning, conflictingFields,
+                                                               runInsertReturningList )
 import           Database.Beam.Postgres                      ( Postgres )
 import qualified Database.Beam.Postgres                      as Pg
 import qualified Database.Beam.Postgres.Full                 as Pg
@@ -192,3 +194,38 @@ cacheStationOccupancy emptyThresh fullThresh stationId startT endT =
            , full
            )))
     (conflictingFields primaryKey) Pg.onConflictUpdateAll
+
+
+-- | Lookup station occupancy record from cache table.
+lookupStationOccupancy :: Integral a
+                       => Int32 -> Int32 -> Maybe a -> UTCTime -> UTCTime
+                       -> Q Postgres BikeshareDb s (StationInformationT (QGenExpr QValueContext Postgres s), StationOccupancyT (QExpr Postgres s))
+lookupStationOccupancy emptyThresh fullThresh stationId startT endT = do
+  occupancy <- all_ (_bikeshareStationOccupancy bikeshareDb)
+  guard_' (_stnOccRangeStart occupancy  ==?. val_ startT        &&?.
+           _stnOccRangeEnd   occupancy  ==?. val_ endT          &&?.
+           _stnOccEmptyThresh occupancy ==?. val_ emptyThresh   &&?.
+           _stnOccFullThresh  occupancy ==?. val_ fullThresh
+          )
+
+  info <- filter_' (\inf -> _stnOccInfo occupancy `references_'` inf) $
+          filter_  (infoStationIdCond stationId) $
+          all_ (_bikeshareStationInformation bikeshareDb)
+  guard_ (_stnOccInfo occupancy ==. primaryKey info)
+  pure (info, occupancy)
+
+
+-- | Query the station occupancy, either returning cached data or caching it and returning the result.
+queryStationOccupancy :: (Integral a, MonadBeamInsertReturning Postgres m)
+                      => Int32 -> Int32 -> Maybe a -> UTCTime -> UTCTime
+                      -> m [(StationInformation, StationOccupancy)]
+queryStationOccupancy emptyThresh fullThresh stationId startT endT = do
+  occLookup <- runSelectReturningList . select $ lookupStationOccupancy 0 0 stationId startT endT
+  case occLookup of
+    -- No cached data found: calculate, store, and return it.
+    [] -> do
+      void $ runInsertReturningList $ cacheStationOccupancy emptyThresh fullThresh stationId startT endT
+      runSelectReturningList . select $ lookupStationOccupancy emptyThresh fullThresh stationId startT endT
+
+    -- Cached data found: return it.
+    xs -> pure xs

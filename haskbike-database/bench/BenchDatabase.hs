@@ -1,3 +1,4 @@
+{-# LANGUAGE PartialTypeSignatures #-}
 -- | Benchmark suite.
 
 module BenchDatabase
@@ -17,7 +18,6 @@ import qualified Data.ByteString                               as B
 import           Data.Time
 
 import           Database.Beam
-import           Database.Beam.Backend.SQL.BeamExtensions
 import           Database.Beam.Postgres
 
 import           Haskbike.AppEnv
@@ -39,15 +39,21 @@ import           Test.Tasty.Bench
 benchWithTmp :: String -> AppM a -> Benchmark
 benchWithTmp name = bench name . whnfIO . withTempDbM Silent (setupTestDatabase >> initDBWithAllTestData) . void
 
+
 statusVariationAll :: StatusVariationQuery
 statusVariationAll = StatusVariationQuery Nothing
                      [ EarliestTime (UTCTime (read "2023-01-01") (timeOfDayToTime midnight))
                      , LatestTime   (UTCTime (read "2024-01-01") (timeOfDayToTime midnight))
                      ]
 
+
 earliestTime, latestTime :: UTCTime
 earliestTime = UTCTime (read "2024-01-01") (timeOfDayToTime midnight)
 latestTime   = UTCTime (read "2024-01-01") (timeOfDayToTime midnight)
+
+
+selectWithPostgres :: FromBackendRow Postgres a => SqlSelect Postgres a -> AppM [a]
+selectWithPostgres = withPostgres . runSelectReturningList
 
 
 -- * Benchmarks.
@@ -62,18 +68,18 @@ bgroupDatabase = bgroup "Database operations"
   , benchWithTmp "Charging events"           $ queryChargingEventsCount statusVariationAll
   , benchWithTmp "Query status factors"      $ queryStatusFactors statusVariationAll
   , benchWithTmp "Docking/undocking events"  $ queryDockingEventsCount statusVariationAll
-  , benchWithTmp "Station empty time (7001)" $ benchStationEmptyTime (Just 7001)
-  , benchWithTmp "Station empty time (all)"  $ benchStationEmptyTime Nothing
+  , benchWithTmp "Station occupancy (7001)" $ benchStationEmptyTime (Just 7001)
+  , benchWithTmp "Station occupancy (all)"  $ benchStationEmptyTime Nothing
   , benchWithTmp "Station information decoding" $ benchStationInformationDecoding "test/dumps/station_information_7001_2024-01-03_2024-01-04.json.zst"
   ]
 
-selectWithPostgres :: FromBackendRow Postgres a => SqlSelect Postgres a -> AppM [a]
-selectWithPostgres = withPostgres . runSelectReturningList
 
-benchStationEmptyTime :: (MonadCatch m, HasEnv env m) => Maybe Int -> m [StationOccupancy]
-benchStationEmptyTime station =
-  withPostgres . runInsertReturningList $ cacheStationOccupancy 0 0 station
-    (UTCTime (fromGregorian 2023 11 01) (timeOfDayToTime midnight)) (UTCTime (fromGregorian 2023 11 02) (timeOfDayToTime midnight))
+benchStationEmptyTime :: (MonadCatch m, HasEnv env m) => Maybe Int -> m [(StationInformation, StationOccupancy)]
+benchStationEmptyTime station = void query >> query -- Run query twice.
+  where
+    query = withPostgresTransaction $ queryStationOccupancy 0 0 station
+                (UTCTime (fromGregorian 2023 11 01) (timeOfDayToTime midnight)) (UTCTime (fromGregorian 2023 11 02) (timeOfDayToTime midnight))
+
 
 benchStationInformationDecoding :: (HasEnv env m, MonadCatch m) => FilePath -> m [StationInformationT Identity]
 benchStationInformationDecoding filePath = do
