@@ -39,7 +39,7 @@ dispatchDebug :: (HasEnv (Env AppM) m, MonadCatch m, MonadUnliftIO m, MonadFail 
 
 dispatchDebug (MockServer opts) = do
   logDebug "Starting mock server."
-  runMockServer (debugMockSrvPort opts)
+  runMockServer MockServerLogStdoutDev (debugMockSrvPort opts)
 
 dispatchDebug MiscStats         = do
   -- Get the number of rows in the station status table.

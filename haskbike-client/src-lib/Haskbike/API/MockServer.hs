@@ -3,7 +3,8 @@
 -- | Mock server for the PBSC bikeshare API.
 
 module Haskbike.API.MockServer
-     ( mockServerBaseUrl
+     ( MockServerLog (..)
+     , mockServerBaseUrl
      , runMockQuery
      , runMockQueryWithEnv
      , runMockServer
@@ -38,7 +39,7 @@ import           Haskbike.AppEnv
 import           Network.HTTP.Client                  ( Manager )
 import           Network.Wai.Handler.Warp             as Warp
 import           Network.Wai.Middleware.Gzip          ( GzipFiles (..), GzipSettings (..), defaultGzipSettings, gzip )
-import           Network.Wai.Middleware.RequestLogger ( logStdoutDev )
+import           Network.Wai.Middleware.RequestLogger ( logStdout, logStdoutDev )
 
 import qualified Servant                              as S
 import           Servant
@@ -68,13 +69,21 @@ mockServer = BikeShareAPIRoutes { _versions           = mkResponseWrapper mockVe
 routesLinks :: BikeShareAPIRoutes (AsLink Link)
 routesLinks = allFieldLinks
 
+data MockServerLog where
+  MockServerLogNever     :: MockServerLog
+  MockServerLogStdout    :: MockServerLog
+  MockServerLogStdoutDev :: MockServerLog
+
 -- | Run the mock server.
 runMockServer :: (HasEnv (Env AppM) m, MonadCatch m, MonadUnliftIO m, MonadFail m)
-              => Int -> m ()
-runMockServer port = do
+              => MockServerLog -> Int -> m ()
+runMockServer shouldLog port = do
   env <- ask
-  liftIO $ runSettings serverSettings (logStdoutDev (serverApp env))
+  liftIO $ runSettings serverSettings (logger shouldLog (serverApp env))
   where
+    logger MockServerLogNever     = id
+    logger MockServerLogStdout    = logStdout
+    logger MockServerLogStdoutDev = logStdoutDev
     apiProxy :: Proxy BikeShareAPI
     apiProxy = Proxy
 
