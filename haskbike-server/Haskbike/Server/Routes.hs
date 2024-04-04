@@ -22,7 +22,6 @@ import           Haskbike.Server.Page.IndexPage
 import           Haskbike.Server.Page.SideMenu
 import           Haskbike.Server.RobotsTXT
 import           Haskbike.Server.StaticAPI
-import           Haskbike.Server.Utils
 import           Haskbike.Server.VisualizationAPI
 import           Haskbike.ServerEnv
 

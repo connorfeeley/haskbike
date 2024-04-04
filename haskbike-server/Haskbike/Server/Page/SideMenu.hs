@@ -5,20 +5,28 @@ module Haskbike.Server.Page.SideMenu
      ( PureSideMenu (..)
      , renderMain
      , renderMenu
+     , sideMenu
      , versionLink
      ) where
 
+import           Control.Monad.Catch
+import           Control.Monad.Reader
+
 import qualified Data.Text                     as T
 
+import           Haskbike.AppEnv
 import           Haskbike.Server.Classes
 import           Haskbike.Server.LatestQueries
 import           Haskbike.Server.Page.Utils
 import           Haskbike.Server.PureCSS
+import           Haskbike.Server.StaticAPI
+import           Haskbike.Version
 
 import           Lucid
 import           Lucid.Base                    ( makeAttribute )
 
-import           Servant                       ( Link, toUrlPiece )
+import           Servant                       ( Link, fieldLink, toUrlPiece )
+
 
 data PureSideMenu a where
   PureSideMenu :: (ToHtml a, ToHtmlComponents a) =>
@@ -88,9 +96,22 @@ renderVersion params =
 
 -- | Render the version link.
 versionLink :: Monad m => String -> HtmlT m ()
-versionLink version = linkElement shortVersion
+versionLink ver = linkElement shortVersion
   where
-    linkElement = a_ [href_ (urlForVersion version)]
-    shortVersion = (toHtml . T.pack . take 7) version
+    linkElement = a_ [href_ (urlForVersion ver)]
+    shortVersion = (toHtml . T.pack . take 7) ver
     baseUrl = "https://github.com/connorfeeley/haskbike/tree/"
     urlForVersion object = baseUrl <> T.pack object
+
+-- | 'SideMenu' smart constructor.
+sideMenu :: (HasEnv env m, MonadIO m, ToHtml a, ToHtmlComponents a, MonadCatch m) => a -> m (PureSideMenu a)
+sideMenu page = do
+  latest <- getLatestQueries
+  pure $
+    PureSideMenu
+    { visPageParams    = page
+    , staticLink       = fieldLink staticApi
+    , cabalVersionText = getCabalVersion
+    , gitVersionText   = getGitHash
+    , latestQueries    = latest
+    }

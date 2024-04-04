@@ -38,7 +38,6 @@ import           Haskbike.Server.Page.StationStatusVisualization
 import           Haskbike.Server.Page.SystemInfoVisualization
 import           Haskbike.Server.Page.SystemStatusVisualization
 import           Haskbike.Server.StaticAPI
-import           Haskbike.Server.Utils
 import           Haskbike.ServerEnv
 import           Haskbike.TimeInterval
 
