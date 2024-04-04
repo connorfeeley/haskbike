@@ -13,8 +13,8 @@ import           Control.Monad.Catch           ( MonadCatch )
 import           Database.Beam
 
 import           Haskbike.Database.Expressions
-import           Haskbike.LatestQueries
 import           Haskbike.Server.Classes
+import           Haskbike.Server.LatestQueries
 import           Haskbike.Server.Page.SideMenu
 import           Haskbike.Server.StaticAPI
 import           Haskbike.ServerEnv

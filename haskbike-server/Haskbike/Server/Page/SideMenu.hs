@@ -8,17 +8,17 @@ module Haskbike.Server.Page.SideMenu
      , versionLink
      ) where
 
-import qualified Data.Text                  as T
+import qualified Data.Text                     as T
 
-import           Haskbike.LatestQueries
 import           Haskbike.Server.Classes
+import           Haskbike.Server.LatestQueries
 import           Haskbike.Server.Page.Utils
 import           Haskbike.Server.PureCSS
 
 import           Lucid
-import           Lucid.Base                 ( makeAttribute )
+import           Lucid.Base                    ( makeAttribute )
 
-import           Servant                    ( Link, toUrlPiece )
+import           Servant                       ( Link, toUrlPiece )
 
 data PureSideMenu a where
   PureSideMenu :: (ToHtml a, ToHtmlComponents a) =>

@@ -11,7 +11,6 @@ module Haskbike.Database.Expressions
      , infoByIdExpr
      , insertStationInformationExpr
      , integrateColumns
-     , latestQueryLogsToMap
      , queryChargingInfrastructure
      , queryLatestInfo
      , queryLatestInfoBefore
@@ -70,7 +69,6 @@ import           Haskbike.Database.Tables.StationInformation
 import           Haskbike.Database.Tables.StationLookup
 import           Haskbike.Database.Tables.StationStatus
 import           Haskbike.Database.Tables.SystemInformation
-import           Haskbike.LatestQueries
 import           Haskbike.TimeInterval
 
 import           Text.Pretty.Simple.Extras
@@ -412,12 +410,6 @@ queryLatestQueryLogs = do
     partitioned <- reuse ranked
     guard_ (partitioned ^. _2 ==. 1) -- Is max rank (latest record in partition)
     pure (partitioned ^. _1)
-
-latestQueryLogsToMap :: TimeZone -> [QueryLog] -> LatestQueries
-latestQueryLogsToMap tz = LatestQueries . queryMap
-  where
-    queryMap = Map.fromList . map (\q -> (_queryLogEndpoint q, (utcToLocal . _queryLogTime) q))
-    utcToLocal = utcToLocalTime tz
 
 -- | Get the latest query logs for each endpoint.
 queryLatestInfo :: be ~ Postgres

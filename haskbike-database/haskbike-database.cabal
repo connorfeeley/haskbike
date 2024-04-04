@@ -114,8 +114,6 @@ library
                     , Haskbike.Database.Tables.SystemInformation
                     , Haskbike.Database.Tables.StationOccupancy
 
-                    , Haskbike.LatestQueries
-
                     , Haskbike.Database.Test.Utils
                     , Paths_haskbike_database
 

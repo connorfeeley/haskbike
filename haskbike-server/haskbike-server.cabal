@@ -119,6 +119,7 @@ library
                     , Haskbike.Server.Routes
                     , Haskbike.Server.StaticAPI
                     , Haskbike.Server.StatusDataParams
+                    , Haskbike.Server.LatestQueries
                     , Haskbike.Server.Utils
                     , Haskbike.Server.VisualizationAPI
                     , Haskbike.ServerEnv

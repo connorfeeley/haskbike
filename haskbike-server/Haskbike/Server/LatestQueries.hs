@@ -1,16 +1,18 @@
 -- | Component for displaying the latest queries.
 
-module Haskbike.LatestQueries
+module Haskbike.Server.LatestQueries
      ( LatestQueries (..)
+     , latestQueryLogsToMap
      ) where
 
-import           Control.Monad                     ( forM_ )
+import           Control.Monad                      ( forM_ )
 
-import qualified Data.Map                          as Map
-import qualified Data.Text                         as T
+import qualified Data.Map                           as Map
+import qualified Data.Text                          as T
 import           Data.Time
 
 import           Haskbike.Database.EndpointQueried
+import           Haskbike.Database.Tables.QueryLogs
 
 import           Lucid
 
@@ -52,3 +54,9 @@ formatTimeHtml = T.pack . formatTime defaultTimeLocale shortTimeFormat
 -- Short month name, day, hours-minutes-seconds
 shortTimeFormat :: String
 shortTimeFormat = "%b %d %H:%M:%S"
+
+latestQueryLogsToMap :: TimeZone -> [QueryLog] -> LatestQueries
+latestQueryLogsToMap tz = LatestQueries . queryMap
+  where
+    queryMap = Map.fromList . map (\q -> (_queryLogEndpoint q, (utcToLocal . _queryLogTime) q))
+    utcToLocal = utcToLocalTime tz
