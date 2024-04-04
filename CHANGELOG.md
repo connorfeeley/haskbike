@@ -131,7 +131,7 @@
   * Use DD:HH:MM:SS format for station occupancy time formats.
   * Make selection form label optional.
 
-## 3.6.1 -- TBD
+## 3.6.1 -- 2024-04-03
 
 * Database
   * Add `station_occupancy `table to store cached occupancy query results.
@@ -196,3 +196,9 @@
 * Nix
   * Use fork of beam packages with support for `insertOnlyOnConflict`
   * Fix module graph generation script
+
+## 3.6.2 -- 2024-04-04
+
+* Server
+  * Cache station occupancy when querying `DataAPI` (`/data/`)
+  * Propagate query parameters from station occupancy list to `DataAPI` query
