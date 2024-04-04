@@ -37,4 +37,4 @@ instance FromJSON SystemRegion where
 
 instance HasDataField [SystemRegion] where
   -- For a list of SystemRegion, we expect to find them under the 'versions' key
-  getDataField obj = obj .: "regions"
+  dataFieldKey = "regions"

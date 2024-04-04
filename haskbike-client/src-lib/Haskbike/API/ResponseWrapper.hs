@@ -43,12 +43,12 @@ instance (FromJSON a, HasDataField a) => FromJSON (ResponseWrapper a) where
     _respData        <- v .: "data" >>= getDataField
     return ResponseWrapper {..}
 
-instance ToJSON a => ToJSON (ResponseWrapper a) where
+instance (ToJSON a, HasDataField a) => ToJSON (ResponseWrapper a) where
   toJSON ResponseWrapper {..} =
     object [ "last_updated" .= utcToPosix _respLastUpdated
            , "ttl"          .= _respTtl
            , "version"      .= _respVer
-           , "data"         .= _respData
+           , "data"         .= putDataField _respData
            ]
 
 -- | Lenses

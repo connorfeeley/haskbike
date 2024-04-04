@@ -13,6 +13,7 @@
     # Haskell package sources.
     # tmp-postgres needs a new release.
     tmp-postgres = { url = "github:jfischoff/tmp-postgres"; flake = false; };
+    beam = { url = "github:connorfeeley/beam/feat/insert-only-on-conflict"; flake = false; };
   };
   outputs = inputs@{ self, nixpkgs, flake-parts, ... }:
     let rev = self.rev or self.dirtyRev or "dirty";
@@ -131,6 +132,10 @@
               # aeson.source = "2.1.2.0";
               # zlib.source = pkgs.zlib;
               tmp-postgres.source = inputs.tmp-postgres;
+              beam-core.source = "${inputs.beam}/beam-core";
+              beam-migration.source = "${inputs.beam}/beam-migration";
+              beam-postgres.source = "${inputs.beam}/beam-postgres";
+              beam-sqlite.source = "${inputs.beam}/beam-sqlite";
             } // lib.optionalAttrs (lib.versionOlder config.haskellProjects.default.basePackages.ghc.version "9.4") {
               resource-pool.source = "0.4.0.0";
 
@@ -146,7 +151,10 @@
             };
             settings = {
               postgresql-libpg.jailbreak = true;
-              beam-postgres.jailbreak = true;
+              beam-postgres = {
+                jailbreak = true;
+                check = false; # Postgres tests are flaky on darwin.
+              };
               beam-migrate = {
                 jailbreak = true;
                 broken = false;
@@ -254,7 +262,8 @@
           };
 
           # Display a graph of all modules and how they depend on each other
-          packages.module-deps-with-filetype = pkgs.writeShellScript "mainserv-module-deps-with-filetype" ''
+          # Run with: nix run .#module-deps-with-filetype -- pdf > /tmp/haskbike.pdf
+          packages.module-deps-with-filetype = pkgs.writeShellScriptBin "mainserv-module-deps-with-filetype" ''
             shopt -s globstar
             filetype="$1"
             ${config.haskellProjects.default.basePackages.graphmod}/bin/graphmod \
@@ -262,7 +271,7 @@
             --quiet \
             ${/*applies some kind of import simplification*/""} \
             --prune-edges \
-            ./src-*/**/*.hs \
+            ./haskbike-*/**/*.hs \
             | ${pkgs.graphviz}/bin/dot \
               ${/*otherwise it’s a bit cramped*/""} \
               -Gsize="20,20!" \

@@ -60,8 +60,8 @@ instance ToJSON SystemInformation where
     , "build_number"                     .= _sysInfBuildNumber inf
     , "build_version"                    .= _sysInfBuildVersion inf
     , "language"                         .= _sysInfLanguage inf
-    , "mobile_head_version"              .= _sysInfMobileHeadVersion inf
-    , "mobile_minimum_supported_version" .= _sysInfMobileMinSuppVersion inf
+    , "mobile_head_version"              .= (show . _sysInfMobileHeadVersion) inf
+    , "mobile_minimum_supported_version" .= (show . _sysInfMobileMinSuppVersion) inf
     , "name"                             .= _sysInfName inf
     , "system_id"                        .= _sysInfSysId inf
     , "timezone"                         .= _sysInfTimeZone inf
@@ -96,7 +96,9 @@ instance FromJSON SystemInformation where
 
 instance HasDataField SystemInformation where
   -- For SystemInformation, since it's directly under 'data', we pass the parser through
+  dataFieldKey = "" -- FIXME: possibly unsafe
   getDataField obj = parseJSON (Object obj)
+  putDataField = toJSON
 
 -- | Lenses
 makeLenses ''SystemInformation

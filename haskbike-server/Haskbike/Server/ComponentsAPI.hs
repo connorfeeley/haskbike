@@ -23,14 +23,14 @@ import           Database.Beam
 import           Haskbike.Database.Expressions                           ( queryChargingInfrastructure )
 import           Haskbike.Database.Operations.Dockings
 import           Haskbike.Database.Operations.Factors
-import           Haskbike.Database.Operations.StationEmpty               ( queryStationEmptyFullTime )
+import           Haskbike.Database.Operations.StationOccupancy
 import           Haskbike.Database.StatusVariationQuery                  ( StatusThreshold (..),
                                                                            StatusVariationQuery (..) )
+import qualified Haskbike.Database.Tables.StationOccupancy               as DB
 import           Haskbike.Server.Components.ChargingHeader
 import           Haskbike.Server.Components.ChargingInfrastructureHeader
 import           Haskbike.Server.Components.DockingHeader
 import           Haskbike.Server.Components.PerformanceData
-import           Haskbike.Server.Data.EmptyFullData
 import           Haskbike.Server.StatusDataParams
 import           Haskbike.ServerEnv
 
@@ -47,10 +47,10 @@ data ComponentsAPI mode where
     } -> ComponentsAPI mode
   deriving stock Generic
 
-componentsHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m, MonadError ServerError m) => ComponentsAPI (AsServerT m)
+componentsHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m, MonadError ServerError m)
+                  => ComponentsAPI (AsServerT m)
 componentsHandler =
-  ComponentsAPI { eventsComponents = eventsComponentHandler
-                }
+  ComponentsAPI { eventsComponents = eventsComponentHandler }
 
 data EventsComponentAPI mode where
   EventsComponentAPI ::
@@ -83,7 +83,8 @@ data EventsComponentAPI mode where
     } -> EventsComponentAPI mode
   deriving stock Generic
 
-eventsComponentHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m, MonadError ServerError m) => EventsComponentAPI (AsServerT m)
+eventsComponentHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m, MonadError ServerError m)
+                       => EventsComponentAPI (AsServerT m)
 eventsComponentHandler = EventsComponentAPI
   { dockingEventsHeader          = dockingsHeader
   , chargingEventsHeader         = chargingsHeader
@@ -91,7 +92,8 @@ eventsComponentHandler = EventsComponentAPI
   , performanceHeader            = performanceHeaderHandler
   }
 
-dockingsHeader :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m) => Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> m DockingHeader
+dockingsHeader :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m)
+               => Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> m DockingHeader
 dockingsHeader stationId startTime endTime = do
   tz <- getTz
   currentUtc <- liftIO getCurrentTime
@@ -108,7 +110,8 @@ dockingsHeader stationId startTime endTime = do
   events <- queryDockingEventsCount variation
   pure $ DockingHeader events
 
-chargingsHeader :: (HasEnv env m, MonadIO m, MonadCatch m) => Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> m ChargingHeader
+chargingsHeader :: (HasEnv env m, MonadIO m, MonadCatch m)
+                => Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> m ChargingHeader
 chargingsHeader stationId startTime endTime = do
   tz <- getTz
   currentUtc <- liftIO getCurrentTime
@@ -126,7 +129,8 @@ chargingsHeader stationId startTime endTime = do
 
   pure $ ChargingHeader chargings
 
-chargingInfrastructureHeaderHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadError ServerError m) => Maybe LocalTime -> m ChargingInfrastructureHeader
+chargingInfrastructureHeaderHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadError ServerError m)
+                                    => Maybe LocalTime -> m ChargingInfrastructureHeader
 chargingInfrastructureHeaderHandler t = do
   tz <- getTz
   currentUtc <- liftIO getCurrentTime
@@ -142,7 +146,8 @@ chargingInfrastructureHeaderHandler t = do
                                            }
     _ ->  throwError err500 { errBody = "Unable to calculate charging infrastructure counts." }
 
-performanceHeaderHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadError ServerError m, MonadUnliftIO m) => Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> m PerformanceData
+performanceHeaderHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadError ServerError m, MonadUnliftIO m)
+                         => Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> m PerformanceData
 performanceHeaderHandler stationId startTime endTime = do
   tz <- getTz
   currentUtc <- liftIO getCurrentTime
@@ -157,9 +162,9 @@ performanceHeaderHandler stationId startTime endTime = do
       , LatestTime   (localTimeToUTC tz (latestTime   range))
       ]
     ))
-    (withPostgres $ runSelectReturningList $ select $
-     queryStationEmptyFullTime stationId (localTimeToUTC tz (earliestTime range)) (localTimeToUTC tz (latestTime range))
+    (withPostgresTransaction $ queryStationOccupancy 0 0 stationId
+      (localTimeToUTC tz (earliestTime range)) (localTimeToUTC tz (latestTime range))
     )
-  let emptyFull = head $ map (\(_i, (e, f)) -> emptyFullFromSecs e f) emptyFullTup
+  let emptyFull = head $ map (\(_inf, occ) -> DB.emptyFullFromSecs (DB._stnOccEmptySec occ) (DB._stnOccFullSec occ)) emptyFullTup
 
   pure $ (head . map (integralToPerformanceData emptyFull)) perf

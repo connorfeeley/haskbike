@@ -54,4 +54,4 @@ instance FromJSON SystemPricingPlan where
 
 instance HasDataField [SystemPricingPlan] where
   -- For a list of SystemPricingPlan, we expect to find them under the 'versions' key
-  getDataField obj = obj .: "plans"
+  dataFieldKey = "plans"

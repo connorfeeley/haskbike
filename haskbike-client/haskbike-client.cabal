@@ -20,7 +20,7 @@ name:               haskbike-client
 -- PVP summary:     +-+------- breaking API changes
 --                  | | +----- non-breaking API additions
 --                  | | | +--- code changes with no API change
-version:            3.5.0
+version:            3.6.1
 
 -- A short (one-line) description of the package.
 synopsis:           Client API for Toronto Bike Share.
@@ -79,6 +79,7 @@ library
                     , Haskbike.API.BikeShareAPI
                     , Haskbike.API.ClientLifted
                     , Haskbike.API.ClientUtils
+                    , Haskbike.API.MockServer
                     -- , API.Pollable
                     , Haskbike.API.ResponseWrapper
                     , Haskbike.API.APIVersion
@@ -107,12 +108,18 @@ library
                     , text
                     , time
                     , unliftio
+                    , mtl
 
                     , aeson
                     , http-client
                     , http-client-tls
                     , servant
                     , servant-client
+                    , servant-client-core
+
+                    , servant-server
+                    , wai-extra
+                    , warp
 
     -- Directories containing source files.
     hs-source-dirs: src-lib
@@ -147,7 +154,7 @@ test-suite haskbike-client-test
     hs-source-dirs:   test
 
     -- The entrypoint to the test suite.
-    main-is:          Driver.hs
+    main-is:          Main.hs
 
     -- Test dependencies.
     build-depends:    base
@@ -158,5 +165,3 @@ test-suite haskbike-client-test
                     , bytestring
                     , aeson
                     , file-embed
-
-    build-tool-depends: tasty-discover:tasty-discover

@@ -156,7 +156,7 @@ instance FromJSON VehicleDock where
 
 instance HasDataField [StationStatus] where
   -- For a list of SystemStatus, we expect to find them under the 'stations' key
-  getDataField obj = obj .: "stations"
+  dataFieldKey = "stations"
 
 
 -- * Functions for updating 'StationStatus'.

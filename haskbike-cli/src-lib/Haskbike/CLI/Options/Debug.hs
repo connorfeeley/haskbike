@@ -1,8 +1,9 @@
 -- | Options for the debug commands.
 
 module Haskbike.CLI.Options.Debug
-     ( DebugMiscOptions (..)
-     , debugMiscOptionsParser
+     ( DebugCommand (..)
+     , DebugMockServerOptions (..)
+     , debugCommandParser
      ) where
 
 import           Haskbike.CLI.Options.Command
@@ -10,18 +11,37 @@ import           Haskbike.CLI.Options.Command
 import           Options.Applicative
 
 
--- | Options for the 'Debug' command.
-data DebugMiscOptions where
-  DebugMiscOptions :: { optFoo :: Bool -- TODO: this is just a placeholder.
-                      } -> DebugMiscOptions
+-- | 'Debug' subcommands.
+data DebugCommand where
+  MockServer :: DebugMockServerOptions -> DebugCommand
+  MiscStats  :: DebugCommand
   deriving (Show)
 
-instance HasCommandDesc DebugMiscOptions where
+instance HasCommandDesc DebugCommand where
+  commandDesc = "Miscellaneous debugging faciilities."
+
+-- | Parser for 'DatabaseOptions'.
+debugCommandParser :: Parser DebugCommand
+debugCommandParser = hsubparser
+  (  command "mock-server" (info (MockServer <$> debugMockServerOptionsParser) (progDesc "Run mock API server."))
+  <> command "misc-stats"  (info (pure MiscStats)                              (progDesc "Print misc stats."))
+  )
+
+-- | Options for the 'MockServer' -> subcommand.
+data DebugMockServerOptions where
+  DebugMockServerOptions :: { debugMockSrvPort :: Int
+                            } -> DebugMockServerOptions
+  deriving (Show)
+
+instance HasCommandDesc DebugMockServerOptions where
   commandDesc = "Miscellaneous debugging faciilities."
 
 -- | Parser for 'DebugOptions'.
-debugMiscOptionsParser :: Parser DebugMiscOptions
-debugMiscOptionsParser = DebugMiscOptions
-  <$> switch
-      ( long "foo"
-     <> help "Foo. Foo foo foo bar." )
+debugMockServerOptionsParser :: Parser DebugMockServerOptions
+debugMockServerOptionsParser = DebugMockServerOptions
+  <$> option auto
+      ( long "port"
+     <> short 'p'
+     <> metavar "PORT"
+     <> value 8082 -- default value
+     <> help "Port to serve mock API on." )

@@ -16,6 +16,7 @@ import           Data.Text.Lazy                         ( Text, pack )
 
 import           Database.Beam.Schema.Tables
 
+import           Haskbike.API.MockServer
 import           Haskbike.AppEnv
 import           Haskbike.CLI.Options
 import           Haskbike.CLI.QueryFormat
@@ -33,10 +34,14 @@ import           UnliftIO
 
 
 -- | Dispatch CLI arguments for debugging.
-dispatchDebug :: (HasEnv env m, MonadIO m, MonadFail m, MonadUnliftIO m, MonadCatch m)
-              => DebugMiscOptions
-              -> m ()
-dispatchDebug _options = do
+dispatchDebug :: (HasEnv (Env AppM) m, MonadCatch m, MonadUnliftIO m, MonadFail m)
+              => DebugCommand -> m ()
+
+dispatchDebug (MockServer opts) = do
+  logDebug "Starting mock server."
+  runMockServer MockServerLogStdoutDev (debugMockSrvPort opts)
+
+dispatchDebug MiscStats         = do
   -- Get the number of rows in the station status table.
   numStatusRows <-
     logDebug "Querying number of rows in status table."
@@ -66,7 +71,6 @@ dispatchDebug _options = do
 
   liftIO $ do
     cliOut $ formatDatabaseStats numStatusRows infoTableSize statusTableSize
-
 
 formatDatabaseStats :: Int -> Maybe String -> Maybe String -> [Text]
 formatDatabaseStats numStatusRows infoTableSize statusTableSize =

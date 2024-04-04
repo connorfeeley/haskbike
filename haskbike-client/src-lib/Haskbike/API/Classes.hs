@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 -- |
 
 module Haskbike.API.Classes
@@ -9,5 +10,9 @@ import           Data.Aeson.Types ( Parser )
 
 
 -- Define a class to generalize the JSON data retrieval
-class HasDataField a where
+class (FromJSON a, ToJSON a) => HasDataField a where
+  dataFieldKey :: Key
   getDataField :: Object -> Parser a
+  putDataField :: a -> Value
+  getDataField obj = obj .: (dataFieldKey @a)
+  putDataField obj = object [(dataFieldKey @a) .= obj]

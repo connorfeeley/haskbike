@@ -1,4 +1,3 @@
-
 {-# LANGUAGE BlockArguments            #-}
 {-# LANGUAGE FlexibleContexts          #-}
 {-# LANGUAGE FlexibleInstances         #-}
@@ -11,26 +10,30 @@
 -- | Test the database's charging count calculations and docking/undocking counts.
 
 module TestOperations
-     ( unit_queryFieldIntegrals
+     ( unit_cacheStationOccupancy
+     , unit_queryFieldIntegrals
      , unit_queryStatusFactors
      , unit_stationEmptyTime
      , unit_stationEmptyTimeExported
      ) where
 
-import           Control.Monad.Catch                       ( MonadCatch )
+import           Control.Monad.Catch                           ( MonadCatch )
 
-import           Data.Fixed                                ( Pico )
+import           Data.Fixed                                    ( Pico )
+import           Data.Int                                      ( Int32 )
 import           Data.Time
 
 import           Database.Beam
 
-import qualified Haskbike.API.StationStatus                as AT
+import qualified Haskbike.API.StationStatus                    as AT
 import           Haskbike.API.Utils
 import           Haskbike.AppEnv
 import           Haskbike.Database.Operations
 import           Haskbike.Database.Operations.Factors
-import           Haskbike.Database.Operations.StationEmpty
+import           Haskbike.Database.Operations.StationOccupancy
 import           Haskbike.Database.StatusVariationQuery
+import           Haskbike.Database.Tables.StationInformation
+import           Haskbike.Database.Tables.StationOccupancy
 import           Haskbike.Database.Test.Utils
 
 import           Test.Tasty.HUnit
@@ -151,29 +154,61 @@ toDuration = calendarTimeTime . secondsToNominalDiffTime
 check :: (HasEnv env m, MonadIO m, MonadFail m, MonadUnliftIO m, MonadCatch m)
       => DayOfMonth -> Maybe CalendarDiffTime -> m ()
 check d expected = do
-  empty <- withPostgres $ runSelectReturningList $ select $
-    queryStationEmptyFullTime (Nothing :: Maybe Int)
+  empty <- withPostgresTransaction $ queryStationOccupancy 0 0 (Nothing :: Maybe Int32)
     (UTCTime (fromGregorian 2023 01 d)      (timeOfDayToTime (TimeOfDay 0 0 0)))
     (UTCTime (fromGregorian 2023 01 (d +1)) (timeOfDayToTime (TimeOfDay 0 0 0)))
-  liftIO $ assertEqual ("Station empty time " <> show d) expected ((secondsToDuration . fst . snd . head) empty)
+  liftIO $ assertEqual ("Station empty time " <> show d) expected ((secondsToDuration . _stnOccEmptySec . snd . head) empty)
   where secondsToDuration Nothing  = Nothing
         secondsToDuration (Just x) = Just ((toDuration . fromIntegral) x)
 
 
 unit_stationEmptyTimeExported :: IO ()
 unit_stationEmptyTimeExported = withTempDbM Silent initSteps $ do
-  result <- withPostgres $ runSelectReturningOne $ select $
-    queryStationEmptyFullTime (Just 7001 :: Maybe Int)
+  result <- withPostgresTransaction $ queryStationOccupancy 0 0 (Nothing :: Maybe Int32)
     (UTCTime (fromGregorian 2024 01 03) (timeOfDayToTime (TimeOfDay 0 0 0)))
     (UTCTime (fromGregorian 2024 01 04) (timeOfDayToTime (TimeOfDay 0 0 0)))
 
   liftIO $ case result of
-    Nothing -> assertFailure "No result returned."
-    Just (_stationInfo, (emptyTime, fullTime)) -> do
-      -- FIXME: calculated in excel we should be expecting 51104 seconds empty.
-      assertEqual "Station empty time (exported)" (Just 51104) emptyTime
-      assertEqual "Station full time (exported)"  (Just 0) fullTime
+    [(_inf, occ)] -> do
+      -- FIXME: calculated in excel that we should be expecting 50595 seconds empty.
+      assertEqual "Station empty time (exported)" (Just 51104) (_stnOccEmptySec occ)
+      assertEqual "Station full time  (exported)" (Just 0)     (_stnOccFullSec  occ)
+    [] -> assertFailure "No result returned."
+    _ -> assertFailure "Multiple results returned."
   where
     initSteps = setupTestDatabase >> initDBWithExportedDataDate (Just 7001) startDay endDay
-    startDay = fromGregorian 2024 01 03
-    endDay   = fromGregorian 2024 01 04
+    startDay  = fromGregorian 2024 01 03
+    endDay    = fromGregorian 2024 01 04
+
+unit_cacheStationOccupancy :: IO ()
+unit_cacheStationOccupancy = withTempDbM Silent initSteps $ do
+  occ1 <- queryAndCacheOccupancy
+  assertOccupancy 1 ((_stnOccCalculated . snd . head) occ1) occ1
+
+  occ2 <- queryAndCacheOccupancy
+  assertOccupancy 1 ((_stnOccCalculated . snd . head) occ2) occ2
+  where
+    initSteps = setupTestDatabase >> initDBWithExportedDataDate (Just 7001) startDay endDay
+    startDay  = fromGregorian 2024 01 03
+    endDay    = fromGregorian 2024 01 04
+    expectedOccupancy calculated =
+      [ StationOccupancy { _stnOccInfo        = StationInformationId 7001 (UTCTime (fromGregorian 2023 09 24) (timeOfDayToTime (TimeOfDay 17 58 22)))
+                         , _stnOccCalculated  = calculated -- Use calculated time from returned record (since it defaults to the current time).
+                         , _stnOccRangeStart  = UTCTime (fromGregorian 2024 01 03) (timeOfDayToTime (TimeOfDay 00 00 00))
+                         , _stnOccRangeEnd    = UTCTime (fromGregorian 2024 01 04) (timeOfDayToTime (TimeOfDay 00 00 00))
+                         , _stnOccEmptyThresh = 0
+                         , _stnOccFullThresh  = 0
+                         , _stnOccEmptySec    = Just 51104
+                         , _stnOccFullSec     = Just 0
+                         }
+      ]
+    queryAndCacheOccupancy = withPostgresTransaction $
+      queryStationOccupancy 0 0
+      (Nothing :: Maybe Int32)
+      (UTCTime startDay (timeOfDayToTime midnight))
+      (UTCTime endDay   (timeOfDayToTime midnight))
+
+    assertOccupancy :: MonadIO m => Int -> UTCTime -> [(StationInformation, StationOccupancy)] -> m ()
+    assertOccupancy expectedLength expectedCalculated occ = liftIO $ do
+      assertEqual "Expected number of station occupancy records" expectedLength (length occ)
+      assertEqual "Cached 1 station occupancy record" (expectedOccupancy expectedCalculated) (map snd occ)

@@ -20,7 +20,7 @@ name:               haskbike-database
 -- PVP summary:     +-+------- breaking API changes
 --                  | | +----- non-breaking API additions
 --                  | | | +--- code changes with no API change
-version:            3.5.0
+version:            3.6.1
 
 -- A short (one-line) description of the package.
 synopsis:           Database for Toronto Bike Share.
@@ -85,6 +85,7 @@ library
 
     -- Modules exported by the library.
     exposed-modules:  Haskbike.Database.BikeShare
+                    , Haskbike.Database.CustomExpressions
                     , Haskbike.Database.BeamConvertable
                     , Haskbike.Database.Connection
                     , Haskbike.Database.DaysAgo
@@ -99,13 +100,27 @@ library
                     , Haskbike.Database.Operations.Dockings
                     , Haskbike.Database.Operations.Factors
                     , Haskbike.Database.Operations.QueryLogs
-                    , Haskbike.Database.Operations.StationEmpty
+                    , Haskbike.Database.Operations.StationOccupancy
                     , Haskbike.Database.Operations.StatusChanges
                     , Haskbike.Database.StatusDeltaFields
                     , Haskbike.Database.StatusVariationQuery
                     , Haskbike.Database.Utils
-                    -- Schemas:
-                    , Haskbike.Database.Schema.V001.BikeShare
+                    -- Final table definitions:
+                    , Haskbike.Database.Tables.Diagnostics
+                    , Haskbike.Database.Tables.QueryLogs
+                    , Haskbike.Database.Tables.StationInformation
+                    , Haskbike.Database.Tables.StationLookup
+                    , Haskbike.Database.Tables.StationStatus
+                    , Haskbike.Database.Tables.SystemInformation
+                    , Haskbike.Database.Tables.StationOccupancy
+
+                    , Haskbike.LatestQueries
+
+                    , Haskbike.Database.Test.Utils
+                    , Paths_haskbike_database
+
+    -- Modules included in this library but not exported.
+    other-modules:    Haskbike.Database.Schema.V001.BikeShare
                     , Haskbike.Database.Schema.V001.Diagnostics
                     , Haskbike.Database.Schema.V001.Migrations
                     , Haskbike.Database.Schema.V001.QueryLogs
@@ -120,21 +135,9 @@ library
                     , Haskbike.Database.Schema.V002.StationLookup
                     , Haskbike.Database.Schema.V003.BikeShare
                     , Haskbike.Database.Schema.V003.Migrations
-                    -- Final table definitions:
-                    , Haskbike.Database.Tables.Diagnostics
-                    , Haskbike.Database.Tables.QueryLogs
-                    , Haskbike.Database.Tables.StationInformation
-                    , Haskbike.Database.Tables.StationLookup
-                    , Haskbike.Database.Tables.StationStatus
-                    , Haskbike.Database.Tables.SystemInformation
-
-                    , Haskbike.LatestQueries
-
-                    , Haskbike.Database.Test.Utils
-                    , Paths_haskbike_database
-
-    -- Modules included in this library but not exported.
-    -- other-modules:
+                    , Haskbike.Database.Schema.V004.BikeShare
+                    , Haskbike.Database.Schema.V004.Migrations
+                    , Haskbike.Database.Schema.V004.StationOccupancy
 
 
     -- LANGUAGE extensions used by modules in this package.
@@ -151,7 +154,6 @@ library
                     , containers
                     , exceptions
                     , attoparsec
-                    , pretty-simple
                     , resource-pool >= 0.4.0.0
                     , text
                     , time
@@ -252,7 +254,6 @@ benchmark haskbike-database-bench
     build-depends:    base
                     , tasty-bench
                     , haskbike-core
-                    , haskbike-client
                     , haskbike-database
                     , beam-core
                     , beam-postgres

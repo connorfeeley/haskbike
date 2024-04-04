@@ -22,7 +22,7 @@ module Haskbike.API.Client
 import           Control.Monad.Catch             ( MonadCatch, MonadThrow )
 
 import           Data.Aeson                      ( Object )
-import           Data.Proxy
+import           Data.Proxy                      ( Proxy (..) )
 
 import           Haskbike.API.APIVersion
 import           Haskbike.API.BikeShare
@@ -41,31 +41,32 @@ import           Network.HTTP.Client.TLS         ( tlsManagerSettings )
 
 import           Servant.API
 import           Servant.Client
+import           Servant.Client.Generic
 
 import           Text.Pretty.Simple              ( pPrintString )
 
 import           UnliftIO
 
 -- | The BikeShare API client.
-bikeShareAPIClient :: Proxy BikeShareAPI
-bikeShareAPIClient = Proxy
+bikeShareAPIClient :: Client ClientM BikeShareAPI
+bikeShareAPIClient = client (Proxy @BikeShareAPI)
 
 -- | The BikeShare API client functions.
-versions            :: ClientM (ResponseWrapper [APIVersion])
-vehicleTypes        :: ClientM (ResponseWrapper [VehicleTypeFull])
-stationInformation  :: ClientM (ResponseWrapper [StationInformation])
-stationStatus       :: ClientM (ResponseWrapper [StationStatus])
-systemRegions       :: ClientM (ResponseWrapper [SystemRegion])
-systemInformation   :: ClientM (ResponseWrapper SystemInformation)
-systemPricingPlans  :: ClientM (ResponseWrapper [SystemPricingPlan])
-(      versions
-  :<|> vehicleTypes
-  :<|> stationInformation
-  :<|> stationStatus
-  :<|> systemRegions
-  :<|> systemInformation
-  :<|> systemPricingPlans
-  ) = client bikeShareAPIClient
+versions           :: ClientM (ResponseWrapper [APIVersion])
+vehicleTypes       :: ClientM (ResponseWrapper [VehicleTypeFull])
+stationInformation :: ClientM (ResponseWrapper [StationInformation])
+stationStatus      :: ClientM (ResponseWrapper [StationStatus])
+systemRegions      :: ClientM (ResponseWrapper [SystemRegion])
+systemInformation  :: ClientM (ResponseWrapper SystemInformation)
+systemPricingPlans :: ClientM (ResponseWrapper [SystemPricingPlan])
+versions           = _versions           bikeShareAPIClient
+vehicleTypes       = _vehicleTypes       bikeShareAPIClient
+stationInformation = _stationInformation bikeShareAPIClient
+stationStatus      = _stationStatus      bikeShareAPIClient
+systemRegions      = _systemRegions      bikeShareAPIClient
+systemInformation  = _systemInformation  bikeShareAPIClient
+systemPricingPlans = _systemPricingPlans bikeShareAPIClient
+
 
 mkClientManager :: IO Manager
 mkClientManager = newManager tlsManagerSettings

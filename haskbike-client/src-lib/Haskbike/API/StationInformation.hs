@@ -207,7 +207,7 @@ instance FromJSON StationInformation where
 
 instance HasDataField [StationInformation] where
   -- For a list of StationInformation, we expect to find them under the 'stations' key
-  getDataField obj = obj .: "stations"
+  dataFieldKey = "stations"
 
 -- | Lenses
 makeLenses ''StationInformation

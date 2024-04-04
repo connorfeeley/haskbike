@@ -3,7 +3,8 @@
 -- | Types for "versions" endpoint.
 
 module Haskbike.API.VehicleTypeFull
-     ( VehicleTypeFull (..)
+     ( TorontoVehicleType (..)
+     , VehicleTypeFull (..)
      ) where
 
 import           Data.Aeson
@@ -50,4 +51,4 @@ instance FromJSON VehicleTypeFull where
 
 instance HasDataField [VehicleTypeFull] where
   -- For a list of VehicleTypeFull, we expect to find them under the 'vehicle_types' key
-  getDataField obj = obj .: "vehicle_types"
+  dataFieldKey = "vehicle_types"

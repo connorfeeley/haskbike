@@ -88,13 +88,13 @@ parseOptions = Options
 
 -- | Top-level commands.
 data Command where
-  Poll           :: !PollOptions           -> Command
-  Query          :: !QueryOptions          -> Command
+  Poll           :: !PollOptions     -> Command
+  Query          :: !QueryOptions    -> Command
   QueryApi       :: Command
-  Events         :: !EventsOptions         -> Command
-  Server         :: !ServerOptions -> Command
-  DebugMisc      :: !DebugMiscOptions      -> Command
-  Database       :: !DatabaseCommand       -> Command
+  Events         :: !EventsOptions   -> Command
+  Server         :: !ServerOptions   -> Command
+  DebugMisc      :: !DebugCommand    -> Command
+  Database       :: !DatabaseCommand -> Command
   deriving (Show)
 
 -- | Parser for 'Command'.
@@ -109,7 +109,7 @@ commandParser = hsubparser
   <> command "serve"
     (info (Server        <$> serverOptionsParser)    (progDesc (commandDesc @ServerOptions)))
   <> command "debug"
-    (info (DebugMisc     <$> debugMiscOptionsParser) (progDesc (commandDesc @DebugMiscOptions)))
+    (info (DebugMisc     <$> debugCommandParser)     (progDesc (commandDesc @DebugCommand)))
   <> command "database"
     (info (Database      <$> databaseCommandParser)  (progDesc (commandDesc @DatabaseCommand)))
   )

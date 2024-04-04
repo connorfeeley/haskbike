@@ -110,6 +110,16 @@ instance (Monad m, MonadReader (Env m) m, MonadIO m) => HasEnv (Env m) m where
     getClientManager    = asks envClientManager
     getBaseUrl          = asks envBaseUrl
 
+-- Implement logging for the application environment.
+instance HasLog (Env m) Message m where
+  getLogAction :: Env m -> LogAction m Message
+  getLogAction = envLogAction
+  {-# INLINE getLogAction #-}
+
+  setLogAction :: LogAction m Message -> Env m -> Env m
+  setLogAction newLogAction env = env { envLogAction = newLogAction }
+  {-# INLINE setLogAction #-}
+
 {- | Type alias for constraint for:
 
 1. Monad @m@ have access to environment @env@.
@@ -171,16 +181,6 @@ withPostgresTransaction action = do
 -- | Fetch client manager from the environment.
 withManager :: (HasEnv env m, MonadIO m, MonadThrow m) => m Manager
 withManager = getClientManager >>= liftIO . pure
-
--- Implement logging for the application environment.
-instance HasLog (Env m) Message m where
-  getLogAction :: Env m -> LogAction m Message
-  getLogAction = envLogAction
-  {-# INLINE getLogAction #-}
-
-  setLogAction :: LogAction m Message -> Env m -> Env m
-  setLogAction newLogAction env = env { envLogAction = newLogAction }
-  {-# INLINE setLogAction #-}
 
 -- | Simple environment for the main application.
 simpleEnv :: (HasEnv env m, MonadIO m, MonadThrow m) => TimeZone -> Pool Connection -> Manager -> Env m

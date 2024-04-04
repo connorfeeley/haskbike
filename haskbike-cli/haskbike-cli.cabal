@@ -20,7 +20,7 @@ name:               haskbike-cli
 -- PVP summary:     +-+------- breaking API changes
 --                  | | +----- non-breaking API additions
 --                  | | | +--- code changes with no API change
-version:            3.5.0
+version:            3.6.1
 
 -- A short (one-line) description of the package.
 synopsis:           CLI for Toronto Bike Share.
@@ -177,6 +177,7 @@ library
                     , text-show
                     , time
                     , unliftio
+                    , mtl
 
                     , aeson
                     , servant-client
@@ -208,14 +209,18 @@ test-suite haskbike-cli-test
 
     hs-source-dirs:   test
 
-    main-is:          Driver.hs
+    main-is:          Main.hs
 
     build-depends:    base
                     , haskbike-core
+                    , haskbike-client
                     , haskbike-database
                     , haskbike-cli
                     , tasty
                     , tasty-hunit
                     , unliftio
-
-    build-tool-depends: tasty-discover:tasty-discover
+                    , mtl
+                    , beam-core
+                    , exceptions
+                    , text
+                    , co-log

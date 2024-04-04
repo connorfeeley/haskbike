@@ -3,11 +3,13 @@
 -- | Poll the API for status updates, inserting results in database as needed.
 module Haskbike.CLI.Poll
      ( dispatchPoll
+     , makePollThreadPair
      , pollClient
      ) where
 
-import           Colog                             ( logInfo, logWarning )
+import           Colog                             ( logError, logInfo, logWarning )
 
+import           Control.Exception                 ( throw )
 import           Control.Monad                     ( forever, void )
 import           Control.Monad.Catch               ( MonadCatch, MonadThrow )
 
@@ -15,6 +17,7 @@ import qualified Data.Text                         as T
 
 import           Haskbike.API.APIEntity
 import qualified Haskbike.API.Client               as C
+import           Haskbike.API.ResponseWrapper
 import           Haskbike.AppEnv
 import           Haskbike.CLI.Options              ( PollOptions (..), PopulateStatusChangesOpt (..) )
 import           Haskbike.Database.BikeShare       ( bikeshareStationStatusChanges )
@@ -22,6 +25,8 @@ import           Haskbike.Database.EndpointQueried
 import           Haskbike.Database.Operations      ( populateChangedStationStatusTable, queryRowCount )
 
 import           Prelude                           hiding ( log )
+
+import           Servant.Client                    ( ClientM )
 
 import           TextShow                          ( showt )
 
@@ -32,43 +37,43 @@ import           UnliftIO
 dispatchPoll :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m)
              => PollOptions
              -> m ()
-dispatchPoll = pollClient
+dispatchPoll opts = pollClient opts `catch` handlePollException
 
+
+-- | Handle a polling exception.
+handlePollException :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m)
+                    => PollException
+                    -> m ()
+handlePollException e = logError ("Poll exception: " <> (T.pack . show) e) >> throw e
+
+
+makePollThreadPair :: (HasEnv env m, APIPersistable apiType dbType, MonadUnliftIO m, MonadCatch m)
+                   => EndpointQueried -> ClientM (ResponseWrapper apiType) -> m (Async a1, Async a2)
+makePollThreadPair endpoint endpointFn = do
+  lastUpdated  <- liftIO (newTVarIO 0)
+  queue        <- liftIO (newTBQueueIO queueDepth)
+  newInsertThread <- (async . forever) (insertThread endpoint queue)
+  newPollThread   <- (async . forever) (pollThread endpoint endpointFn lastUpdated queue)
+  pure (newInsertThread, newPollThread)
+  where
+    -- Queue depth is set to hold two hours worth of data.
+    queueDepth = 2 * secondsInHour `div` averagePollSeconds
+    secondsInHour = 3600
+    averagePollSeconds = 30
 
 pollClient :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m)
            => PollOptions -> m ()
 pollClient pollOptions = do
-  -- runReaderT (unServerAppM app) senv
-  -- Initialize TVars for per-thread last updated time.
-  (statusLastUpdated, infoLastUpdated, sysInfoLastUpdated) <- liftIO $
-    (,,) <$> newTVarIO 0 <*> newTVarIO 0 <*> newTVarIO 0
-
-  infoQueue    <- liftIO newTQueueIO
-  statusQueue  <- liftIO newTQueueIO
-  sysInfoQueue <- liftIO newTQueueIO
-
-
   -- Populate status changes table if switch was enabled.
   void (populateStatusChanges (optPollPopulateStatusChanges pollOptions))
 
-  -- Set up insertion threads before doing initial fetch.
-  logInfo "Initializing insertion threads."
-  insertThreadInfo     <- (async . forever) (insertThread StationInformationEP infoQueue)
-  insertThreadStatus   <- (async . forever) (insertThread StationStatusEP      statusQueue)
-  insertThreadSysInfo  <- (async . forever) (insertThread SystemInformationEP  sysInfoQueue)
+  logInfo "Initializing insertion and polling threads."
+  (insertThreadInfo,    pollThreadInfo)    <- makePollThreadPair StationInformationEP C.stationInformation
+  (insertThreadStatus,  pollThreadStatus)  <- makePollThreadPair StationStatusEP      C.stationStatus
+  (insertThreadSysInfo, pollThreadSysInfo) <- makePollThreadPair SystemInformationEP  C.systemInformation
   let insertThreads = [ insertThreadInfo, insertThreadStatus, insertThreadSysInfo ]
+  let pollThreads   = [ pollThreadInfo,   pollThreadStatus,   pollThreadSysInfo   ]
 
-  logInfo "Fetching from API once."
-  -- runPollReader pollEnv $ fetchAndPersist StationInformationEP stationInformation firstUpdate infoQueue
-  fetchAndPersist StationInformationEP C.stationInformation firstUpdate infoQueue
-  fetchAndPersist StationStatusEP      C.stationStatus      firstUpdate statusQueue
-  fetchAndPersist SystemInformationEP  C.systemInformation  firstUpdate sysInfoQueue
-
-  logInfo "Initializing polling threads."
-  pollThreadInfo    <- (async . forever) (pollThread StationInformationEP C.stationInformation infoLastUpdated    infoQueue)
-  pollThreadStatus  <- (async . forever) (pollThread StationStatusEP      C.stationStatus      statusLastUpdated  statusQueue)
-  pollThreadSysInfo <- (async . forever) (pollThread SystemInformationEP  C.systemInformation  sysInfoLastUpdated sysInfoQueue)
-  let pollThreads = [ pollThreadInfo, pollThreadStatus, pollThreadSysInfo ]
 
   -- All threads managed by pollClient.
   let threads = insertThreads ++ pollThreads
@@ -79,8 +84,6 @@ pollClient pollOptions = do
 
   logWarning "Polling and insertion threads terminated."
   pure ()
-  where
-    firstUpdate = 0 -- Use Unix epoch for initial lastUpdated.
 
 -- | Populate the station status changes table from the content of the station status table.
 populateStatusChanges :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m)

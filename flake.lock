@@ -1,5 +1,22 @@
 {
   "nodes": {
+    "beam": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1712030690,
+        "narHash": "sha256-SMp1SS8rqr3aFvDpqzPN+vXNyHqkzqY2vF8qPMF7UXw=",
+        "owner": "connorfeeley",
+        "repo": "beam",
+        "rev": "914fb5faa60678ee8020d1f9855b03f31433ba94",
+        "type": "github"
+      },
+      "original": {
+        "owner": "connorfeeley",
+        "ref": "feat/insert-only-on-conflict",
+        "repo": "beam",
+        "type": "github"
+      }
+    },
     "flake-compat": {
       "flake": false,
       "locked": {
@@ -116,6 +133,7 @@
     },
     "root": {
       "inputs": {
+        "beam": "beam",
         "flake-compat": "flake-compat",
         "flake-parts": "flake-parts",
         "flake-root": "flake-root",
