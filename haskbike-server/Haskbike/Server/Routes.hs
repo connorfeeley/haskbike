@@ -6,7 +6,6 @@
 module Haskbike.Server.Routes
      ( API (..)
      , BikeShareExplorerAPI
-     , latestQueries
      , server
      ) where
 

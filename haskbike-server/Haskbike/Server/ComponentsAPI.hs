@@ -20,6 +20,7 @@ import           Data.Time.Extras
 
 import           Database.Beam
 
+import           Haskbike.Database.Expressions
 import           Haskbike.Database.Expressions                           ( queryChargingInfrastructure )
 import           Haskbike.Database.Operations.Dockings
 import           Haskbike.Database.Operations.Factors
@@ -31,6 +32,7 @@ import           Haskbike.Server.Components.ChargingHeader
 import           Haskbike.Server.Components.ChargingInfrastructureHeader
 import           Haskbike.Server.Components.DockingHeader
 import           Haskbike.Server.Components.PerformanceData
+import           Haskbike.Server.LatestQueries
 import           Haskbike.Server.StatusDataParams
 import           Haskbike.ServerEnv
 
@@ -80,6 +82,10 @@ data EventsComponentAPI mode where
           :> QueryParam "start-time" LocalTime
           :> QueryParam "end-time" LocalTime
           :> Get '[HTML] PerformanceData
+    , latestQueries :: mode :-
+      "latest-queries"
+        :> QueryParam "time" LocalTime
+        :> Get '[HTML] LatestQueries
     } -> EventsComponentAPI mode
   deriving stock Generic
 
@@ -90,6 +96,7 @@ eventsComponentHandler = EventsComponentAPI
   , chargingEventsHeader         = chargingsHeader
   , chargingInfrastructureHeader = chargingInfrastructureHeaderHandler
   , performanceHeader            = performanceHeaderHandler
+  , latestQueries                = latestQueriesHandler
   }
 
 dockingsHeader :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m)
@@ -168,3 +175,10 @@ performanceHeaderHandler stationId startTime endTime = do
   let emptyFull = head $ map (\(_inf, occ) -> DB.emptyFullFromSecs (DB._stnOccEmptySec occ) (DB._stnOccFullSec occ)) emptyFullTup
 
   pure $ (head . map (integralToPerformanceData emptyFull)) perf
+
+latestQueriesHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadError ServerError m, MonadUnliftIO m)
+                     => Maybe LocalTime -> m LatestQueries
+latestQueriesHandler t = do
+  tz <- getTz
+  latest <- withPostgres $ runSelectReturningList $ selectWith queryLatestQueryLogs
+  pure $ latestQueryLogsToMap tz latest
