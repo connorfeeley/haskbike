@@ -25,7 +25,7 @@ import           Database.Beam
 
 import           Haskbike.API.VehicleType
 import           Haskbike.Database.EventCounts
-import           Haskbike.Database.Expressions                       ( queryLatestStatuses, queryStationBeforeExpr )
+import           Haskbike.Database.Expressions                       ( queryStationBeforeExpr )
 import           Haskbike.Database.Operations.Dockings
 import           Haskbike.Database.Operations.Factors
 import           Haskbike.Database.Operations.StationOccupancy
@@ -258,15 +258,19 @@ handleEmptyFullData start end = do
 
   logInfo $ "Rendering station empty/full data for time [" <> tshow start <> " - " <> tshow end <> "]"
 
-  (latest, emptyFull) <- concurrently (withPostgres $ runSelectReturningList $ select queryLatestStatuses)
-                                      (withPostgres $ runSelectReturningList $ select $
-                                        stationOccupancyE (Nothing :: Maybe Integer) (start' currentUtc tz) (end' currentUtc tz))
-
+  (latest, emptyFull) <- concurrently (withPostgres $ runSelectReturningList $ select $ queryStationBeforeExpr (end' currentUtc tz))
+                                      (withPostgresTransaction $ queryStationOccupancy 0 0 (Nothing :: Maybe Int)
+                                        (start' currentUtc tz) (end' currentUtc tz)
+                                      )
   let combined = combineStations latest (resultToEmptyFull emptyFull)
 
-  pure $ map (\(i, ss, ef) -> DB.EmptyFullRecord i ss ef) combined
+  pure $ map (uncurry3 DB.EmptyFullRecord) combined
   where
-    resultToEmptyFull = map (\(i, (e, f)) -> (i, DB.emptyFullFromSecs e f))
+    resultToEmptyFull = map (\(i, occ) -> (i, DB.emptyFullFromSecs (DB._stnOccEmptySec occ) (DB._stnOccFullSec occ)))
     tshow = T.pack . show
     start' cUtc tz = maybe (addUTCTime (-60 * 60 * 24) cUtc) (localTimeToUTC tz) start
     end'   cUtc tz = maybe cUtc (localTimeToUTC tz) end
+
+-- | Uncurry a function of three arguments.
+uncurry3 :: (a -> b -> c -> d) -> (a, b, c) -> d
+uncurry3 f (x, y, z) = f x y z
