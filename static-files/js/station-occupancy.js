@@ -1,3 +1,5 @@
+var urlParams = new URLSearchParams(window.location.search);
+
 const grid = new gridjs.Grid({...tableBase,
   columns: [
     {
@@ -18,7 +20,7 @@ const grid = new gridjs.Grid({...tableBase,
     ] },
   ],
   server: {
-    url: "/data/station-occupancy",
+    url: "/data/station-occupancy?" + urlParams.toString(),
     then: (data) =>
       data.map((card) => [
         card.station_information.station_id,
