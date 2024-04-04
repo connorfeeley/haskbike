@@ -166,12 +166,9 @@ stationListPageHandler :: (HasEnv env m, MonadIO m, MonadCatch m)
 stationListPageHandler _end = do
   logInfo "Rendering station list"
 
-  latest <- withPostgres $ runSelectReturningList $ select queryLatestStatuses
-
-  let sorted = sortOn (_infoStationId . fst) latest
   sideMenu $
     StationList
-    { _stationList           = sorted
+    { _stationList           = [] -- FIXME: remove; list is queried by GridJS
     , _stationTimeRange      = (Nothing, Nothing)
     , _staticLink            = fieldLink staticApi
     , _stationListInputs     = []
@@ -186,7 +183,7 @@ stationEmptyFullListPage start end = do
 
   sideMenu $
     StationList
-    { _stationList           = [] -- sorted
+    { _stationList           = [] -- FIXME: remove; list is queried by GridJS
     , _stationTimeRange      = (start, end)
     , _staticLink            = fieldLink staticApi
     , _stationListInputs     = []
