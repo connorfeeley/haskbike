@@ -12,22 +12,23 @@ module Haskbike.Server
      ) where
 
 
-import           Control.Conditional         ( condM )
-import           Control.Monad.Catch         ( throwM )
+import           Control.Conditional                  ( condM )
+import           Control.Monad.Catch                  ( throwM )
 import           Control.Monad.Reader
 
-import           Data.Function               ( (&) )
+import           Data.Function                        ( (&) )
 
 import           Haskbike.Server.Routes
 import           Haskbike.ServerEnv
 
-import           Network.HTTP.Types          ( Status )
+import           Network.HTTP.Types                   ( Status )
 import           Network.Wai
-import           Network.Wai.Handler.Warp    as Warp
-import           Network.Wai.Middleware.Gzip ( GzipFiles (..), GzipSettings (..), defaultGzipSettings, gzip )
+import           Network.Wai.Handler.Warp             as Warp
+import           Network.Wai.Middleware.Gzip          ( GzipFiles (..), GzipSettings (..), defaultGzipSettings, gzip )
+import           Network.Wai.Middleware.RequestLogger
 
-import qualified Servant                     as S
-import qualified Servant.Server.Generic      as S
+import qualified Servant                              as S
+import qualified Servant.Server.Generic               as S
 
 import           UnliftIO
 
@@ -44,7 +45,7 @@ serveVisualization = do
     ]
 
   -- Run Warp/Wai server using specific settings.
-  liftIO $ runSettings (serverSettings env) $ gzipM (serverApp env)
+  liftIO $ runSettings (serverSettings env) $ logStdout (gzipM (serverApp env))
 
 
 gzipSettings :: GzipSettings
@@ -59,11 +60,7 @@ gzipSettings =
 serverSettings :: ServerEnv ServerAppM -> Settings
 serverSettings env = defaultSettings
                & setPort (serverPort env)
-               & setLogger serverLogger
                & setTimeout (serverTimeoutSeconds env)
-
-serverLogger :: Request -> Status -> Maybe Integer -> IO ()
-serverLogger req status code = putStrLn $ show req ++ " " ++ show status ++ " " ++ show code
 
 
 -- | Natural transformation between server monad and Servant 'Handler' monad.
