@@ -162,8 +162,6 @@ library
                     , servant
                     , aeson
 
-                    , lucid
-
                     , beam-core
                     , beam-migrate
                     , postgresql-simple
