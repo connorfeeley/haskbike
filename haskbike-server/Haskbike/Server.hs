@@ -12,29 +12,32 @@ module Haskbike.Server
      ) where
 
 
-import           Control.Conditional                  ( condM )
-import           Control.Monad.Catch                  ( throwM )
+import           Control.Conditional                       ( condM )
+import           Control.Monad.Catch                       ( throwM )
 import           Control.Monad.Reader
 
-import           Data.Function                        ( (&) )
+import           Data.Default                              ( def )
+import           Data.Function                             ( (&) )
 
 import           Haskbike.Server.Routes
 import           Haskbike.ServerEnv
 
-import           Network.HTTP.Types                   ( Status )
-import           Network.Wai
-import           Network.Wai.Handler.Warp             as Warp
-import           Network.Wai.Middleware.Gzip          ( GzipFiles (..), GzipSettings (..), defaultGzipSettings, gzip )
+import           Network.Wai                               ( Middleware )
+import           Network.Wai.Handler.Warp                  as Warp
+import           Network.Wai.Middleware.Gzip               ( GzipFiles (..), GzipSettings (..), defaultGzipSettings,
+                                                             gzip )
 import           Network.Wai.Middleware.RequestLogger
+import           Network.Wai.Middleware.RequestLogger.JSON
 
-import qualified Servant                              as S
-import qualified Servant.Server.Generic               as S
+import qualified Servant                                   as S
+import qualified Servant.Server.Generic                    as S
 
 import           UnliftIO
 
 
-serveVisualization :: (Monad m, MonadReader (ServerEnv ServerAppM) m, MonadUnliftIO m, HasServerEnv (ServerEnv ServerAppM) m, HasEnv (ServerEnv ServerAppM) m)
-                   => m ()
+serveVisualization :: ( Monad m, MonadReader (ServerEnv ServerAppM) m, MonadUnliftIO m
+                      , HasServerEnv (ServerEnv ServerAppM) m, HasEnv (ServerEnv ServerAppM) m
+                      ) => m ()
 serveVisualization = do
   env <- ask
 
@@ -44,8 +47,15 @@ serveVisualization = do
     , (return True,                        return id)
     ]
 
+  logger <- liftIO mkServerLogger
+
   -- Run Warp/Wai server using specific settings.
-  liftIO $ runSettings (serverSettings env) $ logStdout (gzipM (serverApp env))
+  liftIO $ runSettings (serverSettings env) (logger (gzipM (serverApp env)))
+
+
+-- | Log requests as JSON with response headers.
+mkServerLogger :: IO Middleware
+mkServerLogger = mkRequestLogger def { outputFormat = CustomOutputFormatWithDetailsAndHeaders formatAsJSONWithHeaders }
 
 
 gzipSettings :: GzipSettings

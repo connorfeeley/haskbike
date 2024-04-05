@@ -146,6 +146,7 @@ library
                     , text
                     , time
                     , unliftio
+                    , data-default
 
                     , attoparsec
                     , base-compat-batteries
@@ -165,7 +166,6 @@ library
                     , wai
                     , wai-extra
                     , warp
-                    , http-types
 
                     , beam-core
                     , postgresql-simple
