@@ -107,7 +107,13 @@ emptyFullRows stationId' startTime' endTime' =
                                                 lead >=. val_ startTime' ||.
                                                 (lag  <. val_ startTime' &&. (row ^. statusLastReported) >=. val_ startTime')
           ) $
-    withWindow_ (\row -> frame_ (partitionBy_ ((_unInformationStationId . _statusInfoId . _statusCommon) row)) (orderPartitionBy_ ((asc_ . _statusLastReported . _statusCommon) row)) noBounds_)
+    withWindow_ (\row -> frame_ (partitionBy_ ((_unInformationStationId . _statusInfoId . _statusCommon) row))
+                                (orderPartitionBy_
+                                 ( (asc_ . _unInformationStationId . _statusInfoId . _statusCommon) row
+                                 , (asc_ . _statusLastReported . _statusCommon) row)
+                                )
+                                noBounds_
+                )
                 (\row w -> ( row
                            , ( leadWithDefault_ (row ^. statusLastReported     ) (val_ (1 :: Int32)) (val_ endTime')  `over_` w
                              , leadWithDefault_ (row ^. statusNumBikesAvailable) (val_ (1 :: Int32)) (val_ 0) `over_` w
