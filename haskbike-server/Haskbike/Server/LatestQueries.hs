@@ -2,6 +2,8 @@
 
 module Haskbike.Server.LatestQueries
      ( LatestQueries (..)
+     , endpointElement
+     , endpointElementTemplate
      , getLatestQueries
      , latestQueryLogsToMap
      ) where
@@ -13,7 +15,7 @@ import qualified Data.Map                           as Map
 import qualified Data.Text                          as T
 import           Data.Time
 
-import           Database.Beam
+import           Database.Beam                      hiding ( div_ )
 
 import           Haskbike.Database.EndpointQueried
 import           Haskbike.Database.Expressions
@@ -30,16 +32,23 @@ data LatestQueries where
 
 instance ToHtml LatestQueries where
   toHtmlRaw = toHtml
-  toHtml params = Lucid.div_ [class_ "menu-footer-element"] $
+  toHtml params = div_ [class_ "menu-footer-element"] $
     h3_ [class_ "menu-heading latest-updated-header"] "Last Updated" >>
     forM_ (Map.toList (unLatestQueries params)) (uncurry endpointElement)
 
 
+-- | Templated LatestQueries element with concrete data.
 endpointElement :: Monad m => EndpointQueried -> LocalTime -> HtmlT m ()
-endpointElement ep t =
-  p_ [class_ "pure-g latest-updated"] $ title <> content
-  where title = b_ [class_ "latest-updated-endpoint"] ((toHtml . endpointName) ep)
-        content = span_ [class_ "latest-updated-time"] ((toHtml . formatTimeHtml) t)
+endpointElement ep t = endpointElementTemplate ep (Just t)
+
+
+-- | Template for LatestQueries element. Used by HTMX component to pre-render the endpoint elements.
+endpointElementTemplate :: Monad m => EndpointQueried -> Maybe LocalTime -> HtmlT m ()
+endpointElementTemplate ep t =
+  div_ [class_ "pure-g latest-updated"] $ title <> content
+  where
+    title = b_ [class_ "latest-updated-endpoint"] ((toHtml . endpointName) ep)
+    content = span_ [class_ "latest-updated-time"] (maybe mempty (toHtml . formatTimeHtml) t)
 
 
 endpointName :: EndpointQueried -> T.Text

@@ -120,6 +120,7 @@ library
                     , Haskbike.Server.StaticAPI
                     , Haskbike.Server.StatusDataParams
                     , Haskbike.Server.LatestQueries
+                    , Haskbike.Server.LatestQueriesComponent
                     , Haskbike.Server.VisualizationAPI
                     , Haskbike.ServerEnv
 

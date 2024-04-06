@@ -12,21 +12,21 @@ module Haskbike.Server.Page.SideMenu
 import           Control.Monad.Catch
 import           Control.Monad.Reader
 
-import qualified Data.Text                     as T
+import qualified Data.Text                              as T
 
 import           Haskbike.AppEnv
 import           Haskbike.Server.Classes
-import           Haskbike.Server.ComponentsAPI
 import           Haskbike.Server.LatestQueries
+import           Haskbike.Server.LatestQueriesComponent
 import           Haskbike.Server.Page.Utils
 import           Haskbike.Server.PureCSS
 import           Haskbike.Server.StaticAPI
 import           Haskbike.Version
 
 import           Lucid
-import           Lucid.Base                    ( makeAttribute )
+import           Lucid.Base                             ( makeAttribute )
 
-import           Servant                       ( Link, fieldLink, linkURI, toUrlPiece )
+import           Servant                                ( Link, fieldLink, toUrlPiece )
 
 
 data PureSideMenu a where
@@ -80,10 +80,7 @@ renderMenu params =
 
     div_ [id_ "menu-footer"] $ do
       div_ [class_ "menu-vertical-spacer"] mempty
-      div_ [ hx_ "trigger" "load"
-           , hx_ "get" ("/components/" <> (T.pack . show . linkURI) (fieldLink latestQueries Nothing))
-           ] mempty
-        -- (img_ [class_ "htmx-indicator htmx-spinner", src_ ("/" <> toUrlPiece (staticLink params) <> "/images/svg-loaders/circles.svg"), alt_ "Loading..."])
+      toHtml LatestQueriesComponent
       renderVersion params
 
 -- | Render the version link.
