@@ -11,6 +11,7 @@ module Haskbike.Database.Schema.V001.QueryLogs
      , QueryLogT (..)
      , QueryResult (..)
      , createQueries
+     , extraQueriesMigrations
      , queryLogEndpoint
      , queryLogErrJson
      , queryLogErrMsg
@@ -24,6 +25,7 @@ import           Control.Lens
 
 import           Data.Aeson
 import           Data.Int
+import           Data.String                       ( IsString )
 import qualified Data.Text                         as T
 import           Data.Time
 
@@ -123,3 +125,7 @@ createQueries =
   , _queryLogErrMsg   = field "error_msg"  (maybeType Pg.text)
   , _queryLogErrJson  = field "error_json" (maybeType Pg.jsonb)
   }
+
+extraQueriesMigrations :: IsString a => [a]
+extraQueriesMigrations = [ "CREATE INDEX IF NOT EXISTS queries_endpoint_time_desc_idx ON queries USING btree (endpoint, time DESC)"
+                         ]

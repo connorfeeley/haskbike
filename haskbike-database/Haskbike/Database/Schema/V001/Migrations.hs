@@ -11,11 +11,16 @@
 
 module Haskbike.Database.Schema.V001.Migrations where
 
+import           Control.Monad
+
+import           Data.Pool                                        ( withResource )
+
 import           Database.Beam.Migrate
 import           Database.Beam.Migrate.Simple
 import           Database.Beam.Postgres
 import           Database.Beam.Postgres.CustomTypes
 import qualified Database.Beam.Postgres.Migrate                   as PG
+import           Database.PostgreSQL.Simple                       ( execute_, withTransaction )
 
 import           Haskbike.AppEnv
 import           Haskbike.Database.EndpointQueried
@@ -24,6 +29,8 @@ import           Haskbike.Database.Schema.V001.QueryLogs          as V001
 import           Haskbike.Database.Schema.V001.StationInformation as V001
 import           Haskbike.Database.Schema.V001.StationStatus      as V001
 import           Haskbike.Database.Schema.V001.SystemInformation  as V001
+
+import           UnliftIO
 
 
 {- Set up entire database.
@@ -62,10 +69,12 @@ migrateDB = do
     PG.migrationBackend
     initialSetupStep
 
-  -- pool <- withConnPool
-  -- void . liftIO . withResource pool $ \conn -> do
-  --   forM_ V001.extraInfoMigrations $ \migration -> do
-  --     execute_ conn migration
+  -- Execute extra migrations.
+  withConnPool >>= \pool -> void . liftIO . withResource pool $ \conn ->  withTransaction conn $ do
+    forM_ V001.extraInfoMigrations $ \migration -> do
+      execute_ conn migration
+    forM_ V001.extraQueriesMigrations $ \mig -> do
+      execute_ conn mig
   pure checkedDbSettings
 
 enumSetupStep :: MigrationSteps Postgres () (CheckedDatabaseEntity Postgres db (PgType EndpointQueried))
