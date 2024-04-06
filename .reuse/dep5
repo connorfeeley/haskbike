@@ -38,6 +38,16 @@ Files: static-files/css/pure/*
 Copyright: 2013 Yahoo! Inc.
 License: BSD-3-Clause
 
+### GridJS
+Files: static-files/js/gridjs/*
+Copyright: Afshin Mehrabani
+License: MIT
+
+### MermaidJS
+Files: static-files/css/mermaid/*
+Copyright: 2014 - 2022 Knut Sveidqvist
+License: MIT
+
 ### Vega/Vega-Lite
 Files: static-files/js/vega/*
 Copyright: 2015 University of Washington Interactive Data Lab
