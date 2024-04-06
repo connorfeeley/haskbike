@@ -21,7 +21,6 @@ import           Data.Time.Extras
 import           Database.Beam
 
 import           Haskbike.Database.Expressions
-import           Haskbike.Database.Expressions                           ( queryChargingInfrastructure )
 import           Haskbike.Database.Operations.Dockings
 import           Haskbike.Database.Operations.Factors
 import           Haskbike.Database.Operations.StationOccupancy
