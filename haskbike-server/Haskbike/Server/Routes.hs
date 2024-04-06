@@ -63,7 +63,8 @@ server = API { debugApi         = debugApiHandler
 -- * Handlers.
 
 -- | Handler render the home page.
-homePageHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m, HasServerEnv env m) => m (PureSideMenu IndexPage)
+homePageHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m, HasServerEnv env m)
+                => m (PureSideMenu IndexPage)
 homePageHandler = do
   contactEmail <- getServerContactEmail
   sideMenu $

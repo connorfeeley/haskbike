@@ -16,6 +16,7 @@ import qualified Data.Text                     as T
 
 import           Haskbike.AppEnv
 import           Haskbike.Server.Classes
+import           Haskbike.Server.ComponentsAPI
 import           Haskbike.Server.LatestQueries
 import           Haskbike.Server.Page.Utils
 import           Haskbike.Server.PureCSS
@@ -25,16 +26,15 @@ import           Haskbike.Version
 import           Lucid
 import           Lucid.Base                    ( makeAttribute )
 
-import           Servant                       ( Link, fieldLink, toUrlPiece )
+import           Servant                       ( Link, fieldLink, linkURI, toUrlPiece )
 
 
 data PureSideMenu a where
   PureSideMenu :: (ToHtml a, ToHtmlComponents a) =>
-    { visPageParams    :: a
-    , staticLink       :: Link
-    , cabalVersionText :: String
-    , gitVersionText   :: String
-    , latestQueries    :: LatestQueries
+    { visPageParams     :: a
+    , staticLink        :: Link
+    , cabalVersionText  :: String
+    , gitVersionText    :: String
     } -> PureSideMenu a
 
 instance (ToHtml a, ToHtml LatestQueries, ToHtmlComponents a) => ToHtml (PureSideMenu a) where
@@ -80,7 +80,10 @@ renderMenu params =
 
     div_ [id_ "menu-footer"] $ do
       div_ [class_ "menu-vertical-spacer"] mempty
-      toHtml (latestQueries params)
+      div_ [ hx_ "trigger" "load"
+           , hx_ "get" ("/components/" <> (T.pack . show . linkURI) (fieldLink latestQueries Nothing))
+           ] mempty
+        -- (img_ [class_ "htmx-indicator htmx-spinner", src_ ("/" <> toUrlPiece (staticLink params) <> "/images/svg-loaders/circles.svg"), alt_ "Loading..."])
       renderVersion params
 
 -- | Render the version link.
@@ -106,12 +109,10 @@ versionLink ver = linkElement shortVersion
 -- | 'SideMenu' smart constructor.
 sideMenu :: (HasEnv env m, MonadIO m, ToHtml a, ToHtmlComponents a, MonadCatch m) => a -> m (PureSideMenu a)
 sideMenu page = do
-  latest <- getLatestQueries
   pure $
     PureSideMenu
     { visPageParams    = page
     , staticLink       = fieldLink staticApi
     , cabalVersionText = getCabalVersion
     , gitVersionText   = getGitHash
-    , latestQueries    = latest
     }
