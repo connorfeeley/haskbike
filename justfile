@@ -148,3 +148,6 @@ import-local-station-info CSVFILE:
 
 profile:
     {{CABAL}} v2-run --enable-profiling exes -- poll -v +RTS -p
+
+sha384-integrity FILE:
+    cat {{FILE}} | openssl dgst -sha384 -binary | openssl base64 -A
