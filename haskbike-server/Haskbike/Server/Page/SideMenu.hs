@@ -16,11 +16,13 @@ import qualified Data.Text                              as T
 
 import           Haskbike.AppEnv
 import           Haskbike.Server.Classes
+import           Haskbike.Server.ExternalAssets
 import           Haskbike.Server.LatestQueries
 import           Haskbike.Server.LatestQueriesComponent
 import           Haskbike.Server.Page.Utils
 import           Haskbike.Server.PureCSS
 import           Haskbike.Server.StaticAPI
+import           Haskbike.ServerEnv
 import           Haskbike.Version
 
 import           Lucid
@@ -32,6 +34,7 @@ import           Servant                                ( Link, fieldLink, toUrl
 data PureSideMenu a where
   PureSideMenu :: (ToHtml a, ToHtmlComponents a) =>
     { pageContent       :: a
+    , assetsLocation    :: ExternalAssetLocation
     , staticLink        :: Link
     , cabalVersionText  :: String
     , gitVersionText    :: String
@@ -48,6 +51,7 @@ instance (ToHtml a, ToHtml LatestQueries, ToHtmlComponents a) => ToHtml (PureSid
         makeHeadElements ("/" <> toUrlPiece (staticLink c)) "//stats.bikes.cfeeley.org/count.js"
         toHead (pageContent c)
 
+        stylesheet_ (assetUrl $ getAssetDetails @PureCSS (assetsLocation component)) [defer_ mempty]
         stylesheet_ ("/" <> toUrlPiece (staticLink c) <> "/css/pure/side-menu.css") [defer_ mempty]
         script_ [src_ ("/" <> toUrlPiece (staticLink c) <> "/js/pure/ui.js"), defer_ mempty] ""
       menuLink = a_ [href_ "#menu", id_ "menuLink", class_ "menu-link", makeAttribute "aria-label" "Toggle sidebar"] $ span_ mempty
@@ -104,11 +108,14 @@ versionLink ver = linkElement shortVersion
     urlForVersion object = baseUrl <> T.pack object
 
 -- | 'SideMenu' smart constructor.
-sideMenu :: (HasEnv env m, MonadIO m, ToHtml a, ToHtmlComponents a, MonadCatch m) => a -> m (PureSideMenu a)
-sideMenu page = do
+sideMenu :: (HasEnv env m, MonadIO m, ToHtml a, ToHtmlComponents a, MonadCatch m, HasServerEnv env m)
+         => a -> m (PureSideMenu a)
+sideMenu content = do
+  assetsLocation <- getServerAssetsLocation
   pure $
     PureSideMenu
-    { pageContent      = page
+    { pageContent      = content
+    , assetsLocation   = assetsLocation
     , staticLink       = fieldLink staticApi
     , cabalVersionText = getCabalVersion
     , gitVersionText   = getGitHash

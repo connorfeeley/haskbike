@@ -30,7 +30,7 @@ dispatchServer options = do
                             , serverGzipCompression = True
                             , serverMaxIntervals    = 20
                             , serverContactEmail    = "bikes@cfeeley.org"
-                            , serverAssets          = ServerAssets ExternalAssetCDN allSiteAssets
+                            , serverAssets          = ExternalAssetCDN
                             }
 
   logInfo $ "Gzip compression enabled: " <> (T.pack . show) (serverGzipCompression serverEnv)

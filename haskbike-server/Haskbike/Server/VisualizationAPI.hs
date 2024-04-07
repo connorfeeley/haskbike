@@ -17,7 +17,6 @@ import           Control.Monad.Catch                             ( MonadCatch, M
 import           Control.Monad.Except                            ( MonadError )
 
 import           Data.Default.Class                              ( def )
-import           Data.List                                       ( sortOn )
 import           Data.Maybe                                      ( fromMaybe, listToMaybe )
 import qualified Data.Text                                       as T
 import           Data.Time
@@ -90,7 +89,7 @@ data VisualizationAPI mode where
 
 -- * Handlers.
 
-visualizationHandler :: ( HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m, MonadError ServerError m )
+visualizationHandler :: ( HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m, MonadError ServerError m, HasServerEnv env m )
                      => VisualizationAPI (AsServerT m)
 visualizationHandler = VisualizationAPI
   { pageForStation       = stationStatusVisualizationPage
@@ -102,8 +101,9 @@ visualizationHandler = VisualizationAPI
   }
 
 -- | Create the station status visualization page record.
-stationStatusVisualizationPage :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m, MonadError ServerError m)
-                               => Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> m (PureSideMenu StationStatusVisualizationPage)
+stationStatusVisualizationPage :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m, MonadError ServerError m, HasServerEnv env m)
+                               => Maybe Int -> Maybe LocalTime -> Maybe LocalTime
+                               -> m (PureSideMenu StationStatusVisualizationPage)
 stationStatusVisualizationPage (Just stationId) startTime endTime = do
   tz <- getTz
   currentUtc <- liftIO getCurrentTime
@@ -128,7 +128,9 @@ stationStatusVisualizationPage Nothing _ _ =
 
 
 -- | Create the system status visualization page record.
-systemStatusVisualizationPage :: (HasEnv env m, MonadIO m, MonadCatch m) => Maybe LocalTime -> Maybe LocalTime -> m (PureSideMenu SystemStatusVisualizationPage)
+systemStatusVisualizationPage :: (HasEnv env m, MonadIO m, MonadCatch m, HasServerEnv env m)
+                              => Maybe LocalTime -> Maybe LocalTime
+                              -> m (PureSideMenu SystemStatusVisualizationPage)
 systemStatusVisualizationPage startTime endTime = do
   tz <- getTz
   currentUtc <- liftIO getCurrentTime
@@ -161,8 +163,9 @@ systemStatusVisualizationPage startTime endTime = do
                                   }
 
 -- | Display a list of stations.
-stationListPageHandler :: (HasEnv env m, MonadIO m, MonadCatch m)
-                       => Maybe LocalTime -> m (PureSideMenu (StationList [(StationInformation, StationStatus)]))
+stationListPageHandler :: (HasEnv env m, MonadIO m, MonadCatch m, HasServerEnv env m)
+                       => Maybe LocalTime
+                       -> m (PureSideMenu (StationList [(StationInformation, StationStatus)]))
 stationListPageHandler _end = do
   logInfo "Rendering station list"
 
@@ -176,8 +179,9 @@ stationListPageHandler _end = do
     }
 
 -- | Display a list of stations with their empty/full status.
-stationEmptyFullListPage :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m)
-                         => Maybe LocalTime -> Maybe LocalTime -> m (PureSideMenu (StationList [(StationInformation, StationStatus, DB.EmptyFull)]))
+stationEmptyFullListPage :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m, HasServerEnv env m)
+                         => Maybe LocalTime -> Maybe LocalTime
+                         -> m (PureSideMenu (StationList [(StationInformation, StationStatus, DB.EmptyFull)]))
 stationEmptyFullListPage start end = do
   logInfo $ "Rendering station empty/full list for time [" <> tshow start <> " - " <> tshow end <> "]"
 
@@ -193,7 +197,9 @@ stationEmptyFullListPage start end = do
     tshow = T.pack . show
 
 -- | Create the system status visualization page record.
-systemInfoVisualizationPage :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m) => Maybe LocalTime -> Maybe LocalTime -> m (PureSideMenu SystemInfoVisualizationPage)
+systemInfoVisualizationPage :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m, HasServerEnv env m)
+                            => Maybe LocalTime -> Maybe LocalTime
+                            -> m (PureSideMenu SystemInfoVisualizationPage)
 systemInfoVisualizationPage startTime endTime = do
   tz <- getTz
   currentUtc <- liftIO getCurrentTime
@@ -208,7 +214,9 @@ systemInfoVisualizationPage startTime endTime = do
     , _sysInfoVisPageSysStatusLink = fieldLink systemStatus Nothing Nothing
     }
 
-performanceCsvPageHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m) => Maybe LocalTime -> Maybe LocalTime -> m (PureSideMenu PerformanceCSV)
+performanceCsvPageHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m, HasServerEnv env m)
+                          => Maybe LocalTime -> Maybe LocalTime
+                          -> m (PureSideMenu PerformanceCSV)
 performanceCsvPageHandler startTime endTime = do
   tz <- getTz
   currentUtc <- liftIO getCurrentTime

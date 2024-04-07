@@ -12,7 +12,6 @@ module Haskbike.ServerEnv
      ( HasServerEnv (..)
      , module Haskbike.AppEnv
      , ServerAppM (..)
-     , ServerAssets (..)
      , ServerEnv (..)
      , WithServerEnv
      , ntServer
@@ -65,13 +64,8 @@ data ServerEnv m = ServerEnv
   , serverGzipCompression :: !Bool                  -- ^ Whether to use gzip compression.
   , serverMaxIntervals    :: Pico
   , serverContactEmail    :: String
-  , serverAssets          :: ServerAssets
+  , serverAssets          :: ExternalAssetLocation
   }
-
--- | External asset location and manifest.
-data ServerAssets where
-  ServerAssets :: ExternalAssetLocation -> SiteAssets -> ServerAssets
-
 
 {- | Type alias for constraint for:
 
@@ -91,6 +85,7 @@ class (HasLog env Message m, MonadReader env m, MonadError S.ServerError m, Mona
   getServerGzipCompression :: m Bool
   getServerMaxIntervals    :: m Pico
   getServerContactEmail    :: m String
+  getServerAssetsLocation  :: m ExternalAssetLocation
 
 
 -- | 'HasServerEnv' instance for 'ServerEnv'
@@ -100,6 +95,7 @@ instance (Monad m, MonadReader (ServerEnv m) m, HasLog (ServerEnv m) Message m, 
   getServerGzipCompression = asks serverGzipCompression
   getServerMaxIntervals    = asks serverMaxIntervals
   getServerContactEmail    = asks serverContactEmail
+  getServerAssetsLocation  = asks serverAssets
 
 
 -- | 'HasEnv' instance for 'ServerAppM'
@@ -179,7 +175,7 @@ runWithServerAppM dbname action = do
                             , serverGzipCompression = True
                             , serverMaxIntervals    = 20
                             , serverContactEmail    = "bikes@cfeeley.org"
-                            , serverAssets          = ServerAssets ExternalAssetCDN allSiteAssets
+                            , serverAssets          = ExternalAssetCDN
                             }
   liftIO $ runServerAppM serverEnv action
 
@@ -197,7 +193,7 @@ runWithServerAppMSuppressLog dbname action = do
                             , serverGzipCompression = True
                             , serverMaxIntervals    = 20
                             , serverContactEmail    = "bikes@cfeeley.org"
-                            , serverAssets          = ServerAssets ExternalAssetCDN allSiteAssets
+                            , serverAssets          = ExternalAssetCDN
                             }
   liftIO $ runServerAppM serverEnv action
 
@@ -215,7 +211,7 @@ runWithServerAppMDebug dbname action = do
                             , serverGzipCompression = True
                             , serverMaxIntervals    = 20
                             , serverContactEmail    = "bikes@cfeeley.org"
-                            , serverAssets          = ServerAssets ExternalAssetCDN allSiteAssets
+                            , serverAssets          = ExternalAssetCDN
                             }
   liftIO $ runServerAppM serverEnv action
 
