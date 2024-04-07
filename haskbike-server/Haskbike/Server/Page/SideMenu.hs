@@ -31,7 +31,7 @@ import           Servant                                ( Link, fieldLink, toUrl
 
 data PureSideMenu a where
   PureSideMenu :: (ToHtml a, ToHtmlComponents a) =>
-    { visPageParams     :: a
+    { pageContent       :: a
     , staticLink        :: Link
     , cabalVersionText  :: String
     , gitVersionText    :: String
@@ -46,7 +46,7 @@ instance (ToHtml a, ToHtml LatestQueries, ToHtmlComponents a) => ToHtml (PureSid
     where
       headElement c = head_ $ do
         makeHeadElements ("/" <> toUrlPiece (staticLink c)) "//stats.bikes.cfeeley.org/count.js"
-        toHead (visPageParams c)
+        toHead (pageContent c)
 
         stylesheet_ ("/" <> toUrlPiece (staticLink c) <> "/css/pure/side-menu.css") [defer_ mempty]
         script_ [src_ ("/" <> toUrlPiece (staticLink c) <> "/js/pure/ui.js"), defer_ mempty] ""
@@ -62,14 +62,14 @@ renderMain :: (Monad m, ToHtml a, ToHtmlComponents a) => PureSideMenu a -> HtmlT
 renderMain = mainContainer . mainContent -- Render parameterized type
   where
     mainContainer = div_ [id_ "main", class_ "main-container"]
-    mainContent = toHtml . visPageParams
+    mainContent = toHtml . pageContent
 
 -- | Render the menu sidebar.
 renderMenu :: (Monad m, ToHtml a, ToHtmlComponents a, ToHtml LatestQueries) => PureSideMenu a -> HtmlT m ()
 renderMenu params =
   div_ [id_ "menu"] $ do
     div_ [class_ "pure-menu"] $ do
-      toMenuHeading (visPageParams params)
+      toMenuHeading (pageContent params)
       ul_ [class_ "pure-menu-list"] $ do
         navLink "/" "Home"
         navLink "/visualization/station-list" "Station List"
@@ -108,7 +108,7 @@ sideMenu :: (HasEnv env m, MonadIO m, ToHtml a, ToHtmlComponents a, MonadCatch m
 sideMenu page = do
   pure $
     PureSideMenu
-    { visPageParams    = page
+    { pageContent      = page
     , staticLink       = fieldLink staticApi
     , cabalVersionText = getCabalVersion
     , gitVersionText   = getGitHash
