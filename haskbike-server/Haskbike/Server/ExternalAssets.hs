@@ -32,10 +32,6 @@ data ExternalAssetLocation where
 class HasAssetDetails a where
   getAssetDetails :: ExternalAssetLocation -> ExternalAssetDetails
 
-  -- getAssetUri     :: ExternalAssetLocation -> T.Text
-  -- getAssetUri (ExternalAssetVendored static) = "/" <> toUrlPiece static <> assetUrl
-  -- getAssetUri ExternalAssetCDN               = "https://cdn.jsdelivr.net/npm/purecss@3.0.0/build/pure-min.css"
-
 
 data PureCSS where
   PureCSS :: PureCSS
