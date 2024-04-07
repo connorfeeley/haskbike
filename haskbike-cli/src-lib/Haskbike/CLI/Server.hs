@@ -3,18 +3,17 @@ module Haskbike.CLI.Server
      ( dispatchServer
      ) where
 
-import           Colog                hiding ( getLogAction )
+import           Colog                          hiding ( getLogAction )
 
-import qualified Data.Text            as T
+import qualified Data.Text                      as T
 
 import           Haskbike.AppEnv
 import           Haskbike.CLI.Options
 import           Haskbike.Server
+import           Haskbike.Server.ExternalAssets
 import           Haskbike.ServerEnv
 
-import           Prelude              hiding ( log )
-
-import           UnliftIO             ( liftIO )
+import           UnliftIO                       ( liftIO )
 
 
 -- | Dispatch CLI arguments to the visualization server.
@@ -31,6 +30,7 @@ dispatchServer options = do
                             , serverGzipCompression = True
                             , serverMaxIntervals    = 20
                             , serverContactEmail    = "bikes@cfeeley.org"
+                            , serverAssets          = ServerAssets ExternalAssetCDN allSiteAssets
                             }
 
   logInfo $ "Gzip compression enabled: " <> (T.pack . show) (serverGzipCompression serverEnv)

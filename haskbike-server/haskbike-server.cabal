@@ -122,6 +122,8 @@ library
                     , Haskbike.Server.LatestQueries
                     , Haskbike.Server.LatestQueriesComponent
                     , Haskbike.Server.VisualizationAPI
+                    , Haskbike.Server.ExternalAssets
+                    , Haskbike.Server.HtmlWithAssets
                     , Haskbike.ServerEnv
 
     -- Modules included in this library but not exported.

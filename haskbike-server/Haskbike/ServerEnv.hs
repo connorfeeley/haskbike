@@ -12,6 +12,7 @@ module Haskbike.ServerEnv
      ( HasServerEnv (..)
      , module Haskbike.AppEnv
      , ServerAppM (..)
+     , ServerAssets (..)
      , ServerEnv (..)
      , WithServerEnv
      , ntServer
@@ -23,22 +24,23 @@ module Haskbike.ServerEnv
 
 import           Colog
 
-import           Control.Monad.Catch     ( MonadCatch, MonadThrow, throwM )
+import           Control.Monad.Catch            ( MonadCatch, MonadThrow, throwM )
 import           Control.Monad.Except
 import           Control.Monad.Reader
 
-import           Data.Fixed              ( Pico )
+import           Data.Fixed                     ( Pico )
 import           Data.Time
 
 import           Haskbike.AppEnv
+import           Haskbike.Server.ExternalAssets
 
 import           Network.HTTP.Client
 import           Network.HTTP.Client.TLS
 
-import           Prelude                 ()
+import           Prelude                        ()
 import           Prelude.Compat
 
-import qualified Servant                 as S
+import qualified Servant                        as S
 
 import           UnliftIO
 
@@ -63,7 +65,12 @@ data ServerEnv m = ServerEnv
   , serverGzipCompression :: !Bool                  -- ^ Whether to use gzip compression.
   , serverMaxIntervals    :: Pico
   , serverContactEmail    :: String
+  , serverAssets          :: ServerAssets
   }
+
+-- | External asset location and manifest.
+data ServerAssets where
+  ServerAssets :: ExternalAssetLocation -> SiteAssets -> ServerAssets
 
 
 {- | Type alias for constraint for:
@@ -172,6 +179,7 @@ runWithServerAppM dbname action = do
                             , serverGzipCompression = True
                             , serverMaxIntervals    = 20
                             , serverContactEmail    = "bikes@cfeeley.org"
+                            , serverAssets          = ServerAssets ExternalAssetCDN allSiteAssets
                             }
   liftIO $ runServerAppM serverEnv action
 
@@ -189,6 +197,7 @@ runWithServerAppMSuppressLog dbname action = do
                             , serverGzipCompression = True
                             , serverMaxIntervals    = 20
                             , serverContactEmail    = "bikes@cfeeley.org"
+                            , serverAssets          = ServerAssets ExternalAssetCDN allSiteAssets
                             }
   liftIO $ runServerAppM serverEnv action
 
@@ -206,6 +215,7 @@ runWithServerAppMDebug dbname action = do
                             , serverGzipCompression = True
                             , serverMaxIntervals    = 20
                             , serverContactEmail    = "bikes@cfeeley.org"
+                            , serverAssets          = ServerAssets ExternalAssetCDN allSiteAssets
                             }
   liftIO $ runServerAppM serverEnv action
 
