@@ -47,13 +47,13 @@ instance (ToHtml a, ToHtml LatestQueries, ToHtmlComponents a) => ToHtml (PureSid
     headElement component
     layoutElement component
     where
+      asst = assetsLocation component
       headElement c = head_ $ do
-        makeHeadElements ("/" <> toUrlPiece (staticLink c)) "//stats.bikes.cfeeley.org/count.js"
-        toHead (pageContent c)
+        makeHeadElements (assetsLocation component) ("/" <> toUrlPiece (staticLink c)) "//stats.bikes.cfeeley.org/count.js"
+        toHead asst (pageContent c)
 
-        stylesheet_ (assetUrl $ getAssetDetails @PureCSS (assetsLocation component)) [defer_ mempty]
         stylesheet_ ("/" <> toUrlPiece (staticLink c) <> "/css/pure/side-menu.css") [defer_ mempty]
-        script_ [src_ ("/" <> toUrlPiece (staticLink c) <> "/js/pure/ui.js"), defer_ mempty] ""
+        script_ [src_ ("/" <> toUrlPiece (staticLink c) <> "/js/pure/ui.js"), integrity_ "sha384-kSeBLTki8KqaxayzOX+J1V3vfRIjnWmdVFtdkzwN4mEjkDK8CMit4TbzxVHdOqPu", defer_ mempty] ""
       menuLink = a_ [href_ "#menu", id_ "menuLink", class_ "menu-link", makeAttribute "aria-label" "Toggle sidebar"] $ span_ mempty
       layoutElement c = div_ [id_ "layout"] $ do
         menuLink

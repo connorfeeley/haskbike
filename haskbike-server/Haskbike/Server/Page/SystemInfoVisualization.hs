@@ -15,6 +15,7 @@ import           Graphics.Vega.VegaLite                   hiding ( Number, toHtm
 
 import           Haskbike.Graphics.Vega.VegaLite.Extra
 import           Haskbike.Server.Classes
+import           Haskbike.Server.ExternalAssets
 import           Haskbike.Visualization.SystemInformation
 
 import           Lucid
@@ -22,19 +23,20 @@ import           Lucid
 import           Servant
 
 data SystemInfoVisualizationPage where
-  SystemInfoVisualizationPage :: { _sysInfoVisPageTimeRange     :: TimePair (Maybe LocalTime)
-                                 , _sysInfoVisPageTimeZone      :: TimeZone
-                                 , _sysInfoVisPageCurrentUtc    :: UTCTime
-                                 , _sysInfoVisPageDataLink      :: Link
-                                 , _sysInfoVisPageStaticLink    :: Link
-                                 , _sysInfoVisPageSysStatusLink :: Link
+  SystemInfoVisualizationPage :: { _sysInfoVisPageTimeRange      :: TimePair (Maybe LocalTime)
+                                 , _sysInfoVisPageTimeZone       :: TimeZone
+                                 , _sysInfoVisPageCurrentUtc     :: UTCTime
+                                 , _sysInfoVisPageDataLink       :: Link
+                                 , _sysInfoVisPageStaticLink     :: Link
+                                 , _sysInfoVisPageSysStatusLink  :: Link
+                                 , _sysInfoVisPageExternalAssets :: ExternalAssetLocation
                                  } -> SystemInfoVisualizationPage
   deriving (Show)
 
 instance ToHtmlComponents SystemInfoVisualizationPage where
   pageAnchor _ = "#system-information"
   pageName   _ = "System Info"
-  toHead _ = do
+  toHead _assts _ = do
     script_ [src_ . TL.toStrict . vegaUrl      $ vegaSourceUrlsLocal, defer_ mempty] ("" :: String)
     script_ [src_ . TL.toStrict . vegaLiteUrl  $ vegaSourceUrlsLocal, defer_ mempty] ("" :: String)
     script_ [src_ . TL.toStrict . vegaEmbedUrl $ vegaSourceUrlsLocal, defer_ mempty] ("" :: String)

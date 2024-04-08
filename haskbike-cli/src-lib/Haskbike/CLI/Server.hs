@@ -11,6 +11,7 @@ import           Haskbike.AppEnv
 import           Haskbike.CLI.Options
 import           Haskbike.Server
 import           Haskbike.Server.ExternalAssets
+import           Haskbike.Server.StaticAPI      ( staticApiLink )
 import           Haskbike.ServerEnv
 
 import           UnliftIO                       ( liftIO )
@@ -30,7 +31,8 @@ dispatchServer options = do
                             , serverGzipCompression = True
                             , serverMaxIntervals    = 20
                             , serverContactEmail    = "bikes@cfeeley.org"
-                            , serverAssets          = ExternalAssetCDN
+                            -- , serverAssets          = ExternalAssetCDN
+                            , serverAssets          = ExternalAssetVendored staticApiLink
                             }
 
   logInfo $ "Gzip compression enabled: " <> (T.pack . show) (serverGzipCompression serverEnv)

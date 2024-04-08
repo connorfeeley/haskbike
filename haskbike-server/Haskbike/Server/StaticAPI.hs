@@ -3,6 +3,7 @@
 
 module Haskbike.Server.StaticAPI
      ( StaticAPI (..)
+     , staticApiLink
      , staticHandler
      ) where
 
@@ -24,3 +25,6 @@ data StaticAPI mode where
 
 staticHandler :: (MonadIO m, MonadThrow m) => StaticAPI (AsServerT m)
 staticHandler =  StaticAPI $ serveDirectoryWebApp "static-files"
+
+staticApiLink :: Link
+staticApiLink = fieldLink staticApi

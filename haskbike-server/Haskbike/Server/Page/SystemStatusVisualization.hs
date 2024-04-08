@@ -17,6 +17,7 @@ import           Data.Time.Extras
 import           Haskbike.Graphics.Vega.VegaLite.Extra
 import           Haskbike.Server.Classes
 import           Haskbike.Server.ComponentsAPI
+import           Haskbike.Server.ExternalAssets           ( ExternalAssetLocation )
 import           Haskbike.Server.Page.SelectionForm
 import           Haskbike.Server.Page.StatusVisualization
 import           Haskbike.Server.Page.Utils
@@ -70,19 +71,20 @@ instance ToHtml SystemStatusVisualizationInfo where
             p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "E-Fit G5: " <> span_ [class_ "pure-u-1-2"] (showth (sysStatVisInfNumEfitG5 params))
 
 data SystemStatusVisualizationPage where
-  SystemStatusVisualizationPage :: { _systemStatusVisPageTimeRange     :: TimePair (Maybe LocalTime)
-                                   , _systemStatusVisPageTimeZone      :: TimeZone
-                                   , _systemStatusVisPageCurrentUtc    :: UTCTime
-                                   , _systemStatusVisPageInfo          :: SystemStatusVisualizationInfo
-                                   , _systemStatusVisPageDataLink      :: Link
-                                   , _systemStatusVisPageStaticLink    :: Link
+  SystemStatusVisualizationPage :: { _systemStatusVisPageTimeRange      :: TimePair (Maybe LocalTime)
+                                   , _systemStatusVisPageTimeZone       :: TimeZone
+                                   , _systemStatusVisPageCurrentUtc     :: UTCTime
+                                   , _systemStatusVisPageInfo           :: SystemStatusVisualizationInfo
+                                   , _systemStatusVisPageDataLink       :: Link
+                                   , _systemStatusVisPageStaticLink     :: Link
+                                   , _systemStatusVisPageExternalAssets :: ExternalAssetLocation
                                    } -> SystemStatusVisualizationPage
   deriving (Show)
 
 instance ToHtmlComponents SystemStatusVisualizationPage where
   pageAnchor _ = "#system-status"
   pageName   _ = "System Status"
-  toHead _ = do
+  toHead _assts _ = do
     script_ [src_ . TL.toStrict . vegaUrl      $ vegaSourceUrlsLocal, defer_ mempty] ("" :: String)
     script_ [src_ . TL.toStrict . vegaLiteUrl  $ vegaSourceUrlsLocal, defer_ mempty] ("" :: String)
     script_ [src_ . TL.toStrict . vegaEmbedUrl $ vegaSourceUrlsLocal, defer_ mempty] ("" :: String)

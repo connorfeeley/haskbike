@@ -17,6 +17,7 @@ import qualified Haskbike.Database.Tables.StationInformation as DB
 import qualified Haskbike.Database.Tables.StationOccupancy   as DB
 import qualified Haskbike.Database.Tables.StationStatus      as DB
 import           Haskbike.Server.Classes
+import           Haskbike.Server.ExternalAssets
 import           Haskbike.Server.Page.List.Common
 import           Haskbike.Server.Page.SelectionForm
 import           Haskbike.Server.Page.Utils                  ( stylesheet_ )
@@ -45,11 +46,11 @@ data StationList a where
 class HasStationListPage a where
   pageScript :: Monad m => StationList a -> HtmlT m ()
 
-  pageHead :: Monad m => StationList a -> HtmlT m ()
-  pageHead page = do
+  pageHead :: Monad m => ExternalAssetLocation -> StationList a -> HtmlT m ()
+  pageHead assts page = do
     -- GridJS
-    script_ [src_ "https://cdn.jsdelivr.net/npm/gridjs/dist/gridjs.umd.js", defer_ mempty] ""
-    stylesheet_ "https://cdn.jsdelivr.net/npm/gridjs/dist/theme/mermaid.min.css" [defer_ mempty]
+    script_ [src_ (assetUrl (getAssetDetails @GridJS assts)), integrity_ (getAssetIntegrity @GridJS assts), defer_ mempty] ""
+    stylesheet_ (assetUrl (getAssetDetails @MermaidCss assts)) [integrity_ (getAssetIntegrity @PureCss assts), defer_ mempty]
 
     -- Station list JavaScript.
     script_ [src_ ("/" <> toUrlPiece (_staticLink page) <> "/js/station-list-table.js"), defer_ mempty] ""

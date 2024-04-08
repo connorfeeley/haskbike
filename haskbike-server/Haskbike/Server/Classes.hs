@@ -7,6 +7,8 @@ module Haskbike.Server.Classes
 
 import           Data.Text
 
+import           Haskbike.Server.ExternalAssets ( ExternalAssetLocation )
+
 import           Lucid
 
 
@@ -15,7 +17,7 @@ class ToHtmlComponents a where
   toMenuHeading :: Monad m => a -> HtmlT m ()
   toMenuHeading p = menuHeading (pageAnchor p) (pageName p)
 
-  toHead        :: Monad m => a -> HtmlT m ()
+  toHead        :: Monad m => ExternalAssetLocation -> a -> HtmlT m ()
   toHead _      = mempty
 
   -- | Page name (used in sidebar)

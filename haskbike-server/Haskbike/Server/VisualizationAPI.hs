@@ -113,6 +113,7 @@ stationStatusVisualizationPage (Just stationId) startTime endTime = do
   case info of
     [info'] -> do
       logInfo $ "Matched station information: " <> _infoName info'
+      assetsLocation <- getServerAssetsLocation
       sideMenu $
         StationStatusVisualizationPage { _statusVisPageStationInfo    = info'
                                        , _statusVisPageStationId      = stationId
@@ -121,6 +122,7 @@ stationStatusVisualizationPage (Just stationId) startTime endTime = do
                                        , _statusVisPageCurrentUtc     = currentUtc
                                        , _statusVisPageDataLink       = fieldLink dataForStation (Just stationId) startTime endTime
                                        , _statusVisPageStaticLink     = fieldLink staticApi
+                                       , _statusVisPageExternalAssets = assetsLocation
                                        }
     _noInfoFound ->  throwError err404 { errBody = "Unknown station ID." }
 stationStatusVisualizationPage Nothing _ _ =
@@ -153,13 +155,15 @@ systemStatusVisualizationPage startTime endTime = do
         , sysStatVisInfNumEfitG5     = st ^. _8 & fromIntegral
         }
 
+  assetsLocation <- getServerAssetsLocation
   sideMenu $
-    SystemStatusVisualizationPage { _systemStatusVisPageTimeRange     = TimePair startTime endTime tz currentUtc
-                                  , _systemStatusVisPageTimeZone      = tz
-                                  , _systemStatusVisPageCurrentUtc    = currentUtc
-                                  , _systemStatusVisPageInfo          = (fromMaybe def . listToMaybe . reverse . map systemStatusInfo) systemStatus -- use the latest value
-                                  , _systemStatusVisPageDataLink      = fieldLink dataForStation Nothing startTime endTime
-                                  , _systemStatusVisPageStaticLink    = fieldLink staticApi
+    SystemStatusVisualizationPage { _systemStatusVisPageTimeRange      = TimePair startTime endTime tz currentUtc
+                                  , _systemStatusVisPageTimeZone       = tz
+                                  , _systemStatusVisPageCurrentUtc     = currentUtc
+                                  , _systemStatusVisPageInfo           = (fromMaybe def . listToMaybe . reverse . map systemStatusInfo) systemStatus -- use the latest value
+                                  , _systemStatusVisPageDataLink       = fieldLink dataForStation Nothing startTime endTime
+                                  , _systemStatusVisPageStaticLink     = fieldLink staticApi
+                                  , _systemStatusVisPageExternalAssets = assetsLocation
                                   }
 
 -- | Display a list of stations.
@@ -204,14 +208,16 @@ systemInfoVisualizationPage startTime endTime = do
   tz <- getTz
   currentUtc <- liftIO getCurrentTime
 
+  assetsLocation <- getServerAssetsLocation
   sideMenu $
     SystemInfoVisualizationPage
-    { _sysInfoVisPageTimeRange     = TimePair startTime endTime tz currentUtc
-    , _sysInfoVisPageTimeZone      = tz
-    , _sysInfoVisPageCurrentUtc    = currentUtc
-    , _sysInfoVisPageDataLink      = fieldLink systemInfoData startTime endTime
-    , _sysInfoVisPageStaticLink    = fieldLink staticApi
-    , _sysInfoVisPageSysStatusLink = fieldLink systemStatus Nothing Nothing
+    { _sysInfoVisPageTimeRange      = TimePair startTime endTime tz currentUtc
+    , _sysInfoVisPageTimeZone       = tz
+    , _sysInfoVisPageCurrentUtc     = currentUtc
+    , _sysInfoVisPageDataLink       = fieldLink systemInfoData startTime endTime
+    , _sysInfoVisPageStaticLink     = fieldLink staticApi
+    , _sysInfoVisPageSysStatusLink  = fieldLink systemStatus Nothing Nothing
+    , _sysInfoVisPageExternalAssets = assetsLocation
     }
 
 performanceCsvPageHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m, HasServerEnv env m)

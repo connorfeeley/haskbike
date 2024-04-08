@@ -12,12 +12,14 @@ module Haskbike.Server.Page.Utils
      , stylesheet_
      ) where
 
-import qualified Data.Text  as T
+import qualified Data.Text                      as T
+
+import           Haskbike.Server.ExternalAssets
 
 import           Lucid
-import           Lucid.Base ( makeAttribute )
+import           Lucid.Base                     ( makeAttribute )
 
-import           Servant    ( Link, ToHttpApiData (toUrlPiece), linkURI )
+import           Servant                        ( Link, ToHttpApiData (toUrlPiece), linkURI )
 
 import           TextShow
 
@@ -38,8 +40,8 @@ makeFavicons staticPath = mapM (link_ . linkAttrs)
 
 
 -- | Create standard <head> elements.
-makeHeadElements :: Monad m => T.Text -> T.Text -> HtmlT m ()
-makeHeadElements staticPath statsPath = do
+makeHeadElements :: Monad m => ExternalAssetLocation -> T.Text -> T.Text -> HtmlT m ()
+makeHeadElements asst staticPath statsPath = do
   -- Favicons
   makeFavicons staticPath ([16, 32, 48, 96, 180, 300, 512] :: [Int])
 
@@ -48,7 +50,9 @@ makeHeadElements staticPath statsPath = do
   meta_ [name_ "description", content_ "Toronto Bike Share data explorer."]
 
   -- Pure.CSS
-  link_ [rel_ "stylesheet", href_ (staticPath <> "/css/pure/pure-min@3.0.0.css"), integrity_ "sha384-X38yfunGUhNzHpBaEBsWLO+A0HDYOQi8ufWDkZ0k9e0eXz/tH3II7uKZ9msv++Ls", crossorigin_ "anonymous"]
+
+  stylesheet_ (getAssetUrl @PureCss asst) [integrity_ (getAssetIntegrity @PureCss asst), defer_ mempty]
+  -- link_ [rel_ "stylesheet", href_ (staticPath <> "/css/pure/pure-min@3.0.0.css"), integrity_ "sha384-X38yfunGUhNzHpBaEBsWLO+A0HDYOQi8ufWDkZ0k9e0eXz/tH3II7uKZ9msv++Ls", crossorigin_ "anonymous"]
   -- link_ [rel_ "stylesheet", href_ "https://cdn.jsdelivr.net/npm/purecss@3.0.0/build/pure-min.css", integrity_ "sha384-X38yfunGUhNzHpBaEBsWLO+A0HDYOQi8ufWDkZ0k9e0eXz/tH3II7uKZ9msv++Ls", crossorigin_ "anonymous"]
   stylesheet_ (staticPath <> "/css/pure/pure-grids-responsive-min@3.0.0.css") [defer_ mempty]
 
