@@ -6,9 +6,11 @@ module Haskbike.Server.ExternalAssets
      ( ExternalAssetDetails (..)
      , ExternalAssetLocation (..)
      , GridJS (..)
+     , HTMX (..)
      , HasAssetDetails (..)
      , MermaidCss (..)
      , PureCss (..)
+     , PureCssGrids (..)
      ) where
 
 import qualified Data.Text as T
@@ -73,3 +75,26 @@ instance HasAssetDetails MermaidCss where
   getAssetDetails ExternalAssetCDN               = ExternalAssetDetails ExternalAssetCDN
                                                    "https://cdn.jsdelivr.net/npm/gridjs/dist/theme/mermaid.min.css"
                                                    "sha384-i8iPOOXHyYKlqvjJjbORq7m/VrfUhgupTg3IZvtXz8M7c0CiTPUUhM5gdjiQiGbv"
+
+
+data PureCssGrids where
+  PureCssGrids :: PureCssGrids
+
+instance HasAssetDetails PureCssGrids where
+  getAssetDetails (ExternalAssetVendored static) = ExternalAssetDetails (ExternalAssetVendored static)
+                                                   ("/" <> toUrlPiece static <> "/css/pure/pure-grids-responsive-min@3.0.0.css")
+                                                   "sha384-zSu8LMfA4z+XX+S+3seN6uTKIYy1Qcfk0dNE+/0SHT5UgOHCnFeHjR16aowIFpII"
+  getAssetDetails ExternalAssetCDN               = ExternalAssetDetails ExternalAssetCDN
+                                                   "https://cdn.jsdelivr.net/npm/purecss@3.0.0/build/grids-responsive-min.css"
+                                                   "sha384-zSu8LMfA4z+XX+S+3seN6uTKIYy1Qcfk0dNE+/0SHT5UgOHCnFeHjR16aowIFpII"
+
+data HTMX where
+  HTMX :: HTMX
+
+instance HasAssetDetails HTMX where
+  getAssetDetails (ExternalAssetVendored static) = ExternalAssetDetails (ExternalAssetVendored static)
+                                                   ("/" <> toUrlPiece static <> "/js/htmx/htmx.min.js")
+                                                   "sha384-QFjmbokDn2DjBjq+fM+8LUIVrAgqcNW2s0PjAxHETgRn9l4fvX31ZxDxvwQnyMOX"
+  getAssetDetails ExternalAssetCDN               = ExternalAssetDetails ExternalAssetCDN
+                                                   "https://unpkg.com/htmx.org@1.9.11"
+                                                   "sha384-0gxUXCCR8yv9FM2b+U3FDbsKthCI66oH5IA9fHppQq9DDMHuMauqq1ZHBpJxQ0J0"

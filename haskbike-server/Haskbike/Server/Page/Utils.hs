@@ -51,13 +51,11 @@ makeHeadElements asst staticPath statsPath = do
 
   -- Pure.CSS
 
-  stylesheet_ (getAssetUrl @PureCss asst) [integrity_ (getAssetIntegrity @PureCss asst), defer_ mempty]
-  -- link_ [rel_ "stylesheet", href_ (staticPath <> "/css/pure/pure-min@3.0.0.css"), integrity_ "sha384-X38yfunGUhNzHpBaEBsWLO+A0HDYOQi8ufWDkZ0k9e0eXz/tH3II7uKZ9msv++Ls", crossorigin_ "anonymous"]
-  -- link_ [rel_ "stylesheet", href_ "https://cdn.jsdelivr.net/npm/purecss@3.0.0/build/pure-min.css", integrity_ "sha384-X38yfunGUhNzHpBaEBsWLO+A0HDYOQi8ufWDkZ0k9e0eXz/tH3II7uKZ9msv++Ls", crossorigin_ "anonymous"]
-  stylesheet_ (staticPath <> "/css/pure/pure-grids-responsive-min@3.0.0.css") [defer_ mempty]
+  stylesheet_ (getAssetUrl @PureCss      asst) [integrity_ (getAssetIntegrity @PureCss      asst), defer_ mempty]
+  stylesheet_ (getAssetUrl @PureCssGrids asst) [integrity_ (getAssetIntegrity @PureCssGrids asst), defer_ mempty]
 
   -- HTMX
-  script_ [src_ (staticPath <> "/js/htmx/htmx.min.js"), integrity_ "sha384-QFjmbokDn2DjBjq+fM+8LUIVrAgqcNW2s0PjAxHETgRn9l4fvX31ZxDxvwQnyMOX", crossorigin_ "anonymous", defer_ mempty] ("" :: T.Text)
+  script_ [src_ (assetUrl (getAssetDetails @HTMX asst)), integrity_ (getAssetIntegrity @HTMX asst), defer_ mempty] ("" :: T.Text)
 
   -- Project stylesheet
   stylesheet_ (staticPath <> "/css/haskbike.css") [defer_ mempty]
