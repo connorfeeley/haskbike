@@ -89,7 +89,7 @@ migrate *ARGS:
     {{CABAL}} run haskbike-cli -- --plain debug --enable-migrations -v --log-database
 
 serve *ARGS:
-    {{CABAL}} v2-run --enable-profiling --profiling-detail all-functions haskbike-cli -- --plain serve -v {{ARGS}}
+    {{CABAL}} v2-run --enable-profiling --profiling-detail all-functions haskbike-cli -- --plain serve {{ARGS}} -v
 
 export-rds-table TABLE:
     #!/usr/bin/env bash

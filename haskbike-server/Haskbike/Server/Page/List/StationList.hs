@@ -49,8 +49,8 @@ class HasStationListPage a where
   pageHead :: Monad m => ExternalAssetLocation -> StationList a -> HtmlT m ()
   pageHead assts page = do
     -- GridJS
-    script_ [src_ (assetUrl (getAssetDetails @GridJS assts)), integrity_ (getAssetIntegrity @GridJS assts), defer_ mempty] ""
-    stylesheet_ (assetUrl (getAssetDetails @MermaidCss assts)) [integrity_ (getAssetIntegrity @PureCss assts), defer_ mempty]
+    script_ [src_ (assetUrl (getAssetDetails @GridJS assts)), integrity_ (getAssetIntegrity @GridJS assts),  crossorigin_ "anonymous", defer_ mempty] ""
+    stylesheet_ (assetUrl (getAssetDetails @MermaidCss assts)) [crossorigin_ "anonymous", defer_ mempty]
 
     -- Station list JavaScript.
     script_ [src_ ("/" <> toUrlPiece (_staticLink page) <> "/js/station-list-table.js"), defer_ mempty] ""

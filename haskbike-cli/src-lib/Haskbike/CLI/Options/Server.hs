@@ -6,12 +6,14 @@ module Haskbike.CLI.Options.Server
      ) where
 
 import           Haskbike.CLI.Options.Command
+import           Haskbike.Server.ExternalAssets
 
 import           Options.Applicative
 
 
 data ServerOptions where
-  ServerOptions :: { optServerPort :: Int
+  ServerOptions :: { optServerPort          :: Int
+                   , optServerAssetLocation :: ExternalAssetLocation
                    } -> ServerOptions
   deriving (Show, Read)
 
@@ -25,3 +27,10 @@ serverOptionsParser = ServerOptions
  <> showDefault
  <> value 8081
  <> help "Port to serve visualization interface on." )
+  <*> option auto
+  ( long "assets-location"
+ <> showDefault
+ <> value ExternalAssetCDN
+ <> help ("Serve either vendored assets or from CDN. Allowed values: " <> show allowedValues))
+  where
+    allowedValues = [externalAssetVendored, externalAssetVendored]

@@ -11,9 +11,16 @@ module Haskbike.Server.ExternalAssets
      , MermaidCss (..)
      , PureCss (..)
      , PureCssGrids (..)
+     , externalAssetCDN
+     , externalAssetVendored
      ) where
 
-import qualified Data.Text as T
+import qualified Data.Attoparsec.Text      as A
+import           Data.Either               ( fromRight )
+import           Data.Functor              ( ($>) )
+import qualified Data.Text                 as T
+
+import           Haskbike.Server.StaticAPI ( staticApiLink )
 
 import           Servant
 
@@ -29,7 +36,24 @@ data ExternalAssetDetails where
 data ExternalAssetLocation where
   ExternalAssetVendored :: Link -> ExternalAssetLocation
   ExternalAssetCDN      :: ExternalAssetLocation
-  deriving Show
+  deriving (Show)
+
+
+-- | Read instance for 'PopulateStatusChangesOpt'.
+instance Read ExternalAssetLocation where
+  readsPrec _ = fromRight [] . A.parseOnly parser . T.pack
+    where
+    parser :: A.Parser [(ExternalAssetLocation, String)]
+    parser = A.choice
+      [ A.asciiCI externalAssetVendored $> [(ExternalAssetVendored staticApiLink, "")]
+      , A.asciiCI externalAssetCDN      $> [(ExternalAssetCDN,  "")]
+      ]
+
+externalAssetVendored :: T.Text
+externalAssetVendored = "vendored"
+
+externalAssetCDN :: T.Text
+externalAssetCDN = "cdn"
 
 -- | Typeclass for assets which have retrievable details, depending on asset location.
 class HasAssetDetails a where

@@ -51,11 +51,11 @@ makeHeadElements asst staticPath statsPath = do
 
   -- Pure.CSS
 
-  stylesheet_ (getAssetUrl @PureCss      asst) [integrity_ (getAssetIntegrity @PureCss      asst), defer_ mempty]
-  stylesheet_ (getAssetUrl @PureCssGrids asst) [integrity_ (getAssetIntegrity @PureCssGrids asst), defer_ mempty]
+  stylesheet_ (getAssetUrl @PureCss      asst) [integrity_ (getAssetIntegrity @PureCss      asst), crossorigin_ "anonymous", defer_ mempty]
+  stylesheet_ (getAssetUrl @PureCssGrids asst) [integrity_ (getAssetIntegrity @PureCssGrids asst), crossorigin_ "anonymous", defer_ mempty]
 
   -- HTMX
-  script_ [src_ (assetUrl (getAssetDetails @HTMX asst)), integrity_ (getAssetIntegrity @HTMX asst), defer_ mempty] ("" :: T.Text)
+  script_ [src_ (assetUrl (getAssetDetails @HTMX asst)), integrity_ (getAssetIntegrity @HTMX asst), crossorigin_ "anonymous", defer_ mempty] ("" :: T.Text)
 
   -- Project stylesheet
   stylesheet_ (staticPath <> "/css/haskbike.css") [defer_ mempty]
