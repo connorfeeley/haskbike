@@ -29,9 +29,7 @@ module Haskbike.AppEnv
      , withPostgresTransaction
      ) where
 
-import           Colog                                  ( HasLog (..), LogAction (..), Message, Msg (msgSeverity),
-                                                          Severity (..), filterBySeverity, logException,
-                                                          richMessageAction, simpleMessageAction )
+import           Colog
 
 import           Control.Exception                      ( throw )
 import           Control.Monad                          ( when )
@@ -246,12 +244,25 @@ runWithAppMDebug dbname action = do
   runAppM env action
 
 mkDatabaseConnectionPool :: MonadIO m => ConnectInfo -> m (Pool Connection)
-mkDatabaseConnectionPool = mkDatabaseConnectionPoolFrom connect
+mkDatabaseConnectionPool = mkDatabaseConnectionPoolFrom acquireDbConnection
 {-# INLINE mkDatabaseConnectionPool #-}
 
 mkDatabaseConnectionPoolFrom :: MonadIO m => (t -> IO Connection) -> t -> m (Pool Connection)
-mkDatabaseConnectionPoolFrom connectFn param = liftIO $ newPool (defaultPoolConfig (connectFn param) close 30 numCapabilities)
+mkDatabaseConnectionPoolFrom connectFn param =
+  liftIO . newPool $ defaultPoolConfig (connectFn param) releaseDbConnection 5 numCapabilities
 {-# INLINE mkDatabaseConnectionPoolFrom #-}
+
+acquireDbConnection :: ConnectInfo -> IO Connection
+acquireDbConnection conn = do
+  -- putStrLn "Connecting to DB..."
+  connect conn
+{-# INLINE acquireDbConnection #-}
+
+releaseDbConnection :: Connection -> IO ()
+releaseDbConnection conn = do
+  close conn
+  -- putStrLn "Closing DB connection"
+{-# INLINE releaseDbConnection #-}
 
 -- | Construct a 'ConnectInfo' using values from the HASKBIKE_{PGDBHOST,USERNAME,PASSWORD} environment variables.
 mkDbConnectInfo :: MonadIO m => String -> m ConnectInfo
