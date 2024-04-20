@@ -77,8 +77,10 @@ bgroupDatabase = bgroup "Database operations"
 benchStationEmptyTime :: (MonadCatch m, HasEnv env m) => Maybe Int -> m [(StationInformation, StationOccupancy)]
 benchStationEmptyTime station = void query >> query -- Run query twice.
   where
-    query = withPostgresTransaction $ queryStationOccupancy 0 0 station
-                (UTCTime (fromGregorian 2023 11 01) (timeOfDayToTime midnight)) (UTCTime (fromGregorian 2023 11 02) (timeOfDayToTime midnight))
+    query = withPostgresTransaction $
+      queryStationOccupancy 0 0 station
+      (UTCTime (fromGregorian 2023 11 01) (timeOfDayToTime midnight))
+      (UTCTime (fromGregorian 2023 11 02) (timeOfDayToTime midnight))
 
 
 benchStationInformationDecoding :: (HasEnv env m, MonadCatch m) => FilePath -> m [StationInformationT Identity]
