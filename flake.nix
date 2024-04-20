@@ -2,6 +2,8 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
 
+    nixpkgs-index-advisor.url = "github:connorfeeley/nixpkgs/feat/pg-index-advisor";
+
     flake-compat = { url = "github:edolstra/flake-compat"; flake = false; };
 
     # flake-parts and friends.
@@ -28,7 +30,7 @@
         inputs.flake-root.flakeModule
       ];
 
-      perSystem = { self', config, pkgs, ... }:
+      perSystem = { self', inputs', config, pkgs, ... }:
         let inherit (pkgs) lib;
           haskellOptions = {
             # Profiling options.
@@ -170,7 +172,13 @@
 
             devShell =
               let
-                postgres = lib.hiPrio (pkgs.postgresql_16.withPackages (ps: with ps; [ pg_partman postgis timescaledb ]));
+                postgres = lib.hiPrio (inputs'.nixpkgs-index-advisor.legacyPackages.postgresql_16.withPackages (ps: with ps; [
+                  pg_partman
+                  postgis
+                  timescaledb
+                  hypopg
+                  index-advisor
+                ]));
               in
               {
                 # Enabled by default
@@ -229,8 +237,8 @@
 
                 # Extra arguments to pass to mkShell.
                 mkShellArgs = {
-                  inputsFrom = [ postgres ];
-                  nativeBuildInputs = [ postgres ];
+                  # inputsFrom = [ postgres ];
+                  # nativeBuildInputs = [ postgres ];
                 };
               };
           };

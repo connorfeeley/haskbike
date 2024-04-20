@@ -97,6 +97,22 @@
         "type": "github"
       }
     },
+    "nixpkgs-index-advisor": {
+      "locked": {
+        "lastModified": 1713633398,
+        "narHash": "sha256-H+aka4QOmt2QvJDAnhSsmgGS50YV0K6AKpMDsDMCYBs=",
+        "owner": "connorfeeley",
+        "repo": "nixpkgs",
+        "rev": "2b188b3a6e061f95925af7e2cea7027c14948105",
+        "type": "github"
+      },
+      "original": {
+        "owner": "connorfeeley",
+        "ref": "feat/pg-index-advisor",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
     "nixpkgs-lib": {
       "locked": {
         "dir": "lib",
@@ -139,6 +155,7 @@
         "flake-root": "flake-root",
         "haskell-flake": "haskell-flake",
         "nixpkgs": "nixpkgs",
+        "nixpkgs-index-advisor": "nixpkgs-index-advisor",
         "tmp-postgres": "tmp-postgres",
         "treefmt-nix": "treefmt-nix"
       }
