@@ -49,7 +49,7 @@ instance (ToHtml a, ToHtml LatestQueries, ToHtmlComponents a) => ToHtml (PureSid
     where
       asst = assetsLocation component
       headElement c = head_ $ do
-        makeHeadElements (assetsLocation component) ("/" <> toUrlPiece (staticLink c)) "//stats.bikes.cfeeley.org/count.js"
+        makeHeadElements (assetsLocation component) ("/" <> toUrlPiece (staticLink c))
         toHead asst (pageContent c)
 
         stylesheet_ ("/" <> toUrlPiece (staticLink c) <> "/css/pure/side-menu.css") [defer_ mempty]

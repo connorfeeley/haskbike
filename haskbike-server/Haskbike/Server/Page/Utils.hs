@@ -40,8 +40,8 @@ makeFavicons staticPath = mapM (link_ . linkAttrs)
 
 
 -- | Create standard <head> elements.
-makeHeadElements :: Monad m => ExternalAssetLocation -> T.Text -> T.Text -> HtmlT m ()
-makeHeadElements asst staticPath statsPath = do
+makeHeadElements :: Monad m => ExternalAssetLocation -> T.Text -> HtmlT m ()
+makeHeadElements assetsLocation staticPath = do
   -- Favicons
   makeFavicons staticPath ([16, 32, 48, 96, 180, 300, 512] :: [Int])
 
@@ -51,18 +51,22 @@ makeHeadElements asst staticPath statsPath = do
 
   -- Pure.CSS
 
-  stylesheet_ (getAssetUrl @PureCss      asst) [integrity_ (getAssetIntegrity @PureCss      asst), crossorigin_ "anonymous", defer_ mempty]
-  stylesheet_ (getAssetUrl @PureCssGrids asst) [integrity_ (getAssetIntegrity @PureCssGrids asst), crossorigin_ "anonymous", defer_ mempty]
+  stylesheet_ (getAssetUrl @PureCss      assetsLocation) [integrity_ (getAssetIntegrity @PureCss      assetsLocation), crossorigin_ "anonymous", defer_ mempty]
+  stylesheet_ (getAssetUrl @PureCssGrids assetsLocation) [integrity_ (getAssetIntegrity @PureCssGrids assetsLocation), crossorigin_ "anonymous", defer_ mempty]
 
   -- HTMX
-  script_ [src_ (assetUrl (getAssetDetails @HTMX asst)), integrity_ (getAssetIntegrity @HTMX asst), crossorigin_ "anonymous", defer_ mempty] ("" :: T.Text)
+  script_ [src_ (assetUrl (getAssetDetails @HTMX assetsLocation)), integrity_ (getAssetIntegrity @HTMX assetsLocation), crossorigin_ "anonymous", defer_ mempty] ("" :: T.Text)
 
   -- Project stylesheet
   stylesheet_ (staticPath <> "/css/haskbike.css") [defer_ mempty]
   stylesheet_ (staticPath <> "/css/tooltips.css") [defer_ mempty]
 
-  -- TODO: get this from the server's environment.
-  script_ [mkData_ "goatcounter" "https://stats.bikes.cfeeley.org/count", defer_ mempty, src_ statsPath] ("" :: T.Text)
+  script_ [ src_ (getAssetUrl @GoatCounterAnalytics assetsLocation)
+          , mkData_ "goatcounter" "https://stats.bikes.cfeeley.org/count"
+          , integrity_ (getAssetIntegrity @PureCssGrids assetsLocation)
+          , crossorigin_ "anonymous"
+          , defer_ mempty
+          ] ("" :: T.Text)
 
 
 -- | Make a "data-" attribute suffixed with the given 'Text'.
