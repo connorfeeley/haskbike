@@ -32,6 +32,7 @@ data ExternalAssetDetails where
                           , assetIntegrity :: T.Text
                           } -> ExternalAssetDetails
 
+
 -- | Typed representation of where external asset should be fetched from.
 data ExternalAssetLocation where
   ExternalAssetVendored :: Link -> ExternalAssetLocation
@@ -49,10 +50,8 @@ instance Read ExternalAssetLocation where
       , A.asciiCI externalAssetCDN      $> [(ExternalAssetCDN,  "")]
       ]
 
-externalAssetVendored :: T.Text
+externalAssetCDN, externalAssetVendored :: T.Text
 externalAssetVendored = "vendored"
-
-externalAssetCDN :: T.Text
 externalAssetCDN = "cdn"
 
 -- | Typeclass for assets which have retrievable details, depending on asset location.
@@ -66,6 +65,7 @@ class HasAssetDetails a where
   getAssetIntegrity = assetIntegrity . getAssetDetails @a
 
 
+-- | PureCSS asset details.
 data PureCss where
   PureCss :: PureCss
 
@@ -78,6 +78,7 @@ instance HasAssetDetails PureCss where
                                                    "sha384-X38yfunGUhNzHpBaEBsWLO+A0HDYOQi8ufWDkZ0k9e0eXz/tH3II7uKZ9msv++Ls"
 
 
+-- | GridJS asset details.
 data GridJS where
   GridJS :: GridJS
 
@@ -89,6 +90,7 @@ instance HasAssetDetails GridJS where
                                                    "https://cdn.jsdelivr.net/npm/gridjs/dist/gridjs.umd.js"
                                                    "sha384-y62I+ZvjNRolkugL/AMpUZykqrL6oqYxBruObmlDAhDpmapM0s+xgvVK+wGVpza0"
 
+-- | Mermaid CSS asset details.
 data MermaidCss where
   MermaidCSS :: MermaidCss
 
@@ -101,6 +103,7 @@ instance HasAssetDetails MermaidCss where
                                                    "sha384-i8iPOOXHyYKlqvjJjbORq7m/VrfUhgupTg3IZvtXz8M7c0CiTPUUhM5gdjiQiGbv"
 
 
+-- | PureCSS Grids asset details.
 data PureCssGrids where
   PureCssGrids :: PureCssGrids
 
@@ -112,6 +115,8 @@ instance HasAssetDetails PureCssGrids where
                                                    "https://cdn.jsdelivr.net/npm/purecss@3.0.0/build/grids-responsive-min.css"
                                                    "sha384-zSu8LMfA4z+XX+S+3seN6uTKIYy1Qcfk0dNE+/0SHT5UgOHCnFeHjR16aowIFpII"
 
+
+-- | HTMX asset details.
 data HTMX where
   HTMX :: HTMX
 
