@@ -5,6 +5,7 @@
 module Haskbike.Server.ExternalAssets
      ( ExternalAssetDetails (..)
      , ExternalAssetLocation (..)
+     , GoatCounterAnalytics (..)
      , GridJS (..)
      , HTMX (..)
      , HasAssetDetails (..)
@@ -127,3 +128,16 @@ instance HasAssetDetails HTMX where
   getAssetDetails ExternalAssetCDN               = ExternalAssetDetails ExternalAssetCDN
                                                    "https://unpkg.com/htmx.org@1.9.11"
                                                    "sha384-0gxUXCCR8yv9FM2b+U3FDbsKthCI66oH5IA9fHppQq9DDMHuMauqq1ZHBpJxQ0J0"
+
+
+-- | HTMX asset details.
+data GoatCounterAnalytics where
+  GoatCounterAnalytics :: GoatCounterAnalytics
+
+instance HasAssetDetails GoatCounterAnalytics where
+  getAssetDetails (ExternalAssetVendored static) = ExternalAssetDetails (ExternalAssetVendored static)
+                                                   "/count.js"
+                                                   "sha384-OLBgp1GsljhM2TJ+sbHjaiH9txEUvgdDTAzHv2P24donTt6/529l+9Ua0vFImLlb"
+  getAssetDetails ExternalAssetCDN               = ExternalAssetDetails ExternalAssetCDN
+                                                   "https://stats.bikes.cfeeley.org/count.js"
+                                                   "sha384-OLBgp1GsljhM2TJ+sbHjaiH9txEUvgdDTAzHv2P24donTt6/529l+9Ua0vFImLlb"
