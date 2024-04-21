@@ -71,6 +71,7 @@ bgroupDatabase = bgroup "Database operations"
   , benchWithTmp "Station occupancy (7001)" $ benchStationEmptyTime (Just 7001)
   , benchWithTmp "Station occupancy (all)"  $ benchStationEmptyTime Nothing
   , benchWithTmp "Station information decoding" $ benchStationInformationDecoding "test/dumps/station_information_7001_2024-01-03_2024-01-04.json.zst"
+  , benchWithTmp "Field integrals"          $ benchFieldIntegrals
   ]
 
 
@@ -96,3 +97,11 @@ benchStationInformationDecoding filePath = do
         Right info' -> do
           let infoWithReported = map (\i -> (_infoReported i, fromBeamStationInformationToJSON i)) info'
           insertStationInformation infoWithReported
+
+benchFieldIntegrals :: (HasEnv env m, MonadCatch m) => m ()
+benchFieldIntegrals = do
+  let variation = StatusVariationQuery (Just 7001) [ EarliestTime (UTCTime (fromGregorian 2023 10 30) (timeOfDayToTime midnight))
+                                                   , LatestTime   (UTCTime (fromGregorian 2023 10 31) (timeOfDayToTime midnight))
+                                                   ]
+
+  void $ queryIntegratedStatus variation
