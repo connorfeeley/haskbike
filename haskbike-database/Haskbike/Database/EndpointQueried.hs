@@ -11,6 +11,8 @@ module Haskbike.Database.EndpointQueried
      , endpointQueriedType
      ) where
 
+import           Data.Aeson                           ( ToJSON )
+
 import           Database.Beam
 import           Database.Beam.Backend                ( sqlValueSyntax )
 import           Database.Beam.Migrate
@@ -27,7 +29,7 @@ data EndpointQueried where
   SystemRegionsEP      :: EndpointQueried
   SystemInformationEP  :: EndpointQueried
   SystemPricingPlansEP :: EndpointQueried
-  deriving (Show, Read, Eq, Ord, Enum, Bounded, HasSqlEqualityCheck Postgres)
+  deriving (Show, Read, Eq, Ord, Enum, Bounded, HasSqlEqualityCheck Postgres, Generic, ToJSON)
 
 instance FromBackendRow Postgres EndpointQueried where
 

@@ -110,6 +110,7 @@ library
                     , Haskbike.Server.Page.StatusVisualization
                     , Haskbike.Server.Page.SystemInfoVisualization
                     , Haskbike.Server.Page.SystemStatusVisualization
+                    , Haskbike.Server.Page.QueryHistory
                     , Haskbike.Visualization.StationOccupancy
                     , Haskbike.Visualization.SystemInformation
                     , Haskbike.Server.Page.SelectionForm
