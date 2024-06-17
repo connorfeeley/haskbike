@@ -3,11 +3,11 @@
     "beam": {
       "flake": false,
       "locked": {
-        "lastModified": 1712030690,
-        "narHash": "sha256-SMp1SS8rqr3aFvDpqzPN+vXNyHqkzqY2vF8qPMF7UXw=",
+        "lastModified": 1716161116,
+        "narHash": "sha256-g5EKCKoRBOpvlyXrhnsZsRqcJuVoUsLBsnvedta4ElA=",
         "owner": "connorfeeley",
         "repo": "beam",
-        "rev": "914fb5faa60678ee8020d1f9855b03f31433ba94",
+        "rev": "95ccff7f92e0cf9b6bc1fb18ad09de12676fef10",
         "type": "github"
       },
       "original": {
