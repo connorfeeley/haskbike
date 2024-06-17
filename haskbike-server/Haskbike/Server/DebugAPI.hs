@@ -80,11 +80,11 @@ versionHandler = pure (("version", getCabalVersion), ("git-version", getGitVersi
 
 sleepDatabaseHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m) => Int -> m ()
 sleepDatabaseHandler seconds = do
-  logInfo $ "Sleeping database for " <> (T.pack . show) seconds <> " seconds"
+  logInfo $ "Asked to sleep database for " <> (T.pack . show) seconds <> " seconds. Not sleeping."
   -- throwString "This will print last as an error message"
   --   `finally` logInfo "This will print second"
-  pool <- getDBConnectionPool
-  _ :: [Only ()] <- liftIO $ withResource pool (\conn -> query_ conn (fromString ("SELECT pg_sleep(" ++ show seconds ++ ")")))
+  -- pool <- getDBConnectionPool
+  -- _ :: [Only ()] <- liftIO $ withResource pool (\conn -> query_ conn (fromString ("SELECT pg_sleep(" ++ show seconds ++ ")")))
   pure ()
 
 
