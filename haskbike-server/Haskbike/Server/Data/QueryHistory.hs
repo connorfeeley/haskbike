@@ -6,6 +6,14 @@ module Haskbike.Server.Data.QueryHistory
      (
      ) where
 
+import           Data.Int                          ( Int32 )
+import           Data.Time
+
+import           GHC.Generics                      ( Generic )
+
+import           Haskbike.Database.EndpointQueried
+
+
 data QueryHistoryRecord where
   QueryHistoryRecord ::
     { endpoint    :: EndpointQueried
