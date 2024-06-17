@@ -19,7 +19,7 @@ import           Data.Maybe                             ( isJust )
 import           Data.Pool
 import           Data.String                            ( fromString )
 import qualified Data.Text                              as T
-import           Data.Time                              ( DiffTime )
+import           Data.Time                              ( DiffTime, LocalTime, UTCTime )
 
 import           Database.Beam
 import           Database.PostgreSQL.Simple
@@ -56,7 +56,7 @@ data ErrorsAPI mode where
 
 data QueryHistoryAPI mode where
   QueryHistoryAPI ::
-    { allHistory :: mode :- "all" :> Capture "amount" Integer :> Get '[JSON] Value
+    { allHistory :: mode :- "all" :> QueryParam "start-time" LocalTime :> Get '[JSON] Value
     } -> QueryHistoryAPI mode
   deriving stock Generic
 
@@ -96,15 +96,15 @@ queryHistoryApiHandler = QueryHistoryAPI
   }
 
 
-queryAllHistoryHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m) => Integer -> m Value
-queryAllHistoryHandler limit = do
+queryAllHistoryHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m) => Maybe LocalTime -> m Value
+queryAllHistoryHandler _startTime = do
   logInfo "Querying all endpoint query history"
 
   queries <- withPostgres $ runSelectReturningList $ select $ do
     queryHistoryCountsE
 
   pure $ do
-    toJSON queries
+    toJSON () -- queries
 
 
 -- * ErrorAPI handlers
