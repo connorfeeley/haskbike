@@ -11,7 +11,8 @@ module Haskbike.Database.EndpointQueried
      , endpointQueriedType
      ) where
 
-import           Data.Aeson                           ( ToJSON )
+import           Data.Aeson
+import qualified Data.Text                            as T
 
 import           Database.Beam
 import           Database.Beam.Backend                ( sqlValueSyntax )
@@ -29,7 +30,29 @@ data EndpointQueried where
   SystemRegionsEP      :: EndpointQueried
   SystemInformationEP  :: EndpointQueried
   SystemPricingPlansEP :: EndpointQueried
-  deriving (Show, Read, Eq, Ord, Enum, Bounded, HasSqlEqualityCheck Postgres, Generic, ToJSON)
+  deriving (Show, Read, Eq, Ord, Enum, Bounded, HasSqlEqualityCheck Postgres)
+
+
+instance ToJSON EndpointQueried where
+  toJSON VersionsEP           = String (T.pack "Versions")
+  toJSON VehicleTypesEP       = String (T.pack "Vehicle Types")
+  toJSON StationInformationEP = String (T.pack "Station Information")
+  toJSON StationStatusEP      = String (T.pack "Station Status")
+  toJSON SystemRegionsEP      = String (T.pack "System Regions")
+  toJSON SystemInformationEP  = String (T.pack "System Information")
+  toJSON SystemPricingPlansEP = String (T.pack "System Pricing Plans")
+
+instance FromJSON EndpointQueried where
+  parseJSON = withText "PhysicalConfiguration" $ \t -> case t of
+    "Versions"             -> return VersionsEP
+    "Vehicle Types"        -> return VehicleTypesEP
+    "Station Information"  -> return StationInformationEP
+    "Station Status"       -> return StationStatusEP
+    "System Regions"       -> return SystemRegionsEP
+    "System Information"   -> return SystemInformationEP
+    "System Pricing Plans" -> return SystemPricingPlansEP
+    _                      -> fail ("Invalid EndpointQueried: " ++ show t)
+
 
 instance FromBackendRow Postgres EndpointQueried where
 
