@@ -19,6 +19,7 @@ import           Data.Maybe                             ( isJust )
 import           Data.Pool
 import           Data.String                            ( fromString )
 import qualified Data.Text                              as T
+import           Data.Time                              ( DiffTime )
 
 import           Database.Beam
 import           Database.PostgreSQL.Simple
@@ -27,6 +28,7 @@ import           Haskbike.Database.DaysAgo
 import           Haskbike.Database.EndpointQueried      ( EndpointQueried (..) )
 import           Haskbike.Database.Operations.QueryLogs
 import           Haskbike.Database.Tables.QueryLogs
+import           Haskbike.Server.Data.QueryHistory
 import           Haskbike.ServerEnv
 import           Haskbike.Version
 
@@ -96,7 +98,7 @@ queryHistoryApiHandler = QueryHistoryAPI
 
 queryAllHistoryHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m) => Integer -> m Value
 queryAllHistoryHandler limit = do
-  logInfo "Querying all query history"
+  logInfo "Querying all endpoint query history"
 
   queries <- withPostgres $ runSelectReturningList $ select $ do
     queryHistoryCountsE

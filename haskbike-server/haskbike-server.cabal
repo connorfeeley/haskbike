@@ -99,6 +99,7 @@ library
                     , Haskbike.Server.Data.StationList
                     , Haskbike.Server.Data.EmptyFullData
                     , Haskbike.Server.Data.FactorsCSV
+                    , Haskbike.Server.Data.QueryHistory
                     , Haskbike.Server.DataAPI
                     , Haskbike.Server.DebugAPI
                     , Haskbike.Server.Page.IndexPage
