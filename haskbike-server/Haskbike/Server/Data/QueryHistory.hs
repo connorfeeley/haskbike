@@ -1,3 +1,5 @@
+{-# LANGUAGE DerivingStrategies #-}
+
 -- | This module contains definitions regarding user-facing records of endpoint queries.
 
 module Haskbike.Server.Data.QueryHistory
