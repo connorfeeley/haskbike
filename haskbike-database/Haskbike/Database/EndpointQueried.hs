@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveAnyClass            #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE TypeFamilies              #-}
 {-# LANGUAGE UndecidableInstances      #-}
@@ -26,7 +27,7 @@ data EndpointQueried where
   SystemRegionsEP      :: EndpointQueried
   SystemInformationEP  :: EndpointQueried
   SystemPricingPlansEP :: EndpointQueried
-  deriving (Show, Read, Eq, Ord, Enum, Bounded)
+  deriving (Show, Read, Eq, Ord, Enum, Bounded, HasSqlEqualityCheck Postgres)
 
 instance FromBackendRow Postgres EndpointQueried where
 
