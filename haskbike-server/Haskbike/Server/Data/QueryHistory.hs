@@ -53,10 +53,10 @@ instance ToJSON QueryHistoryRecord where
            , "failed"              .= failed record
            ]
 
-class FromRecords a where
-  fromRecords :: a -> QueryHistoryRecord
+class FromRecords a b where
+  fromRecords :: a -> b
 
-instance FromRecords (EndpointQueried, Int32, Double, Int32, Double, Int32, Double) where
+instance FromRecords (EndpointQueried, Int32, Double, Int32, Double, Int32, Double) QueryHistoryRecord where
   fromRecords (ep, total, avgTimeTotal, successful, avgTimeSuccessful, failed, avgTimeFailed) =
     QueryHistoryRecord ep
     (QueryHistoryDetailRecord total      (intervalToNominalDiffTime avgTimeTotal))
