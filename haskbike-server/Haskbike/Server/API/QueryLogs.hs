@@ -41,7 +41,12 @@ data QueryLogsAPI mode where
 -- | API for querying the query log history.
 data QueryLogsHistoryAPI mode where
   QueryLogsHistoryAPI ::
-    { allHistory :: mode :- "all" :> QueryParam "start-time" LocalTime :> Get '[JSON] Value
+    { allHistory         :: mode :- "all"
+                            :> QueryParam "start-time" LocalTime :> QueryParam "end-time" LocalTime
+                            :> Get '[JSON] Value
+    , historyForEndpoint :: mode :- "all"
+                            :> QueryParam "start-time" LocalTime :> QueryParam "end-time" LocalTime
+                            :> Get '[JSON] Value
     } -> QueryLogsHistoryAPI mode
   deriving stock Generic
 
@@ -60,8 +65,8 @@ queryLogsHistoryApiHandler = QueryLogsHistoryAPI
   { allHistory = queryAllHistoryHandler
   }
 
-queryAllHistoryHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m) => Maybe LocalTime -> m Value
-queryAllHistoryHandler _startTime = do
+queryAllHistoryHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m) => Maybe LocalTime -> Maybe LocalTime -> m Value
+queryAllHistoryHandler _startTime _endTime = do
   logInfo "Querying all endpoint query history"
   queries :: [QueryHistoryRecord] <- fmap fromRecords <$> (withPostgres . runSelectReturningList . selectWith) (queryHistoryE Nothing)
   pure $ toJSON queries
