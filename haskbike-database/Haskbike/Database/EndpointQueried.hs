@@ -11,7 +11,11 @@ module Haskbike.Database.EndpointQueried
      , endpointQueriedType
      ) where
 
+import           Control.Applicative                  ( (<|>) )
+
 import           Data.Aeson
+import           Data.Attoparsec.Text
+import           Data.Functor                         ( ($>) )
 import qualified Data.Text                            as T
 
 import           Database.Beam
@@ -21,6 +25,8 @@ import           Database.Beam.Postgres               ( Postgres )
 import           Database.Beam.Postgres.CustomTypes
 import           Database.Beam.Postgres.Syntax        ( PgValueSyntax )
 import           Database.PostgreSQL.Simple.FromField
+
+import           Servant.API
 
 data EndpointQueried where
   VersionsEP           :: EndpointQueried
@@ -54,6 +60,21 @@ instance FromJSON EndpointQueried where
     "System Information"   -> return SystemInformationEP
     "System Pricing Plans" -> return SystemPricingPlansEP
     _                      -> fail ("Invalid EndpointQueried: " ++ show t)
+
+instance FromHttpApiData EndpointQueried where
+  parseUrlPiece :: T.Text -> Either T.Text EndpointQueried
+  parseUrlPiece piece = case parseOnly (
+    asciiCI "versions"             $> VersionsEP           <|>
+    asciiCI "vehicle-types"        $> VehicleTypesEP       <|>
+    asciiCI "station-information"  $> StationInformationEP <|>
+    asciiCI "station-status"       $> StationStatusEP      <|>
+    asciiCI "system-regions"       $> SystemRegionsEP      <|>
+    asciiCI "system-information"   $> SystemInformationEP  <|>
+    asciiCI "system-pricing-plans" $> SystemPricingPlansEP
+    ) piece of
+    Left e  -> Left  (T.pack e)
+    Right v -> Right v
+  parseQueryParam = parseUrlPiece
 
 
 instance FromBackendRow Postgres EndpointQueried where
