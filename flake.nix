@@ -153,6 +153,7 @@
             };
             settings = {
               postgresql-libpg.jailbreak = true;
+              beam-core.jailbreak = true;
               beam-postgres = {
                 jailbreak = true;
                 check = false; # Postgres tests are flaky on darwin.
