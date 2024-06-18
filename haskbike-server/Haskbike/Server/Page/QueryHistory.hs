@@ -9,7 +9,7 @@ import           Control.Monad
 import qualified Data.Text                         as T
 
 import           Haskbike.Database.EndpointQueried
-import           Haskbike.Server.ComponentsAPI
+import           Haskbike.Server.API.Components
 import           Haskbike.Server.LatestQueries
 import           Haskbike.Server.Page.Utils
 

@@ -1,7 +1,7 @@
 {-# LANGUAGE DataKinds          #-}
 {-# LANGUAGE DerivingStrategies #-}
 
-module Haskbike.Server.StaticAPI
+module Haskbike.Server.API.Static
      ( StaticAPI (..)
      , staticApiLink
      , staticHandler

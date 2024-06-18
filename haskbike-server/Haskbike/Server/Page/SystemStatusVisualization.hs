@@ -15,8 +15,8 @@ import           Data.Time
 import           Data.Time.Extras
 
 import           Haskbike.Graphics.Vega.VegaLite.Extra
+import           Haskbike.Server.API.Components
 import           Haskbike.Server.Classes
-import           Haskbike.Server.ComponentsAPI
 import           Haskbike.Server.ExternalAssets           ( ExternalAssetLocation )
 import           Haskbike.Server.Page.SelectionForm
 import           Haskbike.Server.Page.StatusVisualization

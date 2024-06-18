@@ -16,12 +16,12 @@ module Haskbike.Server.ExternalAssets
      , externalAssetVendored
      ) where
 
-import qualified Data.Attoparsec.Text      as A
-import           Data.Either               ( fromRight )
-import           Data.Functor              ( ($>) )
-import qualified Data.Text                 as T
+import qualified Data.Attoparsec.Text       as A
+import           Data.Either                ( fromRight )
+import           Data.Functor               ( ($>) )
+import qualified Data.Text                  as T
 
-import           Haskbike.Server.StaticAPI ( staticApiLink )
+import           Haskbike.Server.API.Static ( staticApiLink )
 
 import           Servant
 

@@ -4,7 +4,7 @@
 
 -- |
 
-module Haskbike.Server.DebugAPI
+module Haskbike.Server.API.Debug
      ( DebugAPI (..)
      , debugApiHandler
      ) where

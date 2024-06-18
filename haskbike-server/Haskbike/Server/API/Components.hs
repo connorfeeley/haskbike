@@ -3,7 +3,7 @@
 
 -- |
 
-module Haskbike.Server.ComponentsAPI
+module Haskbike.Server.API.Components
      ( ComponentsAPI (..)
      , EventsComponentAPI (..)
      , componentsHandler

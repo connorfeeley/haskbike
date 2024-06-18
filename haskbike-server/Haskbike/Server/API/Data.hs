@@ -3,7 +3,7 @@
 
 -- |
 
-module Haskbike.Server.DataAPI
+module Haskbike.Server.API.Data
      ( DataAPI (..)
      , statusHandler
      ) where

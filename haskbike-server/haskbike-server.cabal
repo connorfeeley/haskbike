@@ -93,16 +93,18 @@ library
                     , Haskbike.Server.Components.ChargingInfrastructureHeader
                     , Haskbike.Server.Components.DockingHeader
                     , Haskbike.Server.Components.PerformanceData
-                    , Haskbike.Server.ComponentsAPI
                     , Haskbike.Server.Data.StationStatusVisualization
                     , Haskbike.Server.Data.SystemInformationVisualization
                     , Haskbike.Server.Data.StationList
                     , Haskbike.Server.Data.EmptyFullData
                     , Haskbike.Server.Data.FactorsCSV
                     , Haskbike.Server.Data.QueryHistory
+                    , Haskbike.Server.API.Components
                     , Haskbike.Server.API.QueryLogs
-                    , Haskbike.Server.DataAPI
-                    , Haskbike.Server.DebugAPI
+                    , Haskbike.Server.API.Data
+                    , Haskbike.Server.API.Debug
+                    , Haskbike.Server.API.Static
+                    , Haskbike.Server.API.Visualization
                     , Haskbike.Server.Page.IndexPage
                     , Haskbike.Server.Page.List.Common
                     , Haskbike.Server.Page.List.StationList
@@ -120,11 +122,9 @@ library
                     , Haskbike.Server.PureCSS
                     , Haskbike.Server.RobotsTXT
                     , Haskbike.Server.Routes
-                    , Haskbike.Server.StaticAPI
                     , Haskbike.Server.StatusDataParams
                     , Haskbike.Server.LatestQueries
                     , Haskbike.Server.LatestQueriesComponent
-                    , Haskbike.Server.VisualizationAPI
                     , Haskbike.Server.ExternalAssets
                     , Haskbike.ServerEnv
 
