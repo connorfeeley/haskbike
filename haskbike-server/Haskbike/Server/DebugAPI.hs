@@ -98,7 +98,7 @@ queryAllHistoryHandler _startTime = do
     queryHistoryCountsE
 
   pure $ do
-    toJSON (fromRecords <$> queries)
+    toJSON ((fromRecords <$> queries) :: [QueryHistoryRecord])
 
 
 -- * ErrorAPI handlers
