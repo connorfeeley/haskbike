@@ -43,12 +43,12 @@ instance ToJSON QueryHistoryRecord where
            , "failed"              .= failed record
            ]
 
-instance FromRecords (EndpointQueried, Int32, Double, Int32, Double, Int32, Double) QueryHistoryRecord where
-  fromRecords (ep, total, avgTimeTotal, successful, avgTimeSuccessful, failed, avgTimeFailed) =
-    QueryHistoryRecord ep
-    (QueryHistoryDetailRecord total      (intervalToNominalDiffTime avgTimeTotal))
-    (QueryHistoryDetailRecord successful (intervalToNominalDiffTime avgTimeSuccessful))
-    (QueryHistoryDetailRecord failed     (intervalToNominalDiffTime avgTimeFailed))
+instance FromRecords (EndpointQueried, (Int32, Double, Maybe UTCTime), (Int32, Double, Maybe UTCTime), (Int32, Double, Maybe UTCTime)) QueryHistoryRecord where
+  fromRecords (ep, (total, avgTimeTotal, latest), (successful, avgTimeSuccessful, latestSuccess), (failed, avgTimeFailed, latestFail)) = QueryHistoryRecord
+    ep
+    (QueryHistoryDetailRecord total      (intervalToNominalDiffTime avgTimeTotal)      latest)
+    (QueryHistoryDetailRecord successful (intervalToNominalDiffTime avgTimeSuccessful) latestSuccess)
+    (QueryHistoryDetailRecord failed     (intervalToNominalDiffTime avgTimeFailed)     latestFail)
     where
       intervalToNominalDiffTime :: Double -> NominalDiffTime
       intervalToNominalDiffTime = secondsToNominalDiffTime . toPico
@@ -60,16 +60,18 @@ instance FromRecords (EndpointQueried, Int32, Double, Int32, Double, Int32, Doub
 -- | Record representing the details of an endpoint's query history.
 data QueryHistoryDetailRecord where
   QueryHistoryDetailRecord ::
-    { count             :: Int32
-    , avgTime           :: NominalDiffTime
+    { count       :: Int32
+    , avgInterval :: NominalDiffTime
+    , latest      :: Maybe UTCTime
     } -> QueryHistoryDetailRecord
   deriving (Show)
   deriving stock (Generic)
 
 instance ToJSON QueryHistoryDetailRecord where
   toJSON record =
-    object [ "num-queries"         .= count record
-           , "avg-time"            .= toTime (avgTime record)
+    object [ "num-queries"  .= count record
+           , "avg-interval" .= toTime (avgInterval record)
+           , "latest-query" .= latest record
            ]
     where
       toTime = T.pack . formatTime defaultTimeLocale "%d:%H:%M:%S"

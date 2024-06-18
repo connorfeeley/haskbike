@@ -1,5 +1,6 @@
-{-# LANGUAGE DataKinds          #-}
-{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE DerivingStrategies    #-}
+{-# LANGUAGE PartialTypeSignatures #-}
 
 -- |
 
@@ -10,16 +11,17 @@ module Haskbike.Server.DebugAPI
 
 import           Colog
 
-import           Control.Monad.Catch                    ( MonadCatch )
+import           Control.Monad.Catch                       ( MonadCatch )
 
-import           Data.Aeson                             ( ToJSON (..), Value )
-import           Data.Maybe                             ( isJust )
-import qualified Data.Text                              as T
-import           Data.Time                              ( LocalTime )
+import           Data.Aeson                                ( ToJSON (..), Value )
+import           Data.Maybe                                ( isJust )
+import qualified Data.Text                                 as T
+import           Data.Time                                 ( LocalTime )
 
 import           Database.Beam
 
 import           Haskbike.Database.DaysAgo
+import           Haskbike.Database.Operations.QueryHistory
 import           Haskbike.Database.Operations.QueryLogs
 import           Haskbike.Database.Tables.QueryLogs
 import           Haskbike.Server.Data.QueryHistory
@@ -27,7 +29,7 @@ import           Haskbike.ServerEnv
 import           Haskbike.Version
 
 import           Servant
-import           Servant.Server.Generic                 ( AsServerT )
+import           Servant.Server.Generic                    ( AsServerT )
 
 import           UnliftIO
 
@@ -94,11 +96,9 @@ queryAllHistoryHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO 
 queryAllHistoryHandler _startTime = do
   logInfo "Querying all endpoint query history"
 
-  queries <- withPostgres $ runSelectReturningList $ select $ do
-    queryHistoryCountsE
+  queries :: [QueryHistoryRecord] <- fmap fromRecords <$> (withPostgres . runSelectReturningList . selectWith) (queryHistoryE Nothing)
 
-  pure $ do
-    toJSON ((fromRecords <$> queries) :: [QueryHistoryRecord])
+  pure $ toJSON queries
 
 
 -- * ErrorAPI handlers
@@ -113,8 +113,7 @@ errorsApiHandler = ErrorsAPI
 errorsSinceHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m) => DaysAgo -> m Value
 errorsSinceHandler days@(DaysAgo daysAgo) = do
   logInfo $ "Querying errors since " <> (T.pack . show) daysAgo
-  errors <- withPostgres $ runSelectReturningList $ select $ do
-    limit_ 100 $ latestQueryErrorsE (val_ days)
+  errors <- withPostgres $ runSelectReturningList $ select $ limit_ 100 $ latestQueryErrorsE (val_ days)
 
   let x = filter (isJust . _queryLogErrJson) errors
   let e = decodeJsonErrors x
@@ -124,8 +123,7 @@ errorsSinceHandler days@(DaysAgo daysAgo) = do
 latestErrorsHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m) => Integer -> m Value
 latestErrorsHandler limit = do
   logInfo "Querying latest errors"
-  errors <- withPostgres $ runSelectReturningList $ select $ do
-    limit_ limit queryErrorsE
+  errors <- withPostgres $ runSelectReturningList $ select $ limit_ limit queryErrorsE
 
   let x = filter (isJust . _queryLogErrJson) errors
   let e = decodeJsonErrors x

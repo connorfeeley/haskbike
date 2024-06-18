@@ -100,6 +100,7 @@ library
                     , Haskbike.Database.Operations.Dockings
                     , Haskbike.Database.Operations.Factors
                     , Haskbike.Database.Operations.QueryLogs
+                    , Haskbike.Database.Operations.QueryHistory
                     , Haskbike.Database.Operations.StationOccupancy
                     , Haskbike.Database.Operations.StatusChanges
                     , Haskbike.Database.StatusDeltaFields
