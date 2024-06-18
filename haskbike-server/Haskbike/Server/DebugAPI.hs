@@ -10,25 +10,18 @@ module Haskbike.Server.DebugAPI
 
 import           Colog
 
-import           Control.Lens
 import           Control.Monad.Catch                    ( MonadCatch )
 
 import           Data.Aeson                             ( ToJSON (..), Value )
-import           Data.Int                               ( Int32 )
 import           Data.Maybe                             ( isJust )
-import           Data.Pool
-import           Data.String                            ( fromString )
 import qualified Data.Text                              as T
-import           Data.Time                              ( DiffTime, LocalTime, UTCTime )
+import           Data.Time                              ( LocalTime )
 
 import           Database.Beam
-import           Database.PostgreSQL.Simple
 
 import           Haskbike.Database.DaysAgo
-import           Haskbike.Database.EndpointQueried      ( EndpointQueried (..) )
 import           Haskbike.Database.Operations.QueryLogs
 import           Haskbike.Database.Tables.QueryLogs
-import           Haskbike.Server.Data.QueryHistory
 import           Haskbike.ServerEnv
 import           Haskbike.Version
 
