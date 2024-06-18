@@ -4,18 +4,17 @@ module Haskbike.Server.Page.QueryHistory
      ( QueryHistoryComponent (..)
      ) where
 
-import           Control.Monad
 
-import qualified Data.Text                         as T
+import qualified Data.Text                     as T
 
-import           Haskbike.Database.EndpointQueried
-import           Haskbike.Server.API.Components
-import           Haskbike.Server.LatestQueries
+import           Haskbike.Server.API.QueryLogs
+import           Haskbike.Server.Classes       ( ToHtmlComponents (..) )
 import           Haskbike.Server.Page.Utils
 
 import           Lucid
+import           Lucid.Base                    ( makeAttribute )
 
-import           Servant                           ( fieldLink, linkURI )
+import           Servant                       ( fieldLink, linkURI )
 
 
 data QueryHistoryComponent where
@@ -23,10 +22,22 @@ data QueryHistoryComponent where
 
 instance ToHtml QueryHistoryComponent where
   toHtmlRaw = toHtml
-  toHtml _ =
-    div_ [ hx_ "trigger" "load"
-         , hx_ "get" ("/components/" <> (T.pack . show . linkURI) (fieldLink latestQueries Nothing))
-         ] $ -- (img_ [class_ "htmx-indicator htmx-spinner", src_ ("/" <> toUrlPiece (staticLink params) <> "/images/svg-loaders/circles.svg"), alt_ "Loading..."])
-      div_ [class_ "menu-footer-element"] $
-          h3_ [class_ "menu-heading latest-updated-header"] "Last Updated" >>
-          forM_ [(StationInformationEP, Nothing), (StationStatusEP, Nothing), (SystemInformationEP, Nothing)] (uncurry endpointElementTemplate)
+  toHtml _ = do
+    div_ [ hx_ "ext" "client-side-templates" ] $
+      div_ [ hx_ "trigger" "load"
+           , hx_ "get" ("/debug/query-logs/history/" <> (T.pack . show . linkURI) (fieldLink allHistory Nothing Nothing))
+           , makeAttribute "mustache-array-template"  "query-logs-template"
+           ] mempty
+    template_ [ id_ "query-logs-template"
+              ] $ do
+      toHtmlRaw $ T.pack "{{#data}}"
+      div_ [] $ do
+          h3_ [class_ "menu-heading"] "Endpoint: "
+          toHtmlRaw $ T.pack "{{endpoint}}"
+      toHtmlRaw $ T.pack "{{/data}}"
+
+instance ToHtmlComponents QueryHistoryComponent where
+  pageName :: QueryHistoryComponent -> T.Text
+  pageName _ = "Test"
+  pageAnchor :: QueryHistoryComponent -> T.Text
+  pageAnchor _ = "Test"

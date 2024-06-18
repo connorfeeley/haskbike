@@ -11,6 +11,7 @@ module Haskbike.Server.ExternalAssets
      , HTMXExtClientSideTemplates (..)
      , HasAssetDetails (..)
      , MermaidCss (..)
+     , Mustache (..)
      , PureCss (..)
      , PureCssGrids (..)
      , externalAssetCDN
@@ -138,10 +139,23 @@ data HTMXExtClientSideTemplates where
 instance HasAssetDetails HTMXExtClientSideTemplates where
   getAssetDetails (ExternalAssetVendored static) = ExternalAssetDetails (ExternalAssetVendored static)
                                                    ("/" <> toUrlPiece static <> "/js/htmx/client-side-templates.js")
-                                                   "sha384-q/huQyJ6q5A6n6a7woJDV43/kg0OMiEM9B94VPjZD0VVN5DD2et0L8nAoX05TYVZ"
+                                                   "sha384-QFjmbokDn2DjBjq+fM+8LUIVrAgqcNW2s0PjAxHETgRn9l4fvX31ZxDxvwQnyMOX"
   getAssetDetails ExternalAssetCDN               = ExternalAssetDetails ExternalAssetCDN
                                                    "https://unpkg.com/htmx-ext-client-side-templates@2.0.0/client-side-templates.js"
                                                    "sha384-q/huQyJ6q5A6n6a7woJDV43/kg0OMiEM9B94VPjZD0VVN5DD2et0L8nAoX05TYVZ"
+
+
+-- | Mustache template engine asset details.
+data Mustache where
+  Mustache :: Mustache
+
+instance HasAssetDetails Mustache where
+  getAssetDetails (ExternalAssetVendored static) = ExternalAssetDetails (ExternalAssetVendored static)
+                                                   ("/" <> toUrlPiece static <> "/js/mustache@4.2.0")
+                                                   "sha384-w1w4OJZe53/hPslZL3huM7kr/RQ+IXfaVeO5Tx0boUDt0ZTA8dwJ5OjxjpWOtw14"
+  getAssetDetails ExternalAssetCDN               = ExternalAssetDetails ExternalAssetCDN
+                                                   "https://unpkg.com/mustache@4.2.0"
+                                                   "sha384-w1w4OJZe53/hPslZL3huM7kr/RQ+IXfaVeO5Tx0boUDt0ZTA8dwJ5OjxjpWOtw14"
 
 
 -- | GoatCounter asset details.
@@ -151,7 +165,7 @@ data GoatCounterAnalytics where
 instance HasAssetDetails GoatCounterAnalytics where
   getAssetDetails (ExternalAssetVendored static) = ExternalAssetDetails (ExternalAssetVendored static)
                                                    "/count.js"
-                                                   "sha384-OLBgp1GsljhM2TJ+sbHjaiH9txEUvgdDTAzHv2P24donTt6/529l+9Ua0vFImLlb"
+                                                   "sha384-QGgNMMRFTi8ul5kHJ+vXysPe8gySvSA/Y3rpXZiRLzKPIw8CWY+a3ObKmQsyDr+a"
   getAssetDetails ExternalAssetCDN               = ExternalAssetDetails ExternalAssetCDN
                                                    "https://stats.bikes.cfeeley.org/count.js"
-                                                   "sha384-OLBgp1GsljhM2TJ+sbHjaiH9txEUvgdDTAzHv2P24donTt6/529l+9Ua0vFImLlb"
+                                                   "sha384-QGgNMMRFTi8ul5kHJ+vXysPe8gySvSA/Y3rpXZiRLzKPIw8CWY+a3ObKmQsyDr+a"

@@ -55,15 +55,21 @@ makeHeadElements assetsLocation staticPath = do
   stylesheet_ (getAssetUrl @PureCssGrids assetsLocation) [integrity_ (getAssetIntegrity @PureCssGrids assetsLocation), crossorigin_ "anonymous", defer_ mempty]
 
   -- HTMX
-  script_ [ src_ (assetUrl (getAssetDetails @HTMX assetsLocation))
+  script_ [ src_ (assetUrl (getAssetDetails   @HTMX assetsLocation))
           , integrity_     (getAssetIntegrity @HTMX assetsLocation)
           , crossorigin_ "anonymous"
           , defer_ mempty
           ] ("" :: T.Text)
-  -- script_ [ src_ (assetUrl (getAssetDetails @HTMXExtClientSideTemplates assetsLocation))
-  --         , integrity_     (getAssetIntegrity @HTMXExtClientSideTemplates assetsLocation)
-  --         , crossorigin_ "anonymous", defer_ mempty
-  --         ] ("" :: T.Text)
+  script_ [ src_ (assetUrl (getAssetDetails   @HTMXExtClientSideTemplates assetsLocation))
+          , integrity_     (getAssetIntegrity @HTMXExtClientSideTemplates assetsLocation)
+          , crossorigin_ "anonymous", defer_ mempty
+          ] ("" :: T.Text)
+
+  -- Mustache templating engine (for HTMX client side templates)
+  script_ [ src_ (assetUrl (getAssetDetails   @Mustache assetsLocation))
+          , integrity_     (getAssetIntegrity @Mustache assetsLocation)
+          , crossorigin_ "anonymous", defer_ mempty
+          ] ("" :: T.Text)
 
   -- Project stylesheet
   stylesheet_ (staticPath <> "/css/haskbike.css") [defer_ mempty]

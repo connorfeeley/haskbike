@@ -1,0 +1,40 @@
+<!doctype html>
+<html class="no-js" lang="">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <title>Untitled</title>
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <script src="https://unpkg.com/htmx.org@1.9.11"></script>
+    <script src="https://unpkg.com/htmx-ext-client-side-templates@2.0.0/client-side-templates.js"></script>
+    <script src="https://unpkg.com/mustache@4.2.0"></script>
+    <!-- Place favicon.ico in the root directory -->
+
+</head>
+
+<body>
+    <div hx-ext="client-side-templates">
+            <!-- hx-get="/debug/query-logs/history/endpoint/station-status" -->
+            <!-- hx-swap="innerHTML" -->
+        <div hx-trigger="load"
+             hx-get="/debug/query-logs/history/all"
+             mustache-array-template="my-mustache-template">
+        </div>
+    </div>
+    <template id="my-mustache-template">
+        {{#data}}
+        <div>
+        <h2> Endpoint: {{endpoint}} </h2>
+        <p> Total queries: {{total.num-queries}} </p>
+        <p> Successful queries: {{successful.num-queries}} </p>
+        <p> Failed queries: {{failed.num-queries}} </p>
+        </div>
+        {{/data}}
+    </template>
+</body>
+
+</html>

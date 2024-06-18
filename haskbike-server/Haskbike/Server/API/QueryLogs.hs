@@ -57,7 +57,7 @@ data QueryLogsHistoryAPI mode where
 -- * QueryLogsAPI handlers
 
 queryApiHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m) => QueryLogsAPI (AsServerT m)
-queryApiHandler = QueryHistoryAPI
+queryApiHandler = QueryLogsAPI
   { history = queryLogsHistoryApiHandler }
 
 

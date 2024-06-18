@@ -23,10 +23,13 @@ import           Haskbike.Database.DaysAgo
 import           Haskbike.Database.Operations.QueryLogs
 import           Haskbike.Database.Tables.QueryLogs
 import           Haskbike.Server.API.QueryLogs
+import           Haskbike.Server.Page.QueryHistory      ( QueryHistoryComponent (..) )
+import           Haskbike.Server.Page.SideMenu
 import           Haskbike.ServerEnv
 import           Haskbike.Version
 
 import           Servant
+import           Servant.HTML.Lucid
 import           Servant.Server.Generic                 ( AsServerT )
 
 import           UnliftIO
@@ -40,6 +43,7 @@ data DebugAPI mode where
   DebugAPI ::
     { serverVersion :: mode :- "debug" :> "version"        :> Get '[JSON] Version
     , queryApi      :: mode :- "debug" :> "query-logs"     :> NamedRoutes QueryLogsAPI
+    , queryApiPage  :: mode :- "debug" :> "query-logs-page":> Get '[HTML] (PureSideMenu QueryHistoryComponent)
     , errorsApi     :: mode :- "debug" :> "errors"         :> NamedRoutes ErrorsAPI
     , sleepDatabase :: mode :- "debug" :> "sleep-database" :> Capture "seconds" Int :> Get '[JSON] ()
     } -> DebugAPI mode
@@ -55,10 +59,11 @@ data ErrorsAPI mode where
 
 -- * Handlers
 
-debugApiHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m) => DebugAPI (AsServerT m)
+debugApiHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m, HasServerEnv env m) => DebugAPI (AsServerT m)
 debugApiHandler =
   DebugAPI { serverVersion = versionHandler
            , queryApi      = queryApiHandler
+           , queryApiPage  = queryApiPageHandler
            , errorsApi     = errorsApiHandler
            , sleepDatabase = sleepDatabaseHandler
            }
@@ -104,3 +109,10 @@ latestErrorsHandler limit = do
   let x = filter (isJust . _queryLogErrJson) errors
   let e = decodeJsonErrors x
   pure $ toJSON e
+
+queryApiPageHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m, HasServerEnv env m)
+                    => m (PureSideMenu QueryHistoryComponent)
+queryApiPageHandler = do
+  logInfo "Rendering performance CSV page"
+
+  sideMenu $ QueryHistoryComponent { }

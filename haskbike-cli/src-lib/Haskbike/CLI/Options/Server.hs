@@ -33,4 +33,4 @@ serverOptionsParser = ServerOptions
  <> value ExternalAssetCDN
  <> help ("Serve either vendored assets or from CDN. Allowed values: " <> show allowedValues))
   where
-    allowedValues = [externalAssetVendored, externalAssetVendored]
+    allowedValues = [externalAssetVendored, externalAssetCDN]
