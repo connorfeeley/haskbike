@@ -15,7 +15,7 @@ import           Control.Monad.Catch                       ( MonadCatch )
 
 import           Data.Aeson                                ( ToJSON (..), Value )
 import qualified Data.Text                                 as T
-import           Data.Time                                 ( LocalTime )
+import           Data.Time                                 ( LocalTime, UTCTime )
 
 import           Database.Beam
 
@@ -75,13 +75,15 @@ queryHistoryHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m)
                     => Maybe EndpointQueried -> Maybe LocalTime -> Maybe LocalTime
                     -> m Value
 queryHistoryHandler ep _startTime _endTime = do
+  tz <- getTz  -- Fetch the TimeZone from the environment
   logInfo $
     case ep of
       Nothing  -> "Querying all endpoint query history"
       Just ep' -> "Querying query history for endpoint " <> T.pack (show ep')
 
-  queries :: [QueryHistoryRecord] <- fmap fromRecords <$> (withPostgres . runSelectReturningList . selectWith) (queryHistoryE ep)
-  pure $ toJSON queries
+  queries       :: [QueryHistoryRecord UTCTime] <- fmap fromRecords <$> (withPostgres . runSelectReturningList . selectWith) (queryHistoryE ep)
+  let queriesLt :: [QueryHistoryRecord LocalTime] = toLocalTime tz <$> queries
+  pure $ toJSON queriesLt
 
 
 -- | Handler for querying all query history.

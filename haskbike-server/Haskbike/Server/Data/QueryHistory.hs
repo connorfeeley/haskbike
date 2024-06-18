@@ -5,6 +5,7 @@
 module Haskbike.Server.Data.QueryHistory
      ( FromRecords (..)
      , QueryHistoryRecord (..)
+     , ToLocalTime (..)
      ) where
 
 import           Data.Aeson
@@ -23,19 +24,23 @@ import           Haskbike.Database.EndpointQueried
 class FromRecords a b where
   fromRecords :: a -> b
 
+-- | Typeclass for converting a tuple of database records to a user-facing record.
+class ToLocalTime a b where
+  toLocalTime :: TimeZone -> a -> b
+
 
 -- | Record representing the history of queries to a specific endpoint.
-data QueryHistoryRecord where
+data QueryHistoryRecord a where
   QueryHistoryRecord ::
     { endpoint          :: EndpointQueried
-    , total             :: QueryHistoryDetailRecord
-    , successful        :: QueryHistoryDetailRecord
-    , failed            :: QueryHistoryDetailRecord
-    } -> QueryHistoryRecord
+    , total             :: QueryHistoryDetailRecord a
+    , successful        :: QueryHistoryDetailRecord a
+    , failed            :: QueryHistoryDetailRecord a
+    } -> QueryHistoryRecord a
   deriving (Show)
   deriving stock (Generic)
 
-instance ToJSON QueryHistoryRecord where
+instance ToJSON a => ToJSON (QueryHistoryRecord a) where
   toJSON record =
     object [ "endpoint"            .= endpoint record
            , "total"               .= total record
@@ -43,7 +48,7 @@ instance ToJSON QueryHistoryRecord where
            , "failed"              .= failed record
            ]
 
-instance FromRecords (EndpointQueried, (Int32, Double, Maybe UTCTime), (Int32, Double, Maybe UTCTime), (Int32, Double, Maybe UTCTime)) QueryHistoryRecord where
+instance FromRecords (EndpointQueried, (Int32, Double, Maybe UTCTime), (Int32, Double, Maybe UTCTime), (Int32, Double, Maybe UTCTime)) (QueryHistoryRecord UTCTime) where
   fromRecords (ep, (total, avgTimeTotal, latest), (successful, avgTimeSuccessful, latestSuccess), (failed, avgTimeFailed, latestFail)) = QueryHistoryRecord
     ep
     (QueryHistoryDetailRecord total      (intervalToNominalDiffTime avgTimeTotal)      latest)
@@ -56,18 +61,22 @@ instance FromRecords (EndpointQueried, (Int32, Double, Maybe UTCTime), (Int32, D
       toPico :: Double -> Pico
       toPico = fromInteger . roundDouble -- . (*) 1000000000000
 
+instance ToLocalTime (QueryHistoryRecord UTCTime) (QueryHistoryRecord LocalTime) where
+  toLocalTime tz (QueryHistoryRecord ep total successful failed) =
+    QueryHistoryRecord ep (toLocalTime tz total) (toLocalTime tz successful) (toLocalTime tz failed)
+
 
 -- | Record representing the details of an endpoint's query history.
-data QueryHistoryDetailRecord where
+data QueryHistoryDetailRecord a where
   QueryHistoryDetailRecord ::
     { count       :: Int32
     , avgInterval :: NominalDiffTime
-    , latest      :: Maybe UTCTime
-    } -> QueryHistoryDetailRecord
+    , latest      :: Maybe a
+    } -> QueryHistoryDetailRecord a
   deriving (Show)
   deriving stock (Generic)
 
-instance ToJSON QueryHistoryDetailRecord where
+instance ToJSON a => ToJSON (QueryHistoryDetailRecord a) where
   toJSON record =
     object [ "num-queries"  .= count record
            , "avg-interval" .= toTime (avgInterval record)
@@ -75,3 +84,7 @@ instance ToJSON QueryHistoryDetailRecord where
            ]
     where
       toTime = T.pack . formatTime defaultTimeLocale "%d:%H:%M:%S"
+
+instance ToLocalTime (QueryHistoryDetailRecord UTCTime) (QueryHistoryDetailRecord LocalTime) where
+  toLocalTime tz (QueryHistoryDetailRecord count avgInterval latest) =
+    QueryHistoryDetailRecord count avgInterval (utcToLocalTime tz <$> latest)
