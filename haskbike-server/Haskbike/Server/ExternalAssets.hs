@@ -8,6 +8,7 @@ module Haskbike.Server.ExternalAssets
      , GoatCounterAnalytics (..)
      , GridJS (..)
      , HTMX (..)
+     , HTMXExtClientSideTemplates (..)
      , HasAssetDetails (..)
      , MermaidCss (..)
      , PureCss (..)
@@ -128,6 +129,19 @@ instance HasAssetDetails HTMX where
   getAssetDetails ExternalAssetCDN               = ExternalAssetDetails ExternalAssetCDN
                                                    "https://unpkg.com/htmx.org@1.9.11"
                                                    "sha384-0gxUXCCR8yv9FM2b+U3FDbsKthCI66oH5IA9fHppQq9DDMHuMauqq1ZHBpJxQ0J0"
+
+
+-- | HTMX client side templates asset details.
+data HTMXExtClientSideTemplates where
+  HTMXExtClientSideTemplates :: HTMXExtClientSideTemplates
+
+instance HasAssetDetails HTMXExtClientSideTemplates where
+  getAssetDetails (ExternalAssetVendored static) = ExternalAssetDetails (ExternalAssetVendored static)
+                                                   ("/" <> toUrlPiece static <> "/js/htmx/client-side-templates.js")
+                                                   "sha384-q/huQyJ6q5A6n6a7woJDV43/kg0OMiEM9B94VPjZD0VVN5DD2et0L8nAoX05TYVZ"
+  getAssetDetails ExternalAssetCDN               = ExternalAssetDetails ExternalAssetCDN
+                                                   "https://unpkg.com/htmx-ext-client-side-templates@2.0.0/client-side-templates.js"
+                                                   "sha384-q/huQyJ6q5A6n6a7woJDV43/kg0OMiEM9B94VPjZD0VVN5DD2et0L8nAoX05TYVZ"
 
 
 -- | GoatCounter asset details.
