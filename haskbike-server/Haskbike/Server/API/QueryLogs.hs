@@ -69,14 +69,32 @@ queryLogsHistoryApiHandler = QueryLogsHistoryAPI
   , historyForEndpoint = queryEndpointHistoryHandler
   }
 
-queryAllHistoryHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m) => Maybe LocalTime -> Maybe LocalTime -> m Value
-queryAllHistoryHandler _startTime _endTime = do
-  logInfo "Querying all endpoint query history"
-  queries :: [QueryHistoryRecord] <- fmap fromRecords <$> (withPostgres . runSelectReturningList . selectWith) (queryHistoryE Nothing)
+
+-- Generic handler for querying query history.
+queryHistoryHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m)
+                    => Maybe EndpointQueried -> Maybe LocalTime -> Maybe LocalTime
+                    -> m Value
+queryHistoryHandler ep _startTime _endTime = do
+  logInfo $
+    case ep of
+      Nothing  -> "Querying all endpoint query history"
+      Just ep' -> "Querying query history for endpoint " <> T.pack (show ep')
+
+  queries :: [QueryHistoryRecord] <- fmap fromRecords <$> (withPostgres . runSelectReturningList . selectWith) (queryHistoryE ep)
   pure $ toJSON queries
 
-queryEndpointHistoryHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m) => EndpointQueried -> Maybe LocalTime -> Maybe LocalTime -> m Value
+
+-- | Handler for querying all query history.
+queryAllHistoryHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m)
+                       => Maybe LocalTime -> Maybe LocalTime
+                       -> m Value
+queryAllHistoryHandler _startTime _endTime = do
+  queryHistoryHandler Nothing _startTime _endTime
+
+
+-- | Handler for querying query history for a specific endpoint.
+queryEndpointHistoryHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m)
+                            => EndpointQueried -> Maybe LocalTime -> Maybe LocalTime
+                            -> m Value
 queryEndpointHistoryHandler ep _startTime _endTime = do
-  logInfo "Querying all endpoint query history"
-  queries :: [QueryHistoryRecord] <- fmap fromRecords <$> (withPostgres . runSelectReturningList . selectWith) (queryHistoryE Nothing)
-  pure $ toJSON queries
+  queryHistoryHandler (Just ep) _startTime _endTime
