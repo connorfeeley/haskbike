@@ -29,8 +29,6 @@ import           Haskbike.AppEnv
 import           Haskbike.Database.BeamConvertable
 import           Haskbike.Database.BikeShare
 import           Haskbike.Database.DaysAgo
-import           Haskbike.Database.EndpointQueried        ( EndpointQueried (..) )
-import           Haskbike.Database.Expressions            ( timeDelta )
 import           Haskbike.Database.Tables.QueryLogs
 
 import           Prelude                                  hiding ( log )
@@ -75,11 +73,24 @@ decodeJsonError (PgJSONB j) = j
 
 -- | Query the number of queries for each endpoint.
 queryHistoryCountsE = do
-  aggregate_ (\(row, pTime) -> ( group_ (_queryLogEndpoint row)
-                      , as_ @Int32 countAll_                                                          -- total
-                      , as_ @Int32 $ countAll_ `filterWhere_'` (_queryLogSuccess row ==?. val_ True)  -- successful
-                      , as_ @Int32 $ countAll_ `filterWhere_'` (_queryLogSuccess row ==?. val_ False) -- failed
+  aggregate_ (\(row, pTime, pSuccess) -> ( group_ (_queryLogEndpoint row)
+                      -- Total query count
+                      , as_ @Int32 countAll_
+                      -- Average time delta between queries
                       , fromMaybe_ 0.0 $ avg_ $ cast_ (extract_ Pg.epoch_ (_queryLogTime row) - extract_ Pg.epoch_ pTime) double
+
+                      -- Count of successful queries
+                      , as_ @Int32 $ countAll_ `filterWhere_'` (_queryLogSuccess row ==?. val_ True)
+                      -- Average time delta between successful queries
+                      , fromMaybe_ 0.0 (avg_ (cast_ (extract_ Pg.epoch_ (_queryLogTime row) - extract_ Pg.epoch_ pTime) double)
+                                        `filterWhere_'` (_queryLogSuccess row ==?. val_ True &&?. pSuccess ==?. val_ True))
+
+
+                      -- Count of failed queries
+                      , as_ @Int32 $ countAll_ `filterWhere_'` (_queryLogSuccess row ==?. val_ False)
+                      -- Average time delta between failed queries
+                      , fromMaybe_ 0.0 (avg_ (cast_ (extract_ Pg.epoch_ (_queryLogTime row) - extract_ Pg.epoch_ pTime) double)
+                                        `filterWhere_'` (_queryLogSuccess row ==?. val_ False &&?. pSuccess ==?. val_ False))
                       )
              ) $
     withWindow_ (\row -> frame_ (partitionBy_ (_queryLogEndpoint row))
@@ -87,5 +98,6 @@ queryHistoryCountsE = do
                          noBounds_)
       (\row w -> ( row
                  , lagWithDefault_ (_queryLogTime row) (val_ (1 :: Integer)) (_queryLogTime row) `over_` w
+                 , lagWithDefault_ (_queryLogSuccess row) (val_ (1 :: Integer)) (_queryLogSuccess row) `over_` w
                  )) $
       all_ (_bikeshareQueryLog bikeshareDb)
