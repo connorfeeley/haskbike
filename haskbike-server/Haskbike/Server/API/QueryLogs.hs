@@ -34,7 +34,7 @@ import           UnliftIO
 
 -- | API for querying query logs.
 data QueryLogsAPI mode where
-  QueryHistoryAPI ::
+  QueryLogsAPI ::
     { history :: mode :- "history" :> NamedRoutes QueryLogsHistoryAPI
     } -> QueryLogsAPI mode
   deriving stock Generic
