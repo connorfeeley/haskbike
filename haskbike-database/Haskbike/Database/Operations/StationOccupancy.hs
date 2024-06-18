@@ -20,6 +20,7 @@ import qualified Database.Beam.Postgres                      as Pg
 import qualified Database.Beam.Postgres.Full                 as Pg
 
 import           Haskbike.Database.BikeShare
+import           Haskbike.Database.Expressions
 import           Haskbike.Database.Operations.Utils
 import           Haskbike.Database.Tables.StationInformation
 import           Haskbike.Database.Tables.StationOccupancy
@@ -30,11 +31,6 @@ greatest_, least_ :: QGenExpr ctx Postgres s a -> QGenExpr ctx Postgres s a -> Q
 greatest_ = customExpr_ (\a b -> "GREATEST(" <> a <> ", " <> b <> ")")
 least_    = customExpr_ (\a b -> "LEAST("    <> a <> ", " <> b <> ")")
 
-
--- | Difference between two epochs.
-timeDelta :: (HasSqlTime t, Integral b)
-          => QGenExpr ctx Postgres s t -> QGenExpr ctx Postgres s t -> QGenExpr ctx Postgres s b
-timeDelta a b = cast_ (extract_ Pg.epoch_ a - extract_ Pg.epoch_ b) int
 
 -- | Query how long each station has been both empty and full for.
 stationOccupancyE :: Integral a

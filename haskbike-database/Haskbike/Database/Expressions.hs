@@ -28,6 +28,7 @@ module Haskbike.Database.Expressions
      , statusBetweenExpr
      , statusInfoBetweenExpr
      , systemStatusBetweenExpr
+     , timeDelta
      ) where
 
 import           Control.Arrow                               ( (&&&) )
@@ -72,6 +73,12 @@ import           Haskbike.Database.Tables.SystemInformation
 import           Haskbike.TimeInterval
 
 import           Text.Pretty.Simple.Extras
+
+
+-- | Difference between two epochs.
+timeDelta :: (HasSqlTime t, Integral b)
+          => QGenExpr ctx Postgres s t -> QGenExpr ctx Postgres s t -> QGenExpr ctx Postgres s b
+timeDelta a b = cast_ (extract_ Pg.epoch_ a - extract_ Pg.epoch_ b) int
 
 
 -- | Expression to query the all statuses for the system between two times.
@@ -309,24 +316,22 @@ integrateColumns variation = do
 
   -- Difference between row values and lagged values
   withDeltas <- selecting $ do
-    -- as seconds:
-    let timeDelta column column' = cast_ (extract_ Pg.epoch_ column - extract_ Pg.epoch_ column') int
     -- Calculate delta between current and previous availability.
-      in withWindow_ (\(row, _) -> frame_ (partitionBy_ ((_unInformationStationId . _statusInfoId . _statusCommon) row)) noOrder_ noBounds_)
-         (\(row, pLastReported) _w ->
-             ( row                                                                                  -- _1
-             , as_ @Int32 (timeDelta (row ^. statusLastReported) pLastReported)                     -- _2
-             , ( row ^. statusNumBikesAvailable * timeDelta (row ^. statusLastReported) pLastReported
-               , row ^. statusNumBikesDisabled  * timeDelta (row ^. statusLastReported) pLastReported
-               , row ^. statusNumDocksAvailable * timeDelta (row ^. statusLastReported) pLastReported
-               , row ^. statusNumDocksDisabled  * timeDelta (row ^. statusLastReported) pLastReported
-               )
-             , ( row ^. vehicleTypesAvailableIconic  * timeDelta (row ^. statusLastReported) pLastReported
-               , row ^. vehicleTypesAvailableEfit    * timeDelta (row ^. statusLastReported) pLastReported
-               , row ^. vehicleTypesAvailableEfitG5  * timeDelta (row ^. statusLastReported) pLastReported
-               )
+    withWindow_ (\(row, _) -> frame_ (partitionBy_ ((_unInformationStationId . _statusInfoId . _statusCommon) row)) noOrder_ noBounds_)
+       (\(row, pLastReported) _w ->
+           ( row                                                                                  -- _1
+           , as_ @Int32 (timeDelta (row ^. statusLastReported) pLastReported)                     -- _2
+           , ( row ^. statusNumBikesAvailable * timeDelta (row ^. statusLastReported) pLastReported
+             , row ^. statusNumBikesDisabled  * timeDelta (row ^. statusLastReported) pLastReported
+             , row ^. statusNumDocksAvailable * timeDelta (row ^. statusLastReported) pLastReported
+             , row ^. statusNumDocksDisabled  * timeDelta (row ^. statusLastReported) pLastReported
              )
-         ) (reuse lagged)
+           , ( row ^. vehicleTypesAvailableIconic  * timeDelta (row ^. statusLastReported) pLastReported
+             , row ^. vehicleTypesAvailableEfit    * timeDelta (row ^. statusLastReported) pLastReported
+             , row ^. vehicleTypesAvailableEfitG5  * timeDelta (row ^. statusLastReported) pLastReported
+             )
+           )
+       ) (reuse lagged)
   chargings <- selecting $ reuse withDeltas
 
   pure $ do
