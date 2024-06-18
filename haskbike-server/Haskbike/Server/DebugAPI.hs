@@ -22,6 +22,7 @@ import           Database.Beam
 import           Haskbike.Database.DaysAgo
 import           Haskbike.Database.Operations.QueryLogs
 import           Haskbike.Database.Tables.QueryLogs
+import           Haskbike.Server.Data.QueryHistory
 import           Haskbike.ServerEnv
 import           Haskbike.Version
 
@@ -97,7 +98,7 @@ queryAllHistoryHandler _startTime = do
     queryHistoryCountsE
 
   pure $ do
-    toJSON () -- queries
+    toJSON (fromRecords <$> queries)
 
 
 -- * ErrorAPI handlers
