@@ -29,6 +29,7 @@ import           Haskbike.AppEnv
 import           Haskbike.Database.BeamConvertable
 import           Haskbike.Database.BikeShare
 import           Haskbike.Database.DaysAgo
+import           Haskbike.Database.EndpointQueried        ( EndpointQueried )
 import           Haskbike.Database.Tables.QueryLogs
 
 import           Prelude                                  hiding ( log )
@@ -72,6 +73,16 @@ decodeJsonError :: PgJSONB Value -> Value
 decodeJsonError (PgJSONB j) = j
 
 -- | Query the number of queries for each endpoint.
+queryHistoryCountsE :: (exp ~ QGenExpr, ctx ~ QValueContext, be ~ Postgres)
+                    => Q be BikeshareDb s
+                        ( exp ctx be s EndpointQueried
+                        , exp ctx be s Int32
+                        , exp ctx be s Double
+                        , exp ctx be s Int32
+                        , exp ctx be s Double
+                        , exp ctx be s Int32
+                        , exp ctx be s Double
+                        )
 queryHistoryCountsE = do
   aggregate_ (\(row, pTime, pSuccess) -> ( group_ (_queryLogEndpoint row)
                       -- Total query count
@@ -96,8 +107,8 @@ queryHistoryCountsE = do
     withWindow_ (\row -> frame_ (partitionBy_ (_queryLogEndpoint row))
                          (orderPartitionBy_ ((asc_ . _queryLogTime) row))
                          noBounds_)
-      (\row w -> ( row
-                 , lagWithDefault_ (_queryLogTime row) (val_ (1 :: Integer)) (_queryLogTime row) `over_` w
-                 , lagWithDefault_ (_queryLogSuccess row) (val_ (1 :: Integer)) (_queryLogSuccess row) `over_` w
-                 )) $
-      all_ (_bikeshareQueryLog bikeshareDb)
+    (\row w -> ( row
+               , lagWithDefault_ (_queryLogTime row) (val_ (1 :: Integer)) (_queryLogTime row) `over_` w
+               , lagWithDefault_ (_queryLogSuccess row) (val_ (1 :: Integer)) (_queryLogSuccess row) `over_` w
+               )) $
+    all_ (_bikeshareQueryLog bikeshareDb)
