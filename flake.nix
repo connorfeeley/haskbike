@@ -17,7 +17,7 @@
     tmp-postgres = { url = "github:jfischoff/tmp-postgres"; flake = false; };
     beam = { url = "github:connorfeeley/beam/feat/insert-only-on-conflict"; flake = false; };
   };
-  outputs = inputs@{ self, nixpkgs, flake-parts, ... }:
+  outputs = inputs@{ self, flake-parts, ... }:
     let rev = self.rev or self.dirtyRev or "dirty";
     in
     flake-parts.lib.mkFlake { inherit inputs; } ({ ... }: {
