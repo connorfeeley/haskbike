@@ -130,7 +130,7 @@ instance HasAssetDetails HTMX where
                                                    "sha384-0gxUXCCR8yv9FM2b+U3FDbsKthCI66oH5IA9fHppQq9DDMHuMauqq1ZHBpJxQ0J0"
 
 
--- | HTMX asset details.
+-- | GoatCounter asset details.
 data GoatCounterAnalytics where
   GoatCounterAnalytics :: GoatCounterAnalytics
 
