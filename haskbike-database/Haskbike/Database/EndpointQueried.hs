@@ -30,17 +30,19 @@ data EndpointQueried where
   SystemRegionsEP      :: EndpointQueried
   SystemInformationEP  :: EndpointQueried
   SystemPricingPlansEP :: EndpointQueried
-  deriving (Show, Read, Eq, Ord, Enum, Bounded, HasSqlEqualityCheck Postgres)
+  deriving (Read, Eq, Ord, Enum, Bounded, HasSqlEqualityCheck Postgres)
 
+instance Show EndpointQueried where
+  show VersionsEP           = "Versions"
+  show VehicleTypesEP       = "Vehicle Types"
+  show StationInformationEP = "Station Information"
+  show StationStatusEP      = "Station Status"
+  show SystemRegionsEP      = "System Regions"
+  show SystemInformationEP  = "System Information"
+  show SystemPricingPlansEP = "System Pricing Plans"
 
 instance ToJSON EndpointQueried where
-  toJSON VersionsEP           = String (T.pack "Versions")
-  toJSON VehicleTypesEP       = String (T.pack "Vehicle Types")
-  toJSON StationInformationEP = String (T.pack "Station Information")
-  toJSON StationStatusEP      = String (T.pack "Station Status")
-  toJSON SystemRegionsEP      = String (T.pack "System Regions")
-  toJSON SystemInformationEP  = String (T.pack "System Information")
-  toJSON SystemPricingPlansEP = String (T.pack "System Pricing Plans")
+  toJSON ep           = String (T.pack (show ep))
 
 instance FromJSON EndpointQueried where
   parseJSON = withText "PhysicalConfiguration" $ \t -> case t of
