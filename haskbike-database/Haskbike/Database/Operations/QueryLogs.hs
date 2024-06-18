@@ -23,12 +23,14 @@ import           Data.Int                                 ( Int32 )
 import           Database.Beam
 import           Database.Beam.Backend.SQL.BeamExtensions
 import           Database.Beam.Postgres
+import qualified Database.Beam.Postgres                   as Pg
 
 import           Haskbike.AppEnv
 import           Haskbike.Database.BeamConvertable
 import           Haskbike.Database.BikeShare
 import           Haskbike.Database.DaysAgo
 import           Haskbike.Database.EndpointQueried        ( EndpointQueried (..) )
+import           Haskbike.Database.Expressions            ( timeDelta )
 import           Haskbike.Database.Tables.QueryLogs
 
 import           Prelude                                  hiding ( log )
@@ -72,21 +74,18 @@ decodeJsonError :: PgJSONB Value -> Value
 decodeJsonError (PgJSONB j) = j
 
 -- | Query the number of queries for each endpoint.
--- queryHistoryCountsE :: Q Postgres BikeshareDb s (QGenExpr QValueContext Postgres s EndpointQueried, QGenExpr QValueContext Postgres s Int32)
-queryHistoryCountsE :: Q Postgres BikeshareDb s (QueryLogT (QGenExpr QValueContext Postgres s), QGenExpr QValueContext Postgres s Int32)
 queryHistoryCountsE = do
-  -- orderBy_ (desc_ . _queryLogTime) $
-  --   filter_' (\q -> _queryLogEndpoint q ==?. val_ _ep) $
-  --   all_ (_bikeshareQueryLog bikeshareDb)
-
-  -- aggregate_ (\row -> ( group_ (_queryLogEndpoint row)
-  --                     , as_ @Int32 countAll_
-  --                     )
-  --            ) $
-  withWindow_ (\row -> frame_ (partitionBy_ (_queryLogEndpoint row))
-                       (orderPartitionBy_ ((desc_ . _queryLogTime) row))
-                       noBounds_)
-    (\row w -> ( row
-               , as_ @Int32 $ countAll_ `over_` w
-               )) $
-    all_ (_bikeshareQueryLog bikeshareDb)
+  aggregate_ (\(row, pTime) -> ( group_ (_queryLogEndpoint row)
+                      , as_ @Int32 countAll_                                                          -- total
+                      , as_ @Int32 $ countAll_ `filterWhere_'` (_queryLogSuccess row ==?. val_ True)  -- successful
+                      , as_ @Int32 $ countAll_ `filterWhere_'` (_queryLogSuccess row ==?. val_ False) -- failed
+                      , fromMaybe_ 0.0 $ avg_ $ cast_ (extract_ Pg.epoch_ (_queryLogTime row) - extract_ Pg.epoch_ pTime) double
+                      )
+             ) $
+    withWindow_ (\row -> frame_ (partitionBy_ (_queryLogEndpoint row))
+                         (orderPartitionBy_ ((asc_ . _queryLogTime) row))
+                         noBounds_)
+      (\row w -> ( row
+                 , lagWithDefault_ (_queryLogTime row) (val_ (1 :: Integer)) (_queryLogTime row) `over_` w
+                 )) $
+      all_ (_bikeshareQueryLog bikeshareDb)
