@@ -11,38 +11,41 @@ module Haskbike.Server.DebugAPI
 
 import           Colog
 
-import           Control.Monad.Catch                       ( MonadCatch )
+import           Control.Monad.Catch                    ( MonadCatch )
 
-import           Data.Aeson                                ( ToJSON (..), Value )
-import           Data.Maybe                                ( isJust )
-import qualified Data.Text                                 as T
-import           Data.Time                                 ( LocalTime )
+import           Data.Aeson                             ( ToJSON (..), Value )
+import           Data.Maybe                             ( isJust )
+import qualified Data.Text                              as T
 
 import           Database.Beam
 
 import           Haskbike.Database.DaysAgo
-import           Haskbike.Database.Operations.QueryHistory
 import           Haskbike.Database.Operations.QueryLogs
 import           Haskbike.Database.Tables.QueryLogs
-import           Haskbike.Server.Data.QueryHistory
+import           Haskbike.Server.API.QueryLogs
 import           Haskbike.ServerEnv
 import           Haskbike.Version
 
 import           Servant
-import           Servant.Server.Generic                    ( AsServerT )
+import           Servant.Server.Generic                 ( AsServerT )
 
 import           UnliftIO
 
 
+type Version = ((String, String), (String, String))
+
+
+-- | Miscellaneous debugging API endpoints.
 data DebugAPI mode where
   DebugAPI ::
-    { serverVersion   :: mode :- "debug" :> "version"        :> Get '[JSON] Version
-    , queryHistoryApi :: mode :- "debug" :> "query-history"  :> NamedRoutes QueryHistoryAPI
-    , errorsApi       :: mode :- "debug" :> "errors"         :> NamedRoutes ErrorsAPI
-    , sleepDatabase   :: mode :- "debug" :> "sleep-database" :> Capture "seconds" Int :> Get '[JSON] ()
+    { serverVersion :: mode :- "debug" :> "version"        :> Get '[JSON] Version
+    , queryApi      :: mode :- "debug" :> "query-logs"     :> NamedRoutes QueryLogsAPI
+    , errorsApi     :: mode :- "debug" :> "errors"         :> NamedRoutes ErrorsAPI
+    , sleepDatabase :: mode :- "debug" :> "sleep-database" :> Capture "seconds" Int :> Get '[JSON] ()
     } -> DebugAPI mode
   deriving stock Generic
 
+-- | API for querying failed queries.
 data ErrorsAPI mode where
   ErrorsAPI ::
     { latestErrors :: mode :- "latest" :> Capture "amount" Integer :> Get '[JSON] Value
@@ -50,25 +53,15 @@ data ErrorsAPI mode where
     } -> ErrorsAPI mode
   deriving stock Generic
 
-data QueryHistoryAPI mode where
-  QueryHistoryAPI ::
-    { allHistory :: mode :- "all" :> QueryParam "start-time" LocalTime :> Get '[JSON] Value
-    } -> QueryHistoryAPI mode
-  deriving stock Generic
-
+-- * Handlers
 
 debugApiHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m) => DebugAPI (AsServerT m)
 debugApiHandler =
-  DebugAPI { serverVersion   = versionHandler
-           , queryHistoryApi = queryHistoryApiHandler
-           , errorsApi       = errorsApiHandler
-           , sleepDatabase   = sleepDatabaseHandler
+  DebugAPI { serverVersion = versionHandler
+           , queryApi      = queryApiHandler
+           , errorsApi     = errorsApiHandler
+           , sleepDatabase = sleepDatabaseHandler
            }
-
-type Version = ((String, String), (String, String))
-
-
--- * Handlers
 
 versionHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m) => m Version
 versionHandler = pure (("version", getCabalVersion), ("git-version", getGitVersion))
@@ -82,23 +75,6 @@ sleepDatabaseHandler seconds = do
   -- pool <- getDBConnectionPool
   -- _ :: [Only ()] <- liftIO $ withResource pool (\conn -> query_ conn (fromString ("SELECT pg_sleep(" ++ show seconds ++ ")")))
   pure ()
-
-
--- * QueryHistoryAPI handlers
-
-queryHistoryApiHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m) => QueryHistoryAPI (AsServerT m)
-queryHistoryApiHandler = QueryHistoryAPI
-  { allHistory = queryAllHistoryHandler
-  }
-
-
-queryAllHistoryHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m) => Maybe LocalTime -> m Value
-queryAllHistoryHandler _startTime = do
-  logInfo "Querying all endpoint query history"
-
-  queries :: [QueryHistoryRecord] <- fmap fromRecords <$> (withPostgres . runSelectReturningList . selectWith) (queryHistoryE Nothing)
-
-  pure $ toJSON queries
 
 
 -- * ErrorAPI handlers
