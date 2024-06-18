@@ -50,7 +50,7 @@ data DebugAPI mode where
 data ErrorsAPI mode where
   ErrorsAPI ::
     { latestErrors :: mode :- "latest" :> Capture "amount" Integer :> Get '[JSON] Value
-    , errorsSince :: mode :- "since" :> Capture "days-ago" DaysAgo :> Get '[JSON] Value
+    , errorsSince  :: mode :- "since" :> Capture "days-ago" DaysAgo :> Get '[JSON] Value
     } -> ErrorsAPI mode
   deriving stock Generic
 
