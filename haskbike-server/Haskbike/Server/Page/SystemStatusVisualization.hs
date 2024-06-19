@@ -7,7 +7,6 @@ module Haskbike.Server.Page.SystemStatusVisualization
      , SystemStatusVisualizationPage (..)
      ) where
 
-
 import           Data.Default.Class
 import qualified Data.Text                                as T
 import qualified Data.Text.Lazy                           as TL
@@ -120,8 +119,6 @@ instance ToHtml SystemStatusVisualizationPage where
       div_ $ i_ "Note: Iconic (mechanical) bikes are not displayed on the chart above since e-bike quantities are more interesting."
 
     where
-      staticLink = _systemStatusVisPageStaticLink params
-
       times' = enforceTimeRangeBounds (StatusDataParams (tz $ _systemStatusVisPageTimeRange params)
                                                         (currentUtcTime $ _systemStatusVisPageTimeRange params)
                                                         (_systemStatusVisPageTimeRange params)
