@@ -97,12 +97,6 @@ library
                     , Haskbike.Server.Data.EmptyFullData
                     , Haskbike.Server.Data.FactorsCSV
                     , Haskbike.Server.Data.QueryHistory
-                    , Haskbike.Server.API.Components
-                    , Haskbike.Server.API.QueryLogs
-                    , Haskbike.Server.API.Data
-                    , Haskbike.Server.API.Debug
-                    , Haskbike.Server.API.Static
-                    , Haskbike.Server.API.Visualization
                     , Haskbike.Server.Page.IndexPage
                     , Haskbike.Server.Page.List.Common
                     , Haskbike.Server.Page.List.StationList
@@ -121,6 +115,14 @@ library
                     , Haskbike.Server.RobotsTXT
 
                     , Haskbike.Server.Routes
+
+                    , Haskbike.Server.API.Components
+                    , Haskbike.Server.API.QueryLogs
+                    , Haskbike.Server.API.Data
+                    , Haskbike.Server.API.Debug
+                    , Haskbike.Server.API.Static
+                    , Haskbike.Server.API.Visualization
+
                     , Haskbike.Server.Routes.Components
                     , Haskbike.Server.Routes.QueryLogs
                     , Haskbike.Server.Routes.Data
