@@ -9,7 +9,7 @@ module Haskbike.Server.Routes.TopLevel
      , routesLinks
      ) where
 
-import           Database.Beam
+import           GHC.Generics                         ( Generic )
 
 import           Haskbike.Server.API.Components
 import           Haskbike.Server.Page.IndexPage

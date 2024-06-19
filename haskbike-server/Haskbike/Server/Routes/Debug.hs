@@ -12,7 +12,7 @@ module Haskbike.Server.Routes.Debug
 
 import           Data.Aeson                       ( Value )
 
-import           Database.Beam
+import           GHC.Generics                     ( Generic )
 
 import           Haskbike.Database.DaysAgo
 import           Haskbike.Server.Routes.QueryLogs

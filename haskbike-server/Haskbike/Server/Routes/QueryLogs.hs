@@ -11,7 +11,7 @@ module Haskbike.Server.Routes.QueryLogs
 import           Data.Aeson                        ( Value )
 import           Data.Time                         ( LocalTime )
 
-import           Database.Beam
+import           GHC.Generics                      ( Generic )
 
 import           Haskbike.Database.EndpointQueried ( EndpointQueried )
 

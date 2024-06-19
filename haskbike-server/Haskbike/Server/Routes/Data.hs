@@ -11,7 +11,7 @@ import           Data.ByteString.Lazy                                ( ByteStrin
 import           Data.Text                                           ( Text )
 import           Data.Time
 
-import           Database.Beam
+import           GHC.Generics                                        ( Generic )
 
 import           Haskbike.Database.EventCounts
 import           Haskbike.Database.Operations.Factors

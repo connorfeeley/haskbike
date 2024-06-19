@@ -9,7 +9,7 @@ module Haskbike.Server.Routes.Visualization
 
 import           Data.Time
 
-import           Database.Beam
+import           GHC.Generics                                    ( Generic )
 
 import           Haskbike.Database.Tables.StationInformation
 import qualified Haskbike.Database.Tables.StationOccupancy       as DB
