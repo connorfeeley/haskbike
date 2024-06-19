@@ -9,7 +9,7 @@ module Haskbike.Server.Routes
      , server
      ) where
 
-import           Control.Monad.Catch               ( MonadCatch )
+import           Control.Monad.Catch                  ( MonadCatch )
 
 import           Database.Beam
 
@@ -23,6 +23,7 @@ import           Haskbike.Server.Page.IndexPage
 import           Haskbike.Server.Page.SideMenu
 import           Haskbike.Server.RobotsTXT
 import           Haskbike.Server.Routes.Data
+import           Haskbike.Server.Routes.Visualization
 import           Haskbike.ServerEnv
 
 import           Servant
