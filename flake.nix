@@ -201,7 +201,7 @@
                     tasty-discover
                     weeder
                     retrie
-                    ghcprofview
+                    # ghcprofview # broken
                     eventlog2html
                     stan
                     ;
