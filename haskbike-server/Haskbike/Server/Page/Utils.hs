@@ -21,7 +21,7 @@ import           Haskbike.Server.Routes.Static
 import           Lucid
 import           Lucid.Base                     ( makeAttribute )
 
-import           Servant                        ( Link, ToHttpApiData (toUrlPiece), linkURI )
+import           Servant                        ( Link, ToHttpApiData (toUrlPiece) )
 
 import           TextShow
 
@@ -111,5 +111,6 @@ hxSpinner_ link =
        , hx_ "get" $ "/" <> toUrlPiece link
        ] $
     img_ [ class_ "htmx-indicator htmx-spinner"
-          , src_ ("/" <> toUrlPiece (staticApi staticRoutesLinks) <> "/images/svg-loaders/circles.svg")
-          , alt_ "Loading..."]
+         , src_ ("/" <> toUrlPiece (staticApi staticRoutesLinks) <> "/images/svg-loaders/circles.svg")
+         , alt_ "Loading..."
+         ]
