@@ -33,7 +33,6 @@ data DebugAPI mode where
   DebugAPI ::
     { serverVersion :: mode :- "debug" :> "version"        :> Get '[JSON] Version
     , queryApi      :: mode :- "debug" :> "query-logs"     :> NamedRoutes QueryLogsAPI
-    , queryApiPage  :: mode :- "debug" :> "query-logs-page":> Get '[HTML] (PureSideMenu QueryHistoryComponent)
     , errorsApi     :: mode :- "debug" :> "errors"         :> NamedRoutes ErrorsAPI
     , sleepDatabase :: mode :- "debug" :> "sleep-database" :> Capture "seconds" Int :> Get '[JSON] ()
     } -> DebugAPI mode

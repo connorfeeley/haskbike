@@ -7,7 +7,6 @@ module Haskbike.Server.Page.QueryHistory
 
 import qualified Data.Text                        as T
 
-import           Haskbike.Server.API.QueryLogs
 import           Haskbike.Server.Classes          ( ToHtmlComponents (..) )
 import           Haskbike.Server.Page.Utils
 import           Haskbike.Server.Routes.QueryLogs
@@ -27,6 +26,7 @@ instance ToHtml QueryHistoryComponent where
     div_ [ hx_ "ext" "client-side-templates" ] $
       div_ [ hx_ "trigger" "load"
            , hx_ "get" ("/debug/query-logs/history/" <> (T.pack . show . linkURI) (fieldLink allHistory Nothing Nothing))
+           , hx_ "get" $ (T.pack . show . linkURI) (fieldLink allHistory Nothing Nothing)
            , makeAttribute "mustache-array-template"  "query-logs-template"
            ] mempty
     template_ [ id_ "query-logs-template"

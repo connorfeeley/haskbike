@@ -32,6 +32,7 @@ import           Haskbike.Server.Components.ChargingInfrastructureHeader
 import           Haskbike.Server.Components.DockingHeader
 import           Haskbike.Server.Components.PerformanceData
 import           Haskbike.Server.LatestQueries
+import           Haskbike.Server.Page.QueryHistory
 import           Haskbike.Server.Routes.Components
 import           Haskbike.Server.StatusDataParams
 import           Haskbike.ServerEnv
@@ -41,12 +42,12 @@ import           Servant.Server.Generic                                  ( AsSer
 
 import           UnliftIO
 
-componentsHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m, MonadError ServerError m)
+componentsHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m, MonadError ServerError m, HasServerEnv env m)
                   => ComponentsAPI (AsServerT m)
 componentsHandler =
   ComponentsAPI { eventsComponents = eventsComponentHandler }
 
-eventsComponentHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m, MonadError ServerError m)
+eventsComponentHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m, MonadError ServerError m, HasServerEnv env m)
                        => EventsComponentAPI (AsServerT m)
 eventsComponentHandler = EventsComponentAPI
   { dockingEventsHeader          = dockingsHeader
@@ -54,6 +55,7 @@ eventsComponentHandler = EventsComponentAPI
   , chargingInfrastructureHeader = chargingInfrastructureHeaderHandler
   , performanceHeader            = performanceHeaderHandler
   , latestQueries                = latestQueriesHandler
+  , queryApiPage                 = queryApiPageHandler
   }
 
 dockingsHeader :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m)
@@ -139,3 +141,10 @@ latestQueriesHandler _t = do
   tz <- getTz
   latest <- withPostgres $ runSelectReturningList $ selectWith queryLatestQueryLogs
   pure $ latestQueryLogsToMap tz latest
+
+queryApiPageHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m, HasServerEnv env m)
+                    => m QueryHistoryComponent
+queryApiPageHandler = do
+  logInfo "Rendering performance CSV page"
+
+  pure QueryHistoryComponent

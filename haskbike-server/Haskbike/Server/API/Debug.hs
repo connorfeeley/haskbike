@@ -42,7 +42,6 @@ debugApiHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m, HasS
 debugApiHandler =
   DebugAPI { serverVersion = versionHandler
            , queryApi      = queryApiHandler
-           , queryApiPage  = queryApiPageHandler
            , errorsApi     = errorsApiHandler
            , sleepDatabase = sleepDatabaseHandler
            }
@@ -88,10 +87,3 @@ latestErrorsHandler limit = do
   let x = filter (isJust . _queryLogErrJson) errors
   let e = decodeJsonErrors x
   pure $ toJSON e
-
-queryApiPageHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m, HasServerEnv env m)
-                    => m (PureSideMenu QueryHistoryComponent)
-queryApiPageHandler = do
-  logInfo "Rendering performance CSV page"
-
-  sideMenu $ QueryHistoryComponent { }

@@ -17,6 +17,7 @@ import           Haskbike.Server.Components.ChargingInfrastructureHeader
 import           Haskbike.Server.Components.DockingHeader
 import           Haskbike.Server.Components.PerformanceData
 import           Haskbike.Server.LatestQueries
+import           Haskbike.Server.Page.QueryHistory
 
 import           Servant
 import           Servant.HTML.Lucid
@@ -61,5 +62,6 @@ data EventsComponentAPI mode where
       "latest-queries"
         :> QueryParam "time" LocalTime
         :> Get '[HTML] LatestQueries
+    , queryApiPage  :: mode :- "debug" :> "query-logs-page":> Get '[HTML] QueryHistoryComponent
     } -> EventsComponentAPI mode
   deriving stock Generic
