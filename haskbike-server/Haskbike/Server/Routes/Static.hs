@@ -3,6 +3,7 @@
 
 module Haskbike.Server.Routes.Static
      ( StaticAPI (..)
+     , staticRoutesLinks
      ) where
 
 import           GHC.Generics ( Generic )
@@ -17,3 +18,6 @@ data StaticAPI mode where
     { staticApi :: mode :- "static" :> Raw
     } -> StaticAPI mode
   deriving stock Generic
+
+staticRoutesLinks :: StaticAPI (AsLink Link)
+staticRoutesLinks = allFieldLinks

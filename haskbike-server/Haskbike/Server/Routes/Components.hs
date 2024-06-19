@@ -6,11 +6,12 @@
 module Haskbike.Server.Routes.Components
      ( ComponentsAPI (..)
      , EventsComponentAPI (..)
+     , componentsRoutesLinks
      ) where
 
 import           Data.Time
 
-import           Database.Beam
+import           GHC.Generics                                            ( Generic )
 
 import           Haskbike.Server.Components.ChargingHeader
 import           Haskbike.Server.Components.ChargingInfrastructureHeader
@@ -65,3 +66,6 @@ data EventsComponentAPI mode where
     , queryApiPage  :: mode :- "query-logs-page":> Get '[HTML] QueryHistoryComponent
     } -> EventsComponentAPI mode
   deriving stock Generic
+
+componentsRoutesLinks :: ComponentsAPI (AsLink Link)
+componentsRoutesLinks = allFieldLinks

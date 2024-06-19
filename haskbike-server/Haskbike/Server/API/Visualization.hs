@@ -80,7 +80,6 @@ stationStatusVisualizationPage (Just stationId) startTime endTime = do
                                        , _statusVisPageTimeZone       = tz
                                        , _statusVisPageCurrentUtc     = currentUtc
                                        , _statusVisPageDataLink       = fieldLink dataForStation (Just stationId) startTime endTime
-                                       , _statusVisPageStaticLink     = fieldLink staticApi
                                        , _statusVisPageExternalAssets = assetsLocation
                                        }
     _noInfoFound ->  throwError err404 { errBody = "Unknown station ID." }

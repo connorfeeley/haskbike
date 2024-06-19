@@ -50,7 +50,6 @@ instance ToHtmlComponents QueryHistoryComponent where
 mustache :: (ToHtml a, Monad m, Semigroup a, IsString a, a ~ T.Text) => a -> HtmlT m ()
 mustache x = toHtmlRaw ("{{" <> x <> "}}")
 
--- mustacheTemplate :: (ToHtml a, Monad m, Semigroup a, IsString a, a ~ T.Text) => a -> HtmlT m ()
-mustacheTemplate :: Term [Attribute] (t1 -> t2) => T.Text -> t1 -> t2
+mustacheTemplate :: Term [Attribute] (a -> b) => T.Text -> a -> b
 mustacheTemplate name content = do
   template_ [ id_ name ] content

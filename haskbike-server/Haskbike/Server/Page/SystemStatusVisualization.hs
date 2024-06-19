@@ -103,9 +103,9 @@ instance ToHtml SystemStatusVisualizationPage where
       br_ []
       div_ [class_ "pure-g full-width", style_ "text-align: center"] $ do
         let headers = [ toHtml (_systemStatusVisPageInfo params)
-                      , mkHeader params _systemStatusVisPageStaticLink _systemStatusVisPageTimeRange Nothing dockingEventsHeader
-                      , mkHeader params _systemStatusVisPageStaticLink _systemStatusVisPageTimeRange Nothing chargingEventsHeader
-                      , hxSpinner_ staticLink ((fieldLink chargingInfrastructureHeader . latestTime . _systemStatusVisPageTimeRange) params)
+                      , mkHeader params _systemStatusVisPageTimeRange Nothing dockingEventsHeader
+                      , mkHeader params _systemStatusVisPageTimeRange Nothing chargingEventsHeader
+                      , hxSpinner_ ((fieldLink chargingInfrastructureHeader . latestTime . _systemStatusVisPageTimeRange) params)
                       ]
         mconcat $ map (`with` [class_ ("pure-u-md-1-" <> showt (length headers))]) headers
 

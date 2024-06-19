@@ -16,6 +16,7 @@ module Haskbike.Server.Page.Utils
 import qualified Data.Text                      as T
 
 import           Haskbike.Server.ExternalAssets
+import           Haskbike.Server.Routes.Static
 
 import           Lucid
 import           Lucid.Base                     ( makeAttribute )
@@ -104,9 +105,11 @@ hx_ :: T.Text -> T.Text -> Attribute
 hx_ attr = makeAttribute ("hx-" <> attr)
 
 
--- FIXME: manually prefixing with '/components' defeats the whole point of safe links.
-hxSpinner_ :: Monad m => Link -> Link -> HtmlT m ()
-hxSpinner_ staticPath link = div_ [ hx_ "trigger" "load"
-                                  , hx_ "get" ("/components/" <> (T.pack . show . linkURI) link)
-                                  ]
-                             (img_ [class_ "htmx-indicator htmx-spinner", src_ ("/" <> toUrlPiece staticPath <> "/images/svg-loaders/circles.svg"), alt_ "Loading..."])
+hxSpinner_ :: Monad m => Link -> HtmlT m ()
+hxSpinner_ link =
+  div_ [ hx_ "trigger" "load"
+       , hx_ "get" $ "/" <> toUrlPiece link
+       ] $
+    img_ [ class_ "htmx-indicator htmx-spinner"
+          , src_ ("/" <> toUrlPiece (staticApi staticRoutesLinks) <> "/images/svg-loaders/circles.svg")
+          , alt_ "Loading..."]

@@ -131,8 +131,10 @@ performanceHeaderHandler stationId startTime endTime = do
     (withPostgresTransaction $ queryStationOccupancy 0 0 stationId
       (localTimeToUTC tz (earliestTime range)) (localTimeToUTC tz (latestTime range))
     )
+  -- FIXME: don't use `head`.
   let emptyFull = head $ map (\(_inf, occ) -> DB.emptyFullFromSecs (DB._stnOccEmptySec occ) (DB._stnOccFullSec occ)) emptyFullTup
 
+  -- FIXME: don't use `head`.
   pure $ (head . map (integralToPerformanceData emptyFull)) perf
 
 latestQueriesHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadError ServerError m, MonadUnliftIO m)

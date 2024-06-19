@@ -35,7 +35,6 @@ data StationStatusVisualizationPage where
                                     , _statusVisPageTimeZone       :: TimeZone
                                     , _statusVisPageCurrentUtc     :: UTCTime
                                     , _statusVisPageDataLink       :: Link
-                                    , _statusVisPageStaticLink     :: Link
                                     , _statusVisPageExternalAssets :: ExternalAssetLocation
                                     } -> StationStatusVisualizationPage
 
@@ -76,13 +75,13 @@ instance ToHtml StationStatusVisualizationPage where
 
     where
       headers = catMaybes [ Just capacityHeader
-                          , Just (mkHeader params _statusVisPageStaticLink _statusVisPageTimeRange (Just (_statusVisPageStationId params)) dockingEventsHeader)
+                          , Just (mkHeader params _statusVisPageTimeRange (Just (_statusVisPageStationId params)) dockingEventsHeader)
                           , if _infoIsChargingStation inf then Just chargingHeader else Nothing
-                          , Just (mkHeader params _statusVisPageStaticLink _statusVisPageTimeRange (Just (_statusVisPageStationId params)) performanceHeader)
+                          , Just (mkHeader params _statusVisPageTimeRange (Just (_statusVisPageStationId params)) performanceHeader)
                           , valetHeader
                           , virtualHeader
                           ]
-      chargingHeader = mkHeader params _statusVisPageStaticLink _statusVisPageTimeRange (Just (_statusVisPageStationId params)) chargingEventsHeader
+      chargingHeader = mkHeader params _statusVisPageTimeRange (Just (_statusVisPageStationId params)) chargingEventsHeader
 
       inf = _statusVisPageStationInfo params
 

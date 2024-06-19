@@ -16,6 +16,7 @@ import           Data.Time.Extras
 import qualified Graphics.Vega.VegaLite                  as VL
 
 import           Haskbike.Server.Page.Utils
+import           Haskbike.Server.Routes.Components
 import           Haskbike.Server.StatusDataParams
 import           Haskbike.Visualization.StationOccupancy
 
@@ -46,9 +47,8 @@ maybeHeader cond expr =
 times :: TimeZone -> UTCTime -> TimePair (Maybe LocalTime) -> TimePair LocalTime
 times tz currentUtc range  = enforceTimeRangeBounds (StatusDataParams tz currentUtc range)
 
-mkHeader params static range station headerComponent = hxSpinner_ staticPath componentLink
+mkHeader params range station headerComponent = hxSpinner_ componentLink
   where
-    staticPath    = static params
     earliestTimeP = (earliestTime . range) params
     latestTimeP   = (latestTime   . range) params
-    componentLink = fieldLink headerComponent station earliestTimeP latestTimeP
+    componentLink = (headerComponent . eventsComponents $ componentsRoutesLinks) station earliestTimeP latestTimeP
