@@ -120,6 +120,7 @@ library
                     , Haskbike.Server.PureCSS
                     , Haskbike.Server.RobotsTXT
                     , Haskbike.Server.Routes
+                    , Haskbike.Server.Routes.Data
                     , Haskbike.Server.StatusDataParams
                     , Haskbike.Server.LatestQueries
                     , Haskbike.Server.LatestQueriesComponent

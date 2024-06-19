@@ -29,7 +29,6 @@ import           Haskbike.Database.Operations
 import           Haskbike.Database.Tables.StationInformation
 import qualified Haskbike.Database.Tables.StationOccupancy       as DB
 import           Haskbike.Database.Tables.StationStatus
-import           Haskbike.Server.API.Data
 import           Haskbike.Server.API.Static
 import           Haskbike.Server.Page.List.StationList
 import           Haskbike.Server.Page.PerformanceCSV
@@ -37,6 +36,7 @@ import           Haskbike.Server.Page.SideMenu
 import           Haskbike.Server.Page.StationStatusVisualization
 import           Haskbike.Server.Page.SystemInfoVisualization
 import           Haskbike.Server.Page.SystemStatusVisualization
+import           Haskbike.Server.Routes.Data
 import           Haskbike.ServerEnv
 import           Haskbike.TimeInterval
 
