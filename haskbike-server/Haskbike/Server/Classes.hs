@@ -22,8 +22,11 @@ class ToHtmlComponents a where
 
   -- | Page name (used in sidebar)
   pageName      :: a -> Text
+
+  -- FIXME: currently, all instances have the anchor ("#") hardcoded in the pageAnchor function.
   -- | Page anchor link (used in sidebar)
   pageAnchor    :: a -> Text
+
   -- | Page title (used on page itself). Defaults to 'pageName'.
   pageTitle     :: a -> Text
   pageTitle     = pageName
