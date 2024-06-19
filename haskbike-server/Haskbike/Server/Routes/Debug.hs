@@ -16,9 +16,9 @@ import           Data.Aeson                        ( Value )
 import           Database.Beam
 
 import           Haskbike.Database.DaysAgo
-import           Haskbike.Server.API.QueryLogs
 import           Haskbike.Server.Page.QueryHistory ( QueryHistoryComponent (..) )
 import           Haskbike.Server.Page.SideMenu
+import           Haskbike.Server.Routes.QueryLogs
 
 import           Servant
 import           Servant.HTML.Lucid

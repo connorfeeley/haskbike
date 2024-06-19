@@ -4,9 +4,7 @@
 -- | Query logs API definitions.
 
 module Haskbike.Server.API.QueryLogs
-     ( QueryLogsAPI (..)
-     , QueryLogsHistoryAPI (..)
-     , queryApiHandler
+     ( queryApiHandler
      ) where
 
 import           Colog
@@ -22,36 +20,12 @@ import           Database.Beam
 import           Haskbike.Database.EndpointQueried         ( EndpointQueried )
 import           Haskbike.Database.Operations.QueryHistory
 import           Haskbike.Server.Data.QueryHistory
+import           Haskbike.Server.Routes.QueryLogs
 import           Haskbike.ServerEnv
 
-import           Servant
 import           Servant.Server.Generic                    ( AsServerT )
 
 import           UnliftIO
-
-
--- * API endpoint definitions.
-
--- | API for querying query logs.
-data QueryLogsAPI mode where
-  QueryLogsAPI ::
-    { history :: mode :- "history" :> NamedRoutes QueryLogsHistoryAPI
-    } -> QueryLogsAPI mode
-  deriving stock Generic
-
-
--- | API for querying the query log history.
-data QueryLogsHistoryAPI mode where
-  QueryLogsHistoryAPI ::
-    { allHistory         :: mode :- "all"
-                            :> QueryParam "start-time" LocalTime :> QueryParam "end-time" LocalTime
-                            :> Get '[JSON] Value
-    , historyForEndpoint :: mode :- "endpoint"
-                            :> Capture "endpoint" EndpointQueried
-                            :> QueryParam "start-time" LocalTime :> QueryParam "end-time" LocalTime
-                            :> Get '[JSON] Value
-    } -> QueryLogsHistoryAPI mode
-  deriving stock Generic
 
 
 -- * QueryLogsAPI handlers

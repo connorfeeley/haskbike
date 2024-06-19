@@ -5,16 +5,17 @@ module Haskbike.Server.Page.QueryHistory
      ) where
 
 
-import qualified Data.Text                     as T
+import qualified Data.Text                        as T
 
 import           Haskbike.Server.API.QueryLogs
-import           Haskbike.Server.Classes       ( ToHtmlComponents (..) )
+import           Haskbike.Server.Classes          ( ToHtmlComponents (..) )
 import           Haskbike.Server.Page.Utils
+import           Haskbike.Server.Routes.QueryLogs
 
 import           Lucid
-import           Lucid.Base                    ( makeAttribute )
+import           Lucid.Base                       ( makeAttribute )
 
-import           Servant                       ( fieldLink, linkURI )
+import           Servant                          ( fieldLink, linkURI )
 
 
 data QueryHistoryComponent where

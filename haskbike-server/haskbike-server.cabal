@@ -122,6 +122,7 @@ library
 
                     , Haskbike.Server.Routes
                     , Haskbike.Server.Routes.Components
+                    , Haskbike.Server.Routes.QueryLogs
                     , Haskbike.Server.Routes.Data
                     , Haskbike.Server.Routes.Debug
                     , Haskbike.Server.Routes.Visualization
