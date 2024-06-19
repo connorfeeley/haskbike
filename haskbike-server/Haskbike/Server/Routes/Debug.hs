@@ -7,6 +7,7 @@ module Haskbike.Server.Routes.Debug
      ( DebugAPI (..)
      , ErrorsAPI (..)
      , Version
+     , debugRoutesLinks
      ) where
 
 import           Data.Aeson                       ( Value )
@@ -40,3 +41,6 @@ data ErrorsAPI mode where
     , errorsSince  :: mode :- "since" :> Capture "days-ago" DaysAgo :> Get '[JSON] Value
     } -> ErrorsAPI mode
   deriving stock Generic
+
+debugRoutesLinks :: DebugAPI (AsLink Link)
+debugRoutesLinks = allFieldLinks

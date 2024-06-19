@@ -145,6 +145,6 @@ latestQueriesHandler _t = do
 queryApiPageHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m, HasServerEnv env m)
                     => m QueryHistoryComponent
 queryApiPageHandler = do
-  logInfo "Rendering performance CSV page"
+  logInfo "Rendering query log history page"
 
   pure QueryHistoryComponent

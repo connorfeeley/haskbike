@@ -7,6 +7,7 @@ module Haskbike.Server.Page.Utils
      , hx_
      , makeFavicons
      , makeHeadElements
+     , makeHtmxElements
      , mkData_
      , showth
      , stylesheet_
@@ -39,6 +40,20 @@ makeFavicons staticPath = mapM (link_ . linkAttrs)
     linkAttrs sz = [rel_ "icon noopener noreferrer", type_ "image/png", sizes_ (ssz sz), target_ "_blank", hrefAttr sz]
 
 
+makeHtmxElements :: Monad m => ExternalAssetLocation -> HtmlT m ()
+makeHtmxElements assetsLocation = do
+  -- HTMX
+  script_ [ src_ (assetUrl (getAssetDetails   @HTMX assetsLocation))
+          , integrity_     (getAssetIntegrity @HTMX assetsLocation)
+          , crossorigin_ "anonymous"
+          , defer_ mempty
+          ] ("" :: T.Text)
+  script_ [ src_ (assetUrl (getAssetDetails   @HTMXExtClientSideTemplates assetsLocation))
+          , integrity_     (getAssetIntegrity @HTMXExtClientSideTemplates assetsLocation)
+          , crossorigin_ "anonymous", defer_ mempty
+          ] ("" :: T.Text)
+
+
 -- | Create standard <head> elements.
 makeHeadElements :: Monad m => ExternalAssetLocation -> T.Text -> HtmlT m ()
 makeHeadElements assetsLocation staticPath = do
@@ -55,15 +70,7 @@ makeHeadElements assetsLocation staticPath = do
   stylesheet_ (getAssetUrl @PureCssGrids assetsLocation) [integrity_ (getAssetIntegrity @PureCssGrids assetsLocation), crossorigin_ "anonymous", defer_ mempty]
 
   -- HTMX
-  script_ [ src_ (assetUrl (getAssetDetails   @HTMX assetsLocation))
-          , integrity_     (getAssetIntegrity @HTMX assetsLocation)
-          , crossorigin_ "anonymous"
-          , defer_ mempty
-          ] ("" :: T.Text)
-  script_ [ src_ (assetUrl (getAssetDetails   @HTMXExtClientSideTemplates assetsLocation))
-          , integrity_     (getAssetIntegrity @HTMXExtClientSideTemplates assetsLocation)
-          , crossorigin_ "anonymous", defer_ mempty
-          ] ("" :: T.Text)
+  makeHtmxElements assetsLocation
 
   -- Mustache templating engine (for HTMX client side templates)
   script_ [ src_ (assetUrl (getAssetDetails   @Mustache assetsLocation))

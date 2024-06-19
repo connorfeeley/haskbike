@@ -62,6 +62,6 @@ data EventsComponentAPI mode where
       "latest-queries"
         :> QueryParam "time" LocalTime
         :> Get '[HTML] LatestQueries
-    , queryApiPage  :: mode :- "debug" :> "query-logs-page":> Get '[HTML] QueryHistoryComponent
+    , queryApiPage  :: mode :- "query-logs-page":> Get '[HTML] QueryHistoryComponent
     } -> EventsComponentAPI mode
   deriving stock Generic
