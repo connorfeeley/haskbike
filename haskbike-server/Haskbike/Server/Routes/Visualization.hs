@@ -7,41 +7,22 @@ module Haskbike.Server.Routes.Visualization
      ( VisualizationAPI (..)
      ) where
 
-import           Colog
-
-import           Control.Lens
-import           Control.Monad.Catch                             ( MonadCatch, MonadThrow )
-import           Control.Monad.Except                            ( MonadError )
-
-import           Data.Default.Class                              ( def )
-import           Data.Maybe                                      ( fromMaybe, listToMaybe )
-import qualified Data.Text                                       as T
 import           Data.Time
-import           Data.Time.Extras
 
 import           Database.Beam
 
-import           Haskbike.Database.Expressions
-import           Haskbike.Database.Operations
 import           Haskbike.Database.Tables.StationInformation
 import qualified Haskbike.Database.Tables.StationOccupancy       as DB
 import           Haskbike.Database.Tables.StationStatus
-import           Haskbike.Server.API.Static
 import           Haskbike.Server.Page.List.StationList
 import           Haskbike.Server.Page.PerformanceCSV
 import           Haskbike.Server.Page.SideMenu
 import           Haskbike.Server.Page.StationStatusVisualization
 import           Haskbike.Server.Page.SystemInfoVisualization
 import           Haskbike.Server.Page.SystemStatusVisualization
-import           Haskbike.Server.Routes.Data
-import           Haskbike.ServerEnv
-import           Haskbike.TimeInterval
 
 import           Servant
 import           Servant.HTML.Lucid
-import           Servant.Server.Generic
-
-import           UnliftIO                                        ( MonadUnliftIO )
 
 
 -- | Visualization API handler.
