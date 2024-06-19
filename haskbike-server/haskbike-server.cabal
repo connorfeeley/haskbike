@@ -125,6 +125,7 @@ library
                     , Haskbike.Server.Routes.QueryLogs
                     , Haskbike.Server.Routes.Data
                     , Haskbike.Server.Routes.Debug
+                    , Haskbike.Server.Routes.Static
                     , Haskbike.Server.Routes.Visualization
 
                     , Haskbike.Server.StatusDataParams

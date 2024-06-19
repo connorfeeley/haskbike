@@ -24,6 +24,7 @@ import           Haskbike.Server.Page.SideMenu
 import           Haskbike.Server.RobotsTXT
 import           Haskbike.Server.Routes.Data
 import           Haskbike.Server.Routes.Debug
+import           Haskbike.Server.Routes.Static
 import           Haskbike.Server.Routes.Visualization
 import           Haskbike.ServerEnv
 

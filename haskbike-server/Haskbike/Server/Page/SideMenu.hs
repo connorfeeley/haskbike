@@ -15,13 +15,13 @@ import           Control.Monad.Reader
 import qualified Data.Text                              as T
 
 import           Haskbike.AppEnv
-import           Haskbike.Server.API.Static
 import           Haskbike.Server.Classes
 import           Haskbike.Server.ExternalAssets
 import           Haskbike.Server.LatestQueries
 import           Haskbike.Server.LatestQueriesComponent
 import           Haskbike.Server.Page.Utils
 import           Haskbike.Server.PureCSS
+import           Haskbike.Server.Routes.Static
 import           Haskbike.ServerEnv
 import           Haskbike.Version
 
