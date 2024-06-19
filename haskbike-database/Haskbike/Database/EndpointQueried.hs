@@ -76,6 +76,16 @@ instance FromHttpApiData EndpointQueried where
     Right v -> Right v
   parseQueryParam = parseUrlPiece
 
+instance ToHttpApiData EndpointQueried where
+  toQueryParam = toUrlPiece
+  toUrlPiece VersionsEP           = T.pack "versions"
+  toUrlPiece VehicleTypesEP       = T.pack "vehicle-types"
+  toUrlPiece StationInformationEP = T.pack "station-information"
+  toUrlPiece StationStatusEP      = T.pack "station-status"
+  toUrlPiece SystemRegionsEP      = T.pack "system-regions"
+  toUrlPiece SystemInformationEP  = T.pack "system-information"
+  toUrlPiece SystemPricingPlansEP = T.pack "system-pricing-plans"
+
 
 instance FromBackendRow Postgres EndpointQueried where
 
