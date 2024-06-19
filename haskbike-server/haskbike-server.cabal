@@ -123,6 +123,7 @@ library
                     , Haskbike.Server.Routes
                     , Haskbike.Server.Routes.Components
                     , Haskbike.Server.Routes.Data
+                    , Haskbike.Server.Routes.Debug
                     , Haskbike.Server.Routes.Visualization
 
                     , Haskbike.Server.StatusDataParams
