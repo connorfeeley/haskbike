@@ -13,6 +13,7 @@ import           Data.Fixed                        ( Pico )
 import           Data.Int                          ( Int32 )
 import qualified Data.Text                         as T
 import           Data.Time
+import           Data.Time.Extras
 
 import           GHC.Float                         ( roundDouble )
 import           GHC.Generics                      ( Generic )
@@ -40,7 +41,7 @@ data QueryHistoryRecord a where
   deriving (Show)
   deriving stock (Generic)
 
-instance ToJSON a => ToJSON (QueryHistoryRecord a) where
+instance (ToJSON t, FormatTime t) => ToJSON (QueryHistoryRecord t) where
   toJSON record =
     object [ "endpoint"            .= endpoint record
            , "total"               .= total record
@@ -76,14 +77,17 @@ data QueryHistoryDetailRecord a where
   deriving (Show)
   deriving stock (Generic)
 
-instance ToJSON a => ToJSON (QueryHistoryDetailRecord a) where
+instance (ToJSON t, FormatTime t) => ToJSON (QueryHistoryDetailRecord t) where
   toJSON record =
     object [ "num-queries"  .= count record
-           , "avg-interval" .= toTime (avgInterval record)
-           , "latest-query" .= latest record
+           , "avg-interval" .= toInterval (avgInterval record)
+           , "latest-query" .= (formatTimeHtml <$> latest record)
            ]
     where
-      toTime = T.pack . formatTime defaultTimeLocale "%d:%H:%M:%S"
+      toInterval = T.pack . formatTime defaultTimeLocale "%d:%H:%M:%S"
+
+formatTimeHtml :: FormatTime t => t -> T.Text
+formatTimeHtml = T.pack . formatTime defaultTimeLocale shortTimeFormat
 
 instance ToLocalTime (QueryHistoryDetailRecord UTCTime) (QueryHistoryDetailRecord LocalTime) where
   toLocalTime tz (QueryHistoryDetailRecord count avgInterval latest) =

@@ -14,6 +14,7 @@ import           Control.Monad.Catch                ( MonadCatch )
 import qualified Data.Map                           as Map
 import qualified Data.Text                          as T
 import           Data.Time
+import           Data.Time.Extras
 
 import           Database.Beam                      hiding ( div_ )
 
@@ -64,11 +65,6 @@ endpointName ep = case ep of
 
 formatTimeHtml :: LocalTime -> T.Text
 formatTimeHtml = T.pack . formatTime defaultTimeLocale shortTimeFormat
-
-
--- Short month name, day, hours-minutes-seconds
-shortTimeFormat :: String
-shortTimeFormat = "%b %d %H:%M:%S"
 
 latestQueryLogsToMap :: TimeZone -> [QueryLog] -> LatestQueries
 latestQueryLogsToMap tz = LatestQueries . queryMap
