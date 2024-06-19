@@ -5,17 +5,20 @@
 
 module Haskbike.Server.Routes.Visualization
      ( VisualizationAPI (..)
+     , VisualizationRoutesAPI (..)
      ) where
 
 import           Data.Time
 
 import           GHC.Generics                                    ( Generic )
 
+import           Haskbike.Database.EndpointQueried
 import           Haskbike.Database.Tables.StationInformation
 import qualified Haskbike.Database.Tables.StationOccupancy       as DB
 import           Haskbike.Database.Tables.StationStatus
 import           Haskbike.Server.Page.List.StationList
 import           Haskbike.Server.Page.PerformanceCSV
+import           Haskbike.Server.Page.QueryHistory
 import           Haskbike.Server.Page.SideMenu
 import           Haskbike.Server.Page.StationStatusVisualization
 import           Haskbike.Server.Page.SystemInfoVisualization
@@ -24,43 +27,49 @@ import           Haskbike.Server.Page.SystemStatusVisualization
 import           Servant
 import           Servant.HTML.Lucid
 
-
 -- | Visualization API handler.
 data VisualizationAPI mode where
   VisualizationAPI ::
+    { visualization :: mode :- "visualization" :> NamedRoutes VisualizationRoutesAPI
+    } -> VisualizationAPI mode
+  deriving stock Generic
+
+-- | Visualization API handler.
+data VisualizationRoutesAPI mode where
+  VisualizationRoutesAPI ::
     { pageForStation :: mode :-
-        "visualization" :>
-          "station-status"
+        "station-status"
           :> QueryParam "station-id" Int :> QueryParam "start-time" LocalTime :> QueryParam "end-time" LocalTime
           :> Get '[HTML] (PureSideMenu StationStatusVisualizationPage)
     , systemStatus :: mode :-
-        "visualization" :>
-          "system-status"
+        "system-status"
           :> QueryParam "start-time" LocalTime :> QueryParam "end-time" LocalTime
           :> Get '[HTML] (PureSideMenu SystemStatusVisualizationPage)
     , stationList :: mode :-
-        "visualization" :>
-          "station-list"
+        "station-list"
           :> QueryParam "end-time"     LocalTime
           :> Get '[HTML] (PureSideMenu (StationList [(StationInformation, StationStatus)]))
     , stationEmptyFullList :: mode :-
-        "visualization" :>
-          "station-occupancy"
+        "station-occupancy"
           :> QueryParam "start-time"   LocalTime
           :> QueryParam "end-time"     LocalTime
           :> Get '[HTML] (PureSideMenu (StationList [(StationInformation, StationStatus, DB.EmptyFull)]))
     , systemInfo :: mode :-
-        "visualization" :>
-          "system-information"
+        "system-information"
           :> QueryParam "start-time" LocalTime :> QueryParam "end-time" LocalTime
           :> Get '[HTML] (PureSideMenu SystemInfoVisualizationPage)
     , performanceCsvPage :: mode :-
-        "visualization" :>
-          "system-status" :>
+        "system-status" :>
           "performance" :>
           "csv"
           :> QueryParam "start-time" LocalTime
           :> QueryParam "end-time" LocalTime
           :> Get '[HTML] (PureSideMenu PerformanceCSV)
-    } -> VisualizationAPI mode
+    , queryHistoryPage :: mode :-
+        "query-history"
+          :> QueryParam "endpoint"   EndpointQueried
+          :> QueryParam "start-time" LocalTime
+          :> QueryParam "end-time"   LocalTime
+          :> Get '[HTML] (PureSideMenu QueryHistoryPage)
+    } -> VisualizationRoutesAPI mode
   deriving stock Generic

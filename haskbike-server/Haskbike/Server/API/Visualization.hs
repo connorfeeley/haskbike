@@ -23,6 +23,7 @@ import           Data.Time.Extras
 
 import           Database.Beam
 
+import           Haskbike.Database.EndpointQueried
 import           Haskbike.Database.Expressions
 import           Haskbike.Database.Operations
 import           Haskbike.Database.Tables.StationInformation
@@ -30,6 +31,7 @@ import qualified Haskbike.Database.Tables.StationOccupancy       as DB
 import           Haskbike.Database.Tables.StationStatus
 import           Haskbike.Server.Page.List.StationList
 import           Haskbike.Server.Page.PerformanceCSV
+import           Haskbike.Server.Page.QueryHistory               ( QueryHistoryPage (..) )
 import           Haskbike.Server.Page.SideMenu
 import           Haskbike.Server.Page.StationStatusVisualization
 import           Haskbike.Server.Page.SystemInfoVisualization
@@ -51,12 +53,19 @@ import           UnliftIO                                        ( MonadUnliftIO
 visualizationHandler :: ( HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m, MonadError ServerError m, HasServerEnv env m )
                      => VisualizationAPI (AsServerT m)
 visualizationHandler = VisualizationAPI
+  { visualization = visualizationRoutesHandler
+  }
+
+visualizationRoutesHandler :: ( HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m, MonadError ServerError m, HasServerEnv env m )
+                           => VisualizationRoutesAPI (AsServerT m)
+visualizationRoutesHandler = VisualizationRoutesAPI
   { pageForStation       = stationStatusVisualizationPage
   , systemStatus         = systemStatusVisualizationPage
   , stationList          = stationListPageHandler
   , stationEmptyFullList = stationEmptyFullListPage
   , systemInfo           = systemInfoVisualizationPage
   , performanceCsvPage   = performanceCsvPageHandler
+  , queryHistoryPage     = queryHistoryPageHandler
   }
 
 -- | Create the station status visualization page record.
@@ -195,3 +204,14 @@ performanceCsvPageHandler startTime endTime = do
     , performanceCsvPageDataLink   = fieldLink performanceCsv Nothing startTime endTime
     , performanceCsvPageStaticLink = fieldLink staticApi
     }
+
+queryHistoryPageHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m, HasServerEnv env m)
+                          => Maybe EndpointQueried -> Maybe LocalTime -> Maybe LocalTime
+                          -> m (PureSideMenu QueryHistoryPage)
+queryHistoryPageHandler ep startTime endTime = do
+  tz <- getTz
+  currentUtc <- liftIO getCurrentTime
+
+  logInfo "Rendering query history page"
+
+  sideMenu QueryHistoryPage
