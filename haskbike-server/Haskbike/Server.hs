@@ -19,7 +19,7 @@ import           Control.Monad.Reader
 import           Data.Default                              ( def )
 import           Data.Function                             ( (&) )
 
-import           Haskbike.Server.Routes
+import           Haskbike.Server.API.TopLevel
 import           Haskbike.ServerEnv
 
 import           Network.Wai                               ( Middleware )
