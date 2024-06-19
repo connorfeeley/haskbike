@@ -31,7 +31,8 @@ import qualified Haskbike.Database.Tables.StationOccupancy       as DB
 import           Haskbike.Database.Tables.StationStatus
 import           Haskbike.Server.Page.List.StationList
 import           Haskbike.Server.Page.PerformanceCSV
-import           Haskbike.Server.Page.QueryHistory               ( QueryHistoryPage (..) )
+import           Haskbike.Server.Page.QueryHistory               ( QueryHistoryComponent (QueryHistoryComponent),
+                                                                   QueryHistoryPage (..) )
 import           Haskbike.Server.Page.SideMenu
 import           Haskbike.Server.Page.StationStatusVisualization
 import           Haskbike.Server.Page.SystemInfoVisualization
@@ -206,8 +207,9 @@ performanceCsvPageHandler startTime endTime = do
     }
 
 queryHistoryPageHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m, HasServerEnv env m)
-                          => Maybe EndpointQueried -> Maybe LocalTime -> Maybe LocalTime
-                          -> m (PureSideMenu QueryHistoryPage)
+                        => Maybe EndpointQueried
+                        -> Maybe LocalTime -> Maybe LocalTime
+                        -> m (PureSideMenu QueryHistoryPage)
 queryHistoryPageHandler ep startTime endTime = do
   logInfo "Rendering query history page"
 
@@ -216,4 +218,4 @@ queryHistoryPageHandler ep startTime endTime = do
   let endTime'   = localTimeToUTC tz <$> endTime
 
 
-  sideMenu $ QueryHistoryPage ep startTime' endTime'
+  sideMenu . QueryHistoryPage $ QueryHistoryComponent ep startTime' endTime'

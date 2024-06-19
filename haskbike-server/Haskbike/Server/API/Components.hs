@@ -20,6 +20,7 @@ import           Data.Time.Extras
 
 import           Database.Beam
 
+import           Haskbike.Database.EndpointQueried                       ( EndpointQueried )
 import           Haskbike.Database.Expressions
 import           Haskbike.Database.Operations.Dockings
 import           Haskbike.Database.Operations.Factors
@@ -145,8 +146,11 @@ latestQueriesHandler _t = do
   pure $ latestQueryLogsToMap tz latest
 
 queryHistoryHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m, HasServerEnv env m)
-                    => m QueryHistoryComponent
-queryHistoryHandler = do
-  logInfo "Rendering query log history page"
+                    => Maybe EndpointQueried
+                    -> Maybe UTCTime
+                    -> Maybe UTCTime
+                    -> m QueryHistoryComponent
+queryHistoryHandler ep startTime endTime = do
+  logDebug "Rendering query log history component"
 
-  pure QueryHistoryComponent
+  pure $ QueryHistoryComponent ep startTime endTime

@@ -13,6 +13,7 @@ import           Data.Time
 
 import           GHC.Generics                                            ( Generic )
 
+import           Haskbike.Database.EndpointQueried                       ( EndpointQueried )
 import           Haskbike.Server.Components.ChargingHeader
 import           Haskbike.Server.Components.ChargingInfrastructureHeader
 import           Haskbike.Server.Components.DockingHeader
@@ -61,9 +62,14 @@ data EventsComponentAPI mode where
           :> Get '[HTML] PerformanceData
     , latestQueries :: mode :-
       "latest-queries"
-        :> QueryParam "time" LocalTime
-        :> Get '[HTML] LatestQueries
-    , queryHistory :: mode :- "query-history":> Get '[HTML] QueryHistoryComponent
+          :> QueryParam "time" LocalTime
+          :> Get '[HTML] LatestQueries
+    , queryHistory :: mode :-
+      "query-history"
+          :> QueryParam "endpoint"   EndpointQueried
+          :> QueryParam "start-time" UTCTime
+          :> QueryParam "end-time"   UTCTime
+      :> Get '[HTML] QueryHistoryComponent
     } -> EventsComponentAPI mode
   deriving stock Generic
 
