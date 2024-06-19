@@ -119,8 +119,11 @@ library
                     , Haskbike.Server.Page.Utils
                     , Haskbike.Server.PureCSS
                     , Haskbike.Server.RobotsTXT
+
                     , Haskbike.Server.Routes
+                    , Haskbike.Server.Routes.Components
                     , Haskbike.Server.Routes.Data
+
                     , Haskbike.Server.StatusDataParams
                     , Haskbike.Server.LatestQueries
                     , Haskbike.Server.LatestQueriesComponent

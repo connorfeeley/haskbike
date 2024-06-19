@@ -32,61 +32,19 @@ import           Haskbike.Server.Components.ChargingInfrastructureHeader
 import           Haskbike.Server.Components.DockingHeader
 import           Haskbike.Server.Components.PerformanceData
 import           Haskbike.Server.LatestQueries
+import           Haskbike.Server.Routes.Components
 import           Haskbike.Server.StatusDataParams
 import           Haskbike.ServerEnv
 
 import           Servant
-import           Servant.HTML.Lucid
 import           Servant.Server.Generic                                  ( AsServerT )
 
 import           UnliftIO
-
--- HTMX API
-data ComponentsAPI mode where
-  ComponentsAPI ::
-    { eventsComponents :: mode :- "components" :> NamedRoutes EventsComponentAPI
-    } -> ComponentsAPI mode
-  deriving stock Generic
 
 componentsHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m, MonadError ServerError m)
                   => ComponentsAPI (AsServerT m)
 componentsHandler =
   ComponentsAPI { eventsComponents = eventsComponentHandler }
-
-data EventsComponentAPI mode where
-  EventsComponentAPI ::
-    { dockingEventsHeader :: mode :-
-      "events"
-        :> "docking"
-          :> QueryParam "station-id" Int
-          :> QueryParam "start-time" LocalTime
-          :> QueryParam "end-time" LocalTime
-          :> Get '[HTML] DockingHeader
-    , chargingEventsHeader :: mode :-
-      "events"
-        :> "charging"
-          :> QueryParam "station-id" Int
-          :> QueryParam "start-time" LocalTime
-          :> QueryParam "end-time" LocalTime
-          :> Get '[HTML] ChargingHeader
-    , chargingInfrastructureHeader :: mode :-
-      "system-status"
-        :> "charging-infrastructure"
-          :> QueryParam "time" LocalTime
-          :> Get '[HTML] ChargingInfrastructureHeader
-    , performanceHeader :: mode :-
-      "station-status"
-        :> "performance"
-          :> QueryParam "station-id" Int
-          :> QueryParam "start-time" LocalTime
-          :> QueryParam "end-time" LocalTime
-          :> Get '[HTML] PerformanceData
-    , latestQueries :: mode :-
-      "latest-queries"
-        :> QueryParam "time" LocalTime
-        :> Get '[HTML] LatestQueries
-    } -> EventsComponentAPI mode
-  deriving stock Generic
 
 eventsComponentHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m, MonadError ServerError m)
                        => EventsComponentAPI (AsServerT m)
