@@ -22,18 +22,13 @@ import           Haskbike.Database.DaysAgo
 import           Haskbike.Database.Operations.QueryLogs
 import           Haskbike.Database.Tables.QueryLogs
 import           Haskbike.Server.API.QueryLogs
-import           Haskbike.Server.Page.QueryHistory      ( QueryHistoryComponent (..) )
-import           Haskbike.Server.Page.SideMenu
 import           Haskbike.Server.Routes.Debug
 import           Haskbike.ServerEnv
 import           Haskbike.Version
 
-import           Servant
-import           Servant.HTML.Lucid
 import           Servant.Server.Generic                 ( AsServerT )
 
 import           UnliftIO
-
 
 
 -- * Handlers

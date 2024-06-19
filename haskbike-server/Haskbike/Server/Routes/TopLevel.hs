@@ -9,16 +9,9 @@ module Haskbike.Server.Routes.TopLevel
      , routesLinks
      ) where
 
-import           Control.Monad.Catch                  ( MonadCatch )
-
 import           Database.Beam
 
-import           Haskbike.AppEnv
 import           Haskbike.Server.API.Components
-import           Haskbike.Server.API.Data
-import           Haskbike.Server.API.Debug
-import           Haskbike.Server.API.Static
-import           Haskbike.Server.API.Visualization
 import           Haskbike.Server.Page.IndexPage
 import           Haskbike.Server.Page.SideMenu
 import           Haskbike.Server.RobotsTXT
@@ -26,13 +19,9 @@ import           Haskbike.Server.Routes.Data
 import           Haskbike.Server.Routes.Debug
 import           Haskbike.Server.Routes.Static
 import           Haskbike.Server.Routes.Visualization
-import           Haskbike.ServerEnv
 
 import           Servant
 import           Servant.HTML.Lucid
-import           Servant.Server.Generic
-
-import           UnliftIO
 
 
 -- | The API type.

@@ -9,22 +9,17 @@ module Haskbike.Server.Routes.Debug
      , Version
      ) where
 
-
-
-import           Data.Aeson                        ( Value )
+import           Data.Aeson                       ( Value )
 
 import           Database.Beam
 
 import           Haskbike.Database.DaysAgo
-import           Haskbike.Server.Page.QueryHistory ( QueryHistoryComponent (..) )
-import           Haskbike.Server.Page.SideMenu
 import           Haskbike.Server.Routes.QueryLogs
 
 import           Servant
-import           Servant.HTML.Lucid
 
 
-
+-- | The version of the server.
 type Version = ((String, String), (String, String))
 
 
