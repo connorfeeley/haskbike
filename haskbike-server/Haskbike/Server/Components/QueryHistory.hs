@@ -7,7 +7,6 @@ module Haskbike.Server.Components.QueryHistory
 import           Data.String                      ( IsString )
 import qualified Data.Text                        as T
 
-import           Haskbike.Server.Classes          ( ToHtmlComponents (..) )
 import           Haskbike.Server.ExternalAssets   ( ExternalAssetLocation (ExternalAssetCDN) )
 import           Haskbike.Server.Page.Utils
 import           Haskbike.Server.Routes.Debug
@@ -39,12 +38,6 @@ instance ToHtml QueryHistoryComponent where
         h3_ [class_ "menu-heading"] "Endpoint: "
         mustache "endpoint" <> " "
       mustache "/data"
-
-instance ToHtmlComponents QueryHistoryComponent where
-  pageName :: QueryHistoryComponent -> T.Text
-  pageName _ = "Test"
-  pageAnchor :: QueryHistoryComponent -> T.Text
-  pageAnchor _ = "Test"
 
 mustache :: (ToHtml a, Monad m, Semigroup a, IsString a, a ~ T.Text) => a -> HtmlT m ()
 mustache x = toHtmlRaw ("{{" <> x <> "}}")
