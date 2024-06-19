@@ -91,6 +91,7 @@ library
                     , Haskbike.Server.Components.ChargingInfrastructureHeader
                     , Haskbike.Server.Components.DockingHeader
                     , Haskbike.Server.Components.PerformanceData
+                    , Haskbike.Server.Components.QueryHistory
                     , Haskbike.Server.Data.StationStatusVisualization
                     , Haskbike.Server.Data.SystemInformationVisualization
                     , Haskbike.Server.Data.StationList

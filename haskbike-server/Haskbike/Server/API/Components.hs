@@ -31,8 +31,8 @@ import           Haskbike.Server.Components.ChargingHeader
 import           Haskbike.Server.Components.ChargingInfrastructureHeader
 import           Haskbike.Server.Components.DockingHeader
 import           Haskbike.Server.Components.PerformanceData
+import           Haskbike.Server.Components.QueryHistory
 import           Haskbike.Server.LatestQueries
-import           Haskbike.Server.Page.QueryHistory
 import           Haskbike.Server.Routes.Components
 import           Haskbike.Server.StatusDataParams
 import           Haskbike.ServerEnv
@@ -55,7 +55,7 @@ eventsComponentHandler = EventsComponentAPI
   , chargingInfrastructureHeader = chargingInfrastructureHeaderHandler
   , performanceHeader            = performanceHeaderHandler
   , latestQueries                = latestQueriesHandler
-  , queryApiPage                 = queryApiPageHandler
+  , queryHistory                 = queryHistoryHandler
   }
 
 dockingsHeader :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m)
@@ -144,9 +144,9 @@ latestQueriesHandler _t = do
   latest <- withPostgres $ runSelectReturningList $ selectWith queryLatestQueryLogs
   pure $ latestQueryLogsToMap tz latest
 
-queryApiPageHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m, HasServerEnv env m)
+queryHistoryHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m, HasServerEnv env m)
                     => m QueryHistoryComponent
-queryApiPageHandler = do
+queryHistoryHandler = do
   logInfo "Rendering query log history page"
 
   pure QueryHistoryComponent
