@@ -209,9 +209,11 @@ queryHistoryPageHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO
                           => Maybe EndpointQueried -> Maybe LocalTime -> Maybe LocalTime
                           -> m (PureSideMenu QueryHistoryPage)
 queryHistoryPageHandler ep startTime endTime = do
-  tz <- getTz
-  currentUtc <- liftIO getCurrentTime
-
   logInfo "Rendering query history page"
 
-  sideMenu QueryHistoryPage
+  tz <- getTz
+  let startTime' = localTimeToUTC tz <$> startTime
+  let endTime'   = localTimeToUTC tz <$> endTime
+
+
+  sideMenu $ QueryHistoryPage ep startTime' endTime'

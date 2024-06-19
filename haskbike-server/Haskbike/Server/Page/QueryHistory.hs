@@ -5,7 +5,9 @@ module Haskbike.Server.Page.QueryHistory
      ) where
 
 import qualified Data.Text                               as T
+import           Data.Time                               ( UTCTime )
 
+import           Haskbike.Database.EndpointQueried
 import           Haskbike.Server.Classes                 ( ToHtmlComponents (..) )
 import           Haskbike.Server.Components.QueryHistory
 
@@ -13,7 +15,11 @@ import           Lucid
 
 
 data QueryHistoryPage where
-  QueryHistoryPage :: { } -> QueryHistoryPage
+  QueryHistoryPage ::
+    { queryHistEndpoint  :: Maybe EndpointQueried
+    , queryHistStartTime :: Maybe UTCTime
+    , queryHistEndTime   :: Maybe UTCTime
+    } -> QueryHistoryPage
 
 instance ToHtml QueryHistoryPage where
   toHtmlRaw = toHtml
