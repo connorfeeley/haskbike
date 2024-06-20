@@ -83,7 +83,15 @@ renderMenu params =
         navLink "/visualization/system-status/performance/csv" "Performance Data (CSV)"
 
     div_ [id_ "menu-footer"] $ do
+      -- Fill remaining space.
       div_ [class_ "menu-vertical-spacer"] mempty
+
+      -- Semi-hidden debug pages - hover to show links.
+      ul_ [style_ "hidden-text"] $ do
+        div_ [class_ "hidden-text"] $ span_ [class_ "pure-menu-link hidden-text"] "Debug Information"
+        div_ [style_ "margin-left:20px;"] $
+          a_ [class_ "hidden-text", href_ "/visualization/query-history"] $ span_ [class_ "pure-menu-link hidden-text"] "Query History"
+
       toHtml LatestQueriesComponent
       renderVersion params
 
@@ -109,14 +117,16 @@ versionLink ver = linkElement shortVersion
 
 -- | 'SideMenu' smart constructor.
 sideMenu :: (HasEnv env m, MonadIO m, ToHtml a, ToHtmlComponents a, MonadCatch m, HasServerEnv env m)
-         => a -> m (PureSideMenu a)
+         -- => Link
+         => a
+         -> m (PureSideMenu a)
 sideMenu content = do
   assetsLocation <- getServerAssetsLocation
   pure $
     PureSideMenu
-    { pageContent      = content
-    , assetsLocation   = assetsLocation
-    , staticLink       = fieldLink staticApi
-    , cabalVersionText = getCabalVersion
-    , gitVersionText   = getGitHash
+    { pageContent       = content
+    , assetsLocation    = assetsLocation
+    , staticLink        = fieldLink staticApi
+    , cabalVersionText  = getCabalVersion
+    , gitVersionText    = getGitHash
     }

@@ -18,7 +18,7 @@ navLink href text =
 
 navLinkDivided :: Monad m => Text -> Text -> HtmlT m ()
 navLinkDivided href text =
-  li_ [class_ "menu-item-divided pure-menu-selected"] $
+  li_ [class_ "menu-item-divided"] $
     a_ [class_ "pure-menu-link", href_ href] (toHtml text)
 
 -- | Create an 'h2_' with the "content-subhead" class.
