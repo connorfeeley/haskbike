@@ -85,7 +85,7 @@ makeHeadElements assetsLocation staticPath = do
 
   script_ [ src_ (getAssetUrl @GoatCounterAnalytics assetsLocation)
           , mkData_ "goatcounter" "https://stats.bikes.cfeeley.org/count"
-          , integrity_ (getAssetIntegrity @PureCssGrids assetsLocation)
+          , integrity_ (getAssetIntegrity @GoatCounterAnalytics assetsLocation)
           , crossorigin_ "anonymous"
           , defer_ mempty
           ] ("" :: T.Text)
