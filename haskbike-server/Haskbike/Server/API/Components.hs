@@ -139,7 +139,8 @@ performanceHeaderHandler stationId startTime endTime = do
   pure $ (head . map (integralToPerformanceData emptyFull)) perf
 
 latestQueriesHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadError ServerError m, MonadUnliftIO m)
-                     => Maybe LocalTime -> m LatestQueries
+                     => Maybe LocalTime
+                     -> m LatestQueries
 latestQueriesHandler _t = do
   tz <- getTz
   latest <- withPostgres $ runSelectReturningList $ selectWith queryLatestQueryLogs
