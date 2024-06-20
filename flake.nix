@@ -211,8 +211,10 @@
                   # ghcid = null;
 
                   ### Other tools.
-                  inherit (pkgs)
+                  inherit (pkgs.llvmPackages_16)
                     clang# Faster to link with clang
+                    ;
+                  inherit (pkgs)
                     stack
                     reuse
                     litecli
