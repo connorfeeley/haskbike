@@ -6,6 +6,7 @@
 module Haskbike.Server.Routes.Visualization
      ( VisualizationAPI (..)
      , VisualizationRoutesAPI (..)
+     , visualizationRoutesLinks
      ) where
 
 import           Data.Time
@@ -73,3 +74,6 @@ data VisualizationRoutesAPI mode where
           :> Get '[HTML] (PureSideMenu QueryHistoryPage)
     } -> VisualizationRoutesAPI mode
   deriving stock Generic
+
+visualizationRoutesLinks :: VisualizationAPI (AsLink Link)
+visualizationRoutesLinks = allFieldLinks
