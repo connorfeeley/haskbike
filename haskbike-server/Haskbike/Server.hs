@@ -15,7 +15,7 @@ module Haskbike.Server
 import           Colog                                     ( HasLog, logError )
 
 import           Control.Conditional                       ( condM )
-import           Control.Monad.Catch                       ( MonadCatch, MonadThrow, throwM )
+import           Control.Monad.Catch                       ( MonadThrow )
 import           Control.Monad.Reader
 
 import           Data.Aeson
@@ -24,17 +24,16 @@ import qualified Data.ByteString.Lazy.Char8                as BL8
 import           Data.Data                                 ( Proxy (..) )
 import           Data.Default                              ( def )
 import           Data.Function                             ( (&) )
-import           Data.String                               ( IsString (fromString) )
 import           Data.String.Conversions                   ( cs )
+import qualified Data.String.Conversions.Monomorphic       as BL8
 import qualified Data.Text                                 as T
-import qualified Data.Text.Lazy                            as TL
 
 import           Haskbike.Server.API.TopLevel
+import           Haskbike.Server.Page.ErrorPage
 import           Haskbike.ServerEnv
 
 import           Lucid
 
-import           Network.HTTP.Types
 import qualified Network.HTTP.Types                        as H
 import           Network.Wai
 import           Network.Wai.Handler.Warp                  as Warp
@@ -92,21 +91,12 @@ serverSettings env = do
 
 onExceptionResponse :: Exception e
                     => String -> e -> Response
-onExceptionResponse email _ex =
-    responseBuilder H.internalServerError500
-                    [(H.hContentType, "text/html; charset=utf-8")]
-                    renderErrorPage
+onExceptionResponse email ex = do
+  responseBuilder H.internalServerError500
+                  [(H.hContentType, "text/html; charset=utf-8")]
+                  renderErrorPage
   where
-    renderErrorPage = (Builder.stringUtf8 . TL.unpack . renderText) (errorPage (T.pack email) _ex)
-
-
-errorPage :: (Monad m, Exception e) => T.Text -> e -> HtmlT m ()
-errorPage email ex = do
-  h1_ "Server Error"
-  div_ $ "Oops, you broke the server! Send me an email at " <> emailLink <> "."
-  where
-    emailLink = a_ [ href_ ("mailto:" <> email) ] (toHtml email)
-
+    renderErrorPage = Builder.stringUtf8 . BL8.fromLazyByteString . renderBS . toHtml $ ErrorPage (T.pack email) ex
 
 -- | Natural transformation between server monad and Servant 'Handler' monad.
 serverNt :: ServerEnv ServerAppM -> ServerAppM a -> S.Handler a
