@@ -26,7 +26,7 @@ instance ToHtml LatestQueriesComponent where
   toHtmlRaw = toHtml
   toHtml _ =
     div_ [ hx_ "trigger" "load"
-         , hx_ "get" $ (T.pack . show . linkURI) ((latestQueries . eventsComponents) componentsRoutesLinks Nothing)
+         , hx_ "get" $ "/" <> (T.pack . show . linkURI) ((latestQueries . eventsComponents) componentsRoutesLinks Nothing)
          ] $ -- (img_ [class_ "htmx-indicator htmx-spinner", src_ ("/" <> toUrlPiece (staticLink params) <> "/images/svg-loaders/circles.svg"), alt_ "Loading..."])
       div_ [class_ "menu-footer-element"] $
           h3_ [class_ "menu-heading latest-updated-header"] "Last Updated" >>
