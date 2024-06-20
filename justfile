@@ -3,48 +3,49 @@
 #   like a script, with `./justfile test`, for example.
 
 set shell := ["bash", "-c"]
-
 set positional-arguments := true
+set export := true
 
-export CABAL := "cabal --with-gcc=clang --with-ld=clang -O0"
+export CABAL_OPTS := "--with-gcc=clang --with-ld=clang --ghc-options='-fllvm -O0'"
+export CABAL := "cabal ${CABAL_OPTTS}"
+
 # To benchmark:
 # {{CABAL}} v2-run --enable-profiling exes -- --plain visualize -v --log-database +RTS -p
 
 export OLD_STATUS_COLS := "station_id, last_reported, num_bikes_available, num_bikes_disabled, num_docks_available, num_docks_disabled, is_charging_station, status, is_installed, is_renting, is_returning, traffic, vehicle_docks_available, vehicle_types_available_boost, vehicle_types_available_iconic, vehicle_types_available_efit, vehicle_types_available_efit_g5"
 export OLD_INFO_COLS := "id, station_id, name, physical_configuration, lat, lon, altitude, address, capacity, is_charging_station, rental_methods, is_valet_station, is_virtual_station, groups, obcn, nearby_distance, bluetooth_id, ride_code_support, rental_uris, active"
-
 export NEW_STATUS_COLS := ""
 export NEW_INFO_COLS := "id, station_id, name, physical_configuration, lat, lon, altitude, address, capacity, is_charging_station, rental_methods, is_valet_station, is_virtual_station, groups, obcn, nearby_distance, bluetooth_id, ride_code_support, rental_uris, active, reported"
-
 export ENDPOINT := "http://localhost:8081"
+
 # export ENDPOINT := "https://bikes.cfeeley.org"
 
 status STATION_ID='7001':
-    curl --location "https://toronto.publicbikesystem.net/customer/gbfs/v2/en/station_status" | jq '.data.stations[] | select(.station_id=="{{STATION_ID}}")'
+    curl --location "https://toronto.publicbikesystem.net/customer/gbfs/v2/en/station_status" | jq '.data.stations[] | select(.station_id=="{{ STATION_ID }}")'
 
 info STATION_ID='7001':
-    curl --location "https://toronto.publicbikesystem.net/customer/gbfs/v2/en/station_information" | jq '.data.stations[] | select(.station_id=="{{STATION_ID}}")'
+    curl --location "https://toronto.publicbikesystem.net/customer/gbfs/v2/en/station_information" | jq '.data.stations[] | select(.station_id=="{{ STATION_ID }}")'
 
 integrals STATION_ID='7001':
-    curl --location "{{ENDPOINT}}/data/station-status/integral?station-id={{STATION_ID}}" | jq .
+    curl --location "{{ ENDPOINT }}/data/station-status/integral?station-id={{ STATION_ID }}" | jq .
 
 errors-latest AMOUNT='1':
-    curl --location "{{ENDPOINT}}/debug/errors/latest/{{AMOUNT}}" | jq .
+    curl --location "{{ ENDPOINT }}/debug/errors/latest/{{ AMOUNT }}" | jq .
 
 version:
-    curl --location "{{ENDPOINT}}/version" | jq .
+    curl --location "{{ ENDPOINT }}/version" | jq .
 
 factors STATION_ID='7001':
-    curl --location "{{ENDPOINT}}/data/station-status/factor?station-id={{STATION_ID}}" | jq .
+    curl --location "{{ ENDPOINT }}/data/station-status/factor?station-id={{ STATION_ID }}" | jq .
 
 performance-csv:
-    wget --content-disposition "{{ENDPOINT}}/data/system-status/performance/csv"
+    wget --content-disposition "{{ ENDPOINT }}/data/system-status/performance/csv"
 
 performance-csv-nov:
-    wget --content-disposition "{{ENDPOINT}}/data/system-status/performance/csv?start-time=2023-11-01T00%3A00&end-time=2023-12-01T00%3A00"
+    wget --content-disposition "{{ ENDPOINT }}/data/system-status/performance/csv?start-time=2023-11-01T00%3A00&end-time=2023-12-01T00%3A00"
 
 performance-csv-station STATION_ID='7001':
-    wget --content-disposition "{{ENDPOINT}}/data/system-status/performance/csv?station-id={{STATION_ID}}"
+    wget --content-disposition "{{ ENDPOINT }}/data/system-status/performance/csv?station-id={{ STATION_ID }}"
 
 sums:
     curl "https://tor.publicbikesystem.net/customer/gbfs/v2/en/station_status" | \
@@ -57,81 +58,83 @@ sum-ebike-v1:
 
 test PACKAGE='all':
     set -euo pipefail
-    {{CABAL}} test {{PACKAGE}} --test-show-details=direct
+    {{ CABAL }} test {{ PACKAGE }} --test-show-details=direct
 
 run *ARGS:
-    {{CABAL}} run haskbike-cli -- --plain -v {{ARGS}}
+    {{ CABAL }} run haskbike-cli -- --plain -v {{ ARGS }}
 
 test-one PACKAGE PATTERN:
-    {{CABAL}} test {{PACKAGE}} --test-show-details=direct --test-options='--pattern=/{{PATTERN}}/'
+    {{ CABAL }} test {{ PACKAGE }} --test-show-details=direct --test-options='--pattern=/{{ PATTERN }}/'
 
 # Benchmark and compare against a baseline.
 bench PACKAGE='all':
-    {{CABAL}} bench {{PACKAGE}} --benchmark-options="--baseline=bench-baseline.csv --fail-if-slower=10 --fail-if-faster=10"
+    {{ CABAL }} bench {{ PACKAGE }} --benchmark-options="--baseline=bench-baseline.csv --fail-if-slower=10 --fail-if-faster=10"
 
 # Save benchmark results as a benchline.
 bench-baseline PACKAGE='all':
-    {{CABAL}} bench {{PACKAGE}} --benchmark-options="--csv=bench-baseline.csv --fail-if-slower=10 --fail-if-faster=10"
+    {{ CABAL }} bench {{ PACKAGE }} --benchmark-options="--csv=bench-baseline.csv --fail-if-slower=10 --fail-if-faster=10"
 
 bench-one PACKAGE PATTERN:
-    {{CABAL}} bench {{PACKAGE}} --benchmark-options="--baseline=bench-baseline.csv --fail-if-slower=10 --fail-if-faster=10 --pattern=/{{PATTERN}}/"
+    {{ CABAL }} bench {{ PACKAGE }} --benchmark-options="--baseline=bench-baseline.csv --fail-if-slower=10 --fail-if-faster=10 --pattern=/{{ PATTERN }}/"
 
 poll *ARGS:
-    {{CABAL}} run haskbike-cli -- --plain poll {{ARGS}} -v
+    {{ CABAL }} run haskbike-cli -- --plain poll {{ ARGS }} -v
 
 reset *ARGS:
     #!/usr/bin/env bash
     source ./.env.local
-    {{CABAL}} run haskbike-cli -- --plain reset --reset-only -v --log-database {{ARGS}}
+    {{ CABAL }} run haskbike-cli -- --plain reset --reset-only -v --log-database {{ ARGS }}
 
 migrate *ARGS:
     #!/usr/bin/env bash
     source ./.env.local
-    {{CABAL}} run haskbike-cli -- --plain debug --enable-migrations -v --log-database
+    {{ CABAL }} run haskbike-cli -- --plain debug --enable-migrations -v --log-database
 
 serve *ARGS:
-    {{CABAL}} v2-run --enable-profiling --profiling-detail all-functions haskbike-cli -- --plain serve {{ARGS}} -v
+    {{ CABAL }} v2-run --enable-profiling --profiling-detail all-functions haskbike-cli -- --plain serve {{ ARGS }} -v
 
 export-rds-table TABLE:
     #!/usr/bin/env bash
     PGPASSWORD=$HASKBIKE_PASSWORD psql -h "$HASKBIKE_PGDBHOST" -p "$HASKBIKE_PGDBPORT" -U "$HASKBIKE_USERNAME" \
         -d haskbike \
-        -c "SELECT * FROM public.{{TABLE}}" \
-        --csv -P csv_fieldsep="^" > "./scripts/database-dumps/rds/{{TABLE}}-$(date '+%Y-%m-%d-%H-%M').csv"
+        -c "SELECT * FROM public.{{ TABLE }}" \
+        --csv -P csv_fieldsep="^" > "./scripts/database-dumps/rds/{{ TABLE }}-$(date '+%Y-%m-%d-%H-%M').csv"
 
 export-local-table TABLE:
     PGPASSWORD=$HASKBIKE_PASSWORD psql -h "$HASKBIKE_PGDBHOST" -p "$HASKBIKE_PGDBPORT" -U "$HASKBIKE_USERNAME" \
         -d haskbike \
-        -c "SELECT * FROM public.{{TABLE}}" \
-        --csv -P csv_fieldsep="^" > "./scripts/database-dumps/{{TABLE}}-$(date '+%Y-%m-%d-%H-%M').csv"
+        -c "SELECT * FROM public.{{ TABLE }}" \
+        --csv -P csv_fieldsep="^" > "./scripts/database-dumps/{{ TABLE }}-$(date '+%Y-%m-%d-%H-%M').csv"
 
 watch:
     fd . --extension=nix --extension=hs | entr -a just build-clang
 
+cabal *ARGS:
+    {{ CABAL }} {{ ARGS }}
+
 build-clang:
-    {{CABAL}} --with-gcc=clang --with-ld=clang --ghc-options=-fllvm build
+    {{ CABAL }} build
 
 build *ARGS:
-    {{CABAL}} build {{ARGS}}
+    {{ CABAL }} build {{ ARGS }}
 
 clean *ARGS:
-    cabal clean {{ARGS}}
+    {{ CABAL }} clean {{ ARGS }}
 
 redate:
     git-privacy redate origin/master
 
 module-timings:
-    cabal clean
-    cabal build --ghc-options "-O0 -ddump-to-file -ddump-timings"
+    {{ CABAL }} clean
+    {{ CABAL }} build --ghc-options "-O0 -ddump-to-file -ddump-timings"
     nix run "nixpkgs#time-ghc-modules"
-
 
 import-local-table TABLE CSVFILE:
     #!/usr/bin/env bash
     source ./.env.local
     PGPASSWORD=$HASKBIKE_PASSWORD psql -h "$HASKBIKE_PGDBHOST" -p "$HASKBIKE_PGDBPORT" -U "$HASKBIKE_USERNAME" \
         -d haskbike \
-        -c "COPY {{TABLE}} FROM '{{CSVFILE}}' WITH (FORMAT csv, DELIMITER '^', HEADER true)"
+        -c "COPY {{ TABLE }} FROM '{{ CSVFILE }}' WITH (FORMAT csv, DELIMITER '^', HEADER true)"
 
 # import-local-station-info CSVFILE:
 #     #!/usr/bin/env bash
@@ -145,10 +148,10 @@ import-local-station-info CSVFILE:
     source ./.env.local
     PGPASSWORD=$HASKBIKE_PASSWORD psql -h "$HASKBIKE_PGDBHOST" -p "$HASKBIKE_PGDBPORT" -U "$HASKBIKE_USERNAME" \
         -d haskbike \
-        -c "COPY station_information ({{NEW_INFO_COLS}}) FROM '{{CSVFILE}}' WITH (FORMAT csv, DELIMITER '^', HEADER true)"
+        -c "COPY station_information ({{ NEW_INFO_COLS }}) FROM '{{ CSVFILE }}' WITH (FORMAT csv, DELIMITER '^', HEADER true)"
 
 profile:
-    {{CABAL}} v2-run --enable-profiling exes -- poll -v +RTS -p
+    {{ CABAL }} v2-run --enable-profiling exes -- poll -v +RTS -p
 
 sha384-integrity FILE:
-    cat {{FILE}} | openssl dgst -sha384 -binary | openssl base64 -A
+    cat {{ FILE }} | openssl dgst -sha384 -binary | openssl base64 -A
