@@ -161,6 +161,8 @@ library
                     , time
                     , unliftio
                     , data-default
+                    , uuid
+                    , string-conversions
 
                     , attoparsec
                     , base-compat-batteries
@@ -174,8 +176,10 @@ library
                     , aeson-pretty
                     , http-client
                     , http-client-tls
+                    , http-types
                     , lucid
                     , servant-lucid
+                    , servant
                     , servant-server
                     , wai
                     , wai-extra
