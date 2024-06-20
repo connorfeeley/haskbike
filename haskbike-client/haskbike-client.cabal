@@ -158,7 +158,6 @@ test-suite haskbike-client-test
     build-depends:    base
                     , tasty
                     , tasty-hunit
-                    , haskbike-core
                     , haskbike-client
                     , bytestring
                     , aeson

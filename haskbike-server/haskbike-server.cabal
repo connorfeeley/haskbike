@@ -157,7 +157,6 @@ library
                     , containers
                     , exceptions
                     , mtl
-                    , resource-pool >= 0.4.0.0
                     , text
                     , time
                     , unliftio
@@ -183,7 +182,6 @@ library
                     , warp
 
                     , beam-core
-                    , postgresql-simple
 
     -- Directories containing source files.
     -- hs-source-dirs:
