@@ -12,12 +12,16 @@ module Haskbike.Server
      ) where
 
 
+import           Colog                                     ( HasLog, logError )
+
 import           Control.Conditional                       ( condM )
-import           Control.Monad.Catch                       ( throwM )
+import           Control.Monad.Catch                       ( MonadCatch, MonadThrow, throwM )
 import           Control.Monad.Reader
 
+import qualified Data.ByteString.Lazy.Char8                as BL8
 import           Data.Default                              ( def )
 import           Data.Function                             ( (&) )
+import qualified Data.Text                                 as T
 
 import           Haskbike.Server.API.TopLevel
 import           Haskbike.ServerEnv
@@ -77,12 +81,14 @@ serverSettings env = defaultSettings
 serverNt :: ServerEnv ServerAppM -> ServerAppM a -> S.Handler a
 serverNt env action =
   liftIO $
-    runReaderT (unServerAppM action) env `catch` exceptionHandler
-  where
-    exceptionHandler :: SomeException -> IO a
-    exceptionHandler ex = throwM (servantErrFromEx ex)
+    runReaderT (unServerAppM action) env `catch` (\x -> runReaderT (unServerAppM (exceptionHandler x)) env)
 
-servantErrFromEx :: SomeException -> S.ServerError
+exceptionHandler :: (MonadReader env m, HasLog env Message m, MonadThrow m) => SomeException -> m b
+exceptionHandler ex = do
+  logError $ "Caught exception: " <> T.pack (show ex)
+  throwM (servantErrFromEx ex)
+
+servantErrFromEx :: Exception e => e -> S.ServerError
 servantErrFromEx _ex = S.err500 { S.errBody = "Internal server error" }
 
 serverApp :: ServerEnv ServerAppM -> S.Application
