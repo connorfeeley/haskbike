@@ -21,10 +21,8 @@ import qualified Data.Text                                       as T
 import           Data.Time
 import           Data.Time.Extras
 
-import           Database.Beam
-
 import           Haskbike.Database.EndpointQueried
-import           Haskbike.Database.Expressions
+import           Haskbike.Database.Expressions                   ( infoByIdQ )
 import           Haskbike.Database.Operations
 import           Haskbike.Database.Tables.StationInformation
 import qualified Haskbike.Database.Tables.StationOccupancy       as DB
@@ -46,7 +44,7 @@ import           Haskbike.TimeInterval
 import           Servant
 import           Servant.Server.Generic
 
-import           UnliftIO                                        ( MonadUnliftIO )
+import           UnliftIO                                        ( MonadIO, MonadUnliftIO, liftIO )
 
 
 -- * Handlers.
@@ -77,7 +75,7 @@ stationStatusVisualizationPage (Just stationId) startTime endTime = do
   tz <- getTz
   currentUtc <- liftIO getCurrentTime
 
-  info <- withPostgres $ runSelectReturningList $ selectWith $ infoByIdExpr [fromIntegral stationId]
+  info <- infoByIdQ stationId
 
   case info of
     [info'] -> do

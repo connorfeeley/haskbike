@@ -8,7 +8,8 @@
 
 module Haskbike.Database.Expressions
      ( disabledDocksExpr
-     , infoByIdExpr
+     , infoByIdE
+     , infoByIdQ
      , insertStationInformationExpr
      , integrateColumns
      , queryChargingInfrastructure
@@ -132,9 +133,13 @@ statusInfoBetweenExpr stationId startTime endTime = do
           between_ (status ^. statusLastReported) (val_ startTime) (val_ endTime))
   pure (info, status)
 
+
+infoByIdQ :: (HasEnv env m, MonadIO m, MonadCatch m) => Int -> m [StationInformation]
+infoByIdQ stationId = withPostgres . runSelectReturningList . selectWith $ infoByIdE [fromIntegral stationId]
+
 -- | Expression to query information for stations by their IDs.
-infoByIdExpr :: [Int32] -> With Postgres BikeshareDb (Q Postgres BikeshareDb s (StationInformationT (QGenExpr QValueContext Postgres s)))
-infoByIdExpr stationIds = do
+infoByIdE :: [Int32] -> With Postgres BikeshareDb (Q Postgres BikeshareDb s (StationInformationT (QGenExpr QValueContext Postgres s)))
+infoByIdE stationIds = do
   info         <- selecting $ all_ (bikeshareDb ^. bikeshareStationInformation)
   status       <- selecting $ all_ (bikeshareDb ^. bikeshareStationStatus)
   statusLookup <- selecting $ all_ (bikeshareDb ^. bikeshareStationLookup)
