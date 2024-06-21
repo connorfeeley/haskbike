@@ -186,8 +186,6 @@ library
                     , wai-extra
                     , warp
 
-                    , beam-core
-
     -- Directories containing source files.
     -- hs-source-dirs:
 

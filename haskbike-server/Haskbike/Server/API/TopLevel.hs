@@ -9,8 +9,6 @@ module Haskbike.Server.API.TopLevel
 
 import           Control.Monad.Catch                  ( MonadCatch )
 
-import           Database.Beam
-
 import           Haskbike.AppEnv
 import           Haskbike.Server.API.Components
 import           Haskbike.Server.API.Data
