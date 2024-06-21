@@ -22,11 +22,14 @@ module Haskbike.Database.Expressions
      , queryLatestStatusLookup
      , queryLatestStatuses
      , queryLatestSystemInfoE
+     , queryStationBefore
      , queryStationBeforeExpr
      , queryStationIdExpr
      , queryStationIdLikeExpr
      , queryStationStatusExpr
      , querySystemStatusAtRangeExpr
+     , querySystemStatusAtRangeQ
+     , statusBetween
      , statusBetweenExpr
      , statusInfoBetweenExpr
      , systemStatusBetweenExpr
@@ -94,6 +97,13 @@ systemStatusBetweenExpr start_time end_time =
             between_  (status ^. statusLastReported) (val_ start_time) (val_ end_time)
            )
     pure status
+
+statusBetween :: (HasEnv env m, MonadIO m, MonadCatch m) => Int -> UTCTime -> UTCTime -> m [StationStatus]
+statusBetween stationId startTime endTime = do
+  withPostgres .
+    runSelectReturningList . select $ -- limit_ 10000 $
+    statusBetweenExpr (fromIntegral stationId) startTime endTime
+
 
 -- | Expression to query the statuses for a station between two times.
 statusBetweenExpr :: Int32 -> UTCTime -> UTCTime -> Q Postgres BikeshareDb s (StationStatusT (QGenExpr QValueContext Postgres s))
@@ -203,6 +213,10 @@ queryLatestStatusBetweenExpr earliestTime latestTime = do
     )
 
 
+queryStationBefore :: (HasEnv env m, MonadIO m, MonadCatch m) => UTCTime -> m [(StationInformation, StationStatus)]
+queryStationBefore latestTime = withPostgres . runSelectReturningList . select $
+  queryStationBeforeExpr latestTime
+
 -- | Expression to query the latest statuses not later than a given time for each station.
 queryStationBeforeExpr :: UTCTime
                        -> Q Postgres BikeshareDb s (StationInformationT (QGenExpr QValueContext Postgres s), StationStatusT (QExpr Postgres s))
@@ -218,6 +232,12 @@ queryStationBeforeExpr latestTime = do
 
 mkTime :: UTCTime -> QGenExpr ctxt Postgres s b
 mkTime  = (`cast_` (DataType $ timestampType Nothing True)) . val_
+
+
+-- FIXME: ambiguously named; how is this different from 'querySystemStatusAtRange'?
+querySystemStatusAtRangeQ :: (HasEnv env m, MonadIO m, MonadCatch m) => UTCTime -> UTCTime -> Integer -> m [(UTCTime, Int32, Int32, Int32, Int32, Int32, Int32, Int32)]
+querySystemStatusAtRangeQ start end increment = withPostgres . runSelectReturningList . selectWith $
+    querySystemStatusAtRangeExpr start end increment
 
 {- Expression to query aggregate information from the latest statuses not later than a given time for each station.
 

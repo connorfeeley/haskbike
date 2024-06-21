@@ -17,11 +17,9 @@ import qualified Data.Text                                           as T
 import           Data.Time
 import           Data.Time.Extras
 
-import           Database.Beam
-
 import           Haskbike.API.VehicleType
 import           Haskbike.Database.EventCounts
-import           Haskbike.Database.Expressions                       ( queryStationBeforeExpr )
+import           Haskbike.Database.Expressions                       ( queryStationBefore )
 import           Haskbike.Database.Operations.Dockings
 import           Haskbike.Database.Operations.Factors
 import           Haskbike.Database.Operations.StationOccupancy
@@ -104,9 +102,8 @@ performanceCsvHandler stationId startTime endTime = do
 
   (integrals, emptyFullTup) <- concurrently
     (queryIntegratedStatus variation)
-    (withPostgresTransaction $ queryStationOccupancy 0 0 stationId
-      (localTimeToUTC tz (earliestTime range)) (localTimeToUTC tz (latestTime range))
-    )
+    (queryStationOccupancy 0 0 stationId (localTimeToUTC tz (earliestTime range)) (localTimeToUTC tz (latestTime range)))
+
   let emptyFull = head $ map (\(_inf, occ) -> DB.emptyFullFromSecs (DB._stnOccEmptySec occ) (DB._stnOccFullSec occ)) emptyFullTup
 
   logDebug "Created performance data CSV payload"
@@ -174,7 +171,7 @@ handleStationListData latestTime = do
 
   logInfo $ "Rendering station list data for time [" <> tshow latestTime <> "]"
 
-  latest <- withPostgres . runSelectReturningList . select $ queryStationBeforeExpr (maybe currentUtc (localTimeToUTC tz) latestTime)
+  latest <- queryStationBefore (maybe currentUtc (localTimeToUTC tz) latestTime)
 
   pure $ map (uncurry StationListRecord) latest
   where
@@ -189,9 +186,8 @@ handleEmptyFullData start end = do
 
   logInfo $ "Rendering station empty/full data for time [" <> tshow start <> " - " <> tshow end <> "]"
 
-  (latest, emptyFull) <- concurrently (withPostgres $ runSelectReturningList $ select $ queryStationBeforeExpr (end' currentUtc tz))
-                                      (withPostgresTransaction $ queryStationOccupancy 0 0 (Nothing :: Maybe Int)
-                                        (start' currentUtc tz) (end' currentUtc tz)
+  (latest, emptyFull) <- concurrently (queryStationBefore (end' currentUtc tz))
+                                      (queryStationOccupancy 0 0 (Nothing :: Maybe Int) (start' currentUtc tz) (end' currentUtc tz)
                                       )
   let combined = combineStations latest (resultToEmptyFull emptyFull)
 
