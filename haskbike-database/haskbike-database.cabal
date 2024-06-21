@@ -103,6 +103,7 @@ library
                     , Haskbike.Database.Operations.QueryHistory
                     , Haskbike.Database.Operations.StationOccupancy
                     , Haskbike.Database.Operations.StatusChanges
+                    , Haskbike.Database.Operations.SystemInformation
                     , Haskbike.Database.StatusDeltaFields
                     , Haskbike.Database.StatusVariationQuery
                     , Haskbike.Database.Utils

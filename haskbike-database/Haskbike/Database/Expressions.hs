@@ -19,7 +19,7 @@ module Haskbike.Database.Expressions
      , queryLatestStatusBetweenExpr
      , queryLatestStatusLookup
      , queryLatestStatuses
-     , queryLatestSystemInfo
+     , queryLatestSystemInfoE
      , queryStationBeforeExpr
      , queryStationIdExpr
      , queryStationIdLikeExpr
@@ -387,11 +387,10 @@ queryLatestStatuses = do
   pure (info, status)
 
 -- | Get the latest status records for each station.
-queryLatestSystemInfo :: be ~ Postgres
-                      => With be BikeshareDb
-                      (Q be BikeshareDb s
-                       (SystemInformationCountT (QGenExpr QValueContext Postgres s)))
-queryLatestSystemInfo = do
+queryLatestSystemInfoE :: be ~ Postgres
+                       => With be BikeshareDb
+                       (Q be BikeshareDb s (SystemInformationCountT (QGenExpr QValueContext Postgres s)))
+queryLatestSystemInfoE = do
   sysInfoCte <- selecting $
     Pg.pgNubBy_ (\cnt -> (_sysInfCntStationCount cnt, _sysInfCntMechanicalCount cnt, _sysInfCntEbikeCount cnt)) $
     orderBy_ (asc_ . (_sysInfKeyReported . _sysInfCntKey))

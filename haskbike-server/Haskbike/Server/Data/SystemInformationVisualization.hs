@@ -1,20 +1,19 @@
--- |
+-- | Module for generating the data for the SystemInformation visualization.
 
 module Haskbike.Server.Data.SystemInformationVisualization where
 
-import           Control.Monad.Catch                        ( MonadCatch )
+import           Control.Monad.Catch                            ( MonadCatch )
 
 import           Data.Aeson
 import           Data.Time
 
-import           Database.Beam
+import           GHC.Generics                                   ( Generic )
 
 import           Haskbike.AppEnv
-import           Haskbike.Database.Expressions
+import           Haskbike.Database.Operations.SystemInformation
 import           Haskbike.Database.Tables.SystemInformation
 
 import           UnliftIO
-
 
 
 -- | Type representing a the visualization data for a BikeShare station's status.
@@ -43,10 +42,10 @@ fromBeamSysInfoCntToVisJSON sysInfCnt =
                                       , _sysInfCntVisEbikeCount      = fromIntegral (_sysInfCntEbikeCount sysInfCnt)
                                       }
 
-generateJsonDataSourceSysInfo :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m) => Maybe LocalTime -> Maybe LocalTime -> m [SystemInformationCountVisualization]
-generateJsonDataSourceSysInfo _startTime _endTime = do
-  -- Accessing the inner environment by using the serverEnv accessor.
-  result <- withPostgres $
-    runSelectReturningList $ selectWith queryLatestSystemInfo
+
+generateJsonDataSourceSysInfo :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m)
+                              => Maybe LocalTime -> Maybe LocalTime -> m [SystemInformationCountVisualization]
+generateJsonDataSourceSysInfo startTime endTime = do
+  result <- queryLatestSystemInfo startTime endTime
 
   pure $ map fromBeamSysInfoCntToVisJSON result
