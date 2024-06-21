@@ -71,7 +71,7 @@ instance HasGridJs (StationList [(DB.StationInformation, DB.StationStatus)]) whe
 
 instance HasGridJs (StationList [(DB.StationInformation, DB.StationStatus)]) =>
          ToHtmlComponents (StationList [(DB.StationInformation, DB.StationStatus)]) where
-  pageAnchor _ = "#station-list"
+  pageAnchor _ = "station-list"
   pageName   _ = "Station List"
   toHead       = pageHead
 
@@ -88,7 +88,7 @@ instance HasGridJs (StationList [(DB.StationInformation, DB.StationStatus, DB.Em
 
 instance HasGridJs (StationList [(DB.StationInformation, DB.StationStatus, DB.EmptyFull)]) =>
          ToHtmlComponents (StationList [(DB.StationInformation, DB.StationStatus, DB.EmptyFull)]) where
-  pageAnchor _ = "#station-occupancy"
+  pageAnchor _ = "station-occupancy"
   pageName   _ = "Station Occupancy"
   pageTitle  _ = "Station List with Occupancy Time"
   toHead       = pageHead

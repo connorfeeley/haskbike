@@ -34,7 +34,7 @@ instance HasGridJs QueryHistoryPage where
 
 instance ToHtmlComponents QueryHistoryPage where
   pageName _ = "Query History"
-  pageAnchor _ = "#query-history"
+  pageAnchor _ = "query-history"
   toHead       = pageHead
 
 

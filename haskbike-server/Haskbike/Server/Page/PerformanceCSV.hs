@@ -25,7 +25,7 @@ data PerformanceCSV where
   deriving (Show)
 
 instance ToHtmlComponents PerformanceCSV where
-  pageAnchor _ = "#performance-csv"
+  pageAnchor _ = "performance-csv"
   pageName   _ = "Performance Data (CSV)"
 
 instance ToHtml PerformanceCSV where

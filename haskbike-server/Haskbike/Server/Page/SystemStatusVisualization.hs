@@ -81,7 +81,7 @@ data SystemStatusVisualizationPage where
   deriving (Show)
 
 instance ToHtmlComponents SystemStatusVisualizationPage where
-  pageAnchor _ = "#system-status"
+  pageAnchor _ = "system-status"
   pageName   _ = "System Status"
   toHead _assts _ = do
     script_ [src_ . TL.toStrict . vegaUrl      $ vegaSourceUrlsLocal, defer_ mempty] ("" :: String)

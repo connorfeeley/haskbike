@@ -65,5 +65,7 @@ instance ToHtml IndexPage where
           a_ [href_ ("mailto:" <> (T.pack . _contactEmail) params)] "Over e-mail"
 
 instance ToHtmlComponents IndexPage where
+  -- Default 'toMenuHeading' function prepends a '#' to the anchor.
+  toMenuHeading p = menuHeading (pageAnchor p) (pageName p)
   pageAnchor _ = "/"
   pageName   _ = "Home"

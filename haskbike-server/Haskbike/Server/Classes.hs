@@ -17,7 +17,7 @@ import           Lucid
 -- | Can be converted to HTML.
 class ToHtmlComponents a where
   toMenuHeading :: Monad m => a -> HtmlT m ()
-  toMenuHeading p = menuHeading (pageAnchor p) (pageName p)
+  toMenuHeading p = menuHeading ("#" <> pageAnchor p) (pageName p)
 
   toHead        :: Monad m => ExternalAssetLocation -> a -> HtmlT m ()
   toHead _      = mempty
@@ -25,7 +25,6 @@ class ToHtmlComponents a where
   -- | Page name (used in sidebar)
   pageName      :: a -> Text
 
-  -- FIXME: currently, all instances have the anchor ("#") hardcoded in the pageAnchor function.
   -- | Page anchor link (used in sidebar)
   pageAnchor    :: a -> Text
 

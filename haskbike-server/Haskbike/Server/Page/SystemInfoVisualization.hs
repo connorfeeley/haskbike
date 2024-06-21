@@ -34,7 +34,7 @@ data SystemInfoVisualizationPage where
   deriving (Show)
 
 instance ToHtmlComponents SystemInfoVisualizationPage where
-  pageAnchor _ = "#system-information"
+  pageAnchor _ = "system-information"
   pageName   _ = "System Info"
   toHead _assts _ = do
     script_ [src_ . TL.toStrict . vegaUrl      $ vegaSourceUrlsLocal, defer_ mempty] ("" :: String)

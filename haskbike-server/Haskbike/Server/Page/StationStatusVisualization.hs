@@ -39,7 +39,7 @@ data StationStatusVisualizationPage where
                                     } -> StationStatusVisualizationPage
 
 instance ToHtmlComponents StationStatusVisualizationPage where
-  pageAnchor _ = "#available-bikes"
+  pageAnchor _ = "available-bikes"
   pageName   _ = "Available Bikes"
 
   toHead _assts _ = do
