@@ -54,7 +54,7 @@ instance ToHtmlComponents (StationList a) => ToHtml (StationList a) where
 toStationListTable :: (ToHtmlComponents (StationList a), Monad m)
                    => StationList a -> HtmlT m ()
 toStationListTable _ = do
-  div_ [id_ "station-list-table-too-small", style_ "display: none"]
+  div_ [class_ "gridjs-table-too-small", style_ "display: none"]
     "Screen too small to display table. Rotate your device or resize your browser window."
   div_ [id_ "station-list-table", class_ "station-list-table"] mempty
 
