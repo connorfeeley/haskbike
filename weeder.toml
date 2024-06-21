@@ -4,3 +4,4 @@ roots = [ "^Main.main$"
         , "^Paths_haskbike_*"
         ]
 type-class-roots = true
+unused-types = true
