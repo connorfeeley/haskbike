@@ -7,12 +7,12 @@ module Haskbike.Server.API.Static
 
 import           Control.Monad.Catch           ( MonadThrow )
 
-import           Database.Beam
-
 import           Haskbike.Server.Routes.Static
 
 import           Servant
 import           Servant.Server.Generic
+
+import           UnliftIO                      ( MonadIO )
 
 
 -- * API to serve static files.

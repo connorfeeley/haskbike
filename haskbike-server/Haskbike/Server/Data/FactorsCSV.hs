@@ -9,7 +9,7 @@ module Haskbike.Server.Data.FactorsCSV
 import           Data.Csv                                   ( DefaultOrdered (..), ToField (..), ToNamedRecord (..),
                                                               ToRecord (..), header, namedRecord, record, (.=) )
 
-import           Database.Beam
+import           GHC.Generics                               ( Generic )
 
 import           Haskbike.Database.Operations.Factors
 import           Haskbike.Server.Components.PerformanceData

@@ -8,22 +8,22 @@ module Haskbike.Server.LatestQueries
      , latestQueryLogsToMap
      ) where
 
-import           Control.Monad                      ( forM_ )
-import           Control.Monad.Catch                ( MonadCatch )
+import           Control.Monad                              ( forM_ )
+import           Control.Monad.Catch                        ( MonadCatch )
 
-import qualified Data.Map                           as Map
-import qualified Data.Text                          as T
+import qualified Data.Map                                   as Map
+import qualified Data.Text                                  as T
 import           Data.Time
 import           Data.Time.Extras
 
-import           Database.Beam                      hiding ( div_ )
-
 import           Haskbike.Database.EndpointQueried
-import           Haskbike.Database.Expressions
+import           Haskbike.Database.Operations.LatestQueries
 import           Haskbike.Database.Tables.QueryLogs
 import           Haskbike.ServerEnv
 
 import           Lucid
+
+import           UnliftIO                                   ( MonadIO )
 
 
 data LatestQueries where
@@ -75,5 +75,4 @@ latestQueryLogsToMap tz = LatestQueries . queryMap
 getLatestQueries :: (HasEnv env m, MonadIO m, MonadCatch m) => m LatestQueries
 getLatestQueries = do
   tz <- getTz
-  latest <- withPostgres $ runSelectReturningList $ selectWith queryLatestQueryLogs
-  pure $ latestQueryLogsToMap tz latest
+  latestQueryLogsToMap tz <$> queryLatestQueries
