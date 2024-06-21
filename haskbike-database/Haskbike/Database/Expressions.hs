@@ -12,10 +12,12 @@ module Haskbike.Database.Expressions
      , insertStationInformationExpr
      , integrateColumns
      , queryChargingInfrastructure
+     , queryChargingInfrastructureE
      , queryLatestInfo
      , queryLatestInfoBefore
      , queryLatestInfoLookup
      , queryLatestQueryLogs
+     , queryLatestQueryLogsE
      , queryLatestStatusBetweenExpr
      , queryLatestStatusLookup
      , queryLatestStatuses
@@ -33,6 +35,7 @@ module Haskbike.Database.Expressions
 
 import           Control.Arrow                               ( (&&&) )
 import           Control.Lens                                hiding ( reuse, (<.) )
+import           Control.Monad.Catch                         ( MonadCatch )
 
 import           Data.Containers.ListUtils
 import           Data.Int                                    ( Int32 )
@@ -399,11 +402,15 @@ queryLatestSystemInfoE = do
   pure $ reuse sysInfoCte
 
 -- | Get the latest query logs for each endpoint.
-queryLatestQueryLogs :: be ~ Postgres
-                     => With be BikeshareDb
-                     (Q be BikeshareDb s
-                      (QueryLogT (QExpr be s)))
-queryLatestQueryLogs = do
+queryLatestQueryLogs :: (MonadCatch m, HasEnv env m) => m [QueryLog]
+queryLatestQueryLogs = withPostgres . runSelectReturningList $ selectWith queryLatestQueryLogsE
+
+-- | Expression to get the latest query logs for each endpoint.
+queryLatestQueryLogsE :: be ~ Postgres
+                      => With be BikeshareDb
+                      (Q be BikeshareDb s
+                       (QueryLogT (QExpr be s)))
+queryLatestQueryLogsE = do
   ranked <- selecting $ do
     withWindow_ (\row -> frame_ (partitionBy_ (_queryLogEndpoint row)) (orderPartitionBy_ (desc_ $ _queryLogTime row)) noBounds_)
                 (\row w -> ( row
@@ -477,11 +484,18 @@ maybeFilterDaysAgo reportedField (Just days) = filter_ (\s -> s ^. reportedField
 maybeFilterDaysAgo _ Nothing                 = id
 
 -- | Query charging infrastructure at given time.
-queryChargingInfrastructure :: (be ~ Postgres, ctx ~ QValueContext, db ~ BikeshareDb, expr ~ QGenExpr)
+queryChargingInfrastructure :: (MonadCatch m, HasEnv env m)
+                            => UTCTime
+                            -> m (Maybe (Int32, Int32))
+queryChargingInfrastructure atTime = withPostgres . runSelectReturningOne . selectWith $
+  queryChargingInfrastructureE atTime
+
+-- | Expression to query charging infrastructure at given time.
+queryChargingInfrastructureE :: (be ~ Postgres, ctx ~ QValueContext, db ~ BikeshareDb, expr ~ QGenExpr)
                             => UTCTime
                             -> With be db (Q be db s (expr ctx be s Int32, expr ctx be s Int32))
                             -- ^ (Maybe) a tuple of (number of charging stations, number of charging docks)
-queryChargingInfrastructure t = do
+queryChargingInfrastructureE t = do
   ranked <- selecting $ do
     withWindow_ (\row -> frame_ (partitionBy_ (_infoStationId row)) (orderPartitionBy_ (desc_ $ _infoId row)) noBounds_)
                 (\row w -> ( row

@@ -18,8 +18,6 @@ import qualified Data.Text                                               as T
 import           Data.Time
 import           Data.Time.Extras
 
-import           Database.Beam
-
 import           Haskbike.Database.EndpointQueried                       ( EndpointQueried )
 import           Haskbike.Database.Expressions
 import           Haskbike.Database.Operations.Dockings
@@ -103,10 +101,9 @@ chargingInfrastructureHeaderHandler t = do
   currentUtc <- liftIO getCurrentTime
 
   -- Query charging infrastructure at given time.
-  events <- withPostgres $ runSelectReturningOne $ selectWith $
-    queryChargingInfrastructure (maybe currentUtc (localTimeToUTC tz) t)
+  infra <- queryChargingInfrastructure (maybe currentUtc (localTimeToUTC tz) t)
 
-  case events of
+  case infra of
     Just (eStationCnt, eDockCnt) ->
       pure $ ChargingInfrastructureHeader  { chargingStationCount = fromIntegral eStationCnt
                                            , chargingDockCount    = fromIntegral eDockCnt
@@ -129,9 +126,7 @@ performanceHeaderHandler stationId startTime endTime = do
       , LatestTime   (localTimeToUTC tz (latestTime   range))
       ]
     ))
-    (withPostgresTransaction $ queryStationOccupancy 0 0 stationId
-      (localTimeToUTC tz (earliestTime range)) (localTimeToUTC tz (latestTime range))
-    )
+    (queryStationOccupancy 0 0 stationId (localTimeToUTC tz (earliestTime range)) (localTimeToUTC tz (latestTime range)))
   -- FIXME: don't use `head`.
   let emptyFull = head $ map (\(_inf, occ) -> DB.emptyFullFromSecs (DB._stnOccEmptySec occ) (DB._stnOccFullSec occ)) emptyFullTup
 
@@ -143,8 +138,7 @@ latestQueriesHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadError Serve
                      -> m LatestQueries
 latestQueriesHandler _t = do
   tz <- getTz
-  latest <- withPostgres $ runSelectReturningList $ selectWith queryLatestQueryLogs
-  pure $ latestQueryLogsToMap tz latest
+  latestQueryLogsToMap tz <$> queryLatestQueryLogs
 
 queryHistoryHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m, HasServerEnv env m)
                     => Maybe EndpointQueried

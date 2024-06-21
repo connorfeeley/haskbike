@@ -154,7 +154,7 @@ toDuration = calendarTimeTime . secondsToNominalDiffTime
 check :: (HasEnv env m, MonadIO m, MonadFail m, MonadUnliftIO m, MonadCatch m)
       => DayOfMonth -> Maybe CalendarDiffTime -> m ()
 check d expected = do
-  empty <- withPostgresTransaction $ queryStationOccupancy 0 0 (Nothing :: Maybe Int32)
+  empty <- queryStationOccupancy 0 0 (Nothing :: Maybe Int32)
     (UTCTime (fromGregorian 2023 01 d)      (timeOfDayToTime (TimeOfDay 0 0 0)))
     (UTCTime (fromGregorian 2023 01 (d +1)) (timeOfDayToTime (TimeOfDay 0 0 0)))
   liftIO $ assertEqual ("Station empty time " <> show d) expected ((secondsToDuration . _stnOccEmptySec . snd . head) empty)
@@ -164,7 +164,7 @@ check d expected = do
 
 unit_stationEmptyTimeExported :: IO ()
 unit_stationEmptyTimeExported = withTempDbM Silent initSteps $ do
-  result <- withPostgresTransaction $ queryStationOccupancy 0 0 (Nothing :: Maybe Int32)
+  result <- queryStationOccupancy 0 0 (Nothing :: Maybe Int32)
     (UTCTime (fromGregorian 2024 01 03) (timeOfDayToTime (TimeOfDay 0 0 0)))
     (UTCTime (fromGregorian 2024 01 04) (timeOfDayToTime (TimeOfDay 0 0 0)))
 
@@ -202,7 +202,7 @@ unit_cacheStationOccupancy = withTempDbM Silent initSteps $ do
                          , _stnOccFullSec     = Just 0
                          }
       ]
-    queryAndCacheOccupancy = withPostgresTransaction $
+    queryAndCacheOccupancy =
       queryStationOccupancy 0 0
       (Nothing :: Maybe Int32)
       (UTCTime startDay (timeOfDayToTime midnight))

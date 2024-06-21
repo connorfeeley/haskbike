@@ -62,7 +62,7 @@ selectWithPostgres = withPostgres . runSelectReturningList
 bgroupDatabase :: Benchmark
 bgroupDatabase = bgroup "Database operations"
   [ benchWithTmp "Charging infrastructure"   . selectWithPostgres . selectWith $
-    queryChargingInfrastructure latestTime
+    queryChargingInfrastructureE latestTime
   , benchWithTmp "System status"             . withPostgres . runSelectReturningList . selectWith $
     querySystemStatusAtRangeExpr earliestTime latestTime (minsPerHourlyInterval 4)
   , benchWithTmp "Charging events"           $ queryChargingEventsCount statusVariationAll
@@ -79,7 +79,7 @@ benchStationEmptyTime :: (MonadCatch m, HasEnv env m) => Maybe Int -> m [(Statio
 benchStationEmptyTime station = void query >> query -- Run query twice.
   where
     query = withPostgresTransaction $
-      queryStationOccupancy 0 0 station
+      queryStationOccupancyE 0 0 station
       (UTCTime (fromGregorian 2023 11 01) (timeOfDayToTime midnight))
       (UTCTime (fromGregorian 2023 11 02) (timeOfDayToTime midnight))
 

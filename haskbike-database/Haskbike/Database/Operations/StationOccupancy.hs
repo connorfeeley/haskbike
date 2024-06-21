@@ -3,11 +3,13 @@
 module Haskbike.Database.Operations.StationOccupancy
      ( lookupStationOccupancy
      , queryStationOccupancy
+     , queryStationOccupancyE
      , stationOccupancyE
      ) where
 
 import           Control.Lens                                hiding ( reuse, (<.) )
 import           Control.Monad
+import           Control.Monad.Catch                         ( MonadCatch )
 
 import           Data.Int                                    ( Int32 )
 import           Data.Time
@@ -19,6 +21,7 @@ import           Database.Beam.Postgres                      ( Postgres )
 import qualified Database.Beam.Postgres                      as Pg
 import qualified Database.Beam.Postgres.Full                 as Pg
 
+import           Haskbike.AppEnv
 import           Haskbike.Database.BikeShare
 import           Haskbike.Database.Expressions
 import           Haskbike.Database.Operations.Utils
@@ -218,10 +221,16 @@ lookupStationOccupancy emptyThresh fullThresh stationId startT endT = do
 
 
 -- | Query the station occupancy, either returning cached data or caching it and returning the result.
-queryStationOccupancy :: (Integral a, MonadBeamInsertReturning Postgres m)
+queryStationOccupancy :: (HasEnv env m, MonadCatch m, Integral a)
                       => Int32 -> Int32 -> Maybe a -> UTCTime -> UTCTime
                       -> m [(StationInformation, StationOccupancy)]
 queryStationOccupancy emptyThresh fullThresh stationId startT endT = do
+  withPostgresTransaction $ queryStationOccupancyE emptyThresh fullThresh stationId startT endT
+
+queryStationOccupancyE :: (Integral a, MonadBeamInsertReturning Postgres m)
+                      => Int32 -> Int32 -> Maybe a -> UTCTime -> UTCTime
+                      -> m [(StationInformation, StationOccupancy)]
+queryStationOccupancyE emptyThresh fullThresh stationId startT endT = do
   occLookup <- runSelectReturningList . select $ lookupStationOccupancy 0 0 stationId startT endT
   case occLookup of
     -- No cached data found: calculate, store, and return it.
