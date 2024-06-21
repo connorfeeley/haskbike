@@ -77,7 +77,7 @@ instance ToHtml StationStatusVisualizationPage where
       headers = catMaybes [ Just capacityHeader
                           , Just (mkHeader params _statusVisPageTimeRange (Just (_statusVisPageStationId params)) dockingEventsHeader)
                           , if _infoIsChargingStation inf then Just chargingHeader else Nothing
-                          , Just (mkHeader params _statusVisPageTimeRange (Just (_statusVisPageStationId params)) performanceHeader)
+                          , Just (mkHeader params _statusVisPageTimeRange (_statusVisPageStationId params) performanceHeader)
                           , valetHeader
                           , virtualHeader
                           ]

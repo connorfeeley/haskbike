@@ -14,6 +14,8 @@ import           Colog
 import           Control.Monad.Catch                                     ( MonadCatch )
 import           Control.Monad.Except                                    ( MonadError )
 
+import           Data.Int                                                ( Int32 )
+import           Data.Maybe                                              ( listToMaybe )
 import qualified Data.Text                                               as T
 import           Data.Time
 import           Data.Time.Extras
@@ -25,6 +27,8 @@ import           Haskbike.Database.Operations.Factors
 import           Haskbike.Database.Operations.StationOccupancy
 import           Haskbike.Database.StatusVariationQuery                  ( StatusThreshold (..),
                                                                            StatusVariationQuery (..) )
+import           Haskbike.Database.Tables.StationInformation
+import           Haskbike.Database.Tables.StationOccupancy
 import qualified Haskbike.Database.Tables.StationOccupancy               as DB
 import           Haskbike.Server.Components.ChargingHeader
 import           Haskbike.Server.Components.ChargingInfrastructureHeader
@@ -111,7 +115,8 @@ chargingInfrastructureHeaderHandler t = do
     _ ->  throwError err500 { errBody = "Unable to calculate charging infrastructure counts." }
 
 performanceHeaderHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadError ServerError m, MonadUnliftIO m)
-                         => Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> m PerformanceData
+                         => Int -> Maybe LocalTime -> Maybe LocalTime
+                         -> m PerformanceData
 performanceHeaderHandler stationId startTime endTime = do
   tz <- getTz
   currentUtc <- liftIO getCurrentTime
@@ -119,19 +124,30 @@ performanceHeaderHandler stationId startTime endTime = do
   let params = StatusDataParams tz currentUtc (TimePair startTime endTime tz currentUtc)
   let range = enforceTimeRangeBounds params
 
-  (perf, emptyFullTup) <- concurrently
-    (queryIntegratedStatus
-    (StatusVariationQuery (fromIntegral <$> stationId)
-      [ EarliestTime (localTimeToUTC tz (earliestTime range))
-      , LatestTime   (localTimeToUTC tz (latestTime   range))
-      ]
-    ))
-    (queryStationOccupancy 0 0 stationId (localTimeToUTC tz (earliestTime range)) (localTimeToUTC tz (latestTime range)))
-  -- FIXME: don't use `head`.
-  let emptyFull = head $ map (\(_inf, occ) -> DB.emptyFullFromSecs (DB._stnOccEmptySec occ) (DB._stnOccFullSec occ)) emptyFullTup
+  (statusIntegrals, emptyFullTups) <- concurrently
+    (queryIntegratedStatus $
+      StatusVariationQuery stationId'
+        [ EarliestTime (localTimeToUTC tz (earliestTime range))
+        , LatestTime   (localTimeToUTC tz (latestTime   range))
+        ])
+    (queryStationOccupancy 0 0 stationId' (localTimeToUTC tz (earliestTime range)) (localTimeToUTC tz (latestTime range)))
 
-  -- FIXME: don't use `head`.
-  pure $ (head . map (integralToPerformanceData emptyFull)) perf
+  mapPerformanceResult (listToMaybe statusIntegrals) (listToMaybe emptyFullTups)
+  where
+    stationId' :: Maybe Int32
+    stationId' = (Just . fromIntegral) stationId
+
+-- | Calculate an 'EmptyFull' given a row from the result of 'queryStationOccupancy'.
+calcEmptyFull :: (StationInformation, StationOccupancy) -> EmptyFull
+calcEmptyFull (_, occ) = DB.emptyFullFromSecs (DB._stnOccEmptySec occ) (DB._stnOccFullSec occ)
+
+-- | Construct a 'PerformanceData' into a 'PerformanceData', throwing a 'ServerError' if either are 'Nothing'.
+mapPerformanceResult :: (MonadError ServerError m)
+                     => Maybe StatusIntegral -> Maybe (StationInformation, StationOccupancy)
+                     -> m PerformanceData
+mapPerformanceResult (Just integrals) (Just emptyFullTups) = pure $ integralToPerformanceData (calcEmptyFull emptyFullTups) integrals
+mapPerformanceResult _                _                    = throwError err500 { errBody = "No occupancy data found." }
+
 
 latestQueriesHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadError ServerError m, MonadUnliftIO m)
                      => Maybe LocalTime

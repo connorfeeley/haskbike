@@ -56,7 +56,7 @@ data EventsComponentAPI mode where
     , performanceHeader :: mode :-
       "station-status"
         :> "performance"
-          :> QueryParam "station-id" Int
+          :> Capture "station-id" Int
           :> QueryParam "start-time" LocalTime
           :> QueryParam "end-time" LocalTime
           :> Get '[HTML] PerformanceData

@@ -157,7 +157,7 @@ data EmptyFull where
                } -> EmptyFull
   deriving (Generic, Show, Eq)
 
-emptyFullFromSecs :: (Integral a1, Integral a2) => Maybe a2 -> Maybe a1 -> EmptyFull
+emptyFullFromSecs :: Integral a => Maybe a -> Maybe a -> EmptyFull
 emptyFullFromSecs empty full = EmptyFull emptyTime fullTime
   where
     emptyTime = secondsToNominalDiffTime . fromIntegral <$> empty
