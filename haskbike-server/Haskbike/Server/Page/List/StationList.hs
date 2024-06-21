@@ -7,8 +7,7 @@
 -- | This module defines the data types used to render the station status visualization page.
 
 module Haskbike.Server.Page.List.StationList
-     ( HasStationListPage (..)
-     , StationList (..)
+     ( StationList (..)
      ) where
 
 import           Data.Time
@@ -17,10 +16,8 @@ import qualified Haskbike.Database.Tables.StationInformation as DB
 import qualified Haskbike.Database.Tables.StationOccupancy   as DB
 import qualified Haskbike.Database.Tables.StationStatus      as DB
 import           Haskbike.Server.Classes
-import           Haskbike.Server.ExternalAssets
 import           Haskbike.Server.Page.List.Common
 import           Haskbike.Server.Page.SelectionForm
-import           Haskbike.Server.Page.Utils                  ( stylesheet_ )
 
 import           Lucid
 
@@ -40,21 +37,6 @@ data StationList a where
                  , _stationListInputs     :: [SelectionFormInput]
                  , _visualizationPageLink :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> Link
                  } -> StationList a
-
-
--- | Type class for pages that display a list of stations.
-class HasStationListPage a where
-  pageScript :: Monad m => StationList a -> HtmlT m ()
-
-  pageHead :: Monad m => ExternalAssetLocation -> StationList a -> HtmlT m ()
-  pageHead assts page = do
-    -- GridJS
-    script_ [src_ (assetUrl (getAssetDetails @GridJS assts)), integrity_ (getAssetIntegrity @GridJS assts),  crossorigin_ "anonymous", defer_ mempty] ""
-    stylesheet_ (assetUrl (getAssetDetails @MermaidCss assts)) [crossorigin_ "anonymous", defer_ mempty]
-
-    -- Station list JavaScript.
-    script_ [src_ ("/" <> toUrlPiece (_staticLink page) <> "/js/station-list-table.js"), defer_ mempty] ""
-    pageScript page
 
 
 -- | Define instance used by both regular station list and station occupancy list.
@@ -80,10 +62,14 @@ toStationListTable _ = do
 -- - ---------------------------------------------------------------------------
 -- * Regular station list instances.
 
-instance HasStationListPage [(DB.StationInformation, DB.StationStatus)] where
-  pageScript page = script_ [src_ ("/" <> toUrlPiece (_staticLink page) <> "/js/station-list.js"), defer_ mempty] ""
+instance HasGridJs (StationList [(DB.StationInformation, DB.StationStatus)]) where
+  pageScript page = do
+    -- Station list JavaScript.
+    script_ [src_ ("/" <> toUrlPiece (_staticLink page) <> "/js/station-list-table.js"), defer_ mempty] ""
 
-instance HasStationListPage [(DB.StationInformation, DB.StationStatus)] =>
+    script_ [src_ ("/" <> toUrlPiece (_staticLink page) <> "/js/station-list.js"), defer_ mempty] ""
+
+instance HasGridJs (StationList [(DB.StationInformation, DB.StationStatus)]) =>
          ToHtmlComponents (StationList [(DB.StationInformation, DB.StationStatus)]) where
   pageAnchor _ = "#station-list"
   pageName   _ = "Station List"
@@ -93,10 +79,14 @@ instance HasStationListPage [(DB.StationInformation, DB.StationStatus)] =>
 -- - ---------------------------------------------------------------------------
 -- * Station occupancy list instances.
 
-instance HasStationListPage [(DB.StationInformation, DB.StationStatus, DB.EmptyFull)] where
-  pageScript page = script_ [src_ ("/" <> toUrlPiece (_staticLink page) <> "/js/station-occupancy.js"), defer_ mempty] ""
+instance HasGridJs (StationList [(DB.StationInformation, DB.StationStatus, DB.EmptyFull)]) where
+  pageScript page = do
+    -- Station list JavaScript.
+    script_ [src_ ("/" <> toUrlPiece (_staticLink page) <> "/js/station-list-table.js"), defer_ mempty] ""
 
-instance HasStationListPage [(DB.StationInformation, DB.StationStatus, DB.EmptyFull)] =>
+    script_ [src_ ("/" <> toUrlPiece (_staticLink page) <> "/js/station-occupancy.js"), defer_ mempty] ""
+
+instance HasGridJs (StationList [(DB.StationInformation, DB.StationStatus, DB.EmptyFull)]) =>
          ToHtmlComponents (StationList [(DB.StationInformation, DB.StationStatus, DB.EmptyFull)]) where
   pageAnchor _ = "#station-occupancy"
   pageName   _ = "Station Occupancy"

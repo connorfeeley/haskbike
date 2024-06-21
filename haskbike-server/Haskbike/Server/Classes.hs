@@ -1,13 +1,15 @@
--- |
+-- | Typeclasses for server pages.
 
 module Haskbike.Server.Classes
-     ( ToHtmlComponents (..)
+     ( HasGridJs (..)
+     , ToHtmlComponents (..)
      , menuHeading
      ) where
 
 import           Data.Text
 
-import           Haskbike.Server.ExternalAssets ( ExternalAssetLocation )
+import           Haskbike.Server.ExternalAssets
+import           Haskbike.Server.Page.Utils     ( stylesheet_ )
 
 import           Lucid
 
@@ -30,6 +32,20 @@ class ToHtmlComponents a where
   -- | Page title (used on page itself). Defaults to 'pageName'.
   pageTitle     :: a -> Text
   pageTitle     = pageName
+
+
+-- | Type class for pages that use GridJS.
+class HasGridJs a where
+  pageScript :: Monad m => a -> HtmlT m ()
+
+  pageHead :: Monad m => ExternalAssetLocation -> a -> HtmlT m ()
+  pageHead assts page = do
+    -- GridJS
+    script_ [src_ (assetUrl (getAssetDetails @GridJS assts)), integrity_ (getAssetIntegrity @GridJS assts),  crossorigin_ "anonymous", defer_ mempty] ("" :: String)
+    stylesheet_ (assetUrl (getAssetDetails @MermaidCss assts)) [crossorigin_ "anonymous", defer_ mempty]
+
+    pageScript page
+
 
 -- -- | @since 2.9.8
 -- instance (a ~ (), m ~ Identity) => ToHtmlComponents (HtmlT m a) where
