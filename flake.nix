@@ -289,6 +289,8 @@
               -T"$filetype"
           '';
 
+          checks = import ./nix/checks { inherit pkgs; };
+
           treefmt.config = {
             inherit (config.flake-root) projectRootFile;
 
