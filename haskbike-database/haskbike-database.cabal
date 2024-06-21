@@ -56,6 +56,7 @@ build-type:         Simple
 -- Data files that can be accessed at runtime.
 data-files: test/json/*.json
           , test/dumps/*.json
+          , test/dumps/*.json.zst
 
 -- Linker (use gold) common warning flags.
 common compile-flags
