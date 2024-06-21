@@ -106,6 +106,7 @@ library
                     , Haskbike.Database.Operations.StatusChanges
                     , Haskbike.Database.Operations.SystemInformation
                     , Haskbike.Database.Operations.LatestQueries
+                    , Haskbike.Database.Operations.Debug
 
                     , Haskbike.Database.StatusDeltaFields
                     , Haskbike.Database.StatusVariationQuery

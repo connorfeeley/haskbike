@@ -16,9 +16,8 @@ import           Data.Aeson                             ( ToJSON (..), Value )
 import           Data.Maybe                             ( isJust )
 import qualified Data.Text                              as T
 
-import           Database.Beam
-
 import           Haskbike.Database.DaysAgo
+import           Haskbike.Database.Operations.Debug
 import           Haskbike.Database.Operations.QueryLogs
 import           Haskbike.Database.Tables.QueryLogs
 import           Haskbike.Server.API.QueryLogs
@@ -67,7 +66,7 @@ errorsApiHandler = ErrorsAPI
 errorsSinceHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m) => DaysAgo -> m Value
 errorsSinceHandler days@(DaysAgo daysAgo) = do
   logInfo $ "Querying errors since " <> (T.pack . show) daysAgo
-  errors <- withPostgres $ runSelectReturningList $ select $ limit_ 100 $ latestQueryErrorsE (val_ days)
+  errors <- latestQueryErrors days
 
   let x = filter (isJust . _queryLogErrJson) errors
   let e = decodeJsonErrors x
@@ -77,7 +76,7 @@ errorsSinceHandler days@(DaysAgo daysAgo) = do
 latestErrorsHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m) => Integer -> m Value
 latestErrorsHandler limit = do
   logInfo "Querying latest errors"
-  errors <- withPostgres $ runSelectReturningList $ select $ limit_ limit queryErrorsE
+  errors <- queryErrors limit
 
   let x = filter (isJust . _queryLogErrJson) errors
   let e = decodeJsonErrors x
