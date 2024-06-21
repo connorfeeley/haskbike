@@ -5,10 +5,12 @@
 -- | Expressions to fetch the history of queries for each endpoint.
 
 module Haskbike.Database.Operations.QueryHistory
-     ( queryHistoryE
+     ( queryHistory
+     , queryHistoryE
      ) where
 
 import           Control.Lens                       hiding ( reuse, (<.) )
+import           Control.Monad.Catch                ( MonadCatch )
 
 import           Data.Int                           ( Int32 )
 import           Data.Time                          ( UTCTime )
@@ -17,12 +19,17 @@ import           Database.Beam
 import           Database.Beam.Postgres
 import qualified Database.Beam.Postgres             as Pg
 
+import           Haskbike.AppEnv
 import           Haskbike.Database.BikeShare
 import           Haskbike.Database.EndpointQueried  ( EndpointQueried )
 import           Haskbike.Database.Tables.QueryLogs
 
 import           Prelude                            hiding ( log )
 
+queryHistory :: (MonadCatch m, HasEnv env m)
+             => Maybe EndpointQueried
+             -> m [(EndpointQueried, (Int32, Double, Maybe UTCTime), (Int32, Double, Maybe UTCTime), (Int32, Double, Maybe UTCTime))]
+queryHistory ep = (withPostgres . runSelectReturningList . selectWith) (queryHistoryE ep)
 
 -- | Expression to calculate query statistics for each endpoint.
 queryHistoryE :: ( exp ~ QGenExpr

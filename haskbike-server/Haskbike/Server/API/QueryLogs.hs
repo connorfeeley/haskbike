@@ -15,8 +15,6 @@ import           Data.Aeson                                ( ToJSON (..), Value 
 import qualified Data.Text                                 as T
 import           Data.Time                                 ( LocalTime, UTCTime )
 
-import           Database.Beam
-
 import           Haskbike.Database.EndpointQueried         ( EndpointQueried )
 import           Haskbike.Database.Operations.QueryHistory
 import           Haskbike.Server.Data.QueryHistory
@@ -55,7 +53,7 @@ queryHistoryHandler ep _startTime _endTime = do
       Nothing  -> "Querying all endpoint query history"
       Just ep' -> "Querying query history for endpoint " <> T.pack (show ep')
 
-  queries       :: [QueryHistoryRecord UTCTime] <- fmap fromRecords <$> (withPostgres . runSelectReturningList . selectWith) (queryHistoryE ep)
+  queries       :: [QueryHistoryRecord UTCTime] <- fmap fromRecords <$> queryHistory ep
   let queriesLt :: [QueryHistoryRecord LocalTime] = toLocalTime tz <$> queries
   pure $ toJSON queriesLt
 
