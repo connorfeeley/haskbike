@@ -202,3 +202,8 @@
 * Server
   * Cache station occupancy when querying `DataAPI` (`/data/`)
   * Propagate query parameters from station occupancy list to `DataAPI` query
+
+## 3.7.0 -- 2024-06-21
+
+* Server
+  * Add hidden debug page.
