@@ -145,7 +145,6 @@ stationListPageHandler _end = do
     StationList
     { _stationList           = [] -- FIXME: remove; list is queried by GridJS
     , _stationTimeRange      = (Nothing, Nothing)
-    , _staticLink            = fieldLink staticApi
     , _stationListInputs     = []
     , _visualizationPageLink = fieldLink pageForStation
     }
@@ -161,7 +160,6 @@ stationEmptyFullListPage start end = do
     StationList
     { _stationList           = [] -- FIXME: remove; list is queried by GridJS
     , _stationTimeRange      = (start, end)
-    , _staticLink            = fieldLink staticApi
     , _stationListInputs     = []
     , _visualizationPageLink = fieldLink pageForStation
     }

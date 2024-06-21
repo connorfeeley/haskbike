@@ -18,6 +18,7 @@ import qualified Haskbike.Database.Tables.StationStatus      as DB
 import           Haskbike.Server.Classes
 import           Haskbike.Server.Page.List.Common
 import           Haskbike.Server.Page.SelectionForm
+import           Haskbike.Server.Routes.Static
 
 import           Lucid
 
@@ -33,7 +34,6 @@ import           Servant
 data StationList a where
   StationList :: { _stationList           :: a
                  , _stationTimeRange      :: (Maybe LocalTime, Maybe LocalTime)
-                 , _staticLink            :: Link
                  , _stationListInputs     :: [SelectionFormInput]
                  , _visualizationPageLink :: Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> Link
                  } -> StationList a
@@ -63,11 +63,11 @@ toStationListTable _ = do
 -- * Regular station list instances.
 
 instance HasGridJs (StationList [(DB.StationInformation, DB.StationStatus)]) where
-  pageScript page = do
+  pageScript _page = do
     -- Station list JavaScript.
-    script_ [src_ ("/" <> toUrlPiece (_staticLink page) <> "/js/station-list-table.js"), defer_ mempty] ""
+    script_ [src_ ("/" <> toUrlPiece (staticApi staticRoutesLinks) <> "/js/station-list-table.js"), defer_ mempty] ""
 
-    script_ [src_ ("/" <> toUrlPiece (_staticLink page) <> "/js/station-list.js"), defer_ mempty] ""
+    script_ [src_ ("/" <> toUrlPiece (staticApi staticRoutesLinks) <> "/js/station-list.js"), defer_ mempty] ""
 
 instance HasGridJs (StationList [(DB.StationInformation, DB.StationStatus)]) =>
          ToHtmlComponents (StationList [(DB.StationInformation, DB.StationStatus)]) where
@@ -80,11 +80,11 @@ instance HasGridJs (StationList [(DB.StationInformation, DB.StationStatus)]) =>
 -- * Station occupancy list instances.
 
 instance HasGridJs (StationList [(DB.StationInformation, DB.StationStatus, DB.EmptyFull)]) where
-  pageScript page = do
+  pageScript _page = do
     -- Station list JavaScript.
-    script_ [src_ ("/" <> toUrlPiece (_staticLink page) <> "/js/station-list-table.js"), defer_ mempty] ""
+    script_ [src_ ("/" <> toUrlPiece (staticApi staticRoutesLinks) <> "/js/station-list-table.js"), defer_ mempty] ""
 
-    script_ [src_ ("/" <> toUrlPiece (_staticLink page) <> "/js/station-occupancy.js"), defer_ mempty] ""
+    script_ [src_ ("/" <> toUrlPiece (staticApi staticRoutesLinks) <> "/js/station-occupancy.js"), defer_ mempty] ""
 
 instance HasGridJs (StationList [(DB.StationInformation, DB.StationStatus, DB.EmptyFull)]) =>
          ToHtmlComponents (StationList [(DB.StationInformation, DB.StationStatus, DB.EmptyFull)]) where
