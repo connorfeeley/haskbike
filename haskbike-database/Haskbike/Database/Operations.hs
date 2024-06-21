@@ -249,7 +249,7 @@ queryStationName :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadU
                  => Int                 -- ^ Station ID.
                  -> m (Maybe String) -- ^ Station name assosicated with the given station ID.
 queryStationName stationId = do
-  info <- withPostgres $ runSelectReturningOne $ selectWith $ infoByIdExpr [fromIntegral stationId]
+  info <- withPostgres $ runSelectReturningOne $ selectWith $ infoByIdE [fromIntegral stationId]
 
   let station_name = info ^. _Just . infoName
 

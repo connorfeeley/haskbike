@@ -3,7 +3,7 @@
 
 -- |
 
-module Haskbike.Server.ComponentsAPI
+module Haskbike.Server.API.Components
      ( ComponentsAPI (..)
      , EventsComponentAPI (..)
      , componentsHandler
@@ -18,8 +18,7 @@ import qualified Data.Text                                               as T
 import           Data.Time
 import           Data.Time.Extras
 
-import           Database.Beam
-
+import           Haskbike.Database.EndpointQueried                       ( EndpointQueried )
 import           Haskbike.Database.Expressions
 import           Haskbike.Database.Operations.Dockings
 import           Haskbike.Database.Operations.Factors
@@ -31,64 +30,23 @@ import           Haskbike.Server.Components.ChargingHeader
 import           Haskbike.Server.Components.ChargingInfrastructureHeader
 import           Haskbike.Server.Components.DockingHeader
 import           Haskbike.Server.Components.PerformanceData
+import           Haskbike.Server.Components.QueryHistory
 import           Haskbike.Server.LatestQueries
+import           Haskbike.Server.Routes.Components
 import           Haskbike.Server.StatusDataParams
 import           Haskbike.ServerEnv
 
 import           Servant
-import           Servant.HTML.Lucid
 import           Servant.Server.Generic                                  ( AsServerT )
 
 import           UnliftIO
 
--- HTMX API
-data ComponentsAPI mode where
-  ComponentsAPI ::
-    { eventsComponents :: mode :- "components" :> NamedRoutes EventsComponentAPI
-    } -> ComponentsAPI mode
-  deriving stock Generic
-
-componentsHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m, MonadError ServerError m)
+componentsHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m, MonadError ServerError m, HasServerEnv env m)
                   => ComponentsAPI (AsServerT m)
 componentsHandler =
   ComponentsAPI { eventsComponents = eventsComponentHandler }
 
-data EventsComponentAPI mode where
-  EventsComponentAPI ::
-    { dockingEventsHeader :: mode :-
-      "events"
-        :> "docking"
-          :> QueryParam "station-id" Int
-          :> QueryParam "start-time" LocalTime
-          :> QueryParam "end-time" LocalTime
-          :> Get '[HTML] DockingHeader
-    , chargingEventsHeader :: mode :-
-      "events"
-        :> "charging"
-          :> QueryParam "station-id" Int
-          :> QueryParam "start-time" LocalTime
-          :> QueryParam "end-time" LocalTime
-          :> Get '[HTML] ChargingHeader
-    , chargingInfrastructureHeader :: mode :-
-      "system-status"
-        :> "charging-infrastructure"
-          :> QueryParam "time" LocalTime
-          :> Get '[HTML] ChargingInfrastructureHeader
-    , performanceHeader :: mode :-
-      "station-status"
-        :> "performance"
-          :> QueryParam "station-id" Int
-          :> QueryParam "start-time" LocalTime
-          :> QueryParam "end-time" LocalTime
-          :> Get '[HTML] PerformanceData
-    , latestQueries :: mode :-
-      "latest-queries"
-        :> QueryParam "time" LocalTime
-        :> Get '[HTML] LatestQueries
-    } -> EventsComponentAPI mode
-  deriving stock Generic
-
-eventsComponentHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m, MonadError ServerError m)
+eventsComponentHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m, MonadError ServerError m, HasServerEnv env m)
                        => EventsComponentAPI (AsServerT m)
 eventsComponentHandler = EventsComponentAPI
   { dockingEventsHeader          = dockingsHeader
@@ -96,6 +54,7 @@ eventsComponentHandler = EventsComponentAPI
   , chargingInfrastructureHeader = chargingInfrastructureHeaderHandler
   , performanceHeader            = performanceHeaderHandler
   , latestQueries                = latestQueriesHandler
+  , queryHistory                 = queryHistoryHandler
   }
 
 dockingsHeader :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m)
@@ -142,10 +101,9 @@ chargingInfrastructureHeaderHandler t = do
   currentUtc <- liftIO getCurrentTime
 
   -- Query charging infrastructure at given time.
-  events <- withPostgres $ runSelectReturningOne $ selectWith $
-    queryChargingInfrastructure (maybe currentUtc (localTimeToUTC tz) t)
+  infra <- queryChargingInfrastructure (maybe currentUtc (localTimeToUTC tz) t)
 
-  case events of
+  case infra of
     Just (eStationCnt, eDockCnt) ->
       pure $ ChargingInfrastructureHeader  { chargingStationCount = fromIntegral eStationCnt
                                            , chargingDockCount    = fromIntegral eDockCnt
@@ -168,16 +126,26 @@ performanceHeaderHandler stationId startTime endTime = do
       , LatestTime   (localTimeToUTC tz (latestTime   range))
       ]
     ))
-    (withPostgresTransaction $ queryStationOccupancy 0 0 stationId
-      (localTimeToUTC tz (earliestTime range)) (localTimeToUTC tz (latestTime range))
-    )
+    (queryStationOccupancy 0 0 stationId (localTimeToUTC tz (earliestTime range)) (localTimeToUTC tz (latestTime range)))
+  -- FIXME: don't use `head`.
   let emptyFull = head $ map (\(_inf, occ) -> DB.emptyFullFromSecs (DB._stnOccEmptySec occ) (DB._stnOccFullSec occ)) emptyFullTup
 
+  -- FIXME: don't use `head`.
   pure $ (head . map (integralToPerformanceData emptyFull)) perf
 
 latestQueriesHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadError ServerError m, MonadUnliftIO m)
-                     => Maybe LocalTime -> m LatestQueries
-latestQueriesHandler t = do
+                     => Maybe LocalTime
+                     -> m LatestQueries
+latestQueriesHandler _t = do
   tz <- getTz
-  latest <- withPostgres $ runSelectReturningList $ selectWith queryLatestQueryLogs
-  pure $ latestQueryLogsToMap tz latest
+  latestQueryLogsToMap tz <$> queryLatestQueryLogs
+
+queryHistoryHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m, HasServerEnv env m)
+                    => Maybe EndpointQueried
+                    -> Maybe UTCTime
+                    -> Maybe UTCTime
+                    -> m QueryHistoryComponent
+queryHistoryHandler ep startTime endTime = do
+  logDebug "Rendering query log history component"
+
+  pure $ QueryHistoryComponent ep startTime endTime

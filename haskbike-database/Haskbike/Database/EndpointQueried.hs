@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveAnyClass            #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE TypeFamilies              #-}
 {-# LANGUAGE UndecidableInstances      #-}
@@ -10,6 +11,13 @@ module Haskbike.Database.EndpointQueried
      , endpointQueriedType
      ) where
 
+import           Control.Applicative                  ( (<|>) )
+
+import           Data.Aeson
+import           Data.Attoparsec.Text
+import           Data.Functor                         ( ($>) )
+import qualified Data.Text                            as T
+
 import           Database.Beam
 import           Database.Beam.Backend                ( sqlValueSyntax )
 import           Database.Beam.Migrate
@@ -17,6 +25,8 @@ import           Database.Beam.Postgres               ( Postgres )
 import           Database.Beam.Postgres.CustomTypes
 import           Database.Beam.Postgres.Syntax        ( PgValueSyntax )
 import           Database.PostgreSQL.Simple.FromField
+
+import           Servant.API
 
 data EndpointQueried where
   VersionsEP           :: EndpointQueried
@@ -26,7 +36,56 @@ data EndpointQueried where
   SystemRegionsEP      :: EndpointQueried
   SystemInformationEP  :: EndpointQueried
   SystemPricingPlansEP :: EndpointQueried
-  deriving (Show, Read, Eq, Ord, Enum, Bounded)
+  deriving (Read, Eq, Ord, Enum, Bounded, HasSqlEqualityCheck Postgres)
+
+instance Show EndpointQueried where
+  show VersionsEP           = "Versions"
+  show VehicleTypesEP       = "Vehicle Types"
+  show StationInformationEP = "Station Information"
+  show StationStatusEP      = "Station Status"
+  show SystemRegionsEP      = "System Regions"
+  show SystemInformationEP  = "System Information"
+  show SystemPricingPlansEP = "System Pricing Plans"
+
+instance ToJSON EndpointQueried where
+  toJSON ep           = String (T.pack (show ep))
+
+instance FromJSON EndpointQueried where
+  parseJSON = withText "PhysicalConfiguration" $ \t -> case t of
+    "Versions"             -> return VersionsEP
+    "Vehicle Types"        -> return VehicleTypesEP
+    "Station Information"  -> return StationInformationEP
+    "Station Status"       -> return StationStatusEP
+    "System Regions"       -> return SystemRegionsEP
+    "System Information"   -> return SystemInformationEP
+    "System Pricing Plans" -> return SystemPricingPlansEP
+    _                      -> fail ("Invalid EndpointQueried: " ++ show t)
+
+instance FromHttpApiData EndpointQueried where
+  parseUrlPiece :: T.Text -> Either T.Text EndpointQueried
+  parseUrlPiece piece = case parseOnly (
+    asciiCI "versions"             $> VersionsEP           <|>
+    asciiCI "vehicle-types"        $> VehicleTypesEP       <|>
+    asciiCI "station-information"  $> StationInformationEP <|>
+    asciiCI "station-status"       $> StationStatusEP      <|>
+    asciiCI "system-regions"       $> SystemRegionsEP      <|>
+    asciiCI "system-information"   $> SystemInformationEP  <|>
+    asciiCI "system-pricing-plans" $> SystemPricingPlansEP
+    ) piece of
+    Left e  -> Left  (T.pack e)
+    Right v -> Right v
+  parseQueryParam = parseUrlPiece
+
+instance ToHttpApiData EndpointQueried where
+  toQueryParam = toUrlPiece
+  toUrlPiece VersionsEP           = T.pack "versions"
+  toUrlPiece VehicleTypesEP       = T.pack "vehicle-types"
+  toUrlPiece StationInformationEP = T.pack "station-information"
+  toUrlPiece StationStatusEP      = T.pack "station-status"
+  toUrlPiece SystemRegionsEP      = T.pack "system-regions"
+  toUrlPiece SystemInformationEP  = T.pack "system-information"
+  toUrlPiece SystemPricingPlansEP = T.pack "system-pricing-plans"
+
 
 instance FromBackendRow Postgres EndpointQueried where
 

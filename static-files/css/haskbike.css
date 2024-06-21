@@ -165,7 +165,7 @@ body {
   .station-list-table {
         display: none !important;
   }
-  #station-list-table-too-small {
+  .gridjs-table-too-small {
         display: inherit !important;
   }
 }

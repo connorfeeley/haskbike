@@ -51,12 +51,10 @@ maintainer:         git@cfeeley.org
 build-type:         Simple
 
 -- Extra doc files to be distributed with the package, such as a CHANGELOG or a README.
-extra-doc-files:    CHANGELOG.md
+-- extra-doc-files:    CHANGELOG.md
 
 -- Extra source files to be distributed with the package, such as examples, or a tutorial module.
-extra-source-files: docs/json/2.3/*.json
-                  , test/json/*.json
-                  , test/dumps/*.json
+-- extra-source-files:
 
 -- Linker (use gold) common warning flags.
 common compile-flags
@@ -93,14 +91,13 @@ library
                     , Haskbike.Server.Components.ChargingInfrastructureHeader
                     , Haskbike.Server.Components.DockingHeader
                     , Haskbike.Server.Components.PerformanceData
-                    , Haskbike.Server.ComponentsAPI
+                    , Haskbike.Server.Components.QueryHistory
                     , Haskbike.Server.Data.StationStatusVisualization
                     , Haskbike.Server.Data.SystemInformationVisualization
                     , Haskbike.Server.Data.StationList
                     , Haskbike.Server.Data.EmptyFullData
                     , Haskbike.Server.Data.FactorsCSV
-                    , Haskbike.Server.DataAPI
-                    , Haskbike.Server.DebugAPI
+                    , Haskbike.Server.Data.QueryHistory
                     , Haskbike.Server.Page.IndexPage
                     , Haskbike.Server.Page.List.Common
                     , Haskbike.Server.Page.List.StationList
@@ -110,18 +107,36 @@ library
                     , Haskbike.Server.Page.StatusVisualization
                     , Haskbike.Server.Page.SystemInfoVisualization
                     , Haskbike.Server.Page.SystemStatusVisualization
+                    , Haskbike.Server.Page.QueryHistory
                     , Haskbike.Visualization.StationOccupancy
                     , Haskbike.Visualization.SystemInformation
                     , Haskbike.Server.Page.SelectionForm
+                    , Haskbike.Server.Page.ErrorPage
                     , Haskbike.Server.Page.Utils
                     , Haskbike.Server.PureCSS
                     , Haskbike.Server.RobotsTXT
-                    , Haskbike.Server.Routes
-                    , Haskbike.Server.StaticAPI
+
+
+                    , Haskbike.Server.API.TopLevel
+                    , Haskbike.Server.API.Components
+                    , Haskbike.Server.API.QueryLogs
+                    , Haskbike.Server.API.Data
+                    , Haskbike.Server.API.Debug
+                    , Haskbike.Server.API.Static
+                    , Haskbike.Server.API.Visualization
+
+                    , Haskbike.Server.Routes.TopLevel
+                    , Haskbike.Server.Routes.Components
+                    , Haskbike.Server.Routes.QueryLogs
+                    , Haskbike.Server.Routes.Data
+                    , Haskbike.Server.Routes.Debug
+                    , Haskbike.Server.Routes.Static
+                    , Haskbike.Server.Routes.Visualization
+
                     , Haskbike.Server.StatusDataParams
                     , Haskbike.Server.LatestQueries
                     , Haskbike.Server.LatestQueriesComponent
-                    , Haskbike.Server.VisualizationAPI
+                    , Haskbike.Server.ExternalAssets
                     , Haskbike.ServerEnv
 
     -- Modules included in this library but not exported.
@@ -143,11 +158,12 @@ library
                     , containers
                     , exceptions
                     , mtl
-                    , resource-pool >= 0.4.0.0
                     , text
                     , time
                     , unliftio
                     , data-default
+                    , uuid
+                    , string-conversions
 
                     , attoparsec
                     , base-compat-batteries
@@ -161,15 +177,14 @@ library
                     , aeson-pretty
                     , http-client
                     , http-client-tls
+                    , http-types
                     , lucid
                     , servant-lucid
+                    , servant
                     , servant-server
                     , wai
                     , wai-extra
                     , warp
-
-                    , beam-core
-                    , postgresql-simple
 
     -- Directories containing source files.
     -- hs-source-dirs:

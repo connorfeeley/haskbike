@@ -1,52 +1,32 @@
 {-# LANGUAGE DataKinds          #-}
 {-# LANGUAGE DerivingStrategies #-}
 
--- | This module contains the route definitions for the visualization server.
+-- | This module contains the top-level route handlers.
 
-module Haskbike.Server.Routes
-     ( API (..)
-     , BikeShareExplorerAPI
-     , server
+module Haskbike.Server.API.TopLevel
+     ( server
      ) where
 
-import           Control.Monad.Catch              ( MonadCatch )
-
-import           Database.Beam
+import           Control.Monad.Catch                  ( MonadCatch )
 
 import           Haskbike.AppEnv
-import           Haskbike.Server.ComponentsAPI
-import           Haskbike.Server.DataAPI
-import           Haskbike.Server.DebugAPI
+import           Haskbike.Server.API.Components
+import           Haskbike.Server.API.Data
+import           Haskbike.Server.API.Debug
+import           Haskbike.Server.API.Static
+import           Haskbike.Server.API.Visualization
 import           Haskbike.Server.Page.IndexPage
 import           Haskbike.Server.Page.SideMenu
 import           Haskbike.Server.RobotsTXT
-import           Haskbike.Server.StaticAPI
-import           Haskbike.Server.VisualizationAPI
+import           Haskbike.Server.Routes.TopLevel
+import           Haskbike.Server.Routes.Visualization
 import           Haskbike.ServerEnv
 
 import           Servant
-import           Servant.HTML.Lucid
 import           Servant.Server.Generic
 
 import           UnliftIO
 
-
--- | The API type.
-data API mode where
-  API :: { debugApi         :: mode :- NamedRoutes DebugAPI
-         , homePage         :: mode :- Get '[HTML] (PureSideMenu IndexPage)
-         , dataApi          :: mode :- NamedRoutes DataAPI
-         , visualizationApi :: mode :- NamedRoutes VisualizationAPI
-         , componentsApi    :: mode :- NamedRoutes ComponentsAPI
-         , static           :: mode :- NamedRoutes StaticAPI
-         , robotsTxtFile    :: mode :- NamedRoutes RobotsAPI
-         } -> API mode
-  deriving stock Generic
-
-type BikeShareExplorerAPI = NamedRoutes API
-
--- routesLinks :: API (AsLink Link)
--- routesLinks = allFieldLinks
 
 -- | The API handlers.
 server :: ( WithServerEnv m, WithEnv (ServerEnv ServerAppM) m )

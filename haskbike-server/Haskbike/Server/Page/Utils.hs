@@ -7,17 +7,21 @@ module Haskbike.Server.Page.Utils
      , hx_
      , makeFavicons
      , makeHeadElements
+     , makeHtmxElements
      , mkData_
      , showth
      , stylesheet_
      ) where
 
-import qualified Data.Text  as T
+import qualified Data.Text                      as T
+
+import           Haskbike.Server.ExternalAssets
+import           Haskbike.Server.Routes.Static
 
 import           Lucid
-import           Lucid.Base ( makeAttribute )
+import           Lucid.Base                     ( makeAttribute )
 
-import           Servant    ( Link, ToHttpApiData (toUrlPiece), linkURI )
+import           Servant                        ( Link, ToHttpApiData (toUrlPiece) )
 
 import           TextShow
 
@@ -37,9 +41,23 @@ makeFavicons staticPath = mapM (link_ . linkAttrs)
     linkAttrs sz = [rel_ "icon noopener noreferrer", type_ "image/png", sizes_ (ssz sz), target_ "_blank", hrefAttr sz]
 
 
+makeHtmxElements :: Monad m => ExternalAssetLocation -> HtmlT m ()
+makeHtmxElements assetsLocation = do
+  -- HTMX
+  script_ [ src_ (assetUrl (getAssetDetails   @HTMX assetsLocation))
+          , integrity_     (getAssetIntegrity @HTMX assetsLocation)
+          , crossorigin_ "anonymous"
+          , defer_ mempty
+          ] ("" :: T.Text)
+  script_ [ src_ (assetUrl (getAssetDetails   @HTMXExtClientSideTemplates assetsLocation))
+          , integrity_     (getAssetIntegrity @HTMXExtClientSideTemplates assetsLocation)
+          , crossorigin_ "anonymous", defer_ mempty
+          ] ("" :: T.Text)
+
+
 -- | Create standard <head> elements.
-makeHeadElements :: Monad m => T.Text -> T.Text -> HtmlT m ()
-makeHeadElements staticPath statsPath = do
+makeHeadElements :: Monad m => ExternalAssetLocation -> T.Text -> HtmlT m ()
+makeHeadElements assetsLocation staticPath = do
   -- Favicons
   makeFavicons staticPath ([16, 32, 48, 96, 180, 300, 512] :: [Int])
 
@@ -48,19 +66,29 @@ makeHeadElements staticPath statsPath = do
   meta_ [name_ "description", content_ "Toronto Bike Share data explorer."]
 
   -- Pure.CSS
-  link_ [rel_ "stylesheet", href_ (staticPath <> "/css/pure/pure-min@3.0.0.css"), integrity_ "sha384-X38yfunGUhNzHpBaEBsWLO+A0HDYOQi8ufWDkZ0k9e0eXz/tH3II7uKZ9msv++Ls", crossorigin_ "anonymous"]
-  -- link_ [rel_ "stylesheet", href_ "https://cdn.jsdelivr.net/npm/purecss@3.0.0/build/pure-min.css", integrity_ "sha384-X38yfunGUhNzHpBaEBsWLO+A0HDYOQi8ufWDkZ0k9e0eXz/tH3II7uKZ9msv++Ls", crossorigin_ "anonymous"]
-  stylesheet_ (staticPath <> "/css/pure/pure-grids-responsive-min@3.0.0.css") [defer_ mempty]
+
+  stylesheet_ (getAssetUrl @PureCss      assetsLocation) [integrity_ (getAssetIntegrity @PureCss      assetsLocation), crossorigin_ "anonymous", defer_ mempty]
+  stylesheet_ (getAssetUrl @PureCssGrids assetsLocation) [integrity_ (getAssetIntegrity @PureCssGrids assetsLocation), crossorigin_ "anonymous", defer_ mempty]
 
   -- HTMX
-  script_ [src_ (staticPath <> "/js/htmx/htmx.min.js"), integrity_ "sha384-QFjmbokDn2DjBjq+fM+8LUIVrAgqcNW2s0PjAxHETgRn9l4fvX31ZxDxvwQnyMOX", crossorigin_ "anonymous", defer_ mempty] ("" :: T.Text)
+  makeHtmxElements assetsLocation
+
+  -- Mustache templating engine (for HTMX client side templates)
+  script_ [ src_ (assetUrl (getAssetDetails   @Mustache assetsLocation))
+          , integrity_     (getAssetIntegrity @Mustache assetsLocation)
+          , crossorigin_ "anonymous", defer_ mempty
+          ] ("" :: T.Text)
 
   -- Project stylesheet
   stylesheet_ (staticPath <> "/css/haskbike.css") [defer_ mempty]
   stylesheet_ (staticPath <> "/css/tooltips.css") [defer_ mempty]
 
-  -- TODO: get this from the server's environment.
-  script_ [mkData_ "goatcounter" "https://stats.bikes.cfeeley.org/count", defer_ mempty, src_ statsPath] ("" :: T.Text)
+  script_ [ src_ (getAssetUrl @GoatCounterAnalytics assetsLocation)
+          , mkData_ "goatcounter" "https://stats.bikes.cfeeley.org/count"
+          , integrity_ (getAssetIntegrity @GoatCounterAnalytics assetsLocation)
+          , crossorigin_ "anonymous"
+          , defer_ mempty
+          ] ("" :: T.Text)
 
 
 -- | Make a "data-" attribute suffixed with the given 'Text'.
@@ -77,9 +105,12 @@ hx_ :: T.Text -> T.Text -> Attribute
 hx_ attr = makeAttribute ("hx-" <> attr)
 
 
--- FIXME: manually prefixing with '/components' defeats the whole point of safe links.
-hxSpinner_ :: Monad m => Link -> Link -> HtmlT m ()
-hxSpinner_ staticPath link = div_ [ hx_ "trigger" "load"
-                                  , hx_ "get" ("/components/" <> (T.pack . show . linkURI) link)
-                                  ]
-                             (img_ [class_ "htmx-indicator htmx-spinner", src_ ("/" <> toUrlPiece staticPath <> "/images/svg-loaders/circles.svg"), alt_ "Loading..."])
+hxSpinner_ :: Monad m => Link -> HtmlT m ()
+hxSpinner_ link =
+  div_ [ hx_ "trigger" "load"
+       , hx_ "get" $ "/" <> toUrlPiece link
+       ] $
+    img_ [ class_ "htmx-indicator htmx-spinner"
+         , src_ ("/" <> toUrlPiece (staticApi staticRoutesLinks) <> "/images/svg-loaders/circles.svg")
+         , alt_ "Loading..."
+         ]

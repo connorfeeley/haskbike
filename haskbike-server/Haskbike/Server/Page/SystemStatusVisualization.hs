@@ -7,7 +7,6 @@ module Haskbike.Server.Page.SystemStatusVisualization
      , SystemStatusVisualizationPage (..)
      ) where
 
-
 import           Data.Default.Class
 import qualified Data.Text                                as T
 import qualified Data.Text.Lazy                           as TL
@@ -15,8 +14,9 @@ import           Data.Time
 import           Data.Time.Extras
 
 import           Haskbike.Graphics.Vega.VegaLite.Extra
+import           Haskbike.Server.API.Components
 import           Haskbike.Server.Classes
-import           Haskbike.Server.ComponentsAPI
+import           Haskbike.Server.ExternalAssets           ( ExternalAssetLocation )
 import           Haskbike.Server.Page.SelectionForm
 import           Haskbike.Server.Page.StatusVisualization
 import           Haskbike.Server.Page.Utils
@@ -70,19 +70,20 @@ instance ToHtml SystemStatusVisualizationInfo where
             p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "E-Fit G5: " <> span_ [class_ "pure-u-1-2"] (showth (sysStatVisInfNumEfitG5 params))
 
 data SystemStatusVisualizationPage where
-  SystemStatusVisualizationPage :: { _systemStatusVisPageTimeRange     :: TimePair (Maybe LocalTime)
-                                   , _systemStatusVisPageTimeZone      :: TimeZone
-                                   , _systemStatusVisPageCurrentUtc    :: UTCTime
-                                   , _systemStatusVisPageInfo          :: SystemStatusVisualizationInfo
-                                   , _systemStatusVisPageDataLink      :: Link
-                                   , _systemStatusVisPageStaticLink    :: Link
+  SystemStatusVisualizationPage :: { _systemStatusVisPageTimeRange      :: TimePair (Maybe LocalTime)
+                                   , _systemStatusVisPageTimeZone       :: TimeZone
+                                   , _systemStatusVisPageCurrentUtc     :: UTCTime
+                                   , _systemStatusVisPageInfo           :: SystemStatusVisualizationInfo
+                                   , _systemStatusVisPageDataLink       :: Link
+                                   , _systemStatusVisPageStaticLink     :: Link
+                                   , _systemStatusVisPageExternalAssets :: ExternalAssetLocation
                                    } -> SystemStatusVisualizationPage
   deriving (Show)
 
 instance ToHtmlComponents SystemStatusVisualizationPage where
-  pageAnchor _ = "#system-status"
+  pageAnchor _ = "system-status"
   pageName   _ = "System Status"
-  toHead _ = do
+  toHead _assts _ = do
     script_ [src_ . TL.toStrict . vegaUrl      $ vegaSourceUrlsLocal, defer_ mempty] ("" :: String)
     script_ [src_ . TL.toStrict . vegaLiteUrl  $ vegaSourceUrlsLocal, defer_ mempty] ("" :: String)
     script_ [src_ . TL.toStrict . vegaEmbedUrl $ vegaSourceUrlsLocal, defer_ mempty] ("" :: String)
@@ -101,9 +102,9 @@ instance ToHtml SystemStatusVisualizationPage where
       br_ []
       div_ [class_ "pure-g full-width", style_ "text-align: center"] $ do
         let headers = [ toHtml (_systemStatusVisPageInfo params)
-                      , mkHeader params _systemStatusVisPageStaticLink _systemStatusVisPageTimeRange Nothing dockingEventsHeader
-                      , mkHeader params _systemStatusVisPageStaticLink _systemStatusVisPageTimeRange Nothing chargingEventsHeader
-                      , hxSpinner_ staticLink ((fieldLink chargingInfrastructureHeader . latestTime . _systemStatusVisPageTimeRange) params)
+                      , mkHeader params _systemStatusVisPageTimeRange Nothing dockingEventsHeader
+                      , mkHeader params _systemStatusVisPageTimeRange Nothing chargingEventsHeader
+                      , hxSpinner_ ((fieldLink chargingInfrastructureHeader . latestTime . _systemStatusVisPageTimeRange) params)
                       ]
         mconcat $ map (`with` [class_ ("pure-u-md-1-" <> showt (length headers))]) headers
 
@@ -118,8 +119,6 @@ instance ToHtml SystemStatusVisualizationPage where
       div_ $ i_ "Note: Iconic (mechanical) bikes are not displayed on the chart above since e-bike quantities are more interesting."
 
     where
-      staticLink = _systemStatusVisPageStaticLink params
-
       times' = enforceTimeRangeBounds (StatusDataParams (tz $ _systemStatusVisPageTimeRange params)
                                                         (currentUtcTime $ _systemStatusVisPageTimeRange params)
                                                         (_systemStatusVisPageTimeRange params)

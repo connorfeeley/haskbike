@@ -62,7 +62,7 @@ selectWithPostgres = withPostgres . runSelectReturningList
 bgroupDatabase :: Benchmark
 bgroupDatabase = bgroup "Database operations"
   [ benchWithTmp "Charging infrastructure"   . selectWithPostgres . selectWith $
-    queryChargingInfrastructure latestTime
+    queryChargingInfrastructureE latestTime
   , benchWithTmp "System status"             . withPostgres . runSelectReturningList . selectWith $
     querySystemStatusAtRangeExpr earliestTime latestTime (minsPerHourlyInterval 4)
   , benchWithTmp "Charging events"           $ queryChargingEventsCount statusVariationAll
@@ -71,14 +71,17 @@ bgroupDatabase = bgroup "Database operations"
   , benchWithTmp "Station occupancy (7001)" $ benchStationEmptyTime (Just 7001)
   , benchWithTmp "Station occupancy (all)"  $ benchStationEmptyTime Nothing
   , benchWithTmp "Station information decoding" $ benchStationInformationDecoding "test/dumps/station_information_7001_2024-01-03_2024-01-04.json.zst"
+  , benchWithTmp "Field integrals"          $ benchFieldIntegrals
   ]
 
 
 benchStationEmptyTime :: (MonadCatch m, HasEnv env m) => Maybe Int -> m [(StationInformation, StationOccupancy)]
 benchStationEmptyTime station = void query >> query -- Run query twice.
   where
-    query = withPostgresTransaction $ queryStationOccupancy 0 0 station
-                (UTCTime (fromGregorian 2023 11 01) (timeOfDayToTime midnight)) (UTCTime (fromGregorian 2023 11 02) (timeOfDayToTime midnight))
+    query = withPostgresTransaction $
+      queryStationOccupancyE 0 0 station
+      (UTCTime (fromGregorian 2023 11 01) (timeOfDayToTime midnight))
+      (UTCTime (fromGregorian 2023 11 02) (timeOfDayToTime midnight))
 
 
 benchStationInformationDecoding :: (HasEnv env m, MonadCatch m) => FilePath -> m [StationInformationT Identity]
@@ -94,3 +97,11 @@ benchStationInformationDecoding filePath = do
         Right info' -> do
           let infoWithReported = map (\i -> (_infoReported i, fromBeamStationInformationToJSON i)) info'
           insertStationInformation infoWithReported
+
+benchFieldIntegrals :: (HasEnv env m, MonadCatch m) => m ()
+benchFieldIntegrals = do
+  let variation = StatusVariationQuery (Just 7001) [ EarliestTime (UTCTime (fromGregorian 2023 10 30) (timeOfDayToTime midnight))
+                                                   , LatestTime   (UTCTime (fromGregorian 2023 10 31) (timeOfDayToTime midnight))
+                                                   ]
+
+  void $ queryIntegratedStatus variation

@@ -3,11 +3,13 @@
 module Haskbike.Database.Operations.StationOccupancy
      ( lookupStationOccupancy
      , queryStationOccupancy
+     , queryStationOccupancyE
      , stationOccupancyE
      ) where
 
 import           Control.Lens                                hiding ( reuse, (<.) )
 import           Control.Monad
+import           Control.Monad.Catch                         ( MonadCatch )
 
 import           Data.Int                                    ( Int32 )
 import           Data.Time
@@ -19,7 +21,9 @@ import           Database.Beam.Postgres                      ( Postgres )
 import qualified Database.Beam.Postgres                      as Pg
 import qualified Database.Beam.Postgres.Full                 as Pg
 
+import           Haskbike.AppEnv
 import           Haskbike.Database.BikeShare
+import           Haskbike.Database.Expressions
 import           Haskbike.Database.Operations.Utils
 import           Haskbike.Database.Tables.StationInformation
 import           Haskbike.Database.Tables.StationOccupancy
@@ -30,11 +34,6 @@ greatest_, least_ :: QGenExpr ctx Postgres s a -> QGenExpr ctx Postgres s a -> Q
 greatest_ = customExpr_ (\a b -> "GREATEST(" <> a <> ", " <> b <> ")")
 least_    = customExpr_ (\a b -> "LEAST("    <> a <> ", " <> b <> ")")
 
-
--- | Difference between two epochs.
-timeDelta :: (HasSqlTime t, Integral b)
-          => QGenExpr ctx Postgres s t -> QGenExpr ctx Postgres s t -> QGenExpr ctx Postgres s b
-timeDelta a b = cast_ (extract_ Pg.epoch_ a - extract_ Pg.epoch_ b) int
 
 -- | Query how long each station has been both empty and full for.
 stationOccupancyE :: Integral a
@@ -222,10 +221,16 @@ lookupStationOccupancy emptyThresh fullThresh stationId startT endT = do
 
 
 -- | Query the station occupancy, either returning cached data or caching it and returning the result.
-queryStationOccupancy :: (Integral a, MonadBeamInsertReturning Postgres m)
+queryStationOccupancy :: (HasEnv env m, MonadCatch m, Integral a)
                       => Int32 -> Int32 -> Maybe a -> UTCTime -> UTCTime
                       -> m [(StationInformation, StationOccupancy)]
 queryStationOccupancy emptyThresh fullThresh stationId startT endT = do
+  withPostgresTransaction $ queryStationOccupancyE emptyThresh fullThresh stationId startT endT
+
+queryStationOccupancyE :: (Integral a, MonadBeamInsertReturning Postgres m)
+                      => Int32 -> Int32 -> Maybe a -> UTCTime -> UTCTime
+                      -> m [(StationInformation, StationOccupancy)]
+queryStationOccupancyE emptyThresh fullThresh stationId startT endT = do
   occLookup <- runSelectReturningList . select $ lookupStationOccupancy 0 0 stationId startT endT
   case occLookup of
     -- No cached data found: calculate, store, and return it.

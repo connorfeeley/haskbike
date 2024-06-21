@@ -2,6 +2,8 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
 
+    nixpkgs-index-advisor.url = "github:connorfeeley/nixpkgs/feat/pg-index-advisor";
+
     flake-compat = { url = "github:edolstra/flake-compat"; flake = false; };
 
     # flake-parts and friends.
@@ -15,7 +17,7 @@
     tmp-postgres = { url = "github:jfischoff/tmp-postgres"; flake = false; };
     beam = { url = "github:connorfeeley/beam/feat/insert-only-on-conflict"; flake = false; };
   };
-  outputs = inputs@{ self, nixpkgs, flake-parts, ... }:
+  outputs = inputs@{ self, flake-parts, ... }:
     let rev = self.rev or self.dirtyRev or "dirty";
     in
     flake-parts.lib.mkFlake { inherit inputs; } ({ ... }: {
@@ -28,7 +30,7 @@
         inputs.flake-root.flakeModule
       ];
 
-      perSystem = { self', config, pkgs, ... }:
+      perSystem = { self', inputs', config, pkgs, ... }:
         let inherit (pkgs) lib;
           haskellOptions = {
             # Profiling options.
@@ -151,6 +153,7 @@
             };
             settings = {
               postgresql-libpg.jailbreak = true;
+              # beam-core.jailbreak = true;
               beam-postgres = {
                 jailbreak = true;
                 check = false; # Postgres tests are flaky on darwin.
@@ -170,7 +173,13 @@
 
             devShell =
               let
-                postgres = lib.hiPrio (pkgs.postgresql_16.withPackages (ps: with ps; [ pg_partman postgis timescaledb ]));
+                postgres = lib.hiPrio (inputs'.nixpkgs-index-advisor.legacyPackages.postgresql_16.withPackages (ps: with ps; [
+                  pg_partman
+                  postgis
+                  timescaledb
+                  hypopg
+                  index-advisor
+                ]));
               in
               {
                 # Enabled by default
@@ -192,7 +201,7 @@
                     tasty-discover
                     weeder
                     retrie
-                    ghcprofview
+                    # ghcprofview # broken
                     eventlog2html
                     stan
                     ;
@@ -202,8 +211,10 @@
                   # ghcid = null;
 
                   ### Other tools.
-                  inherit (pkgs)
+                  inherit (pkgs.llvmPackages_16)
                     clang# Faster to link with clang
+                    ;
+                  inherit (pkgs)
                     stack
                     reuse
                     litecli
@@ -229,8 +240,8 @@
 
                 # Extra arguments to pass to mkShell.
                 mkShellArgs = {
-                  inputsFrom = [ postgres ];
-                  nativeBuildInputs = [ postgres ];
+                  # inputsFrom = [ postgres ];
+                  # nativeBuildInputs = [ postgres ];
                 };
               };
           };
@@ -277,6 +288,8 @@
               -Gsize="20,20!" \
               -T"$filetype"
           '';
+
+          checks = import ./nix/checks { inherit pkgs; };
 
           treefmt.config = {
             inherit (config.flake-root) projectRootFile;

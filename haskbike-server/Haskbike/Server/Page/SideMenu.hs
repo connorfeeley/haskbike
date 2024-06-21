@@ -16,11 +16,13 @@ import qualified Data.Text                              as T
 
 import           Haskbike.AppEnv
 import           Haskbike.Server.Classes
+import           Haskbike.Server.ExternalAssets
 import           Haskbike.Server.LatestQueries
 import           Haskbike.Server.LatestQueriesComponent
 import           Haskbike.Server.Page.Utils
 import           Haskbike.Server.PureCSS
-import           Haskbike.Server.StaticAPI
+import           Haskbike.Server.Routes.Static
+import           Haskbike.ServerEnv
 import           Haskbike.Version
 
 import           Lucid
@@ -31,7 +33,8 @@ import           Servant                                ( Link, fieldLink, toUrl
 
 data PureSideMenu a where
   PureSideMenu :: (ToHtml a, ToHtmlComponents a) =>
-    { visPageParams     :: a
+    { pageContent       :: a
+    , assetsLocation    :: ExternalAssetLocation
     , staticLink        :: Link
     , cabalVersionText  :: String
     , gitVersionText    :: String
@@ -44,12 +47,13 @@ instance (ToHtml a, ToHtml LatestQueries, ToHtmlComponents a) => ToHtml (PureSid
     headElement component
     layoutElement component
     where
+      asst = assetsLocation component
       headElement c = head_ $ do
-        makeHeadElements ("/" <> toUrlPiece (staticLink c)) "//stats.bikes.cfeeley.org/count.js"
-        toHead (visPageParams c)
+        makeHeadElements (assetsLocation component) ("/" <> toUrlPiece (staticLink c))
+        toHead asst (pageContent c)
 
         stylesheet_ ("/" <> toUrlPiece (staticLink c) <> "/css/pure/side-menu.css") [defer_ mempty]
-        script_ [src_ ("/" <> toUrlPiece (staticLink c) <> "/js/pure/ui.js"), defer_ mempty] ""
+        script_ [src_ ("/" <> toUrlPiece (staticLink c) <> "/js/pure/ui.js"), integrity_ "sha384-kSeBLTki8KqaxayzOX+J1V3vfRIjnWmdVFtdkzwN4mEjkDK8CMit4TbzxVHdOqPu", defer_ mempty] ""
       menuLink = a_ [href_ "#menu", id_ "menuLink", class_ "menu-link", makeAttribute "aria-label" "Toggle sidebar"] $ span_ mempty
       layoutElement c = div_ [id_ "layout"] $ do
         menuLink
@@ -62,14 +66,14 @@ renderMain :: (Monad m, ToHtml a, ToHtmlComponents a) => PureSideMenu a -> HtmlT
 renderMain = mainContainer . mainContent -- Render parameterized type
   where
     mainContainer = div_ [id_ "main", class_ "main-container"]
-    mainContent = toHtml . visPageParams
+    mainContent = toHtml . pageContent
 
 -- | Render the menu sidebar.
 renderMenu :: (Monad m, ToHtml a, ToHtmlComponents a, ToHtml LatestQueries) => PureSideMenu a -> HtmlT m ()
 renderMenu params =
   div_ [id_ "menu"] $ do
     div_ [class_ "pure-menu"] $ do
-      toMenuHeading (visPageParams params)
+      toMenuHeading (pageContent params)
       ul_ [class_ "pure-menu-list"] $ do
         navLink "/" "Home"
         navLink "/visualization/station-list" "Station List"
@@ -79,7 +83,15 @@ renderMenu params =
         navLink "/visualization/system-status/performance/csv" "Performance Data (CSV)"
 
     div_ [id_ "menu-footer"] $ do
+      -- Fill remaining space.
       div_ [class_ "menu-vertical-spacer"] mempty
+
+      -- Semi-hidden debug pages - hover to show links.
+      ul_ [style_ "hidden-text"] $ do
+        div_ [class_ "hidden-text"] $ span_ [class_ "pure-menu-link hidden-text"] "Debug Information"
+        div_ [style_ "margin-left:20px;"] $
+          a_ [class_ "hidden-text", href_ "/visualization/query-history"] $ span_ [class_ "pure-menu-link hidden-text"] "Query History"
+
       toHtml LatestQueriesComponent
       renderVersion params
 
@@ -104,12 +116,17 @@ versionLink ver = linkElement shortVersion
     urlForVersion object = baseUrl <> T.pack object
 
 -- | 'SideMenu' smart constructor.
-sideMenu :: (HasEnv env m, MonadIO m, ToHtml a, ToHtmlComponents a, MonadCatch m) => a -> m (PureSideMenu a)
-sideMenu page = do
+sideMenu :: (HasEnv env m, MonadIO m, ToHtml a, ToHtmlComponents a, MonadCatch m, HasServerEnv env m)
+         -- => Link
+         => a
+         -> m (PureSideMenu a)
+sideMenu content = do
+  assetsLocation <- getServerAssetsLocation
   pure $
     PureSideMenu
-    { visPageParams    = page
-    , staticLink       = fieldLink staticApi
-    , cabalVersionText = getCabalVersion
-    , gitVersionText   = getGitHash
+    { pageContent       = content
+    , assetsLocation    = assetsLocation
+    , staticLink        = fieldLink staticApi
+    , cabalVersionText  = getCabalVersion
+    , gitVersionText    = getGitHash
     }

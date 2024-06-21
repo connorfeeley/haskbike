@@ -17,6 +17,7 @@ module Data.Time.Extras
      , posixToLocal
      , posixToUtc
      , posixToZonedTime
+     , shortTimeFormat
      , utcFromGregorian
      , utcToPosix
      , zonedTimeToPosix
@@ -93,3 +94,7 @@ utcToPosix = floor . utcTimeToPOSIXSeconds
 
 htmlTimeFormat :: String
 htmlTimeFormat = "%FT%H:%M"
+
+-- Short month name, day, hours-minutes-seconds
+shortTimeFormat :: String
+shortTimeFormat = "%b %d %H:%M:%S"

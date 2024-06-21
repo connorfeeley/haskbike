@@ -51,7 +51,7 @@ maintainer:         git@cfeeley.org
 build-type:         Simple
 
 -- Extra doc files to be distributed with the package, such as a CHANGELOG or a README.
-extra-doc-files:    CHANGELOG.md
+-- extra-doc-files:    CHANGELOG.md
 
 -- Data files that can be accessed at runtime.
 data-files: test/json/*.json
@@ -95,13 +95,19 @@ library
                     , Haskbike.Database.Oddities
                     , Haskbike.Database.ImportExport
                     , Haskbike.Database.Maintenance
+
                     , Haskbike.Database.Operations
                     , Haskbike.Database.Operations.Utils
                     , Haskbike.Database.Operations.Dockings
                     , Haskbike.Database.Operations.Factors
                     , Haskbike.Database.Operations.QueryLogs
+                    , Haskbike.Database.Operations.QueryHistory
                     , Haskbike.Database.Operations.StationOccupancy
                     , Haskbike.Database.Operations.StatusChanges
+                    , Haskbike.Database.Operations.SystemInformation
+                    , Haskbike.Database.Operations.LatestQueries
+                    , Haskbike.Database.Operations.Debug
+
                     , Haskbike.Database.StatusDeltaFields
                     , Haskbike.Database.StatusVariationQuery
                     , Haskbike.Database.Utils

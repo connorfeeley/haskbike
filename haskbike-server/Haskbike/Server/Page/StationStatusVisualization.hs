@@ -15,8 +15,9 @@ import           Data.Time.Extras
 
 import           Haskbike.Database.Tables.StationInformation
 import           Haskbike.Graphics.Vega.VegaLite.Extra
+import           Haskbike.Server.API.Components
 import           Haskbike.Server.Classes
-import           Haskbike.Server.ComponentsAPI
+import           Haskbike.Server.ExternalAssets
 import           Haskbike.Server.Page.SelectionForm
 import           Haskbike.Server.Page.StatusVisualization
 import           Haskbike.Server.Page.Utils
@@ -34,14 +35,14 @@ data StationStatusVisualizationPage where
                                     , _statusVisPageTimeZone       :: TimeZone
                                     , _statusVisPageCurrentUtc     :: UTCTime
                                     , _statusVisPageDataLink       :: Link
-                                    , _statusVisPageStaticLink     :: Link
+                                    , _statusVisPageExternalAssets :: ExternalAssetLocation
                                     } -> StationStatusVisualizationPage
 
 instance ToHtmlComponents StationStatusVisualizationPage where
-  pageAnchor _ = "#available-bikes"
+  pageAnchor _ = "available-bikes"
   pageName   _ = "Available Bikes"
 
-  toHead _ = do
+  toHead _assts _ = do
     script_ [src_ . TL.toStrict . vegaUrl      $ vegaSourceUrlsLocal, defer_ mempty] ("" :: String)
     script_ [src_ . TL.toStrict . vegaLiteUrl  $ vegaSourceUrlsLocal, defer_ mempty] ("" :: String)
     script_ [src_ . TL.toStrict . vegaEmbedUrl $ vegaSourceUrlsLocal, defer_ mempty] ("" :: String)
@@ -74,13 +75,13 @@ instance ToHtml StationStatusVisualizationPage where
 
     where
       headers = catMaybes [ Just capacityHeader
-                          , Just (mkHeader params _statusVisPageStaticLink _statusVisPageTimeRange (Just (_statusVisPageStationId params)) dockingEventsHeader)
+                          , Just (mkHeader params _statusVisPageTimeRange (Just (_statusVisPageStationId params)) dockingEventsHeader)
                           , if _infoIsChargingStation inf then Just chargingHeader else Nothing
-                          , Just (mkHeader params _statusVisPageStaticLink _statusVisPageTimeRange (Just (_statusVisPageStationId params)) performanceHeader)
+                          , Just (mkHeader params _statusVisPageTimeRange (Just (_statusVisPageStationId params)) performanceHeader)
                           , valetHeader
                           , virtualHeader
                           ]
-      chargingHeader = mkHeader params _statusVisPageStaticLink _statusVisPageTimeRange (Just (_statusVisPageStationId params)) chargingEventsHeader
+      chargingHeader = mkHeader params _statusVisPageTimeRange (Just (_statusVisPageStationId params)) chargingEventsHeader
 
       inf = _statusVisPageStationInfo params
 

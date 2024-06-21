@@ -1,5 +1,7 @@
 roots = [ "^Main.main$"
         , "^Driver.main$"
         , "^Bench.main$"
+        , "^Paths_haskbike_*"
         ]
 type-class-roots = true
+unused-types = true

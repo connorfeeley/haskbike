@@ -8,21 +8,22 @@ module Haskbike.Server.LatestQueries
      , latestQueryLogsToMap
      ) where
 
-import           Control.Monad                      ( forM_ )
-import           Control.Monad.Catch                ( MonadCatch )
+import           Control.Monad                              ( forM_ )
+import           Control.Monad.Catch                        ( MonadCatch )
 
-import qualified Data.Map                           as Map
-import qualified Data.Text                          as T
+import qualified Data.Map                                   as Map
+import qualified Data.Text                                  as T
 import           Data.Time
-
-import           Database.Beam                      hiding ( div_ )
+import           Data.Time.Extras
 
 import           Haskbike.Database.EndpointQueried
-import           Haskbike.Database.Expressions
+import           Haskbike.Database.Operations.LatestQueries
 import           Haskbike.Database.Tables.QueryLogs
 import           Haskbike.ServerEnv
 
 import           Lucid
+
+import           UnliftIO                                   ( MonadIO )
 
 
 data LatestQueries where
@@ -65,11 +66,6 @@ endpointName ep = case ep of
 formatTimeHtml :: LocalTime -> T.Text
 formatTimeHtml = T.pack . formatTime defaultTimeLocale shortTimeFormat
 
-
--- Short month name, day, hours-minutes-seconds
-shortTimeFormat :: String
-shortTimeFormat = "%b %d %H:%M:%S"
-
 latestQueryLogsToMap :: TimeZone -> [QueryLog] -> LatestQueries
 latestQueryLogsToMap tz = LatestQueries . queryMap
   where
@@ -79,5 +75,4 @@ latestQueryLogsToMap tz = LatestQueries . queryMap
 getLatestQueries :: (HasEnv env m, MonadIO m, MonadCatch m) => m LatestQueries
 getLatestQueries = do
   tz <- getTz
-  latest <- withPostgres $ runSelectReturningList $ selectWith queryLatestQueryLogs
-  pure $ latestQueryLogsToMap tz latest
+  latestQueryLogsToMap tz <$> queryLatestQueries

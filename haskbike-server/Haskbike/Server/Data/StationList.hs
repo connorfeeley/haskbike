@@ -2,7 +2,6 @@
 
 module Haskbike.Server.Data.StationList
      ( StationListRecord (..)
-     , StationListable (..)
      ) where
 
 import           Data.Aeson
@@ -11,11 +10,7 @@ import qualified Haskbike.Database.Tables.StationInformation as DB
 import qualified Haskbike.Database.Tables.StationStatus      as DB
 
 
--- FIXME: currently unused. Consider removing if it doesn't fix the established pattern.
--- | Typeclass for data that can be serialized into station list data.
-class StationListable a where
-  toStationListData :: ToJSON a => a  -> Value
-
+-- | This type represents an entry in the station list.
 data StationListRecord where
   StationListRecord :: { _stationListInfo   :: DB.StationInformation
                        , _stationListStatus :: DB.StationStatus

@@ -8,30 +8,38 @@
 
 module Haskbike.Database.Expressions
      ( disabledDocksExpr
-     , infoByIdExpr
+     , infoByIdE
+     , infoByIdQ
      , insertStationInformationExpr
      , integrateColumns
      , queryChargingInfrastructure
+     , queryChargingInfrastructureE
      , queryLatestInfo
      , queryLatestInfoBefore
      , queryLatestInfoLookup
      , queryLatestQueryLogs
+     , queryLatestQueryLogsE
      , queryLatestStatusBetweenExpr
      , queryLatestStatusLookup
      , queryLatestStatuses
-     , queryLatestSystemInfo
+     , queryLatestSystemInfoE
+     , queryStationBefore
      , queryStationBeforeExpr
      , queryStationIdExpr
      , queryStationIdLikeExpr
      , queryStationStatusExpr
      , querySystemStatusAtRangeExpr
+     , querySystemStatusAtRangeQ
+     , statusBetween
      , statusBetweenExpr
      , statusInfoBetweenExpr
      , systemStatusBetweenExpr
+     , timeDelta
      ) where
 
 import           Control.Arrow                               ( (&&&) )
 import           Control.Lens                                hiding ( reuse, (<.) )
+import           Control.Monad.Catch                         ( MonadCatch )
 
 import           Data.Containers.ListUtils
 import           Data.Int                                    ( Int32 )
@@ -74,6 +82,12 @@ import           Haskbike.TimeInterval
 import           Text.Pretty.Simple.Extras
 
 
+-- | Difference between two epochs.
+timeDelta :: (HasSqlTime t, Integral b)
+          => QGenExpr ctx Postgres s t -> QGenExpr ctx Postgres s t -> QGenExpr ctx Postgres s b
+timeDelta a b = cast_ (extract_ Pg.epoch_ a - extract_ Pg.epoch_ b) int
+
+
 -- | Expression to query the all statuses for the system between two times.
 systemStatusBetweenExpr :: UTCTime -> UTCTime -> Q Postgres BikeshareDb s (StationStatusT (QGenExpr QValueContext Postgres s))
 systemStatusBetweenExpr start_time end_time =
@@ -84,6 +98,13 @@ systemStatusBetweenExpr start_time end_time =
             between_  (status ^. statusLastReported) (val_ start_time) (val_ end_time)
            )
     pure status
+
+statusBetween :: (HasEnv env m, MonadIO m, MonadCatch m) => Int -> UTCTime -> UTCTime -> m [StationStatus]
+statusBetween stationId startTime endTime = do
+  withPostgres .
+    runSelectReturningList . select $ -- limit_ 10000 $
+    statusBetweenExpr (fromIntegral stationId) startTime endTime
+
 
 -- | Expression to query the statuses for a station between two times.
 statusBetweenExpr :: Int32 -> UTCTime -> UTCTime -> Q Postgres BikeshareDb s (StationStatusT (QGenExpr QValueContext Postgres s))
@@ -112,9 +133,13 @@ statusInfoBetweenExpr stationId startTime endTime = do
           between_ (status ^. statusLastReported) (val_ startTime) (val_ endTime))
   pure (info, status)
 
+
+infoByIdQ :: (HasEnv env m, MonadIO m, MonadCatch m) => Int -> m [StationInformation]
+infoByIdQ stationId = withPostgres . runSelectReturningList . selectWith $ infoByIdE [fromIntegral stationId]
+
 -- | Expression to query information for stations by their IDs.
-infoByIdExpr :: [Int32] -> With Postgres BikeshareDb (Q Postgres BikeshareDb s (StationInformationT (QGenExpr QValueContext Postgres s)))
-infoByIdExpr stationIds = do
+infoByIdE :: [Int32] -> With Postgres BikeshareDb (Q Postgres BikeshareDb s (StationInformationT (QGenExpr QValueContext Postgres s)))
+infoByIdE stationIds = do
   info         <- selecting $ all_ (bikeshareDb ^. bikeshareStationInformation)
   status       <- selecting $ all_ (bikeshareDb ^. bikeshareStationStatus)
   statusLookup <- selecting $ all_ (bikeshareDb ^. bikeshareStationLookup)
@@ -193,6 +218,10 @@ queryLatestStatusBetweenExpr earliestTime latestTime = do
     )
 
 
+queryStationBefore :: (HasEnv env m, MonadIO m, MonadCatch m) => UTCTime -> m [(StationInformation, StationStatus)]
+queryStationBefore latestTime = withPostgres . runSelectReturningList . select $
+  queryStationBeforeExpr latestTime
+
 -- | Expression to query the latest statuses not later than a given time for each station.
 queryStationBeforeExpr :: UTCTime
                        -> Q Postgres BikeshareDb s (StationInformationT (QGenExpr QValueContext Postgres s), StationStatusT (QExpr Postgres s))
@@ -208,6 +237,12 @@ queryStationBeforeExpr latestTime = do
 
 mkTime :: UTCTime -> QGenExpr ctxt Postgres s b
 mkTime  = (`cast_` (DataType $ timestampType Nothing True)) . val_
+
+
+-- FIXME: ambiguously named; how is this different from 'querySystemStatusAtRange'?
+querySystemStatusAtRangeQ :: (HasEnv env m, MonadIO m, MonadCatch m) => UTCTime -> UTCTime -> Integer -> m [(UTCTime, Int32, Int32, Int32, Int32, Int32, Int32, Int32)]
+querySystemStatusAtRangeQ start end increment = withPostgres . runSelectReturningList . selectWith $
+    querySystemStatusAtRangeExpr start end increment
 
 {- Expression to query aggregate information from the latest statuses not later than a given time for each station.
 
@@ -309,24 +344,22 @@ integrateColumns variation = do
 
   -- Difference between row values and lagged values
   withDeltas <- selecting $ do
-    -- as seconds:
-    let timeDelta column column' = cast_ (extract_ Pg.epoch_ column - extract_ Pg.epoch_ column') int
     -- Calculate delta between current and previous availability.
-      in withWindow_ (\(row, _) -> frame_ (partitionBy_ ((_unInformationStationId . _statusInfoId . _statusCommon) row)) noOrder_ noBounds_)
-         (\(row, pLastReported) _w ->
-             ( row                                                                                  -- _1
-             , as_ @Int32 (timeDelta (row ^. statusLastReported) pLastReported)                     -- _2
-             , ( row ^. statusNumBikesAvailable * timeDelta (row ^. statusLastReported) pLastReported
-               , row ^. statusNumBikesDisabled  * timeDelta (row ^. statusLastReported) pLastReported
-               , row ^. statusNumDocksAvailable * timeDelta (row ^. statusLastReported) pLastReported
-               , row ^. statusNumDocksDisabled  * timeDelta (row ^. statusLastReported) pLastReported
-               )
-             , ( row ^. vehicleTypesAvailableIconic  * timeDelta (row ^. statusLastReported) pLastReported
-               , row ^. vehicleTypesAvailableEfit    * timeDelta (row ^. statusLastReported) pLastReported
-               , row ^. vehicleTypesAvailableEfitG5  * timeDelta (row ^. statusLastReported) pLastReported
-               )
+    withWindow_ (\(row, _) -> frame_ (partitionBy_ ((_unInformationStationId . _statusInfoId . _statusCommon) row)) noOrder_ noBounds_)
+       (\(row, pLastReported) _w ->
+           ( row                                                                                  -- _1
+           , as_ @Int32 (timeDelta (row ^. statusLastReported) pLastReported)                     -- _2
+           , ( row ^. statusNumBikesAvailable * timeDelta (row ^. statusLastReported) pLastReported
+             , row ^. statusNumBikesDisabled  * timeDelta (row ^. statusLastReported) pLastReported
+             , row ^. statusNumDocksAvailable * timeDelta (row ^. statusLastReported) pLastReported
+             , row ^. statusNumDocksDisabled  * timeDelta (row ^. statusLastReported) pLastReported
              )
-         ) (reuse lagged)
+           , ( row ^. vehicleTypesAvailableIconic  * timeDelta (row ^. statusLastReported) pLastReported
+             , row ^. vehicleTypesAvailableEfit    * timeDelta (row ^. statusLastReported) pLastReported
+             , row ^. vehicleTypesAvailableEfitG5  * timeDelta (row ^. statusLastReported) pLastReported
+             )
+           )
+       ) (reuse lagged)
   chargings <- selecting $ reuse withDeltas
 
   pure $ do
@@ -382,11 +415,10 @@ queryLatestStatuses = do
   pure (info, status)
 
 -- | Get the latest status records for each station.
-queryLatestSystemInfo :: be ~ Postgres
-                      => With be BikeshareDb
-                      (Q be BikeshareDb s
-                       (SystemInformationCountT (QGenExpr QValueContext Postgres s)))
-queryLatestSystemInfo = do
+queryLatestSystemInfoE :: be ~ Postgres
+                       => With be BikeshareDb
+                       (Q be BikeshareDb s (SystemInformationCountT (QGenExpr QValueContext Postgres s)))
+queryLatestSystemInfoE = do
   sysInfoCte <- selecting $
     Pg.pgNubBy_ (\cnt -> (_sysInfCntStationCount cnt, _sysInfCntMechanicalCount cnt, _sysInfCntEbikeCount cnt)) $
     orderBy_ (asc_ . (_sysInfKeyReported . _sysInfCntKey))
@@ -395,11 +427,15 @@ queryLatestSystemInfo = do
   pure $ reuse sysInfoCte
 
 -- | Get the latest query logs for each endpoint.
-queryLatestQueryLogs :: be ~ Postgres
-                     => With be BikeshareDb
-                     (Q be BikeshareDb s
-                      (QueryLogT (QExpr be s)))
-queryLatestQueryLogs = do
+queryLatestQueryLogs :: (MonadCatch m, HasEnv env m) => m [QueryLog]
+queryLatestQueryLogs = withPostgres . runSelectReturningList $ selectWith queryLatestQueryLogsE
+
+-- | Expression to get the latest query logs for each endpoint.
+queryLatestQueryLogsE :: be ~ Postgres
+                      => With be BikeshareDb
+                      (Q be BikeshareDb s
+                       (QueryLogT (QExpr be s)))
+queryLatestQueryLogsE = do
   ranked <- selecting $ do
     withWindow_ (\row -> frame_ (partitionBy_ (_queryLogEndpoint row)) (orderPartitionBy_ (desc_ $ _queryLogTime row)) noBounds_)
                 (\row w -> ( row
@@ -473,11 +509,18 @@ maybeFilterDaysAgo reportedField (Just days) = filter_ (\s -> s ^. reportedField
 maybeFilterDaysAgo _ Nothing                 = id
 
 -- | Query charging infrastructure at given time.
-queryChargingInfrastructure :: (be ~ Postgres, ctx ~ QValueContext, db ~ BikeshareDb, expr ~ QGenExpr)
+queryChargingInfrastructure :: (MonadCatch m, HasEnv env m)
+                            => UTCTime
+                            -> m (Maybe (Int32, Int32))
+queryChargingInfrastructure atTime = withPostgres . runSelectReturningOne . selectWith $
+  queryChargingInfrastructureE atTime
+
+-- | Expression to query charging infrastructure at given time.
+queryChargingInfrastructureE :: (be ~ Postgres, ctx ~ QValueContext, db ~ BikeshareDb, expr ~ QGenExpr)
                             => UTCTime
                             -> With be db (Q be db s (expr ctx be s Int32, expr ctx be s Int32))
                             -- ^ (Maybe) a tuple of (number of charging stations, number of charging docks)
-queryChargingInfrastructure t = do
+queryChargingInfrastructureE t = do
   ranked <- selecting $ do
     withWindow_ (\row -> frame_ (partitionBy_ (_infoStationId row)) (orderPartitionBy_ (desc_ $ _infoId row)) noBounds_)
                 (\row w -> ( row

@@ -320,3 +320,12 @@ Hides the menu at `48em`, but modify this based on your app's needs.
   flex-direction: column;
   flex-grow: 1;
 }
+
+.hidden-text, span.hidden-text {
+  color: transparent;
+  text-decoration: none;
+}
+
+.hidden-text, span.hidden-text:hover {
+  color: grey;
+}

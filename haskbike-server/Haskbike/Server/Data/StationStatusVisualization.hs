@@ -18,7 +18,7 @@ import qualified Data.Text                              as T
 import           Data.Time
 import           Data.Time.Extras
 
-import           Database.Beam
+import           GHC.Generics                           ( Generic )
 
 import           Haskbike.AppEnv
 import           Haskbike.Database.Expressions
@@ -30,6 +30,8 @@ import           Haskbike.ServerEnv
 import           Haskbike.TimeInterval
 
 import           TextShow                               ( showt )
+
+import           UnliftIO
 
 
 -- | Type representing a the visualization data for a BikeShare station's status.
@@ -85,9 +87,7 @@ generateJsonDataSource (Just stationId) startTime endTime = do
 
   let params = StatusDataParams tz currentUtc (TimePair startTime endTime tz currentUtc)
   let range = enforceTimeRangeBounds params
-  result <- withPostgres $
-    runSelectReturningList $ select $ -- limit_ 10000 $
-    statusBetweenExpr (fromIntegral stationId) (localTimeToUTC tz (earliestTime  range)) (localTimeToUTC tz (latestTime range))
+  result <- statusBetween stationId (localTimeToUTC tz (earliestTime  range)) (localTimeToUTC tz (latestTime range))
 
   pure $ map fromBeamStationStatusToVisJSON result
 
@@ -104,8 +104,7 @@ generateJsonDataSource Nothing startTime endTime = do
   let rangeIncrement = secondsPerIntervalForRange start end maxIntervals
 
   logDebug $ "Start: " <> (T.pack . show) start <> ", end: " <> (T.pack . show) end <> ", increment: " <> (T.pack . show) rangeIncrement <> "s"
-  statusAtRange <- withPostgres $ runSelectReturningList $ selectWith $
-    querySystemStatusAtRangeExpr start end (div rangeIncrement 60)
+  statusAtRange <- querySystemStatusAtRangeQ start end (div rangeIncrement 60)
   (pure . map toVisualization) statusAtRange
   where
     toVisualization st =

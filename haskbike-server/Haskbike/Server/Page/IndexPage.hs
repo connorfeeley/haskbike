@@ -29,7 +29,6 @@ data IndexPage where
 instance ToHtml IndexPage where
   toHtmlRaw = toHtml
   toHtml params = do
-    -- script_ [src_ ("/" <> toUrlPiece (_staticLink params) <> "/js/station-list.js"), defer_ mempty] ""
     div_ [class_ "header"] $ do
       h1_ [] (toHtml "Home")
     div_ [class_ "content"] $ do
@@ -66,5 +65,7 @@ instance ToHtml IndexPage where
           a_ [href_ ("mailto:" <> (T.pack . _contactEmail) params)] "Over e-mail"
 
 instance ToHtmlComponents IndexPage where
+  -- Default 'toMenuHeading' function prepends a '#' to the anchor.
+  toMenuHeading p = menuHeading (pageAnchor p) (pageName p)
   pageAnchor _ = "/"
   pageName   _ = "Home"

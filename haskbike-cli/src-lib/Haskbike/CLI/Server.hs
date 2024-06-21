@@ -12,8 +12,6 @@ import           Haskbike.CLI.Options
 import           Haskbike.Server
 import           Haskbike.ServerEnv
 
-import           Prelude              hiding ( log )
-
 import           UnliftIO             ( liftIO )
 
 
@@ -31,6 +29,7 @@ dispatchServer options = do
                             , serverGzipCompression = True
                             , serverMaxIntervals    = 20
                             , serverContactEmail    = "bikes@cfeeley.org"
+                            , serverAssets          = optServerAssetLocation options
                             }
 
   logInfo $ "Gzip compression enabled: " <> (T.pack . show) (serverGzipCompression serverEnv)

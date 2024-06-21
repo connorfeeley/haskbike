@@ -2,7 +2,7 @@
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# OPTIONS_GHC -Wno-partial-type-signatures #-}
 
--- |
+-- | Expressions regarding query logs.
 
 module Haskbike.Database.Operations.QueryLogs
      ( decodeJsonError
@@ -53,14 +53,12 @@ queryErrorsE :: be ~ Postgres
              => Q be BikeshareDb s (QueryLogT (QGenExpr QValueContext be s))
 queryErrorsE = do
   orderBy_ (desc_ . _queryLogTime) $
-    filter_' (\q -> _queryLogSuccess q ==?. val_ False
-             ) $
+    filter_' (\q -> _queryLogSuccess q ==?. val_ False) $
     all_ (_bikeshareQueryLog bikeshareDb)
 
 latestQueryErrorsQ :: DaysAgo -> AppM [QueryLog]
 latestQueryErrorsQ days = do
-  withPostgres $ runSelectReturningList $ select $ do
-    latestQueryErrorsE (val_ days)
+  withPostgres $ runSelectReturningList $ select $ latestQueryErrorsE (val_ days)
 
 decodeJsonErrors :: (Columnar f1 (Maybe (PgJSONB Value)) ~ f2 (PgJSONB Value),  Functor f3, Functor f2) => f3 (QueryLogT f1) -> f3 (f2 Value)
 decodeJsonErrors xs = fmap decodeJsonError <$> (_queryLogErrJson <$> xs)
