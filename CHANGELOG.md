@@ -207,3 +207,8 @@
 
 * Server
   * Add hidden debug page.
+
+## 3.7.1 -- 2024-06-25
+
+* Server
+  * Fix charging infrastructure component link on System Status page.
