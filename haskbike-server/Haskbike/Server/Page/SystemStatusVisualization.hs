@@ -20,6 +20,7 @@ import           Haskbike.Server.ExternalAssets           ( ExternalAssetLocatio
 import           Haskbike.Server.Page.SelectionForm
 import           Haskbike.Server.Page.StatusVisualization
 import           Haskbike.Server.Page.Utils
+import           Haskbike.Server.Routes.Components
 import           Haskbike.Server.StatusDataParams
 
 import           Lucid
@@ -104,7 +105,7 @@ instance ToHtml SystemStatusVisualizationPage where
         let headers = [ toHtml (_systemStatusVisPageInfo params)
                       , mkHeader params _systemStatusVisPageTimeRange Nothing dockingEventsHeader
                       , mkHeader params _systemStatusVisPageTimeRange Nothing chargingEventsHeader
-                      , hxSpinner_ ((fieldLink chargingInfrastructureHeader . latestTime . _systemStatusVisPageTimeRange) params)
+                      , hxSpinner_ (((chargingInfrastructureHeader . eventsComponents) componentsRoutesLinks . latestTime . _systemStatusVisPageTimeRange) params)
                       ]
         mconcat $ map (`with` [class_ ("pure-u-md-1-" <> showt (length headers))]) headers
 
