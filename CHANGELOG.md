@@ -212,3 +212,8 @@
 
 * Server
   * Fix charging infrastructure component link on System Status page.
+
+## 3.7.2 -- 2024-06-25
+
+* Server
+  * Tweak index page style to align content in the center with a maximum width.

@@ -20,7 +20,7 @@ name:               haskbike-client
 -- PVP summary:     +-+------- breaking API changes
 --                  | | +----- non-breaking API additions
 --                  | | | +--- code changes with no API change
-version:            3.7.1
+version:            3.7.2
 
 -- A short (one-line) description of the package.
 synopsis:           Client API for Toronto Bike Share.
