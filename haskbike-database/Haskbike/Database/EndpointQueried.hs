@@ -51,7 +51,7 @@ instance ToJSON EndpointQueried where
   toJSON ep           = String (T.pack (show ep))
 
 instance FromJSON EndpointQueried where
-  parseJSON = withText "PhysicalConfiguration" $ \t -> case t of
+  parseJSON = withText "EndpointQueried" $ \t -> case t of
     "Versions"             -> return VersionsEP
     "Vehicle Types"        -> return VehicleTypesEP
     "Station Information"  -> return StationInformationEP
