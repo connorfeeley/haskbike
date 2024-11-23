@@ -7,16 +7,17 @@ module Haskbike.Server.Page.IndexPage
      ( IndexPage (..)
      ) where
 
-import qualified Data.Text               as T
+import qualified Data.Text                            as T
 import           Data.Time
 
 import           Haskbike.Server.Classes
 import           Haskbike.Server.PureCSS
+import           Haskbike.Server.Routes.Visualization ( VisualizationAPI (visualization) )
 
 import           Lucid
-import           Lucid.Servant           ( linkHref_ )
+import           Lucid.Servant                        ( linkHref_ )
 
-import           Prelude                 hiding ( null )
+import           Prelude                              hiding ( null )
 
 import           Servant
 
@@ -47,7 +48,10 @@ instance ToHtml IndexPage where
           li_ [style_ "margin-left: 40px;"] "- the number of disabled docks at each station"
         br_ []
         div_ [] $ do
-          p_ $ "This project was borne out of my frustration for why " <> a_ [linkHref_ "/" (_stationStatusLink params (Just 7001) Nothing Nothing)] "Wellesley Station" <> " has had a complement of at least 9 - often more - disabled e-bikes ever since the station was converted to a charging station a few months ago."
+          p_ $
+            "This project was borne out of my frustration for why " <>
+            -- FIXME: This is a hack to get the link to work.
+            a_ [linkHref_ "/visualization" (_stationStatusLink params (Just 7001) Nothing Nothing)] "Wellesley Station" <> " has had a complement of at least 9 - often more - disabled e-bikes ever since the station was converted to a charging station a few months ago."
           p_ [style_ "font-style: italic; margin-left: 40px"] "Click the link to see the last 24 hours of data for Wellesley Station."
         br_ []
         p_ [style_ "font-style: italic"] ("This is a work-in-progress; see " <> a_ [href_ "https://cfeeley.org/posts/city-stuff/freedom-of-information/"] "my blog" <> " for a series of articles on this.")
