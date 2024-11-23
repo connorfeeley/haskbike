@@ -335,7 +335,7 @@ fromJSONToBeamStationInformation
   StationInformation { _infoId                    = default_
                      , _infoStationId             = fromIntegral station_id
                      , _infoName                  = val_ name
-                     , _infoPhysicalConfiguration = val_ (coerce physical_configuration :: BeamPhysicalConfiguration)
+                     , _infoPhysicalConfiguration = val_ (coerce physConf :: BeamPhysicalConfiguration)
                      , _infoLat                   = val_ lat
                      , _infoLon                   = val_ lon
                      , _infoAltitude              = val_ altitude
@@ -361,6 +361,9 @@ fromJSONToBeamStationInformation
     bluetoothId = if not (T.null bluetooth_id)
                   then Just bluetooth_id
                   else Nothing
+    physConf = case physical_configuration of
+      Just conf -> conf
+      Nothing   -> error "API PhysicalConfiguration was Nothing"
 
 -- | Convert from the Beam StationInformation type to the JSON StationInformation
 fromBeamStationInformationToJSON :: StationInformation -> AT.StationInformation
@@ -389,7 +392,7 @@ fromBeamStationInformationToJSON (StationInformation
                                  ) =
   AT.StationInformation { AT.infoStationId               = fromIntegral stationId
                         , AT.infoName                    = name
-                        , AT.infoPhysicalConfiguration   = coerce physicalConfiguration' :: AT.PhysicalConfiguration
+                        , AT.infoPhysicalConfiguration   = Just (coerce physicalConfiguration' :: AT.PhysicalConfiguration)
                         , AT.infoLat                     = lat
                         , AT.infoLon                     = lon
                         , AT.infoAltitude                = altitude

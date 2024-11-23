@@ -138,7 +138,7 @@ manualStationInformation :: AT.StationInformation
 manualStationInformation =
   AT.StationInformation { AT.infoStationId = 7001
                         , AT.infoName = "Wellesley Station Green P"
-                        , AT.infoPhysicalConfiguration = AT.ElectricBikeStation
+                        , AT.infoPhysicalConfiguration = Just AT.ElectricBikeStation
                         , AT.infoLat = 43.66496415990742
                         , AT.infoLon = -79.38355031526893
                         , AT.infoAltitude = Just 0.0
@@ -153,7 +153,7 @@ manualStationInformation =
                         , AT.infoNearbyDistance = 500.0
                         , AT.infoBluetoothId = ""
                         , AT.infoRideCodeSupport = True
-                        , AT.infoRentalUris = AT.RentalURIs "" "" ""
+                        , AT.infoRentalUris = AT.RentalURIs "example.com/2" "example.com/2" "example.com/3"
                         }
 
 

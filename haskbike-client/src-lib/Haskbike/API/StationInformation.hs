@@ -143,7 +143,7 @@ instance FromJSON RentalURIs where
 data StationInformation where
   StationInformation :: { infoStationId               :: Int
                         , infoName                    :: T.Text
-                        , infoPhysicalConfiguration   :: PhysicalConfiguration
+                        , infoPhysicalConfiguration   :: (Maybe PhysicalConfiguration)
                         , infoLat                     :: Double
                         , infoLon                     :: Double
                         , infoAltitude                :: Maybe Double

@@ -159,7 +159,7 @@ mkStationInformation currentTime infoStationId =
   StationInformation { .. }
   where
     infoName                  = (T.pack . show) infoStationId
-    infoPhysicalConfiguration = Regular
+    infoPhysicalConfiguration = Just Regular
     infoLat                   =  43.639832
     infoLon                   = -79.395954
     infoAltitude              = Just 0.0
