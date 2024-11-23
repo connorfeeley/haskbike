@@ -13,5 +13,5 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/connorfeeley/beam.git
-  tag: 95ccff7f92e0cf9b6bc1fb18ad09de12676fef10
+  tag: 39e387fcda42e89b5da5b8b1928f13b475d7ac34
   subdir: beam-core beam-postgres beam-sqlite beam-migrate
