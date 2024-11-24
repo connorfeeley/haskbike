@@ -82,7 +82,7 @@ data StationInformationT f where
   StationInformation :: { _infoId                    :: Columnar f (SqlSerial Int32)
                         , _infoStationId             :: Columnar f Int32
                         , _infoName                  :: Columnar f T.Text
-                        , _infoPhysicalConfiguration :: Columnar f BeamPhysicalConfiguration
+                        , _infoPhysicalConfiguration :: Columnar f (Maybe BeamPhysicalConfiguration)
                         , _infoLat                   :: Columnar f Double
                         , _infoLon                   :: Columnar f Double
                         , _infoAltitude              :: Columnar f (Maybe Double)
@@ -184,7 +184,7 @@ unInformationStationId key (StationInformationId stationId lastReported) = fmap 
 infoId                      :: Lens' (StationInformationT f) (C f (SqlSerial Int32))
 infoStationId               :: Lens' (StationInformationT f) (C f Int32)
 infoName                    :: Lens' (StationInformationT f) (C f T.Text)
-infoPhysicalConfiguration   :: Lens' (StationInformationT f) (C f BeamPhysicalConfiguration)
+infoPhysicalConfiguration   :: Lens' (StationInformationT f) (C f (Maybe BeamPhysicalConfiguration))
 infoLat                     :: Lens' (StationInformationT f) (C f Double)
 infoLon                     :: Lens' (StationInformationT f) (C f Double)
 infoAltitude                :: Lens' (StationInformationT f) (C f (Maybe Double))
@@ -269,13 +269,14 @@ newtype BeamPhysicalConfiguration where
   deriving (Eq, Generic, Show, Read, Ord, FromJSON, ToJSON) via AT.PhysicalConfiguration
 
 
-physicalConfigurationLabel :: BeamPhysicalConfiguration -> T.Text
-physicalConfigurationLabel (BeamPhysicalConfiguration AT.ElectricBikeStation) = "Electric Bike Station"
-physicalConfigurationLabel (BeamPhysicalConfiguration AT.Regular)             = "Regular"
-physicalConfigurationLabel (BeamPhysicalConfiguration AT.RegularLitMapFrame)  = "Regular Lit Map Frame"
-physicalConfigurationLabel (BeamPhysicalConfiguration AT.SmartLitMapFrame)    = "Smart Lit Map Frame"
-physicalConfigurationLabel (BeamPhysicalConfiguration AT.SmartMapFrame)       = "Smart Map Frame"
-physicalConfigurationLabel (BeamPhysicalConfiguration AT.Vault)               = "Vault"
+physicalConfigurationLabel :: Maybe BeamPhysicalConfiguration -> T.Text
+physicalConfigurationLabel (Just (BeamPhysicalConfiguration AT.ElectricBikeStation)) = "Electric Bike Station"
+physicalConfigurationLabel (Just (BeamPhysicalConfiguration AT.Regular))             = "Regular"
+physicalConfigurationLabel (Just (BeamPhysicalConfiguration AT.RegularLitMapFrame))  = "Regular Lit Map Frame"
+physicalConfigurationLabel (Just (BeamPhysicalConfiguration AT.SmartLitMapFrame))    = "Smart Lit Map Frame"
+physicalConfigurationLabel (Just (BeamPhysicalConfiguration AT.SmartMapFrame))       = "Smart Map Frame"
+physicalConfigurationLabel (Just (BeamPhysicalConfiguration AT.Vault))               = "Vault"
+physicalConfigurationLabel Nothing                                                   = "None"
 
 instance (BeamBackend be, FromBackendRow be T.Text) => FromBackendRow be BeamPhysicalConfiguration where
   fromBackendRow = do
@@ -335,7 +336,7 @@ fromJSONToBeamStationInformation
   StationInformation { _infoId                    = default_
                      , _infoStationId             = fromIntegral station_id
                      , _infoName                  = val_ name
-                     , _infoPhysicalConfiguration = val_ (coerce physConf :: BeamPhysicalConfiguration)
+                     , _infoPhysicalConfiguration = val_ (coerce physical_configuration :: Maybe BeamPhysicalConfiguration)
                      , _infoLat                   = val_ lat
                      , _infoLon                   = val_ lon
                      , _infoAltitude              = val_ altitude
@@ -361,9 +362,6 @@ fromJSONToBeamStationInformation
     bluetoothId = if not (T.null bluetooth_id)
                   then Just bluetooth_id
                   else Nothing
-    physConf = case physical_configuration of
-      Just conf -> conf
-      Nothing   -> error "API PhysicalConfiguration was Nothing"
 
 -- | Convert from the Beam StationInformation type to the JSON StationInformation
 fromBeamStationInformationToJSON :: StationInformation -> AT.StationInformation
@@ -392,7 +390,7 @@ fromBeamStationInformationToJSON (StationInformation
                                  ) =
   AT.StationInformation { AT.infoStationId               = fromIntegral stationId
                         , AT.infoName                    = name
-                        , AT.infoPhysicalConfiguration   = Just (coerce physicalConfiguration' :: AT.PhysicalConfiguration)
+                        , AT.infoPhysicalConfiguration   = coerce physicalConfiguration' :: Maybe AT.PhysicalConfiguration
                         , AT.infoLat                     = lat
                         , AT.infoLon                     = lon
                         , AT.infoAltitude                = altitude
@@ -451,7 +449,7 @@ createStationInformation =
   { _infoId                    = field "id"                     Pg.serial notNull unique
   , _infoStationId             = field "station_id"             int notNull
   , _infoName                  = field "name"                   Pg.text notNull
-  , _infoPhysicalConfiguration = field "physical_configuration" physicalConfiguration notNull
+  , _infoPhysicalConfiguration = field "physical_configuration" (maybeType physicalConfiguration)
   , _infoLat                   = field "lat"                    double notNull
   , _infoLon                   = field "lon"                    double notNull
   , _infoAltitude              = field "altitude"               (maybeType double)
