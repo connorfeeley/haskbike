@@ -42,7 +42,7 @@ instance ToHtml PerformanceData where
         p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "Bike available: " <> span_ [class_ "pure-u-1-2"] (elemIf strong_ (bikesAvailable < 0.1)  (factorOf bikesAvailable (Just 2)))
         p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "Bike disabled:  " <> span_ [class_ "pure-u-1-2"] (elemIf strong_ (bikesDisabled  > 0.1)  (factorOf bikesDisabled  (Just 2)))
         p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "Dock available: " <> span_ [class_ "pure-u-1-2"] (elemIf strong_ (docksAvailable < 0.1)  (factorOf docksAvailable (Just 2)))
-        p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "Dock available: " <> span_ [class_ "pure-u-1-2"] (elemIf strong_ (docksAvailable < 0.1)  (factorOf docksAvailable (Just 2)))
+        p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "Dock disabled: "  <> span_ [class_ "pure-u-1-2"] (elemIf strong_ (docksDisabled  > 0.05) (factorOf docksDisabled  (Just 2)))
         p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "Time empty: "     <> span_ [class_ "pure-u-1-2"] (elemIf strong_ (timeGreaterThan emptyTime 100) ((toHtml . formatDiffTime) emptyTime))
         p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "Time full: "      <> span_ [class_ "pure-u-1-2"] (elemIf strong_ (timeGreaterThan fullTime  100) ((toHtml . formatDiffTime) fullTime))
 
