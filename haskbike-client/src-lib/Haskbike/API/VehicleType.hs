@@ -37,6 +37,7 @@ data TorontoVehicleType where
   Iconic :: TorontoVehicleType
   EFit   :: TorontoVehicleType
   EFitG5 :: TorontoVehicleType
+  CHLOE  :: TorontoVehicleType
   deriving (Generic, Eq, Ord)
 
 instance Show TorontoVehicleType where
@@ -45,6 +46,7 @@ instance Show TorontoVehicleType where
   show Iconic = "ICONIC"
   show EFit   = "EFIT"
   show EFitG5 = "EFIT G5"
+  show CHLOE  = "CHLOE"
 
 -- | Read instance for 'TorontoVehicleType' (case-insensitive).
 instance Read TorontoVehicleType where
@@ -57,6 +59,7 @@ instance Read TorontoVehicleType where
       , string "ICONIC"   $> [(Iconic, "")]
       , string "EFIT"     $> [(EFit,   "")]
       , string "EFIT G5"  $> [(EFitG5, "")]
+      , string "CHLOE"    $> [(CHLOE,  "")]
       ]
 
 instance ToJSON TorontoVehicleType where
@@ -65,6 +68,7 @@ instance ToJSON TorontoVehicleType where
   toJSON Iconic = String (T.pack "ICONIC")
   toJSON EFit   = String (T.pack "EFIT")
   toJSON EFitG5 = String (T.pack "EFIT G5")
+  toJSON CHLOE  = String (T.pack "CHLOE")
 
 instance FromJSON TorontoVehicleType where
   parseJSON = withText "TorontoVehicleType" $ \t -> case t of
@@ -73,6 +77,7 @@ instance FromJSON TorontoVehicleType where
      "ICONIC"  -> return Iconic
      "EFIT"    -> return EFit
      "EFIT G5" -> return EFitG5
+     "CHLOE"   -> return CHLOE
      _         -> fail ("Invalid TorontoVehicleType: " ++ show t)
 
 -- | List of 'VehicleType' to Map.
@@ -96,8 +101,9 @@ typeInList vehicleType = find (\x -> vehicleTypeId x == vehicleType)
 findByType :: (Num b, Foldable t) => TorontoVehicleType -> t VehicleType -> b
 findByType tvt xs = fromIntegral $ maybe 0 vehicleTypeCnt (typeInList tvt xs)
 
-numBoost, numIconic, numEfit, numEfitG5 :: Num a => [VehicleType] -> a
+numBoost, numIconic, numEfit, numEfitG5, numChloe :: Num a => [VehicleType] -> a
 numBoost  = findByType Boost
 numIconic = findByType Iconic
 numEfit   = findByType EFit
 numEfitG5 = findByType EFitG5
+numChloe  = findByType CHLOE
