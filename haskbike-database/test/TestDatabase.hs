@@ -11,7 +11,7 @@
 
 module TestDatabase
      ( getDecodedFileSystemInformation
-     , initDBWithAllTestData
+     , initDBWithStationTestData
      , setupTestDatabase
      , unit_insertNewerStatusRecords
      , unit_insertNewerStatusRecordsInsert
