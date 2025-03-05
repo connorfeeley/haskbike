@@ -455,9 +455,9 @@ queryLatestQueryLogsE =
     latestSystemPricingPlans
   where
     latestQueryForEP ep =
-        filter_ (\q -> _queryLogEndpoint q ==. val_ ep) $
-        orderBy_ (\q -> (desc_ (_queryLogTime q), desc_ (_queryLogId q))) $
-        limit_ 1 $
+        limit_ 1 $                                                          -- Only return 1 row per endpoint.
+        filter_ (\q -> _queryLogEndpoint q ==. val_ ep) $                   -- Filter by given endpoint.
+        orderBy_ (\q -> (desc_ (_queryLogTime q), desc_ (_queryLogId q))) $ -- Order by time and ID.
         all_ (bikeshareDb ^. bikeshareQueryLog)
 
 
