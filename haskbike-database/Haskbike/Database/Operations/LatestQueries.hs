@@ -14,4 +14,4 @@ import           Haskbike.Database.Tables.QueryLogs
 
 
 queryLatestQueries :: (HasEnv env m, MonadIO m, MonadCatch m) => m [QueryLog]
-queryLatestQueries = queryLatestQueryLogs
+queryLatestQueries = withPostgres . runSelectReturningList $ select queryLatestQueryLogsE

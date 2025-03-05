@@ -18,6 +18,7 @@ module Haskbike.Database.Expressions
      , queryLatestInfoBefore
      , queryLatestInfoLookup
      , queryLatestQueryLogs
+     , queryLatestQueryLogsE
      , queryLatestQueryLogsNubE
      , queryLatestStatusBetweenExpr
      , queryLatestStatusLookup
@@ -428,7 +429,11 @@ queryLatestSystemInfoE = do
 
 -- | Get the latest query logs for each endpoint.
 queryLatestQueryLogs :: (MonadCatch m, HasEnv env m) => m [QueryLog]
-queryLatestQueryLogs = withPostgres . runSelectReturningList $ select $ -- selectWith queryLatestQueryLogsE -- selectWith queryLatestQueryLogsE -- selectWith queryLatestQueryLogsE -- selectWith queryLatestQueryLogsE
+queryLatestQueryLogs = withPostgres . runSelectReturningList $ select $ queryLatestQueryLogsE
+
+
+queryLatestQueryLogsE :: Q Postgres BikeshareDb s (QueryLogT (QGenExpr QValueContext Postgres s))
+queryLatestQueryLogsE =
   -- TODO: could consider using Template Haskell here, but I'm not that fancy.
   let
     -- Query latest for each endpoint.
