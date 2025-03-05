@@ -429,7 +429,32 @@ queryLatestSystemInfoE = do
 
 -- | Get the latest query logs for each endpoint.
 queryLatestQueryLogs :: (MonadCatch m, HasEnv env m) => m [QueryLog]
-queryLatestQueryLogs = withPostgres . runSelectReturningList $ selectWith queryLatestQueryLogsE
+queryLatestQueryLogs = withPostgres . runSelectReturningList $ select $ -- selectWith queryLatestQueryLogsE -- selectWith queryLatestQueryLogsE -- selectWith queryLatestQueryLogsE -- selectWith queryLatestQueryLogsE
+  -- TODO: could consider using Template Haskell here, but I'm not that fancy.
+  let
+    -- Query latest for each endpoint.
+    latestVersions           = latestQueryForEP VersionsEP
+    latestVehicleTypes       = latestQueryForEP VehicleTypesEP
+    latestStationInfo        = latestQueryForEP StationInformationEP
+    latestStationStatus      = latestQueryForEP StationStatusEP
+    latestSystemRegions      = latestQueryForEP SystemRegionsEP
+    latestSystemInfo         = latestQueryForEP SystemInformationEP
+    latestSystemPricingPlans = latestQueryForEP SystemPricingPlansEP
+  in
+    -- Union all latest queries. This allows the index to do the heavy lifting (~100ms query) versus doing a full table scan (>10s).
+    latestVersions      `unionAll_`
+    latestVehicleTypes  `unionAll_`
+    latestStationInfo   `unionAll_`
+    latestStationStatus `unionAll_`
+    latestSystemRegions `unionAll_`
+    latestSystemInfo    `unionAll_`
+    latestSystemPricingPlans
+  where
+    latestQueryForEP ep =
+        filter_ (\q -> _queryLogEndpoint q ==. val_ ep) $
+        orderBy_ (\q -> (desc_ (_queryLogTime q), desc_ (_queryLogId q))) $
+        limit_ 1 $
+        all_ (bikeshareDb ^. bikeshareQueryLog)
 
 -- | Expression to get the latest query logs for each endpoint.
 queryLatestQueryLogsE :: be ~ Postgres

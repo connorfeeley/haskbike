@@ -29,6 +29,7 @@ import           Database.PostgreSQL.Simple.FromField
 import           Servant.API
 
 data EndpointQueried where
+  -- NOTE: update 'queryLatestQueryLogs' if endpoints are added.
   VersionsEP           :: EndpointQueried
   VehicleTypesEP       :: EndpointQueried
   StationInformationEP :: EndpointQueried
