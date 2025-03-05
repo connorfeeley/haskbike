@@ -30,7 +30,7 @@ module Haskbike.Database.Test.Utils
 
 import           Control.Exception                           ( displayException, toException )
 import           Control.Lens
-import           Control.Monad                               ( void, (<=<) )
+import           Control.Monad                               ( forM_, void, (<=<) )
 import           Control.Monad.Catch                         ( MonadCatch )
 
 import           Data.Aeson
@@ -125,42 +125,52 @@ initDBWithExportedDataDate stationId startDay endDay = do
 -- | Initialize empty database from the test station information response and all 22 station status responses.
 initDBWithStationTestData :: (HasEnv env m, MonadIO m, MonadFail m, MonadUnliftIO m, MonadCatch m) => m ()
 initDBWithStationTestData = do
-  infoResp <- liftIO $ getDecodedFileInformation  "test/json/station_information-1.json"
-  void $ insertStationInformation (map (_respLastUpdated infoResp, ) (_respData infoResp))
+  -- Station information
+  infoResp <- liftIO $ getDecodedFileInformation infoJsonPath
+  void $ insertStationInformation (map (_respLastUpdated infoResp,) (_respData infoResp))
 
-  -- Insert test station status data 1-22.
-  mapM_ (\i -> do
-            statusResponse <- liftIO $ getDecodedFileStatus $ "test/json/station_status-" <> show i <> ".json"
-            void $ insertStationStatus $ statusResponse ^. respData
-        ) [(1 :: Int) .. (22 :: Int)]
+  -- Station status
+  forM_ [1..numStatusFiles] $ \fileIndex -> do
+    statusResponse <- liftIO $ getDecodedFileStatus $ statusJsonBasePath <> show fileIndex <> ".json"
+    void $ insertStationStatus $ statusResponse ^. respData
+
+  where
+    -- Paths and constants
+    infoJsonPath = "test/json/station_information-1.json"
+    statusJsonBasePath = "test/json/station_status-"
+    numStatusFiles = 22 :: Int
 
 
--- | Initialize empty database from the test station information response and all 22 station status responses.
+-- | Initialize empty database from the test station information response, all station status responses, and generated query log records.
 initDBWithStationQueryLogData :: (HasEnv env m, MonadIO m, MonadFail m, MonadUnliftIO m, MonadCatch m) => m ()
 initDBWithStationQueryLogData = do
-  infoResp <- liftIO $ getDecodedFileInformation  "test/json/station_information-1.json"
-  void $ insertStationInformation (map (_respLastUpdated infoResp, ) (_respData infoResp))
+  -- Station information
+  infoResp <- liftIO $ getDecodedFileInformation infoJsonPath
+  void $ insertStationInformation (map (_respLastUpdated infoResp,) (_respData infoResp))
 
-  -- Insert test station status data 1-22.
-  mapM_ (\i -> do
-            statusResponse <- liftIO $ getDecodedFileStatus $ "test/json/station_status-" <> show i <> ".json"
-            void $ insertStationStatus $ statusResponse ^. respData
-        ) [(1 :: Int) .. (22 :: Int)]
+  -- Station status
+  forM_ [1..numStatusFiles] $ \fileIndex -> do
+    statusResponse <- liftIO $ getDecodedFileStatus $ statusJsonBasePath <> show fileIndex <> ".json"
+    void $ insertStationStatus $ statusResponse ^. respData
 
-  insertQueryLogTestData numQueryLogElements VersionsEP
-  insertQueryLogTestData numQueryLogElements VehicleTypesEP
-  insertQueryLogTestData numQueryLogElements StationInformationEP
-  insertQueryLogTestData numQueryLogElements StationStatusEP
-  insertQueryLogTestData numQueryLogElements SystemRegionsEP
-  insertQueryLogTestData numQueryLogElements SystemInformationEP
-  insertQueryLogTestData numQueryLogElements SystemPricingPlansEP
+  -- Query log data
+  forM_ allEndpoints $ \endpoint ->
+    insertQueryLogTestData numQueryLogElements endpoint
+
   where
-    numQueryLogElements = 10000
+    -- Paths and constants
+    infoJsonPath = "test/json/station_information-1.json"
+    statusJsonBasePath = "test/json/station_status-"
+    numStatusFiles = 22 :: Int
+    numQueryLogElements = 10000 :: Int
+    allEndpoints = [ VersionsEP, VehicleTypesEP, StationInformationEP, StationStatusEP,
+                     SystemRegionsEP, SystemInformationEP, SystemPricingPlansEP ]
+
     insertQueryLogTestData numElements ep =
       let queries = generateQueryLogTestData numElements ep
       in withPostgres $ runInsert $
-          insert (bikeshareDb ^. bikeshareQueryLog)
-          (insertExpressions (map convertToBeam queries))
+           insert (bikeshareDb ^. bikeshareQueryLog)
+           (insertExpressions (map convertToBeam queries))
 
 
 generateQueryLogTestData :: Int -> EndpointQueried -> [QueryResult]
