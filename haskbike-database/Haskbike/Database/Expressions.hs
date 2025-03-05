@@ -18,7 +18,6 @@ module Haskbike.Database.Expressions
      , queryLatestInfoBefore
      , queryLatestInfoLookup
      , queryLatestQueryLogs
-     , queryLatestQueryLogsE
      , queryLatestQueryLogsNubE
      , queryLatestStatusBetweenExpr
      , queryLatestStatusLookup
@@ -456,25 +455,6 @@ queryLatestQueryLogs = withPostgres . runSelectReturningList $ select $ -- selec
         limit_ 1 $
         all_ (bikeshareDb ^. bikeshareQueryLog)
 
--- | Expression to get the latest query logs for each endpoint.
-queryLatestQueryLogsE :: be ~ Postgres
-                      => With be BikeshareDb
-                      (Q be BikeshareDb s
-                       (QueryLogT (QExpr be s)))
-queryLatestQueryLogsE = do
-  ranked <- selecting $ do
-    withWindow_ (\row -> frame_ (partitionBy_ (_queryLogEndpoint row))
-                                (orderPartitionBy_ (desc_ $ _queryLogTime row))
-                                noBounds_
-                )
-                (\row w -> ( row
-                           , rank_ `over_` w
-                           )
-                ) (all_ (bikeshareDb ^. bikeshareQueryLog))
-  pure $ do
-    partitioned <- reuse ranked
-    guard_ (partitioned ^. _2 ==. 1) -- Is max rank (latest record in partition)
-    pure (partitioned ^. _1)
 
 -- | Expression to get the latest query logs for each endpoint. Variant of 'queryLatestQueryLogsE' that uses 'Pg.pgNubBy_' (instead of a CTE with 'rank_').
 queryLatestQueryLogsNubE :: Q Postgres BikeshareDb s (QueryLogT (QGenExpr QValueContext Postgres s))
