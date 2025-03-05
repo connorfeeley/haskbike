@@ -37,8 +37,11 @@ import           Test.Tasty.Bench
 -- * Common helpers.
 
 benchWithTmp :: String -> AppM a -> Benchmark
-benchWithTmp name = bench name . whnfIO . withTempDbM Silent (setupTestDatabase >> initDBWithAllTestData) . void
+benchWithTmp name = bench name . whnfIO . withTempDbM Silent (setupTestDatabase >> initDBWithStationTestData) . void
 
+-- FIXME: should combine with function above.
+benchWithQueryTmp :: String -> AppM a -> Benchmark
+benchWithQueryTmp name = bench name . whnfIO . withTempDbM Silent (setupTestDatabase >> initDBWithStationQueryLogData) . void
 
 statusVariationAll :: StatusVariationQuery
 statusVariationAll = StatusVariationQuery Nothing

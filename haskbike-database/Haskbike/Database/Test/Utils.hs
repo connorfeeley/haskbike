@@ -16,9 +16,10 @@ module Haskbike.Database.Test.Utils
      , getDecodedFileInformation
      , getDecodedFileStatus
      , getDecodedFileSystemInformation
-     , initDBWithAllTestData
      , initDBWithExportedData
      , initDBWithExportedDataDate
+     , initDBWithStationQueryLogData
+     , initDBWithStationTestData
      , makeEnvForTest
      , manualSimpleStatus
      , manualStationInformation
@@ -38,6 +39,7 @@ import           Data.Either.Combinators                     ( whenLeft )
 import           Data.Pool                                   ( Pool )
 import           Data.Time
 
+import           Database.Beam                               ( insert, insertExpressions, runInsert )
 import           Database.Postgres.Temp
 import           Database.PostgreSQL.Simple                  ( Connection, close, connectPostgreSQL )
 
@@ -48,9 +50,12 @@ import qualified Haskbike.API.StationStatus                  as AT
 import qualified Haskbike.API.SystemInformation              as AT
 import           Haskbike.API.Utils
 import           Haskbike.AppEnv
+import           Haskbike.Database.BeamConvertable           ( BeamConvertable (..) )
 import           Haskbike.Database.BikeShare
+import           Haskbike.Database.EndpointQueried
 import           Haskbike.Database.ImportExport
 import           Haskbike.Database.Operations
+import           Haskbike.Database.Schema.V001.QueryLogs
 import qualified Haskbike.Database.Tables.StationInformation as DB
 import qualified Haskbike.Database.Tables.StationStatus      as DB
 import           Haskbike.Database.Utils
@@ -118,8 +123,8 @@ initDBWithExportedDataDate stationId startDay endDay = do
 
 
 -- | Initialize empty database from the test station information response and all 22 station status responses.
-initDBWithAllTestData :: (HasEnv env m, MonadIO m, MonadFail m, MonadUnliftIO m, MonadCatch m) => m ()
-initDBWithAllTestData = do
+initDBWithStationTestData :: (HasEnv env m, MonadIO m, MonadFail m, MonadUnliftIO m, MonadCatch m) => m ()
+initDBWithStationTestData = do
   infoResp <- liftIO $ getDecodedFileInformation  "test/json/station_information-1.json"
   void $ insertStationInformation (map (_respLastUpdated infoResp, ) (_respData infoResp))
 
@@ -129,6 +134,41 @@ initDBWithAllTestData = do
             void $ insertStationStatus $ statusResponse ^. respData
         ) [(1 :: Int) .. (22 :: Int)]
 
+
+-- | Initialize empty database from the test station information response and all 22 station status responses.
+initDBWithStationQueryLogData :: (HasEnv env m, MonadIO m, MonadFail m, MonadUnliftIO m, MonadCatch m) => m ()
+initDBWithStationQueryLogData = do
+  infoResp <- liftIO $ getDecodedFileInformation  "test/json/station_information-1.json"
+  void $ insertStationInformation (map (_respLastUpdated infoResp, ) (_respData infoResp))
+
+  -- Insert test station status data 1-22.
+  mapM_ (\i -> do
+            statusResponse <- liftIO $ getDecodedFileStatus $ "test/json/station_status-" <> show i <> ".json"
+            void $ insertStationStatus $ statusResponse ^. respData
+        ) [(1 :: Int) .. (22 :: Int)]
+
+  insertQueryLogTestData numQueryLogElements VersionsEP
+  insertQueryLogTestData numQueryLogElements VehicleTypesEP
+  insertQueryLogTestData numQueryLogElements StationInformationEP
+  insertQueryLogTestData numQueryLogElements StationStatusEP
+  insertQueryLogTestData numQueryLogElements SystemRegionsEP
+  insertQueryLogTestData numQueryLogElements SystemInformationEP
+  insertQueryLogTestData numQueryLogElements SystemPricingPlansEP
+  where
+    numQueryLogElements = 10000
+    insertQueryLogTestData numElements ep =
+      let queries = generateQueryLogTestData numElements ep
+      in withPostgres $ runInsert $
+          insert (bikeshareDb ^. bikeshareQueryLog)
+          (insertExpressions (map convertToBeam queries))
+
+
+generateQueryLogTestData :: Int -> EndpointQueried -> [QueryResult]
+generateQueryLogTestData numElements ep = [QuerySuccess (addUTCTime (secondsToNominalDiffTime (fromIntegral seconds)) startTime) ep
+                                          | seconds <- [0 .. numElements - 1]
+                                          ]
+  where
+    startTime = UTCTime (fromGregorian 2023 10 30) 0
 
 
 -- * Manually-created test data.

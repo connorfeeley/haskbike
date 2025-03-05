@@ -34,7 +34,7 @@ import           UnliftIO
 
 -- | HUnit test to query all charging events.
 unit_queryChargings :: IO ()
-unit_queryChargings = withTempDbM Silent (setupTestDatabase >> initDBWithAllTestData) $ do
+unit_queryChargings = withTempDbM Silent (setupTestDatabase >> initDBWithStationTestData) $ do
   chargings <- queryChargingEventsCount variation
   liftIO $ assertEqual "Expected number of chargings for entire system" (-1, 0, 1) (sumTuples chargings)
   where

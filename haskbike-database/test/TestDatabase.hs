@@ -332,7 +332,7 @@ unit_queryStationByIdAndName = withTempDbM Silent setupTestDatabase $ do
 
 -- | HUnit test to query all status records for a station between two times.
 unit_queryStationStatusBetween :: IO ()
-unit_queryStationStatusBetween = withTempDbM Silent (setupTestDatabase >> initDBWithAllTestData) $ do
+unit_queryStationStatusBetween = withTempDbM Silent (setupTestDatabase >> initDBWithStationTestData) $ do
   -- First status for #7001 was inserted at 2023-09-15 17:16:58; last status at 2023-09-15 17:35:00.
   statusBetweenAll <- queryStationStatusBetween 7001
     (UTCTime (read "2023-09-15") (timeOfDayToTime (read "17:16:58")))
@@ -363,7 +363,7 @@ unit_queryStationStatusBetween = withTempDbM Silent (setupTestDatabase >> initDB
 
 -- | HUnit test to query all status records for a station between two times.
 unit_queryDockingUndockingCount :: IO ()
-unit_queryDockingUndockingCount = withTempDbM Silent (setupTestDatabase >> initDBWithAllTestData) $ do
+unit_queryDockingUndockingCount = withTempDbM Silent (setupTestDatabase >> initDBWithStationTestData) $ do
     -- Test dataset has 5 rows for station 7000, 3 rows for 7006, 5 for 7012, and 5 rows for 7148:
     -- |   id | station | reported               | iconic |
     -- |------+---------+------------------------+--------|
