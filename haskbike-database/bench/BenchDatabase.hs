@@ -72,7 +72,7 @@ bgroupDatabase = bgroup "Database operations"
   , benchWithTmp "Station occupancy (all)"      $ benchStationEmptyTime Nothing
   , benchWithTmp "Station information decoding" $ benchStationInformationDecoding "test/dumps/station_information_7001_2024-01-03_2024-01-04.json.zst"
   , benchWithTmp "Field integrals"              benchFieldIntegrals
-  , benchWithTmp "Latest queries"               . withPostgres . runSelectReturningList . selectWith $ queryLatestQueryLogsE
+  , benchWithTmp "Latest queries"               . withPostgres . runSelectReturningList . select $ queryLatestQueryLogsE
   ]
 
 
