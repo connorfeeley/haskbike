@@ -343,7 +343,7 @@ fromJSONToBeamStationInformation
                      , _infoAddress               = val_ address
                      , _infoCapacity              = fromIntegral capacity
                      , _infoIsChargingStation     = val_ is_charging_station
-                     , _infoRentalMethods         = val_ $ fromList (coerce rental_methods :: [BeamRentalMethod])
+                     , _infoRentalMethods         = val_ $ fromList $ fromMaybe [] (coerce rental_methods :: Maybe [BeamRentalMethod])
                      , _infoIsValetStation        = val_ is_valet_station
                      , _infoIsVirtualStation      = val_ is_virtual_station
                      , _infoGroups                = val_ $ fromList groups
@@ -397,7 +397,7 @@ fromBeamStationInformationToJSON (StationInformation
                         , AT.infoAddress                 = address
                         , AT.infoCapacity                = fromIntegral capacity
                         , AT.infoIsChargingStation       = isChargingStation
-                        , AT.infoRentalMethods           = coerce (toList rentalMethods) :: [AT.RentalMethod]
+                        , AT.infoRentalMethods           = emptyListToNothing (coerce (toList rentalMethods) :: [AT.RentalMethod])
                         , AT.infoIsValetStation          = isValetStation
                         , AT.infoIsVirtualStation        = isVirtualStation
                         , AT.infoGroups                  = toList groups
@@ -412,6 +412,9 @@ fromBeamStationInformationToJSON (StationInformation
                         }
   where
     rentalUrisList = toList rentalUris
+    -- Convert an empty list to Nothing, otherwise Just the list.
+    emptyListToNothing [] = Nothing
+    emptyListToNothing xs = Just xs
 
 -- * Table modifications and migrations.
 
