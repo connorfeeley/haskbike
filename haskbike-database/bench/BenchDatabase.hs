@@ -61,17 +61,18 @@ selectWithPostgres = withPostgres . runSelectReturningList
 -- | Benchmark group for database operations.
 bgroupDatabase :: Benchmark
 bgroupDatabase = bgroup "Database operations"
-  [ benchWithTmp "Charging infrastructure"   . selectWithPostgres . selectWith $
+  [ benchWithTmp "Charging infrastructure"      . selectWithPostgres . selectWith $
     queryChargingInfrastructureE latestTime
-  , benchWithTmp "System status"             . withPostgres . runSelectReturningList . selectWith $
+  , benchWithTmp "System status"                . withPostgres . runSelectReturningList . selectWith $
     querySystemStatusAtRangeExpr earliestTime latestTime (minsPerHourlyInterval 4)
-  , benchWithTmp "Charging events"           $ queryChargingEventsCount statusVariationAll
-  , benchWithTmp "Query status factors"      $ queryStatusFactors statusVariationAll
-  , benchWithTmp "Docking/undocking events"  $ queryDockingEventsCount statusVariationAll
-  , benchWithTmp "Station occupancy (7001)" $ benchStationEmptyTime (Just 7001)
-  , benchWithTmp "Station occupancy (all)"  $ benchStationEmptyTime Nothing
+  , benchWithTmp "Charging events"              $ queryChargingEventsCount statusVariationAll
+  , benchWithTmp "Query status factors"         $ queryStatusFactors statusVariationAll
+  , benchWithTmp "Docking/undocking events"     $ queryDockingEventsCount statusVariationAll
+  , benchWithTmp "Station occupancy (7001)"     $ benchStationEmptyTime (Just 7001)
+  , benchWithTmp "Station occupancy (all)"      $ benchStationEmptyTime Nothing
   , benchWithTmp "Station information decoding" $ benchStationInformationDecoding "test/dumps/station_information_7001_2024-01-03_2024-01-04.json.zst"
-  , benchWithTmp "Field integrals"          $ benchFieldIntegrals
+  , benchWithTmp "Field integrals"              benchFieldIntegrals
+  , benchWithTmp "Latest queries"               . withPostgres . runSelectReturningList . selectWith $ queryLatestQueryLogsE
   ]
 
 
