@@ -143,14 +143,14 @@ instance FromJSON RentalURIs where
 data StationInformation where
   StationInformation :: { infoStationId               :: Int
                         , infoName                    :: T.Text
-                        , infoPhysicalConfiguration   :: (Maybe PhysicalConfiguration)
+                        , infoPhysicalConfiguration   :: Maybe PhysicalConfiguration
                         , infoLat                     :: Double
                         , infoLon                     :: Double
                         , infoAltitude                :: Maybe Double
                         , infoAddress                 :: Maybe T.Text
                         , infoCapacity                :: Int
                         , infoIsChargingStation       :: Bool
-                        , infoRentalMethods           :: [RentalMethod]
+                        , infoRentalMethods           :: Maybe [RentalMethod]
                         , infoIsValetStation          :: Bool
                         , infoIsVirtualStation        :: Bool
                         , infoGroups                  :: [T.Text]
@@ -195,7 +195,7 @@ instance FromJSON StationInformation where
     <*> v .:? "address"
     <*> v .:  "capacity"
     <*> v .:  "is_charging_station"
-    <*> v .:  "rental_methods"
+    <*> v .:? "rental_methods"
     <*> (fromMaybe False <$> (v .:? "is_valet_station"))
     <*> v .:  "is_virtual_station"
     <*> v .:  "groups"

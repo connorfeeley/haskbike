@@ -46,18 +46,21 @@ tests = testGroup "Decoding tests"
   [ versions
   , vehicleTypes
   , stationInformation
+  , stationInformationMissingRentalMethods
   , stationStatus
   , systemInformation
   , systemRegions
   , systemPricingPlans
   ]
 
-versions, vehicleTypes, stationInformation, stationStatus, systemInformation, systemRegions, systemPricingPlans :: TestTree
+versions, vehicleTypes, stationInformation, stationInformationMissingRentalMethods, stationStatus, systemInformation, systemRegions, systemPricingPlans :: TestTree
 
-versions           = testCase "Decode versions"             (buildTestCase (undefined :: ResponseWrapper [APIVersion])         "gbfs_versions.json")
-vehicleTypes       = testCase "Decode vehicle types"        (buildTestCase (undefined :: ResponseWrapper [VehicleTypeFull])    "vehicle_types.json")
-stationInformation = testCase "Decode station information"  (buildTestCase (undefined :: ResponseWrapper [StationInformation]) "station_information.json")
-stationStatus      = testCase "Decode station status"       (buildTestCase (undefined :: ResponseWrapper [StationStatus])      "station_status.json")
-systemRegions      = testCase "Decode system regions"       (buildTestCase (undefined :: ResponseWrapper [SystemRegion])       "system_regions.json")
-systemInformation  = testCase "Decode system information"   (buildTestCase (undefined :: ResponseWrapper SystemInformation)    "system_information.json")
-systemPricingPlans = testCase "Decode system pricing plans" (buildTestCase (undefined :: ResponseWrapper [SystemPricingPlan])  "system_pricing_plans.json")
+versions                               = testCase "Decode versions"             (buildTestCase (undefined :: ResponseWrapper [APIVersion])         "gbfs_versions.json")
+vehicleTypes                           = testCase "Decode vehicle types"        (buildTestCase (undefined :: ResponseWrapper [VehicleTypeFull])    "vehicle_types.json")
+stationInformation                     = testCase "Decode station information"  (buildTestCase (undefined :: ResponseWrapper [StationInformation]) "station_information.json")
+stationInformationMissingRentalMethods = testCase "Decode station information (missing rental methods)"
+                                                                                (buildTestCase (undefined :: ResponseWrapper [StationInformation]) "station_information_missing_rental_methods.json")
+stationStatus                          = testCase "Decode station status"       (buildTestCase (undefined :: ResponseWrapper [StationStatus])      "station_status.json")
+systemRegions                          = testCase "Decode system regions"       (buildTestCase (undefined :: ResponseWrapper [SystemRegion])       "system_regions.json")
+systemInformation                      = testCase "Decode system information"   (buildTestCase (undefined :: ResponseWrapper SystemInformation)    "system_information.json")
+systemPricingPlans                     = testCase "Decode system pricing plans" (buildTestCase (undefined :: ResponseWrapper [SystemPricingPlan])  "system_pricing_plans.json")
