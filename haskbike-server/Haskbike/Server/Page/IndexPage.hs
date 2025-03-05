@@ -7,17 +7,16 @@ module Haskbike.Server.Page.IndexPage
      ( IndexPage (..)
      ) where
 
-import qualified Data.Text                            as T
+import qualified Data.Text               as T
 import           Data.Time
 
 import           Haskbike.Server.Classes
 import           Haskbike.Server.PureCSS
-import           Haskbike.Server.Routes.Visualization ( VisualizationAPI (visualization) )
 
 import           Lucid
-import           Lucid.Servant                        ( linkHref_ )
+import           Lucid.Servant           ( linkHref_ )
 
-import           Prelude                              hiding ( null )
+import           Prelude                 hiding ( null )
 
 import           Servant
 
