@@ -305,7 +305,7 @@
             # Suggests improvements for your code in .hs files
             programs.hlint.enable = false;
 
-            settings.formatter.stylish-haskell.excludes = [ "./*/test/Driver.hs" ];
+            settings.formatter.stylish-haskell.excludes = [ "*/test/Driver.hs" ];
           };
         };
     });
