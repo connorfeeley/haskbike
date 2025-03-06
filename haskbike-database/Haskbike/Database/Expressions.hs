@@ -429,27 +429,37 @@ queryLatestSystemInfoE = do
 
 -- | Get the latest query logs for each endpoint.
 queryLatestQueryLogs :: (MonadCatch m, HasEnv env m) => m [QueryLog]
-queryLatestQueryLogs = withPostgres . runSelectReturningList $ selectWith queryLatestQueryLogsE
+queryLatestQueryLogs = withPostgres . runSelectReturningList $ select $ queryLatestQueryLogsE
 
--- | Expression to get the latest query logs for each endpoint.
-queryLatestQueryLogsE :: be ~ Postgres
-                      => With be BikeshareDb
-                      (Q be BikeshareDb s
-                       (QueryLogT (QExpr be s)))
-queryLatestQueryLogsE = do
-  ranked <- selecting $ do
-    withWindow_ (\row -> frame_ (partitionBy_ (_queryLogEndpoint row))
-                                (orderPartitionBy_ (desc_ $ _queryLogTime row))
-                                noBounds_
-                )
-                (\row w -> ( row
-                           , rank_ `over_` w
-                           )
-                ) (all_ (bikeshareDb ^. bikeshareQueryLog))
-  pure $ do
-    partitioned <- reuse ranked
-    guard_ (partitioned ^. _2 ==. 1) -- Is max rank (latest record in partition)
-    pure (partitioned ^. _1)
+
+queryLatestQueryLogsE :: Q Postgres BikeshareDb s (QueryLogT (QGenExpr QValueContext Postgres s))
+queryLatestQueryLogsE =
+  -- TODO: could consider using Template Haskell here, but I'm not that fancy.
+  let
+    -- Query latest for each endpoint.
+    latestVersions           = latestQueryForEP VersionsEP
+    latestVehicleTypes       = latestQueryForEP VehicleTypesEP
+    latestStationInfo        = latestQueryForEP StationInformationEP
+    latestStationStatus      = latestQueryForEP StationStatusEP
+    latestSystemRegions      = latestQueryForEP SystemRegionsEP
+    latestSystemInfo         = latestQueryForEP SystemInformationEP
+    latestSystemPricingPlans = latestQueryForEP SystemPricingPlansEP
+  in
+    -- Union all latest queries. This allows the index to do the heavy lifting (~100ms query) versus doing a full table scan (>10s).
+    latestVersions      `unionAll_`
+    latestVehicleTypes  `unionAll_`
+    latestStationInfo   `unionAll_`
+    latestStationStatus `unionAll_`
+    latestSystemRegions `unionAll_`
+    latestSystemInfo    `unionAll_`
+    latestSystemPricingPlans
+  where
+    latestQueryForEP ep =
+        limit_ 1 $                                                          -- Only return 1 row per endpoint.
+        filter_ (\q -> _queryLogEndpoint q ==. val_ ep) $                   -- Filter by given endpoint.
+        orderBy_ (\q -> (desc_ (_queryLogTime q), desc_ (_queryLogId q))) $ -- Order by time and ID.
+        all_ (bikeshareDb ^. bikeshareQueryLog)
+
 
 -- | Expression to get the latest query logs for each endpoint. Variant of 'queryLatestQueryLogsE' that uses 'Pg.pgNubBy_' (instead of a CTE with 'rank_').
 queryLatestQueryLogsNubE :: Q Postgres BikeshareDb s (QueryLogT (QGenExpr QValueContext Postgres s))

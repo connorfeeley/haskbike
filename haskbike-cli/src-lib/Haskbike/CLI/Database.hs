@@ -94,7 +94,7 @@ handleReset options resetOptions = do
     then logWarning "Only resetting database..." >> dropTables >> migrateDB >> logWarning "Database reset; exiting." >> liftIO exitSuccess
     else logWarning "Resetting database..."      >> dropTables >> logWarning "Database reset." >>
          logWarning "Migrating database."        >> migrateDB  >> logWarning "Migrations performed." >>
-         logInfo "Initializing database."     >> handleInformation >> liftIO exitSuccess
+         logInfo "Initializing database."        >> handleInformation >> liftIO exitSuccess
 
 -- | Helper for station information request.
 handleInformation :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m) => m ()
