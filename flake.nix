@@ -135,7 +135,7 @@
               # zlib.source = pkgs.zlib;
               tmp-postgres.source = inputs.tmp-postgres;
               beam-core.source = "${inputs.beam}/beam-core";
-              beam-migration.source = "${inputs.beam}/beam-migration";
+              beam-migrate.source = "${inputs.beam}/beam-migrate";
               beam-postgres.source = "${inputs.beam}/beam-postgres";
               beam-sqlite.source = "${inputs.beam}/beam-sqlite";
             } // lib.optionalAttrs (lib.versionOlder config.haskellProjects.default.basePackages.ghc.version "9.4") {
