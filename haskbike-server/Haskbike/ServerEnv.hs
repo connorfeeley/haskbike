@@ -67,9 +67,9 @@ data ServerEnv m = ServerEnv
   , serverPort            :: !Int                   -- ^ Port number on which the server is running
   , serverTimeoutSeconds  :: !Int                   -- ^ Timeout in seconds for the server.
   , serverGzipCompression :: !Bool                  -- ^ Whether to use gzip compression.
-  , serverMaxIntervals    :: Pico
-  , serverContactEmail    :: String
-  , serverAssets          :: ExternalAssetLocation
+  , serverMaxIntervals    :: !Pico
+  , serverContactEmail    :: !String
+  , serverAssets          :: !ExternalAssetLocation
   }
 
 {- | Type alias for constraint for:
