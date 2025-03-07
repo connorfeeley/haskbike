@@ -1,5 +1,6 @@
 {-# LANGUAGE DerivingStrategies   #-}
 {-# LANGUAGE FlexibleContexts     #-}
+{-# LANGUAGE StrictData           #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 -- | Application environment and monad.
