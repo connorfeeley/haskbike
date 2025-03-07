@@ -5,14 +5,19 @@
 
 -- | Application environment and monad.
 module Haskbike.AppEnv
-     ( AppM (..)
+     ( AppError (..)
+     , AppM (..)
      , Env (..)
-     , HasEnv (..)
+     , HasDB (..)
+     , HasEnv
+     , HasHaskbikeClient (..)
+     , HasLogger (..)
      , Message
      , Severity (..)
      , WithEnv
      , ask
      , asks
+     , createAppEnv
      , executeWithConnPool
      , mainEnv
      , mkDatabaseConnectionPool
@@ -23,11 +28,14 @@ module Haskbike.AppEnv
      , runWithAppMDebug
      , runWithAppMSuppressLog
      , simpleEnv
+     , throwAppError
      , withConnPool
      , withManager
      , withPooledConn
      , withPostgres
+     , withPostgresAppM
      , withPostgresTransaction
+     , withPostgresTransactionAppM
      ) where
 
 import           Colog
@@ -90,7 +98,8 @@ newtype AppM a where
                    , MonadReader (Env AppM)
                    , MonadFail
                    , MonadThrow
-                   , MonadCatch )
+                   , MonadCatch
+                   )
 
 -- | Proper MonadUnliftIO instance with resource safety
 instance MonadUnliftIO AppM where
@@ -208,8 +217,8 @@ withPostgres action = do
         else runBeamPostgres
   res <- try $ withPooledConn dbFunction action
   case res of
-    Left (e :: SqlError) ->
-      logException e >>
+    Left (e :: SqlError) -> do
+      logException e
       throw e
     Right result -> pure result
 {-# INLINE withPostgres #-}
@@ -224,11 +233,27 @@ withPostgresTransaction action = do
         else runBeamPostgres
   res <- try $ liftIO $ withResource pool $ \conn -> withTransaction conn (dbFunction conn action)
   case res of
-    Left (e :: SqlError) ->
-      logException e >>
+    Left (e :: SqlError) -> do
+      logException e
       throw e
     Right result -> pure result
 {-# INLINE withPostgresTransaction #-}
+
+-- | Specialized version of withPostgresTransaction for AppM that uses structured error handling
+withPostgresTransactionAppM :: Pg a -> AppM a
+withPostgresTransactionAppM action = do
+  logDatabase <- getLogDatabase
+  pool <- withConnPool
+  let dbFunction = if logDatabase
+        then runBeamPostgresDebug putStrLn
+        else runBeamPostgres
+  res <- try $ liftIO $ withResource pool $ \conn -> withTransaction conn (dbFunction conn action)
+  case res of
+    Left (e :: SqlError) -> do
+      logException e
+      throwAppError (DBError e)
+    Right result -> pure result
+{-# INLINE withPostgresTransactionAppM #-}
 
 -- | Fetch client manager from the environment.
 withManager :: (HasEnv env m, MonadIO m, MonadThrow m) => m Manager
@@ -266,36 +291,54 @@ mainLogAction :: (MonadIO m)
               -> LogAction m Message -- ^ Action used to log.
 mainLogAction severity enableRich = filterBySeverity severity msgSeverity (if enableRich then richMessageAction else simpleMessageAction)
 
-  -- | Helper function to run the application.
+  -- | Specialized version of withPostgres for AppM that uses structured error handling
+withPostgresAppM :: Pg b -> AppM b
+withPostgresAppM action = do
+  logDatabase <- getLogDatabase
+  let dbFunction = if logDatabase
+        then runBeamPostgresDebug putStrLn
+        else runBeamPostgres
+  res <- try $ withPooledConn dbFunction action
+  case res of
+    Left (e :: SqlError) -> do
+      logException e
+      throwAppError (DBError e)
+    Right result -> pure result
+{-# INLINE withPostgresAppM #-}
+
+-- | Helper function to run the application.
 runAppM :: Env AppM -> AppM a -> IO a
 runAppM env app = runReaderT (unAppM app) env
+
+-- | Helper function to create an app environment with standard configuration
+createAppEnv :: MonadIO m
+             => Severity  -- ^ Log severity level
+             -> Bool      -- ^ Log database operations
+             -> Bool      -- ^ Use rich logging
+             -> String    -- ^ Database name
+             -> m (Env AppM)
+createAppEnv sev logDatabase richLogging dbname = liftIO $ do
+  connPool <- mkDbConnectInfo dbname >>= mkDatabaseConnectionPool
+  currentTimeZone <- getCurrentTimeZone
+  clientManager <- newManager tlsManagerSettings
+  pure $ mainEnv sev logDatabase richLogging currentTimeZone connPool clientManager
 
 -- | Helper function to run a computation in the AppM monad, returning an IO monad.
 runWithAppM :: String -> AppM a -> IO a
 runWithAppM dbname action = do
-  connPool <- mkDbConnectInfo dbname >>= mkDatabaseConnectionPool
-  currentTimeZone <- getCurrentTimeZone
-  clientManager <- liftIO $ newManager tlsManagerSettings
-  let env = mainEnv Info False True currentTimeZone connPool clientManager
+  env <- createAppEnv Info False True dbname
   runAppM env action
 
 -- | This function is the same as runWithAppM, but overrides the log action to be a no-op.
 runWithAppMSuppressLog :: String -> AppM a -> IO a
 runWithAppMSuppressLog dbname action = do
-  connPool <- mkDbConnectInfo dbname >>= mkDatabaseConnectionPool
-  currentTimeZone <- getCurrentTimeZone
-  clientManager <- liftIO $ newManager tlsManagerSettings
-  let env = (mainEnv Info False True currentTimeZone connPool clientManager :: Env AppM) { envLogAction = mempty }
-  runAppM env action
-
+  env <- createAppEnv Info False True dbname
+  runAppM (env { envLogAction = mempty }) action
 
 -- | Helper function to run a computation in the AppM monad with debug and database logging, returning an IO monad.
 runWithAppMDebug :: String -> AppM a -> IO a
 runWithAppMDebug dbname action = do
-  connPool <- mkDbConnectInfo dbname >>= mkDatabaseConnectionPool
-  currentTimeZone <- getCurrentTimeZone
-  clientManager <- liftIO $ newManager tlsManagerSettings
-  let env = mainEnv Debug True True currentTimeZone connPool clientManager
+  env <- createAppEnv Debug True True dbname
   runAppM env action
 
 mkDatabaseConnectionPool :: MonadIO m => ConnectInfo -> m (Pool Connection)
