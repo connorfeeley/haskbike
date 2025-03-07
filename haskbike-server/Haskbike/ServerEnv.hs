@@ -33,18 +33,12 @@ import           Control.Monad.Reader
 
 import           Data.Fixed                             ( Pico )
 import           Data.Pool
-import           Data.Time
 
-import           Database.Beam.Postgres                 ( ConnectInfo (..), Connection, Pg, SqlError, close, connect,
-                                                          runBeamPostgres, runBeamPostgresDebug )
-import           Database.PostgreSQL.Simple             ( defaultConnectInfo )
+import           Database.Beam.Postgres                 ( Pg, SqlError, runBeamPostgres, runBeamPostgresDebug )
 import           Database.PostgreSQL.Simple.Transaction ( withTransaction )
 
 import           Haskbike.AppEnv
 import           Haskbike.Server.ExternalAssets
-
-import           Network.HTTP.Client
-import           Network.HTTP.Client.TLS
 
 import           Prelude                                ()
 import           Prelude.Compat
@@ -65,7 +59,8 @@ newtype ServerAppM a where
                    , MonadReader (ServerEnv ServerAppM)
                    , MonadFail
                    , MonadThrow
-                   , MonadCatch )
+                   , MonadCatch
+                   )
 
 data ServerEnv m = ServerEnv
   { serverEnvBase         :: !(Env AppM)
