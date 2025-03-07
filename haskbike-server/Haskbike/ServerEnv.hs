@@ -33,6 +33,7 @@ import           Control.Monad.Reader
 
 import           Data.Fixed                             ( Pico )
 import           Data.Pool
+import qualified Data.Text                              as T
 
 import           Database.Beam.Postgres                 ( Pg, SqlError, runBeamPostgres, runBeamPostgresDebug )
 import           Database.PostgreSQL.Simple.Transaction ( withTransaction )
@@ -68,7 +69,7 @@ data ServerEnv m = ServerEnv
   , serverTimeoutSeconds  :: !Int                   -- ^ Timeout in seconds for the server.
   , serverGzipCompression :: !Bool                  -- ^ Whether to use gzip compression.
   , serverMaxIntervals    :: !Pico
-  , serverContactEmail    :: !String
+  , serverContactEmail    :: !T.Text
   , serverAssets          :: !ExternalAssetLocation
   }
 
@@ -89,7 +90,7 @@ class (HasLog env Message m, MonadReader env m, MonadError S.ServerError m, Mona
   getServerTimeoutSeconds  :: m Int
   getServerGzipCompression :: m Bool
   getServerMaxIntervals    :: m Pico
-  getServerContactEmail    :: m String
+  getServerContactEmail    :: m T.Text
   getServerAssetsLocation  :: m ExternalAssetLocation
 
 

@@ -20,12 +20,11 @@ import           Control.Monad.Reader
 
 import           Data.Aeson
 import qualified Data.ByteString.Builder                   as Builder
-import qualified Data.ByteString.Lazy.Char8                as BL8
 import           Data.Data                                 ( Proxy (..) )
 import           Data.Default                              ( def )
 import           Data.Function                             ( (&) )
 import           Data.String.Conversions                   ( cs )
-import qualified Data.String.Conversions.Monomorphic       as BL8
+import qualified Data.String.Conversions.Monomorphic       as SCM
 import qualified Data.Text                                 as T
 
 import           Haskbike.Server.API.TopLevel
@@ -89,14 +88,13 @@ serverSettings env = do
     & setTimeout (serverTimeoutSeconds env)
     & setOnExceptionResponse (onExceptionResponse (serverContactEmail env))
 
-onExceptionResponse :: Exception e
-                    => String -> e -> Response
+onExceptionResponse :: Exception e => T.Text -> e -> Response
 onExceptionResponse email ex = do
   responseBuilder H.internalServerError500
                   [(H.hContentType, "text/html; charset=utf-8")]
                   renderErrorPage
   where
-    renderErrorPage = Builder.stringUtf8 . BL8.fromLazyByteString . renderBS . toHtml $ ErrorPage (T.pack email) ex
+    renderErrorPage = Builder.stringUtf8 . SCM.fromLazyByteString . renderBS . toHtml $ ErrorPage email ex
 
 -- | Natural transformation between server monad and Servant 'Handler' monad.
 serverNt :: ServerEnv ServerAppM -> ServerAppM a -> S.Handler a
@@ -112,9 +110,9 @@ exceptionHandler ex = do
   logError $ "Caught servant exception (" <> "" <> "): " <> T.pack (show ex)
   throwError (servantErrFromEx email ex)
 
-servantErrFromEx :: Exception e => String -> e -> S.ServerError
+servantErrFromEx :: Exception e => T.Text -> e -> S.ServerError
 servantErrFromEx email _ex =
-  S.err500 { S.errBody    = "Internal server error. Contact " <> BL8.pack email <> " if the issue persists."
+  S.err500 { S.errBody    = "Internal server error. Contact " <> cs email <> " if the issue persists."
            , S.errHeaders = [("Content-Type", "application/text")]
            }
 
