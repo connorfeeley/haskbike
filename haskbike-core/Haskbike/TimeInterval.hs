@@ -25,9 +25,11 @@ import           Data.Time
 -}
 generateTimeRange :: UTCTime -> UTCTime -> Integer -> [UTCTime]
 generateTimeRange start end incMinutes =
-    [addUTCTime (fromInteger $ incMinutes * 60 * n) start | n <- [0 .. deltaIncrements]]
-        where
-          deltaIncrements = ceiling (diffUTCTime end start / fromInteger (60 * incMinutes)) :: Integer
+    let !incSeconds = incMinutes * 60
+        !diffSecs = diffUTCTime end start
+        !deltaIncrements = ceiling (diffSecs / fromInteger incSeconds) :: Integer
+        addTimeStep !n = addUTCTime (fromInteger $ incSeconds * n) start
+    in [addTimeStep n | n <- [0 .. deltaIncrements]]
 
 
 {-
@@ -38,13 +40,9 @@ generateTimeRange start end incMinutes =
     (60*15)
 -}
 incrementsPerRange :: UTCTime -> UTCTime -> NominalDiffTime -> Integer
-incrementsPerRange start end intervalSecs = intervals
-  where
-    diff :: NominalDiffTime -- ^ Difference in seconds between end and start
-    diff = diffUTCTime end start
-
-    intervals :: Integer    -- ^ Intervals within time range; rounded up.
-    intervals = ceiling (diff / intervalSecs)
+incrementsPerRange start end intervalSecs = 
+    let !diff = diffUTCTime end start  -- ^ Difference in seconds between end and start
+    in ceiling (diff / intervalSecs)    -- ^ Intervals within time range; rounded up.
 
 
 oneMinute, oneHour :: NominalDiffTime
@@ -57,10 +55,16 @@ oneHour   = secondsToNominalDiffTime (60 * 60)
 15
 -}
 minsPerHourlyInterval :: NominalDiffTime -> Integer
-minsPerHourlyInterval = (ceiling . (/) oneHour) . (*) 60
+minsPerHourlyInterval numIntervals = 
+    let !secondsPerInterval = (*) 60 numIntervals
+    in ceiling (oneHour / secondsPerInterval)
 
 secondsPerIntervalForRange :: UTCTime -> UTCTime -> Pico -> Integer
-secondsPerIntervalForRange start end numMaxIntervals = (flip div 1000000000000 . fromPico) (nominalDiffTimeToSeconds (diffUTCTime end start) / numMaxIntervals)
+secondsPerIntervalForRange start end numMaxIntervals = 
+    let !diffSeconds = nominalDiffTimeToSeconds (diffUTCTime end start)
+        !intervalsRatio = diffSeconds / numMaxIntervals
+        !picoValue = fromPico intervalsRatio
+    in picoValue `div` 1000000000000
 
 
 fromPico :: Pico -> Integer

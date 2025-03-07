@@ -102,11 +102,22 @@ class (HasLog env Message m, MonadReader env m, MonadIO m) => HasEnv env m where
 
 instance (Monad m, MonadReader (Env m) m, MonadIO m) => HasEnv (Env m) m where
     getLogDatabase      = asks envLogDatabase
+    {-# INLINE getLogDatabase #-}
+
     getMinSeverity      = asks envMinSeverity
+    {-# INLINE getMinSeverity #-}
+
     getTz               = asks envTimeZone
+    {-# INLINE getTz #-}
+
     getDBConnectionPool = asks envDBConnectionPool
+    {-# INLINE getDBConnectionPool #-}
+
     getClientManager    = asks envClientManager
+    {-# INLINE getClientManager #-}
+
     getBaseUrl          = asks envBaseUrl
+    {-# INLINE getBaseUrl #-}
 
 -- Implement logging for the application environment.
 instance HasLog (Env m) Message m where
@@ -178,7 +189,8 @@ withPostgresTransaction action = do
 
 -- | Fetch client manager from the environment.
 withManager :: (HasEnv env m, MonadIO m, MonadThrow m) => m Manager
-withManager = getClientManager >>= liftIO . pure
+withManager = getClientManager
+{-# INLINE withManager #-}
 
 -- | Simple environment for the main application.
 simpleEnv :: (HasEnv env m, MonadIO m, MonadThrow m) => TimeZone -> Pool Connection -> Manager -> Env m

@@ -29,10 +29,10 @@ import           Data.Time.Clock.POSIX
 
 -- | Data type containing a pair of times.
 data TimePair a where
-  TimePair :: { earliestTime   :: a
-              , latestTime     :: a
-              , tz             :: TimeZone
-              , currentUtcTime :: UTCTime
+  TimePair :: { earliestTime   :: !a
+              , latestTime     :: !a
+              , tz             :: !TimeZone
+              , currentUtcTime :: !UTCTime
               } -> TimePair a
   deriving (Show, Eq, Ord)
 
@@ -55,7 +55,7 @@ addMinutes m time' = utcToLocalTime utc (addUTCTime (m*60) (localTimeToUTC utc t
 localToSystem :: TimeZone -> LocalTime -> LocalTime
 localToSystem systemTimeZone localTime = do
   -- Convert the local time to a POSIX time, using "fake UTC" as the timezone
-  let asPosix = localToPosix localTime
+  let !asPosix = localToPosix localTime
   -- Convert the POSIX time to a local time, using the system's current timezone
   posixToLocal' systemTimeZone asPosix
   where
@@ -65,7 +65,7 @@ localToSystem systemTimeZone localTime = do
 localToSystem' :: LocalTime -> IO LocalTime
 localToSystem' localTime = do
   -- Get the current timezone
-  currentTimeZone <- getCurrentTimeZone
+  !currentTimeZone <- getCurrentTimeZone
   pure $ localToSystem currentTimeZone localTime
 
 
