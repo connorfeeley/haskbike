@@ -14,21 +14,31 @@ module Haskbike.ServerEnv
      , ServerAppM (..)
      , ServerEnv (..)
      , WithServerEnv
+     , createServerEnv
      , ntServer
      , runServerAppM
      , runWithServerAppM
      , runWithServerAppMDebug
      , runWithServerAppMSuppressLog
+     , throwServerError
+     , withPostgresServerAppM
+     , withPostgresTransactionServerAppM
      ) where
 
 import           Colog
 
-import           Control.Monad.Catch            ( MonadCatch, MonadThrow, throwM )
+import           Control.Monad.Catch                    ( MonadCatch, MonadThrow, throwM )
 import           Control.Monad.Except
 import           Control.Monad.Reader
 
-import           Data.Fixed                     ( Pico )
+import           Data.Fixed                             ( Pico )
+import           Data.Pool
 import           Data.Time
+
+import           Database.Beam.Postgres                 ( ConnectInfo (..), Connection, Pg, SqlError, close, connect,
+                                                          runBeamPostgres, runBeamPostgresDebug )
+import           Database.PostgreSQL.Simple             ( defaultConnectInfo )
+import           Database.PostgreSQL.Simple.Transaction ( withTransaction )
 
 import           Haskbike.AppEnv
 import           Haskbike.Server.ExternalAssets
@@ -36,10 +46,10 @@ import           Haskbike.Server.ExternalAssets
 import           Network.HTTP.Client
 import           Network.HTTP.Client.TLS
 
-import           Prelude                        ()
+import           Prelude                                ()
 import           Prelude.Compat
 
-import qualified Servant                        as S
+import qualified Servant                                as S
 
 import           UnliftIO
 
@@ -98,14 +108,24 @@ instance (Monad m, MonadReader (ServerEnv m) m, HasLog (ServerEnv m) Message m, 
   getServerAssetsLocation  = asks serverAssets
 
 
--- | 'HasEnv' instance for 'ServerAppM'
-instance (HasEnv (ServerEnv ServerAppM) ServerAppM) where
-    getLogDatabase      = asks (envLogDatabase       . serverEnvBase)
-    getMinSeverity      = asks (envMinSeverity       . serverEnvBase)
-    getTz               = asks (envTimeZone          . serverEnvBase)
-    getDBConnectionPool = asks (envDBConnectionPool  . serverEnvBase)
-    getClientManager    = asks (envClientManager     . serverEnvBase)
-    getBaseUrl          = asks (envBaseUrl           . serverEnvBase)
+-- | 'HasLogger' instance for 'ServerAppM'
+instance HasLogger (ServerEnv ServerAppM) ServerAppM where
+    getLogAction        = asks (envLogAction    . serverEnvBase) >>= \action -> pure (adaptLogAction action)
+    getLogDatabase      = asks (envLogDatabase  . serverEnvBase)
+    getMinSeverity      = asks (envMinSeverity  . serverEnvBase)
+
+-- | 'HasDB' instance for 'ServerAppM'
+instance HasDB (ServerEnv ServerAppM) ServerAppM where
+    getDBConnectionPool = asks (envDBConnectionPool . serverEnvBase)
+    getTz               = asks (envTimeZone        . serverEnvBase)
+
+-- | 'HasHaskbikeClient' instance for 'ServerAppM'
+instance HasHaskbikeClient (ServerEnv ServerAppM) ServerAppM where
+    getClientManager    = asks (envClientManager . serverEnvBase)
+    getBaseUrl          = asks (envBaseUrl       . serverEnvBase)
+
+-- | Combined 'HasEnv' instance for 'ServerAppM'
+instance HasEnv (ServerEnv ServerAppM) ServerAppM
 
 
 -- * 'HasLog' instances
@@ -130,7 +150,7 @@ instance HasLog (ServerEnv ServerAppM) Message ServerAppM where
 
 instance HasLog (ServerEnv m) Message AppM where
   getLogAction :: ServerEnv m -> LogAction AppM Message
-  getLogAction = getLogAction . serverEnvBase
+  getLogAction = Colog.getLogAction . serverEnvBase
   {-# INLINE getLogAction #-}
 
   setLogAction :: LogAction AppM Message -> ServerEnv m -> ServerEnv m
@@ -142,6 +162,41 @@ instance HasLog (ServerEnv m) Message AppM where
 instance MonadError S.ServerError ServerAppM where
   throwError = ServerAppM . throwM
   catchError action handler = ServerAppM $ catch (unServerAppM action) (unServerAppM . handler)
+
+-- | Helper to throw consistent server app errors
+throwServerError :: AppError -> ServerAppM a
+throwServerError = ServerAppM . throwM
+
+-- | Specialized version of withPostgres for ServerAppM
+withPostgresServerAppM :: Pg b -> ServerAppM b
+withPostgresServerAppM action = do
+  logDatabase <- getLogDatabase
+  let dbFunction = if logDatabase
+        then runBeamPostgresDebug putStrLn
+        else runBeamPostgres
+  res <- try $ withPooledConn dbFunction action
+  case res of
+    Left (e :: SqlError) -> do
+      logException e
+      throwServerError (DBError e)
+    Right result -> pure result
+{-# INLINE withPostgresServerAppM #-}
+
+-- | Specialized version of withPostgresTransaction for ServerAppM
+withPostgresTransactionServerAppM :: Pg a -> ServerAppM a
+withPostgresTransactionServerAppM action = do
+  logDatabase <- getLogDatabase
+  pool <- withConnPool
+  let dbFunction = if logDatabase
+        then runBeamPostgresDebug putStrLn
+        else runBeamPostgres
+  res <- try $ liftIO $ withResource pool $ \conn -> withTransaction conn (dbFunction conn action)
+  case res of
+    Left (e :: SqlError) -> do
+      logException e
+      throwServerError (DBError e)
+    Right result -> pure result
+{-# INLINE withPostgresTransactionServerAppM #-}
 
 
 -- | Natural transformation function to lift ServerAppM into the Handler monad.
@@ -162,58 +217,37 @@ runServerAppM :: ServerEnv ServerAppM -> ServerAppM a -> IO a
 runServerAppM env app = flip runReaderT env $ unServerAppM app
 
 
+-- | Helper function to create a server environment
+createServerEnv :: Severity -> Bool -> Bool -> String -> IO (ServerEnv ServerAppM)
+createServerEnv sev logDatabase richLogging dbname = do
+  env <- createAppEnv sev logDatabase richLogging dbname
+  pure $ ServerEnv { serverEnvBase         = env
+                   , serverPort            = 8081
+                   , serverTimeoutSeconds  = 5 * 60
+                   , serverGzipCompression = True
+                   , serverMaxIntervals    = 20
+                   , serverContactEmail    = "bikes@cfeeley.org"
+                   , serverAssets          = ExternalAssetCDN
+                   }
+
 -- | Helper function to run a computation in the ServerAppM monad, returning an IO monad.
 runWithServerAppM :: String -> ServerAppM a -> IO a
 runWithServerAppM dbname action = do
-  connPool <- mkDbConnectInfo dbname >>= mkDatabaseConnectionPool
-  currentTimeZone <- getCurrentTimeZone
-  clientManager <- liftIO $ newManager tlsManagerSettings
-  let env = mainEnv Info False True currentTimeZone connPool clientManager
-  let serverEnv = ServerEnv { serverEnvBase         = env
-                            , serverPort            = 8081
-                            , serverTimeoutSeconds  = 5 * 60
-                            , serverGzipCompression = True
-                            , serverMaxIntervals    = 20
-                            , serverContactEmail    = "bikes@cfeeley.org"
-                            , serverAssets          = ExternalAssetCDN
-                            }
-  liftIO $ runServerAppM serverEnv action
-
+  serverEnv <- createServerEnv Info False True dbname
+  runServerAppM serverEnv action
 
 -- | This function is the same as runWithServerAppM, but overrides the log action to be a no-op.
 runWithServerAppMSuppressLog :: String -> ServerAppM a -> IO a
 runWithServerAppMSuppressLog dbname action = do
-  connPool <- mkDbConnectInfo dbname >>= mkDatabaseConnectionPool
-  currentTimeZone <- getCurrentTimeZone
-  clientManager <- liftIO $ newManager tlsManagerSettings
-  let env = mainEnv Info False True currentTimeZone connPool clientManager
-  let serverEnv = ServerEnv { serverEnvBase         = env
-                            , serverPort            = 8081
-                            , serverTimeoutSeconds  = 5 * 60
-                            , serverGzipCompression = True
-                            , serverMaxIntervals    = 20
-                            , serverContactEmail    = "bikes@cfeeley.org"
-                            , serverAssets          = ExternalAssetCDN
-                            }
-  liftIO $ runServerAppM serverEnv action
-
+  serverEnv <- createServerEnv Info False True dbname
+  let envWithNoLog = serverEnv { serverEnvBase = (serverEnvBase serverEnv) { envLogAction = mempty } }
+  runServerAppM envWithNoLog action
 
 -- | Helper function to run a computation in the ServerAppM monad with debug and database logging, returning an IO monad.
 runWithServerAppMDebug :: String -> ServerAppM a -> IO a
 runWithServerAppMDebug dbname action = do
-  connPool <- mkDbConnectInfo dbname >>= mkDatabaseConnectionPool
-  currentTimeZone <- getCurrentTimeZone
-  clientManager <- liftIO $ newManager tlsManagerSettings
-  let env = mainEnv Debug True True currentTimeZone connPool clientManager
-  let serverEnv = ServerEnv { serverEnvBase         = env
-                            , serverPort            = 8081
-                            , serverTimeoutSeconds  = 5 * 60
-                            , serverGzipCompression = True
-                            , serverMaxIntervals    = 20
-                            , serverContactEmail    = "bikes@cfeeley.org"
-                            , serverAssets          = ExternalAssetCDN
-                            }
-  liftIO $ runServerAppM serverEnv action
+  serverEnv <- createServerEnv Debug True True dbname
+  runServerAppM serverEnv action
 
 
 -- Function to adapt LogAction from AppM to ServerAppM
