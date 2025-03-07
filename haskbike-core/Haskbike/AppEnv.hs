@@ -39,6 +39,7 @@ import           Control.Monad.Reader                   ( MonadReader, ReaderT (
 
 import           Data.Maybe                             ( fromMaybe, isNothing )
 import           Data.Pool
+import qualified Data.Text                              as T
 import           Data.Time                              ( TimeZone, getCurrentTimeZone )
 import           Data.Word                              ( Word16 )
 
@@ -63,7 +64,7 @@ import           System.Environment                     ( lookupEnv )
 
 import           Text.Read                              ( readMaybe )
 
-import           UnliftIO                               ( MonadIO (..), MonadUnliftIO )
+import           UnliftIO                               ( MonadIO (..), MonadUnliftIO, withRunInIO )
 
 
 -- Application environment
@@ -85,39 +86,65 @@ newtype AppM a where
                    , Applicative
                    , Monad
                    , MonadIO
-                   , MonadUnliftIO
                    , MonadReader (Env AppM)
                    , MonadFail
                    , MonadThrow
                    , MonadCatch )
 
+-- | Proper MonadUnliftIO instance with resource safety
+instance MonadUnliftIO AppM where
+  withRunInIO inner = AppM $ withRunInIO $ \run ->
+    inner (run . unAppM)
 
-class (HasLog env Message m, MonadReader env m, MonadIO m) => HasEnv env m where
-    getLogDatabase      :: m Bool
+
+-- | Logger capability typeclass
+class (MonadReader env m, MonadIO m, HasLog env Message m) => HasLogger env m where
+    getLogAction        :: m (LogAction m Message)
     getMinSeverity      :: m Severity
-    getTz               :: m TimeZone
+    getLogDatabase      :: m Bool
+
+-- | Database capability typeclass
+class (MonadReader env m, MonadIO m) => HasDB env m where
     getDBConnectionPool :: m (Pool Connection)
+    getTz               :: m TimeZone
+
+-- | Client capability typeclass
+class (MonadReader env m, MonadIO m) => HasHaskbikeClient env m where
     getClientManager    :: m Manager
     getBaseUrl          :: m BaseUrl
 
-instance (Monad m, MonadReader (Env m) m, MonadIO m) => HasEnv (Env m) m where
-    getLogDatabase      = asks envLogDatabase
-    {-# INLINE getLogDatabase #-}
+-- | Combined environment capability
+class (HasLogger env m, HasDB env m, HasHaskbikeClient env m) => HasEnv env m
+
+-- Logger capability implementation
+instance (Monad m, MonadReader (Env m) m, MonadIO m) => HasLogger (Env m) m where
+    getLogAction        = asks envLogAction
+    {-# INLINE getLogAction #-}
 
     getMinSeverity      = asks envMinSeverity
     {-# INLINE getMinSeverity #-}
 
-    getTz               = asks envTimeZone
-    {-# INLINE getTz #-}
+    getLogDatabase      = asks envLogDatabase
+    {-# INLINE getLogDatabase #-}
 
+-- Database capability implementation
+instance (Monad m, MonadReader (Env m) m, MonadIO m) => HasDB (Env m) m where
     getDBConnectionPool = asks envDBConnectionPool
     {-# INLINE getDBConnectionPool #-}
 
+    getTz               = asks envTimeZone
+    {-# INLINE getTz #-}
+
+-- Client capability implementation
+instance (Monad m, MonadReader (Env m) m, MonadIO m) => HasHaskbikeClient (Env m) m where
     getClientManager    = asks envClientManager
     {-# INLINE getClientManager #-}
 
     getBaseUrl          = asks envBaseUrl
     {-# INLINE getBaseUrl #-}
+
+-- Combined environment implementation
+instance (HasLogger (Env m) m, HasDB (Env m) m, HasHaskbikeClient (Env m) m) => HasEnv (Env m) m
 
 -- Implement logging for the application environment.
 instance HasLog (Env m) Message m where
@@ -140,9 +167,24 @@ you will have access to code lines that log messages.
 -}
 type WithEnv env m = HasEnv env m
 
+-- | Custom App error type for structured error handling
+data AppError
+  = DBError SqlError
+  | ServerError ServerError
+  | ConfigError T.Text
+  | GenericError T.Text
+  deriving (Show)
+
+instance Exception AppError
+
+-- | Standardized error handling by converting all errors to AppError
 instance MonadError ServerError AppM where
-  throwError = AppM . throwM
+  throwError = AppM . throwM . ServerError
   catchError action handler = AppM $ catch (unAppM action) (unAppM . handler)
+
+-- | Helper to throw consistent app errors
+throwAppError :: AppError -> AppM a
+throwAppError = AppM . throwM
 
 -- | Fetch database connection pool from environment monad.
 withConnPool :: (HasEnv env m, MonadIO m, MonadThrow m) => m (Pool Connection)
@@ -157,7 +199,7 @@ withPooledConn :: (HasEnv env m, MonadIO m, MonadThrow m) => (Connection -> p ->
 withPooledConn dbFunction action = withConnPool >>= executeWithConnPool dbFunction action
 
 -- | Run a Beam operation using database connection from the environment.
-withPostgres :: (MonadCatch m, HasEnv env m, MonadIO m) => Pg b -> m b
+withPostgres :: (HasLogger env m, MonadCatch m, HasEnv env m, MonadIO m) => Pg b -> m b
 withPostgres action = do
   logDatabase <- getLogDatabase
   let dbFunction = if logDatabase
