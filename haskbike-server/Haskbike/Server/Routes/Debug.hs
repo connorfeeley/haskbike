@@ -37,8 +37,8 @@ data DebugAPI mode where
 -- | API for querying failed queries.
 data ErrorsAPI mode where
   ErrorsAPI ::
-    { latestErrors :: mode :- "latest" :> Capture "amount" Integer :> Get '[JSON] Value
-    , errorsSince  :: mode :- "since" :> Capture "days-ago" DaysAgo :> Get '[JSON] Value
+    { latestErrors :: mode :- "latest" :> Capture "amount"   Integer :> Get '[JSON] Value
+    , errorsSince  :: mode :- "since"  :> Capture "days-ago" DaysAgo :> Get '[JSON] Value
     } -> ErrorsAPI mode
   deriving stock Generic
 
