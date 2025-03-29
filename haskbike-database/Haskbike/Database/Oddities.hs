@@ -13,7 +13,7 @@ import           Control.Monad
 import           Control.Monad.Catch                         ( MonadCatch )
 
 import           Data.Int                                    ( Int32 )
-import           Data.List
+import qualified Data.List.NonEmpty                          as NE
 import qualified Data.Text                                   as T
 import           Data.Time
 
@@ -116,4 +116,5 @@ showFreq :: (Ord a, Show a) => (Int, a) -> T.Text
 showFreq (count, x) = T.pack $ show x <> ": " <> show count <> " times"
 
 frequency :: Ord a => [a] -> [(Int,a)]
-frequency = map (length &&& head) . group . sort
+frequency []     = []
+frequency (x:xs) = map (NE.length &&& NE.head) $ NE.group $ NE.sort $ x NE.:| xs
