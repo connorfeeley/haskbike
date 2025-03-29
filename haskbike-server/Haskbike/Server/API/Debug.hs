@@ -38,6 +38,7 @@ import           UnliftIO
 parentDebugApiHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m, HasServerEnv env m) => ParentDebugAPI (AsServerT m)
 parentDebugApiHandler =
   ParentDebugAPI { debugPage     = debugPageHandler
+                 , debugApi      = debugApiHandler
                  }
 
 

@@ -30,17 +30,20 @@ type Version = ((String, String), (String, String))
 -- | Parent of debugging API endpoints.
 data ParentDebugAPI mode where
   ParentDebugAPI ::
-    { debugPage     :: mode :- "debug"                     :> Get '[HTML] DebugLandingPage
+    -- Debug landing page.
+    { debugPage     :: mode :- "debug" :> Get '[HTML] DebugLandingPage
+    -- Rest of debug API.
+    , debugApi      :: mode :- "debug" :> NamedRoutes DebugAPI
     } -> ParentDebugAPI mode
   deriving stock Generic
 
 -- | Miscellaneous debugging API endpoints.
 data DebugAPI mode where
   DebugAPI ::
-    { serverVersion :: mode :- "debug" :> "version"        :> Get '[JSON] Version
-    , queryApi      :: mode :- "debug" :> "query-logs"     :> NamedRoutes QueryLogsAPI
-    , errorsApi     :: mode :- "debug" :> "errors"         :> NamedRoutes ErrorsAPI
-    , sleepDatabase :: mode :- "debug" :> "sleep-database" :> Capture "seconds" Int :> Get '[JSON] ()
+    { serverVersion :: mode :- "version"        :> Get '[JSON] Version
+    , queryApi      :: mode :- "query-logs"     :> NamedRoutes QueryLogsAPI
+    , errorsApi     :: mode :- "errors"         :> NamedRoutes ErrorsAPI
+    , sleepDatabase :: mode :- "sleep-database" :> Capture "seconds" Int :> Get '[JSON] ()
     } -> DebugAPI mode
   deriving stock Generic
 
