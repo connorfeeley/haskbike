@@ -6,6 +6,7 @@
 module Haskbike.Server.Routes.Debug
      ( DebugAPI (..)
      , ErrorsAPI (..)
+     , ParentDebugAPI (..)
      , Version
      , debugRoutesLinks
      ) where
@@ -26,6 +27,13 @@ import           Servant.HTML.Lucid
 type Version = ((String, String), (String, String))
 
 
+-- | Parent of debugging API endpoints.
+data ParentDebugAPI mode where
+  ParentDebugAPI ::
+    { debugPage     :: mode :- "debug"                     :> Get '[HTML] DebugLandingPage
+    } -> ParentDebugAPI mode
+  deriving stock Generic
+
 -- | Miscellaneous debugging API endpoints.
 data DebugAPI mode where
   DebugAPI ::
@@ -33,7 +41,6 @@ data DebugAPI mode where
     , queryApi      :: mode :- "debug" :> "query-logs"     :> NamedRoutes QueryLogsAPI
     , errorsApi     :: mode :- "debug" :> "errors"         :> NamedRoutes ErrorsAPI
     , sleepDatabase :: mode :- "debug" :> "sleep-database" :> Capture "seconds" Int :> Get '[JSON] ()
-    , debugPage     :: mode :- "debug"                     :> Get '[HTML] DebugLandingPage
     } -> DebugAPI mode
   deriving stock Generic
 

@@ -7,6 +7,7 @@
 
 module Haskbike.Server.API.Debug
      ( debugApiHandler
+     , parentDebugApiHandler
      ) where
 
 import           Colog
@@ -34,13 +35,18 @@ import           UnliftIO
 
 -- * Handlers
 
+parentDebugApiHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m, HasServerEnv env m) => ParentDebugAPI (AsServerT m)
+parentDebugApiHandler =
+  ParentDebugAPI { debugPage     = debugPageHandler
+                 }
+
+
 debugApiHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m, HasServerEnv env m) => DebugAPI (AsServerT m)
 debugApiHandler =
   DebugAPI { serverVersion = versionHandler
            , queryApi      = queryApiHandler
            , errorsApi     = errorsApiHandler
            , sleepDatabase = sleepDatabaseHandler
-           , debugPage     = debugPageHandler
            }
 
 versionHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m) => m Version
