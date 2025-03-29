@@ -123,6 +123,7 @@ library
                     , Haskbike.Server.API.QueryLogs
                     , Haskbike.Server.API.Data
                     , Haskbike.Server.API.Debug
+                    , Haskbike.Server.API.Debug.DebugAPI
                     , Haskbike.Server.API.Static
                     , Haskbike.Server.API.Visualization
 
