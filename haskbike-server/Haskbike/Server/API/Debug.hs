@@ -20,7 +20,6 @@ import qualified Data.Text                              as T
 
 import           Haskbike.Database.DaysAgo
 import           Haskbike.Database.Operations.Debug
-import           Haskbike.Database.Operations.QueryLogs
 import           Haskbike.Database.Tables.QueryLogs
 import           Haskbike.Server.API.Debug.QueryLogs
 import           Haskbike.Server.Page.Debug.LandingPage
@@ -79,7 +78,7 @@ errorsSinceHandler days@(DaysAgo daysAgo) = do
   errors <- latestQueryErrors days
 
   let x = filter (isJust . _queryLogErrJson) errors
-  let e = decodeJsonErrors x
+  let e = _queryLogErrMsg <$> x
   pure $ toJSON e
 
 
@@ -88,8 +87,8 @@ latestErrorsHandler limit = do
   logInfo "Querying latest errors"
   errors <- queryErrors limit
 
-  let x = filter (isJust . _queryLogErrJson) errors
-  let e = decodeJsonErrors x
+  let x = filter (isJust . _queryLogErrMsg) errors
+  let e = _queryLogErrMsg <$> x
   pure $ toJSON e
 
 debugPageHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m) => m DebugLandingPage
