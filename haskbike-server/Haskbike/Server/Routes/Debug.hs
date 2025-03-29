@@ -10,14 +10,16 @@ module Haskbike.Server.Routes.Debug
      , debugRoutesLinks
      ) where
 
-import           Data.Aeson                       ( Value )
+import           Data.Aeson                             ( Value )
 
-import           GHC.Generics                     ( Generic )
+import           GHC.Generics                           ( Generic )
 
 import           Haskbike.Database.DaysAgo
+import           Haskbike.Server.Page.Debug.LandingPage
 import           Haskbike.Server.Routes.QueryLogs
 
 import           Servant
+import           Servant.HTML.Lucid
 
 
 -- | The version of the server.
@@ -31,6 +33,7 @@ data DebugAPI mode where
     , queryApi      :: mode :- "debug" :> "query-logs"     :> NamedRoutes QueryLogsAPI
     , errorsApi     :: mode :- "debug" :> "errors"         :> NamedRoutes ErrorsAPI
     , sleepDatabase :: mode :- "debug" :> "sleep-database" :> Capture "seconds" Int :> Get '[JSON] ()
+    , debugPage     :: mode :- "debug"                     :> Get '[HTML] DebugLandingPage
     } -> DebugAPI mode
   deriving stock Generic
 

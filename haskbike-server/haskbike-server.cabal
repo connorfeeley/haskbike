@@ -113,6 +113,7 @@ library
                     , Haskbike.Server.Page.SelectionForm
                     , Haskbike.Server.Page.ErrorPage
                     , Haskbike.Server.Page.Utils
+                    , Haskbike.Server.Page.Debug.LandingPage
                     , Haskbike.Server.PureCSS
                     , Haskbike.Server.RobotsTXT
 

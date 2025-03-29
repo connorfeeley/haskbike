@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE DerivingStrategies    #-}
 {-# LANGUAGE PartialTypeSignatures #-}
+{-# OPTIONS_GHC -Wno-deferred-out-of-scope-variables #-}
 
 -- |
 
@@ -21,6 +22,7 @@ import           Haskbike.Database.Operations.Debug
 import           Haskbike.Database.Operations.QueryLogs
 import           Haskbike.Database.Tables.QueryLogs
 import           Haskbike.Server.API.QueryLogs
+import           Haskbike.Server.Page.Debug.LandingPage
 import           Haskbike.Server.Routes.Debug
 import           Haskbike.ServerEnv
 import           Haskbike.Version
@@ -38,6 +40,7 @@ debugApiHandler =
            , queryApi      = queryApiHandler
            , errorsApi     = errorsApiHandler
            , sleepDatabase = sleepDatabaseHandler
+           , debugPage     = debugPageHandler
            }
 
 versionHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m) => m Version
@@ -81,3 +84,8 @@ latestErrorsHandler limit = do
   let x = filter (isJust . _queryLogErrJson) errors
   let e = decodeJsonErrors x
   pure $ toJSON e
+
+debugPageHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m) => m DebugLandingPage
+debugPageHandler = do
+  logInfo "Rendering debug page"
+  pure DebugLandingPage
