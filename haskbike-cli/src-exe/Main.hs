@@ -10,7 +10,7 @@ import           Control.Monad             ( unless, when )
 import           Control.Monad.Reader      ( runReaderT )
 
 import qualified Data.Text                 as T
-import qualified Data.Text                 as Text
+import qualified Data.Text.IO              as TIO
 import           Data.Text.Lazy            ( toStrict )
 import qualified Data.Text.Lazy            as TL
 import           Data.Time                 ( getCurrentTimeZone )
@@ -88,8 +88,8 @@ main = do
     logStdoutAction = cmap fmtMessage logTextStdout
 
     printVersionFromCabalAndGit = do
-      putStrLn $ "Version: " ++ getCabalVersion
-      putStrLn $ "Git revision: " ++ getGitVersion
+      TIO.putStrLn $ "Version: " <> getCabalVersion
+      TIO.putStrLn $ "Git revision: " <> getGitVersion
 
     opts :: ParserInfo Options
     opts = info (parseOptions <**> helper)
@@ -102,8 +102,8 @@ main = do
 -- appMain :: (MonadUnliftIO m, MonadCatch m, MonadFail m,  HasServerEnv (ServerEnv m) (ReaderT (ServerEnv m) m),  MonadError S.ServerError m, HasEnv env m,  HasEnv (ServerEnv m) (ReaderT (ServerEnv m) m),  HasEnv    (ServerEnv (ReaderT (ServerEnv m) m))    (ServerAppM (ReaderT (ServerEnv m) m))) => Options -> m ()
 appMain :: Options -> AppM ()
 appMain options = do
-  logInfo $ "Starting Toronto Bikeshare CLI with verbosity '" <> Text.pack (show (logLevel options)) <> "'."
-  logInfo $ "Version: " <> T.pack getCabalVersion <> " | " <> T.pack getGitVersion
+  logInfo $ "Starting Toronto Bikeshare CLI with verbosity '" <> T.pack (show (logLevel options)) <> "'."
+  logInfo $ "Version: " <> getCabalVersion <> " | " <> getGitVersion
 
   -- Dispatch to appropriate command.
   dispatchDatabase options

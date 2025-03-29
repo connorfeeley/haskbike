@@ -1,7 +1,6 @@
 {-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE DerivingStrategies    #-}
 {-# LANGUAGE PartialTypeSignatures #-}
-{-# OPTIONS_GHC -Wno-deferred-out-of-scope-variables #-}
 
 -- |
 
@@ -49,8 +48,11 @@ debugApiHandler =
            , sleepDatabase = sleepDatabaseHandler
            }
 
-versionHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m) => m Version
-versionHandler = pure (("version", getCabalVersion), ("git-version", getGitVersion))
+versionHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m) => m ServerVersion
+versionHandler = pure ServerVersion { _serverVersion    = getCabalVersion
+                                    , _serverGitVersion = getGitVersion
+                                    , _serverGitHash    = getGitHash
+                                    }
 
 
 sleepDatabaseHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m) => Int -> m ()
