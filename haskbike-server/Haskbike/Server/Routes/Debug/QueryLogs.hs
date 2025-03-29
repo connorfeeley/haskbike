@@ -3,9 +3,11 @@
 
 -- | Route definitions for Query logs API.
 
-module Haskbike.Server.Routes.QueryLogs
+module Haskbike.Server.Routes.Debug.QueryLogs
      ( QueryLogsAPI (..)
      , QueryLogsHistoryAPI (..)
+     , queryLogsHistoryRoutesLinks
+     , queryLogsRoutesLinks
      ) where
 
 import           Data.Aeson                        ( Value )
@@ -40,3 +42,9 @@ data QueryLogsHistoryAPI mode where
                             :> Get '[JSON] Value
     } -> QueryLogsHistoryAPI mode
   deriving stock Generic
+
+queryLogsRoutesLinks :: QueryLogsAPI (AsLink Link)
+queryLogsRoutesLinks = allFieldLinks
+
+queryLogsHistoryRoutesLinks :: QueryLogsHistoryAPI (AsLink Link)
+queryLogsHistoryRoutesLinks = allFieldLinks

@@ -22,8 +22,7 @@ import           Haskbike.Database.DaysAgo
 import           Haskbike.Database.Operations.Debug
 import           Haskbike.Database.Operations.QueryLogs
 import           Haskbike.Database.Tables.QueryLogs
-import           Haskbike.Server.API.Debug.DebugAPI
-import           Haskbike.Server.API.QueryLogs
+import           Haskbike.Server.API.Debug.QueryLogs
 import           Haskbike.Server.Page.Debug.LandingPage
 import           Haskbike.Server.Routes.Debug
 import           Haskbike.ServerEnv

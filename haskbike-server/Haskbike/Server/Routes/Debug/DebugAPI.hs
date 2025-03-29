@@ -3,19 +3,19 @@
 
 -- | Route definitions for the main component of the debug API.
 
-module Haskbike.Server.API.Debug.DebugAPI
+module Haskbike.Server.Routes.Debug.DebugAPI
      ( DebugAPI (..)
      , ErrorsAPI (..)
      , Version
      , debugRoutesLinks
      ) where
 
-import           Data.Aeson                       ( Value )
+import           Data.Aeson                             ( Value )
 
-import           GHC.Generics                     ( Generic )
+import           GHC.Generics                           ( Generic )
 
 import           Haskbike.Database.DaysAgo
-import           Haskbike.Server.Routes.QueryLogs
+import           Haskbike.Server.Routes.Debug.QueryLogs
 
 import           Servant
 

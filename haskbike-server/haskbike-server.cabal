@@ -120,18 +120,18 @@ library
 
                     , Haskbike.Server.API.TopLevel
                     , Haskbike.Server.API.Components
-                    , Haskbike.Server.API.QueryLogs
                     , Haskbike.Server.API.Data
                     , Haskbike.Server.API.Debug
-                    , Haskbike.Server.API.Debug.DebugAPI
+                    , Haskbike.Server.API.Debug.QueryLogs
                     , Haskbike.Server.API.Static
                     , Haskbike.Server.API.Visualization
 
                     , Haskbike.Server.Routes.TopLevel
                     , Haskbike.Server.Routes.Components
-                    , Haskbike.Server.Routes.QueryLogs
+                    , Haskbike.Server.Routes.Debug.QueryLogs
                     , Haskbike.Server.Routes.Data
                     , Haskbike.Server.Routes.Debug
+                    , Haskbike.Server.Routes.Debug.DebugAPI
                     , Haskbike.Server.Routes.Static
                     , Haskbike.Server.Routes.Visualization
 

@@ -5,14 +5,14 @@
 
 module Haskbike.Server.Routes.Debug
      ( DebugAPI (..)
-     , module Haskbike.Server.API.Debug.DebugAPI
+     , module Haskbike.Server.Routes.Debug.DebugAPI
      , ParentDebugAPI (..)
      ) where
 
 import           GHC.Generics                           ( Generic )
 
-import           Haskbike.Server.API.Debug.DebugAPI
 import           Haskbike.Server.Page.Debug.LandingPage
+import           Haskbike.Server.Routes.Debug.DebugAPI
 
 import           Servant
 import           Servant.HTML.Lucid

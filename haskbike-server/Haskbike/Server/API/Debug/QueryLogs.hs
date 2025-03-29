@@ -3,7 +3,7 @@
 
 -- | Query logs API definitions.
 
-module Haskbike.Server.API.QueryLogs
+module Haskbike.Server.API.Debug.QueryLogs
      ( queryApiHandler
      ) where
 
@@ -18,7 +18,7 @@ import           Data.Time                                 ( LocalTime, UTCTime 
 import           Haskbike.Database.EndpointQueried         ( EndpointQueried )
 import           Haskbike.Database.Operations.QueryHistory
 import           Haskbike.Server.Data.QueryHistory
-import           Haskbike.Server.Routes.QueryLogs
+import           Haskbike.Server.Routes.Debug.QueryLogs
 import           Haskbike.ServerEnv
 
 import           Servant.Server.Generic                    ( AsServerT )
