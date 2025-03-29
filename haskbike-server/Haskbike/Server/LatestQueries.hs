@@ -4,6 +4,7 @@ module Haskbike.Server.LatestQueries
      ( LatestQueries (..)
      , endpointElement
      , endpointElementTemplate
+     , endpointName
      , getLatestQueries
      , latestQueryLogsToMap
      ) where

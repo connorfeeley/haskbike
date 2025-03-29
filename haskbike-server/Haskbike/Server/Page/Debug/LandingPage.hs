@@ -7,6 +7,7 @@ module Haskbike.Server.Page.Debug.LandingPage
 import           Control.Monad                          ( forM_ )
 
 import           Haskbike.Database.EndpointQueried      ( EndpointQueried (..) )
+import           Haskbike.Server.LatestQueries          ( endpointName )
 import           Haskbike.Server.Routes.Debug.DebugAPI
 import           Haskbike.Server.Routes.Debug.QueryLogs
 
@@ -29,12 +30,25 @@ instance ToHtml DebugLandingPage where
     ul_ [class_ ""] $ do
       li_ [] $ a_ [ href_ (toUrlPiece (serverVersion debugRoutesLinks))
                   ] "Server version"
+
     h3_ "Query History"
     ul_ [class_ ""] $ do
       li_ [] $ a_ [ href_ (toUrlPiece ((allHistory . history . queryApi) debugRoutesLinks Nothing Nothing))
                   ] "All endpoint history"
       h4_ "Endpoint-specific history"
       ul_ [class_ ""] $ do
-        forM_ [StationInformationEP, StationStatusEP, SystemInformationEP] $ \ep -> do
-          li_ [] $ a_ [ href_ (toUrlPiece ((historyForEndpoint . history . queryApi) debugRoutesLinks ep Nothing Nothing))
-                      ] (toHtml (show ep))
+        -- Render link for each endpoint.
+        forM_ [(minBound :: EndpointQueried) ..] renderEndpointHistoryLink
+
+    h3_ "Error History"
+    ul_ [class_ ""] $ do
+      li_ [] $ a_ [ href_ (toUrlPiece ((latestErrors . errorsApi) debugRoutesLinks 1))
+                  ] "Latest error"
+      li_ [] $ a_ [ href_ (toUrlPiece ((latestErrors . errorsApi) debugRoutesLinks 10))
+                  ] "Latest 10 errors"
+
+    where
+      renderEndpointHistoryLink :: Monad m => EndpointQueried -> HtmlT m ()
+      renderEndpointHistoryLink ep =
+        li_ [] $ a_ [ href_ (toUrlPiece ((historyForEndpoint . history . queryApi) debugRoutesLinks ep Nothing Nothing))
+                    ] (toHtml (endpointName ep))
