@@ -163,6 +163,7 @@
                 broken = false;
               };
               tmp-postgres.check = false;
+              warp.check = false;
             };
 
             # The base package set representing a specific GHC version.
