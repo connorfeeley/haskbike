@@ -37,10 +37,14 @@ module Haskbike.Database.Schema.V001.StationStatus
      , statusVehicleTypesAvailable
      , unStatusLastReported
      , unStatusStationId
+     , vehicleTypesAvailableAstro
      , vehicleTypesAvailableBoost
+     , vehicleTypesAvailableChloe
+     , vehicleTypesAvailableCosmo
      , vehicleTypesAvailableEfit
      , vehicleTypesAvailableEfitG5
      , vehicleTypesAvailableIconic
+     , vehicleTypesAvailableMetro
      ) where
 
 import           Control.Lens
@@ -133,6 +137,10 @@ vehicleTypesAvailableBoost  :: Lens' (StationStatusT f) (C f Int32)
 vehicleTypesAvailableIconic :: Lens' (StationStatusT f) (C f Int32)
 vehicleTypesAvailableEfit   :: Lens' (StationStatusT f) (C f Int32)
 vehicleTypesAvailableEfitG5 :: Lens' (StationStatusT f) (C f Int32)
+vehicleTypesAvailableChloe  :: Lens' (StationStatusT f) (C f Int32)
+vehicleTypesAvailableCosmo  :: Lens' (StationStatusT f) (C f Int32)
+vehicleTypesAvailableAstro  :: Lens' (StationStatusT f) (C f Int32)
+vehicleTypesAvailableMetro  :: Lens' (StationStatusT f) (C f Int32)
 
 statusCommon = to _statusCommon
 statusVehicleTypesAvailable = to _statusVehicleTypesAvailable
@@ -150,10 +158,14 @@ StationStatus _ _ _ (LensFor statusIsRenting)                                   
 StationStatus _ _ _ _ (LensFor statusIsReturning)                                           _ _ _ = tableLenses
 StationStatus _ _ _ _ _ (LensFor statusTraffic)                                               _ _ = tableLenses
 StationStatus _ _ _ _ _ _ (LensFor statusVehicleDocksAvailable)                                 _ = tableLenses
-StationStatus _ _ _ _ _ _ _ (VehicleType (LensFor vehicleTypesAvailableBoost)   _ _ _)            = tableLenses
-StationStatus _ _ _ _ _ _ _ (VehicleType _ (LensFor vehicleTypesAvailableIconic)  _ _)            = tableLenses
-StationStatus _ _ _ _ _ _ _ (VehicleType _ _ (LensFor vehicleTypesAvailableEfit)    _)            = tableLenses
-StationStatus _ _ _ _ _ _ _ (VehicleType _ _ _ (LensFor vehicleTypesAvailableEfitG5) )            = tableLenses
+StationStatus _ _ _ _ _ _ _ (VehicleType (LensFor vehicleTypesAvailableBoost)   _ _ _ _ _ _ _)    = tableLenses
+StationStatus _ _ _ _ _ _ _ (VehicleType _ (LensFor vehicleTypesAvailableIconic)  _ _ _ _ _ _)    = tableLenses
+StationStatus _ _ _ _ _ _ _ (VehicleType _ _ (LensFor vehicleTypesAvailableEfit)    _ _ _ _ _)    = tableLenses
+StationStatus _ _ _ _ _ _ _ (VehicleType _ _ _ (LensFor vehicleTypesAvailableEfitG5)  _ _ _ _)    = tableLenses
+StationStatus _ _ _ _ _ _ _ (VehicleType _ _ _ _ (LensFor vehicleTypesAvailableChloe)   _ _ _)    = tableLenses
+StationStatus _ _ _ _ _ _ _ (VehicleType _ _ _ _ _ (LensFor vehicleTypesAvailableCosmo)   _ _)    = tableLenses
+StationStatus _ _ _ _ _ _ _ (VehicleType _ _ _ _ _ _ (LensFor vehicleTypesAvailableAstro)   _)    = tableLenses
+StationStatus _ _ _ _ _ _ _ (VehicleType _ _ _ _ _ _ _ (LensFor vehicleTypesAvailableMetro)  )    = tableLenses
 
 -- | Newtype wrapper for StationStatusString to allow us to define a custom FromBackendRow instance.
 -- Don't want to implement database-specific code for the underlying StationStatusString type.
@@ -214,7 +226,7 @@ fromJSONToBeamStationStatus infId status
                 , _statusIsReturning           = val_ $ status ^. AT.statusIsReturning
                 , _statusTraffic               = val_ $ status ^. AT.statusTraffic
                 , _statusVehicleDocksAvailable = maybe 0 (fromIntegral . AT.dock_count) $ listToMaybe $ status ^. AT.statusVehicleDocksAvailable
-                , _statusVehicleTypesAvailable = val_ $ VehicleType num_boost num_iconic num_efit num_efit_g5
+                , _statusVehicleTypesAvailable = val_ $ VehicleType num_boost num_iconic num_efit num_efit_g5 num_chloe num_cosmo num_astro num_metro
                 }
   | otherwise = Nothing
   where
@@ -225,6 +237,10 @@ fromJSONToBeamStationStatus infId status
     num_iconic  = findByType AT.Iconic
     num_efit    = findByType AT.EFit
     num_efit_g5 = findByType AT.EFitG5
+    num_chloe   = findByType AT.CHLOE
+    num_cosmo   = findByType AT.Cosmo
+    num_astro   = findByType AT.Astro
+    num_metro   = findByType AT.Metro
 
 -- | Convert from the Beam StationStatus type to the JSON StationStatus
 fromBeamStationStatusToJSON :: StationStatus -> AT.StationStatus
@@ -242,7 +258,7 @@ fromBeamStationStatusToJSON status =
                    , AT._statusIsReturning           = status ^. statusIsReturning
                    , AT._statusTraffic               = status ^. statusTraffic
                    , AT._statusVehicleDocksAvailable = [ AT.VehicleDock
-                                                         (map (T.pack . show) [AT.Boost, AT.Iconic, AT.EFit, AT.EFitG5])
+                                                         (map (T.pack . show) [AT.Boost, AT.Iconic, AT.EFit, AT.EFitG5, AT.CHLOE, AT.Cosmo, AT.Astro, AT.Metro])
                                                          (fromIntegral $ status ^. statusVehicleDocksAvailable)
                                                        ]
                    , AT._statusVehicleTypesAvailable =
@@ -250,6 +266,10 @@ fromBeamStationStatusToJSON status =
                                   , (AT.Iconic, AT.VehicleType AT.Iconic (fromIntegral (status ^. vehicleTypesAvailableIconic)))
                                   , (AT.EFit,   AT.VehicleType AT.EFit   (fromIntegral (status ^. vehicleTypesAvailableEfit)))
                                   , (AT.EFitG5, AT.VehicleType AT.EFitG5 (fromIntegral (status ^. vehicleTypesAvailableEfitG5)))
+                                  , (AT.CHLOE,  AT.VehicleType AT.CHLOE  (fromIntegral (status ^. vehicleTypesAvailableChloe)))
+                                  , (AT.Cosmo,  AT.VehicleType AT.Cosmo  (fromIntegral (status ^. vehicleTypesAvailableCosmo)))
+                                  , (AT.Astro,  AT.VehicleType AT.Astro  (fromIntegral (status ^. vehicleTypesAvailableAstro)))
+                                  , (AT.Metro,  AT.VehicleType AT.Metro  (fromIntegral (status ^. vehicleTypesAvailableMetro)))
                                   ]
                    }
 
@@ -289,10 +309,14 @@ createStationStatus tableName =
   , _statusIsReturning           = field "is_returning"            boolean notNull
   , _statusTraffic               = field "traffic"                 (maybeType Pg.text)
   , _statusVehicleDocksAvailable = field "vehicle_docks_available" int notNull
-  , _statusVehicleTypesAvailable = VehicleType (field "vehicle_types_available_boost"   int notNull)
-                                               (field "vehicle_types_available_iconic"  int notNull)
-                                               (field "vehicle_types_available_efit"    int notNull)
-                                               (field "vehicle_types_available_efit_g5" int notNull)
+  , _statusVehicleTypesAvailable = VehicleType (field "vehicle_types_available_boost"   int notNull (defaultTo_ 0))
+                                               (field "vehicle_types_available_iconic"  int notNull (defaultTo_ 0))
+                                               (field "vehicle_types_available_efit"    int notNull (defaultTo_ 0))
+                                               (field "vehicle_types_available_efit_g5" int notNull (defaultTo_ 0))
+                                               (field "vehicle_types_available_chloe"   int notNull (defaultTo_ 0))
+                                               (field "vehicle_types_available_cosmo"   int notNull (defaultTo_ 0))
+                                               (field "vehicle_types_available_astro"   int notNull (defaultTo_ 0))
+                                               (field "vehicle_types_available_metro"   int notNull (defaultTo_ 0))
   }
 
 _extraStatusMigrations :: IsString a => [a]

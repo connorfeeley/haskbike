@@ -42,6 +42,38 @@
         "max_range_meters": 60000.0,
         "name": "EFIT G5",
         "default_pricing_plan_id": "186-2"
+      },
+      {
+        "vehicle_type_id": "CHLOE",
+        "form_factor": "bicycle",
+        "propulsion_type": "human",
+        "max_range_meters": 0.0,
+        "name": "CHLOE",
+        "default_pricing_plan_id": "186-1"
+      },
+      {
+        "vehicle_type_id": "COSMO",
+        "form_factor": "bicycle",
+        "propulsion_type": "electric_assist",
+        "max_range_meters": 0.0,
+        "name": "COSMO",
+        "default_pricing_plan_id": "186-2"
+      },
+      {
+        "vehicle_type_id": "ASTRO",
+        "form_factor": "bicycle",
+        "propulsion_type": "electric_assist",
+        "max_range_meters": 0.0,
+        "name": "ASTRO",
+        "default_pricing_plan_id": "186-2"
+      },
+      {
+        "vehicle_type_id": "METRO",
+        "form_factor": "bicycle",
+        "propulsion_type": "electric_assist",
+        "max_range_meters": 0.0,
+        "name": "METRO",
+        "default_pricing_plan_id": "186-2"
       }
     ]
   },

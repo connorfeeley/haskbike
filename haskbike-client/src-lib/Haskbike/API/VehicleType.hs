@@ -38,7 +38,10 @@ data TorontoVehicleType where
   EFit   :: TorontoVehicleType
   EFitG5 :: TorontoVehicleType
   CHLOE  :: TorontoVehicleType
-  deriving (Generic, Eq, Ord)
+  Cosmo  :: TorontoVehicleType
+  Astro  :: TorontoVehicleType
+  Metro  :: TorontoVehicleType
+  deriving (Generic, Eq, Ord, Enum, Bounded)
 
 instance Show TorontoVehicleType where
   show Fit    = "FIT"
@@ -47,6 +50,9 @@ instance Show TorontoVehicleType where
   show EFit   = "EFIT"
   show EFitG5 = "EFIT G5"
   show CHLOE  = "CHLOE"
+  show Cosmo  = "COSMO"
+  show Astro  = "ASTRO"
+  show Metro  = "METRO"
 
 -- | Read instance for 'TorontoVehicleType' (case-insensitive).
 instance Read TorontoVehicleType where
@@ -57,9 +63,12 @@ instance Read TorontoVehicleType where
       [ string "FIT"      $> [(Fit,    "")]
       , string "BOOST"    $> [(Boost,  "")]
       , string "ICONIC"   $> [(Iconic, "")]
-      , string "EFIT"     $> [(EFit,   "")]
       , string "EFIT G5"  $> [(EFitG5, "")]
+      , string "EFIT"     $> [(EFit,   "")]
       , string "CHLOE"    $> [(CHLOE,  "")]
+      , string "COSMO"    $> [(Cosmo,  "")]
+      , string "ASTRO"    $> [(Astro,  "")]
+      , string "METRO"    $> [(Metro,  "")]
       ]
 
 instance ToJSON TorontoVehicleType where
@@ -69,6 +78,9 @@ instance ToJSON TorontoVehicleType where
   toJSON EFit   = String (T.pack "EFIT")
   toJSON EFitG5 = String (T.pack "EFIT G5")
   toJSON CHLOE  = String (T.pack "CHLOE")
+  toJSON Cosmo  = String (T.pack "COSMO")
+  toJSON Astro  = String (T.pack "ASTRO")
+  toJSON Metro  = String (T.pack "METRO")
 
 instance FromJSON TorontoVehicleType where
   parseJSON = withText "TorontoVehicleType" $ \t -> case t of
@@ -78,6 +90,9 @@ instance FromJSON TorontoVehicleType where
      "EFIT"    -> return EFit
      "EFIT G5" -> return EFitG5
      "CHLOE"   -> return CHLOE
+     "COSMO"   -> return Cosmo
+     "ASTRO"   -> return Astro
+     "METRO"   -> return Metro
      _         -> fail ("Invalid TorontoVehicleType: " ++ show t)
 
 -- | List of 'VehicleType' to Map.
