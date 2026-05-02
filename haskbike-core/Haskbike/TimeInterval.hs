@@ -40,7 +40,7 @@ generateTimeRange start end incMinutes =
     (60*15)
 -}
 incrementsPerRange :: UTCTime -> UTCTime -> NominalDiffTime -> Integer
-incrementsPerRange start end intervalSecs = 
+incrementsPerRange start end intervalSecs =
     let !diff = diffUTCTime end start  -- ^ Difference in seconds between end and start
     in ceiling (diff / intervalSecs)    -- ^ Intervals within time range; rounded up.
 
@@ -55,12 +55,12 @@ oneHour   = secondsToNominalDiffTime (60 * 60)
 15
 -}
 minsPerHourlyInterval :: NominalDiffTime -> Integer
-minsPerHourlyInterval numIntervals = 
+minsPerHourlyInterval numIntervals =
     let !secondsPerInterval = (*) 60 numIntervals
     in ceiling (oneHour / secondsPerInterval)
 
 secondsPerIntervalForRange :: UTCTime -> UTCTime -> Pico -> Integer
-secondsPerIntervalForRange start end numMaxIntervals = 
+secondsPerIntervalForRange start end numMaxIntervals =
     let !diffSeconds = nominalDiffTimeToSeconds (diffUTCTime end start)
         !intervalsRatio = diffSeconds / numMaxIntervals
         !picoValue = fromPico intervalsRatio

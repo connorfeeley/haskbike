@@ -14,6 +14,7 @@ module Haskbike.API.StationInformation
      ) where
 
 import           Control.Lens         hiding ( (.=) )
+import           Control.Monad        ( join )
 
 import           Data.Aeson
 import           Data.Attoparsec.Text ( Parser, choice, parseOnly, string )
@@ -188,7 +189,7 @@ instance FromJSON StationInformation where
   parseJSON = withObject "StationInformation" $ \v -> StationInformation
     <$> fmap read (v .: "station_id")
     <*> v .:  "name"
-    <*> v .:  "physical_configuration"
+    <*> (join <$> v .:? "physical_configuration")
     <*> v .:  "lat"
     <*> v .:  "lon"
     <*> v .:  "altitude"

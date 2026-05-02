@@ -163,6 +163,7 @@
                 broken = false;
               };
               tmp-postgres.check = false;
+              warp.check = false;
             };
 
             # The base package set representing a specific GHC version.
@@ -212,7 +213,7 @@
 
                   ### Other tools.
                   inherit (pkgs.llvmPackages_16)
-                    clang-unwrapped # Faster to link with clang
+                    clang-unwrapped# Faster to link with clang
                     ;
                   inherit (pkgs)
                     stack

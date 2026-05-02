@@ -26,7 +26,7 @@ import           Servant.HTML.Lucid
 
 -- | The API type.
 data API mode where
-  API :: { debugApi         :: mode :- NamedRoutes DebugAPI
+  API :: { parentDebugApi   :: mode :- NamedRoutes ParentDebugAPI
          , homePage         :: mode :- Get '[HTML] (PureSideMenu IndexPage)
          , dataApi          :: mode :- NamedRoutes DataAPI
          , visualizationApi :: mode :- NamedRoutes VisualizationAPI

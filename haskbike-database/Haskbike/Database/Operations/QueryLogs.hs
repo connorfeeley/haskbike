@@ -61,7 +61,7 @@ latestQueryErrorsQ days = do
   withPostgres $ runSelectReturningList $ select $ latestQueryErrorsE (val_ days)
 
 decodeJsonErrors :: (Columnar f1 (Maybe (PgJSONB Value)) ~ f2 (PgJSONB Value),  Functor f3, Functor f2) => f3 (QueryLogT f1) -> f3 (f2 Value)
-decodeJsonErrors xs = fmap decodeJsonError <$> (_queryLogErrJson <$> xs)
+decodeJsonErrors xs = fmap decodeJsonError . _queryLogErrJson <$> xs
 
 decodeJsonError :: PgJSONB Value -> Value
 decodeJsonError (PgJSONB j) = j

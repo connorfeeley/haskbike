@@ -1,46 +1,30 @@
 {-# LANGUAGE DataKinds          #-}
 {-# LANGUAGE DerivingStrategies #-}
 
--- | Route definitions for the debug API.
+-- | Route definitions for the parent debug API. Reexports debug sub-API.
 
 module Haskbike.Server.Routes.Debug
      ( DebugAPI (..)
-     , ErrorsAPI (..)
-     , Version
-     , debugRoutesLinks
+     , module Haskbike.Server.Routes.Debug.DebugAPI
+     , ParentDebugAPI (..)
      ) where
 
-import           Data.Aeson                       ( Value )
+import           GHC.Generics                           ( Generic )
 
-import           GHC.Generics                     ( Generic )
-
-import           Haskbike.Database.DaysAgo
-import           Haskbike.Server.Routes.QueryLogs
+import           Haskbike.Server.Page.Debug.LandingPage
+import           Haskbike.Server.Routes.Debug.DebugAPI
 
 import           Servant
+import           Servant.HTML.Lucid
 
 
--- | The version of the server.
-type Version = ((String, String), (String, String))
-
-
--- | Miscellaneous debugging API endpoints.
-data DebugAPI mode where
-  DebugAPI ::
-    { serverVersion :: mode :- "debug" :> "version"        :> Get '[JSON] Version
-    , queryApi      :: mode :- "debug" :> "query-logs"     :> NamedRoutes QueryLogsAPI
-    , errorsApi     :: mode :- "debug" :> "errors"         :> NamedRoutes ErrorsAPI
-    , sleepDatabase :: mode :- "debug" :> "sleep-database" :> Capture "seconds" Int :> Get '[JSON] ()
-    } -> DebugAPI mode
+-- | Parent of debugging API endpoints.
+data ParentDebugAPI mode where
+  ParentDebugAPI ::
+    -- Debug landing page.
+    { debugPage     :: mode :- "debug" :> Get '[HTML] DebugLandingPage
+    -- Rest of debug API.
+    , debugApi      :: mode :- "debug" :> NamedRoutes DebugAPI
+    } -> ParentDebugAPI mode
   deriving stock Generic
 
--- | API for querying failed queries.
-data ErrorsAPI mode where
-  ErrorsAPI ::
-    { latestErrors :: mode :- "latest" :> Capture "amount"   Integer :> Get '[JSON] Value
-    , errorsSince  :: mode :- "since"  :> Capture "days-ago" DaysAgo :> Get '[JSON] Value
-    } -> ErrorsAPI mode
-  deriving stock Generic
-
-debugRoutesLinks :: DebugAPI (AsLink Link)
-debugRoutesLinks = allFieldLinks

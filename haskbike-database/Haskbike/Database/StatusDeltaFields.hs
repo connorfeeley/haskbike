@@ -28,6 +28,10 @@ data StatusDeltaFields where
     , statusDeltaVehicleTypesAvailableIconic :: Int
     , statusDeltaVehicleTypesAvailableEfit   :: Int
     , statusDeltaVehicleTypesAvailableEfitG5 :: Int
+    , statusDeltaVehicleTypesAvailableChloe  :: Int
+    , statusDeltaVehicleTypesAvailableCosmo  :: Int
+    , statusDeltaVehicleTypesAvailableAstro  :: Int
+    , statusDeltaVehicleTypesAvailableMetro  :: Int
     } -> StatusDeltaFields
     deriving (Eq, Show)
 
@@ -44,6 +48,10 @@ calculateDelta a b = StatusDeltaFields
   , statusDeltaVehicleTypesAvailableIconic = (lookupCount Iconic . vta) b - (lookupCount Iconic . vta) a
   , statusDeltaVehicleTypesAvailableEfit   = (lookupCount EFit   . vta) b - (lookupCount EFit   . vta) a
   , statusDeltaVehicleTypesAvailableEfitG5 = (lookupCount EFitG5 . vta) b - (lookupCount EFitG5 . vta) a
+  , statusDeltaVehicleTypesAvailableChloe  = (lookupCount CHLOE  . vta) b - (lookupCount CHLOE  . vta) a
+  , statusDeltaVehicleTypesAvailableCosmo  = (lookupCount Cosmo  . vta) b - (lookupCount Cosmo  . vta) a
+  , statusDeltaVehicleTypesAvailableAstro  = (lookupCount Astro  . vta) b - (lookupCount Astro  . vta) a
+  , statusDeltaVehicleTypesAvailableMetro  = (lookupCount Metro  . vta) b - (lookupCount Metro  . vta) a
   }
   where
     vta = _statusVehicleTypesAvailable

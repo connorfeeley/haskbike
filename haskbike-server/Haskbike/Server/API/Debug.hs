@@ -6,6 +6,7 @@
 
 module Haskbike.Server.API.Debug
      ( debugApiHandler
+     , parentDebugApiHandler
      ) where
 
 import           Colog
@@ -18,9 +19,9 @@ import qualified Data.Text                              as T
 
 import           Haskbike.Database.DaysAgo
 import           Haskbike.Database.Operations.Debug
-import           Haskbike.Database.Operations.QueryLogs
 import           Haskbike.Database.Tables.QueryLogs
-import           Haskbike.Server.API.QueryLogs
+import           Haskbike.Server.API.Debug.QueryLogs
+import           Haskbike.Server.Page.Debug.LandingPage
 import           Haskbike.Server.Routes.Debug
 import           Haskbike.ServerEnv
 import           Haskbike.Version
@@ -32,6 +33,13 @@ import           UnliftIO
 
 -- * Handlers
 
+parentDebugApiHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m, HasServerEnv env m) => ParentDebugAPI (AsServerT m)
+parentDebugApiHandler =
+  ParentDebugAPI { debugPage     = debugPageHandler
+                 , debugApi      = debugApiHandler
+                 }
+
+
 debugApiHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m, HasServerEnv env m) => DebugAPI (AsServerT m)
 debugApiHandler =
   DebugAPI { serverVersion = versionHandler
@@ -40,8 +48,11 @@ debugApiHandler =
            , sleepDatabase = sleepDatabaseHandler
            }
 
-versionHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m) => m Version
-versionHandler = pure (("version", getCabalVersion), ("git-version", getGitVersion))
+versionHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m) => m ServerVersion
+versionHandler = pure ServerVersion { _serverVersion    = getCabalVersion
+                                    , _serverGitVersion = getGitVersion
+                                    , _serverGitHash    = getGitHash
+                                    }
 
 
 sleepDatabaseHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m) => Int -> m ()
@@ -69,7 +80,7 @@ errorsSinceHandler days@(DaysAgo daysAgo) = do
   errors <- latestQueryErrors days
 
   let x = filter (isJust . _queryLogErrJson) errors
-  let e = decodeJsonErrors x
+  let e = _queryLogErrMsg <$> x
   pure $ toJSON e
 
 
@@ -78,6 +89,11 @@ latestErrorsHandler limit = do
   logInfo "Querying latest errors"
   errors <- queryErrors limit
 
-  let x = filter (isJust . _queryLogErrJson) errors
-  let e = decodeJsonErrors x
+  let x = filter (isJust . _queryLogErrMsg) errors
+  let e = _queryLogErrMsg <$> x
   pure $ toJSON e
+
+debugPageHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m) => m DebugLandingPage
+debugPageHandler = do
+  logInfo "Rendering debug page"
+  pure DebugLandingPage

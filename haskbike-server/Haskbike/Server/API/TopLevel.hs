@@ -31,7 +31,7 @@ import           UnliftIO
 -- | The API handlers.
 server :: ( WithServerEnv m, WithEnv (ServerEnv ServerAppM) m )
        => API (AsServerT m)
-server = API { debugApi         = debugApiHandler
+server = API { parentDebugApi   = parentDebugApiHandler
              , homePage         = homePageHandler
              , dataApi          = statusHandler
              , visualizationApi = visualizationHandler

@@ -4,21 +4,21 @@ module Haskbike.Server.Components.QueryHistory
      ( QueryHistoryComponent (..)
      ) where
 
-import           Data.String                       ( IsString )
-import qualified Data.Text                         as T
-import           Data.Time                         ( UTCTime )
+import           Data.String                            ( IsString )
+import qualified Data.Text                              as T
+import           Data.Time                              ( UTCTime )
 
 import           Haskbike.Database.EndpointQueried
-import           Haskbike.Server.ExternalAssets    ( ExternalAssetLocation (ExternalAssetCDN) )
+import           Haskbike.Server.ExternalAssets         ( ExternalAssetLocation (ExternalAssetCDN) )
 import           Haskbike.Server.Page.Utils
 import           Haskbike.Server.Routes.Debug
-import           Haskbike.Server.Routes.QueryLogs
+import           Haskbike.Server.Routes.Debug.QueryLogs
 import           Haskbike.Server.Routes.Static
 
 import           Lucid
-import           Lucid.Base                        ( makeAttribute )
+import           Lucid.Base                             ( makeAttribute )
 
-import           Servant                           ( linkURI, toUrlPiece )
+import           Servant                                ( linkURI, toUrlPiece )
 
 
 data QueryHistoryComponent where

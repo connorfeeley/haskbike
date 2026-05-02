@@ -7,15 +7,16 @@ module Haskbike.Version
      , version
      ) where
 
+import qualified Data.Text           as T
 import           Data.Version        ( showVersion )
 
 import           Paths_haskbike_core ( version )
 
-getCabalVersion :: String
-getCabalVersion = showVersion version
+getCabalVersion :: T.Text
+getCabalVersion = (T.pack . showVersion) version
 
-getGitVersion :: String
+getGitVersion :: T.Text
 getGitVersion = "@rev@"
 
-getGitHash :: String
+getGitHash :: T.Text
 getGitHash = "@rev@"

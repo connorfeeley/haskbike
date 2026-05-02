@@ -36,8 +36,8 @@ data PureSideMenu a where
     { pageContent       :: a
     , assetsLocation    :: ExternalAssetLocation
     , staticLink        :: Link
-    , cabalVersionText  :: String
-    , gitVersionText    :: String
+    , cabalVersionText  :: T.Text
+    , gitVersionText    :: T.Text
     } -> PureSideMenu a
 
 instance (ToHtml a, ToHtml LatestQueries, ToHtmlComponents a) => ToHtml (PureSideMenu a) where
@@ -107,13 +107,13 @@ renderVersion params =
     cabalVersion = toHtml . cabalVersionText
 
 -- | Render the version link.
-versionLink :: Monad m => String -> HtmlT m ()
+versionLink :: Monad m => T.Text -> HtmlT m ()
 versionLink ver = linkElement shortVersion
   where
     linkElement = a_ [href_ (urlForVersion ver)]
-    shortVersion = (toHtml . T.pack . take 7) ver
+    shortVersion = (toHtml . T.take 7) ver
     baseUrl = "https://github.com/connorfeeley/haskbike/tree/"
-    urlForVersion object = baseUrl <> T.pack object
+    urlForVersion object = baseUrl <> object
 
 -- | 'SideMenu' smart constructor.
 sideMenu :: (HasEnv env m, MonadIO m, ToHtml a, ToHtmlComponents a, MonadCatch m, HasServerEnv env m)
