@@ -12,14 +12,19 @@ module Haskbike.Graphics.Vega.VegaLite.Extra
      , vegaSourceUrlsCdn
      , vegaSourceUrlsLocal
        -- Colours
+     , astroPink
      , black
+     , chargingChartreuse
      , commonColourRange
+     , cosmoOrange
      , green
      , lemon
      , lightBlue
+     , metroGold
      , salmon
      , skyBlue
      , transparent
+     , wineRed
      ) where
 
 import           Data.Aeson
@@ -35,22 +40,33 @@ import qualified Graphics.Vega.VegaLite     as VL
 import           Prelude                    hiding ( filter, lookup, repeat )
 
 
-transparent, lemon, lightBlue, skyBlue, green, salmon, black :: String
-transparent = "rgb(0,0,0,0)" -- transparent
-lemon        = "#fffacd"
-lightBlue    = "#009ACD"
-skyBlue      = "#00688B"
-green        = "#1E4D2B"
-salmon       = "#FA8072"
-black        = "#000000"
+transparent, lemon, lightBlue, skyBlue, green, salmon, black,
+  wineRed, cosmoOrange, astroPink, metroGold, chargingChartreuse :: String
+transparent        = "rgb(0,0,0,0)" -- transparent
+lemon              = "#fffacd"
+lightBlue          = "#009ACD"
+skyBlue            = "#00688B"
+green              = "#1E4D2B"
+salmon             = "#FA8072"
+black              = "#000000"
+wineRed            = "#722F37"  -- Boost
+cosmoOrange        = "#F28C28"  -- Cosmo
+astroPink          = "#FF6FA8"  -- Astro
+metroGold          = "#D4AF37"  -- Metro
+chargingChartreuse = "#7FFF00"  -- CHLOE
 
 commonColourRange :: [T.Text]
-commonColourRange = map T.pack [ lemon       -- Available dock: lemon chiffron
-                               , green       -- Iconic: Cal Poly Pomona green
-                               , lightBlue   -- E-Fit: light blue
-                               , skyBlue     -- E-Fit G5: sky blue
-                               , salmon      -- Disabled bike: salmon
-                               , black       -- Disabled dock: black
+commonColourRange = map T.pack [ lemon              -- Available dock: lemon chiffron
+                               , wineRed            -- Boost: wine red
+                               , green              -- Iconic: Cal Poly Pomona green
+                               , lightBlue          -- E-Fit: light blue
+                               , skyBlue            -- E-Fit G5: sky blue
+                               , chargingChartreuse -- CHLOE: chartreuse
+                               , cosmoOrange        -- Cosmo: orange
+                               , astroPink          -- Astro: pink
+                               , metroGold          -- Metro: gold
+                               , salmon             -- Disabled bike: salmon
+                               , black              -- Disabled dock: black
                                ]
 
 globalConfig :: [ConfigureSpec] -> PropertySpec

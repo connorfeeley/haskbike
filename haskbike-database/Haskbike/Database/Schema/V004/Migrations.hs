@@ -19,6 +19,7 @@ import           Database.PostgreSQL.Simple
 
 import           Haskbike.AppEnv
 import           Haskbike.Database.Schema.V001.Migrations       ( allowDestructive )
+import qualified Haskbike.Database.Schema.V001.StationStatus    as V001
 import qualified Haskbike.Database.Schema.V003.BikeShare        as V003
 import qualified Haskbike.Database.Schema.V003.Migrations       as V003
 import qualified Haskbike.Database.Schema.V004.BikeShare        as V004
@@ -58,8 +59,11 @@ migrateDB = do
     migration
 
   -- Execute extra migrations.
-  withConnPool >>= \pool -> void . liftIO . withResource pool $ \conn ->  withTransaction conn $
-    forM_ V004.extraOccupancyMigrations $ \mig -> do
-      execute_ conn mig
+  withConnPool >>= \pool -> void . liftIO . withResource pool $ \conn -> withTransaction conn $ do
+    -- Idempotent ADD COLUMN IF NOT EXISTS for the per-vehicle-type columns. This is needed for
+    -- existing databases that pre-date the schema extension; bringUpToDateWithHooks may not
+    -- emit ALTER TABLE for fields added retroactively to an already-applied migration step.
+    forM_ V001.extraVehicleTypeColumnMigrations $ \mig -> execute_ conn mig
+    forM_ V004.extraOccupancyMigrations         $ \mig -> execute_ conn mig
 
   pure checkedDbSettings

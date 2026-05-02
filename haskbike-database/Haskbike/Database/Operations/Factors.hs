@@ -37,9 +37,14 @@ data StatusIntegral where
                     , intStatusSecDocksAvailable  :: Integer
                     , intStatusSecDocksDisabled   :: Integer
 
+                    , intStatusSecBoostAvailable  :: Integer
                     , intStatusSecIconicAvailable :: Integer
                     , intStatusSecEfitAvailable   :: Integer
                     , intStatusSecEfitG5Available :: Integer
+                    , intStatusSecChloeAvailable  :: Integer
+                    , intStatusSecCosmoAvailable  :: Integer
+                    , intStatusSecAstroAvailable  :: Integer
+                    , intStatusSecMetroAvailable  :: Integer
                     } -> StatusIntegral
   deriving (Generic, Show, Eq)
 
@@ -56,9 +61,14 @@ instance ToJSON StatusIntegral where
            , "docks_available_seconds"   .= intStatusSecDocksAvailable  integral
            , "docks_disabled_seconds"    .= intStatusSecDocksDisabled   integral
 
+           , "boost_available_seconds"   .= intStatusSecBoostAvailable  integral
            , "iconic_available_seconds"  .= intStatusSecIconicAvailable integral
            , "efit_available_seconds"    .= intStatusSecEfitAvailable   integral
            , "efit_g5_available_seconds" .= intStatusSecEfitG5Available integral
+           , "chloe_available_seconds"   .= intStatusSecChloeAvailable  integral
+           , "cosmo_available_seconds"   .= intStatusSecCosmoAvailable  integral
+           , "astro_available_seconds"   .= intStatusSecAstroAvailable  integral
+           , "metro_available_seconds"   .= intStatusSecMetroAvailable  integral
            ]
 
 queryIntegratedStatus :: (HasEnv env m, MonadIO m, MonadCatch m) => StatusVariationQuery -> m [StatusIntegral]
@@ -76,9 +86,14 @@ queryIntegratedStatus variation = do
                            , intStatusSecBikesDisabled   = stationIntegrals ^. _2 & fromIntegral
                            , intStatusSecDocksAvailable  = stationIntegrals ^. _3 & fromIntegral
                            , intStatusSecDocksDisabled   = stationIntegrals ^. _4 & fromIntegral
-                           , intStatusSecIconicAvailable = bikeIntegrals ^. _1 & fromIntegral
-                           , intStatusSecEfitAvailable   = bikeIntegrals ^. _2 & fromIntegral
-                           , intStatusSecEfitG5Available = bikeIntegrals ^. _3 & fromIntegral
+                           , intStatusSecBoostAvailable  = bikeIntegrals ^. _1 & fromIntegral
+                           , intStatusSecIconicAvailable = bikeIntegrals ^. _2 & fromIntegral
+                           , intStatusSecEfitAvailable   = bikeIntegrals ^. _3 & fromIntegral
+                           , intStatusSecEfitG5Available = bikeIntegrals ^. _4 & fromIntegral
+                           , intStatusSecChloeAvailable  = bikeIntegrals ^. _5 & fromIntegral
+                           , intStatusSecCosmoAvailable  = bikeIntegrals ^. _6 & fromIntegral
+                           , intStatusSecAstroAvailable  = bikeIntegrals ^. _7 & fromIntegral
+                           , intStatusSecMetroAvailable  = bikeIntegrals ^. _8 & fromIntegral
                            })
         ) integrals
 
@@ -98,13 +113,23 @@ data StatusFactor where
                   , statusFactorDocksAvailable            :: Double
                   , statusFactorDocksDisabled             :: Double
 
+                  , statusFactorBoostAvailable            :: Double
                   , statusFactorIconicAvailable           :: Double
                   , statusFactorEfitAvailable             :: Double
                   , statusFactorEfitG5Available           :: Double
+                  , statusFactorChloeAvailable            :: Double
+                  , statusFactorCosmoAvailable            :: Double
+                  , statusFactorAstroAvailable            :: Double
+                  , statusFactorMetroAvailable            :: Double
 
+                  , statusFactorNormalizedBoostAvailable  :: Double
                   , statusFactorNormalizedIconicAvailable :: Double
                   , statusFactorNormalizedEfitAvailable   :: Double
                   , statusFactorNormalizedEfitG5Available :: Double
+                  , statusFactorNormalizedChloeAvailable  :: Double
+                  , statusFactorNormalizedCosmoAvailable  :: Double
+                  , statusFactorNormalizedAstroAvailable  :: Double
+                  , statusFactorNormalizedMetroAvailable  :: Double
                   } -> StatusFactor
   deriving (Generic, Show, Eq)
 
@@ -120,13 +145,23 @@ instance ToJSON StatusFactor where
            , "docks_available_factor"   .= statusFactorDocksAvailable  factor
            , "docks_disabled_factor"    .= statusFactorDocksDisabled   factor
 
+           , "boost_available_factor"   .= statusFactorBoostAvailable  factor
            , "iconic_available_factor"  .= statusFactorIconicAvailable factor
            , "efit_available_factor"    .= statusFactorEfitAvailable   factor
            , "efit_g5_available_factor" .= statusFactorEfitG5Available factor
+           , "chloe_available_factor"   .= statusFactorChloeAvailable  factor
+           , "cosmo_available_factor"   .= statusFactorCosmoAvailable  factor
+           , "astro_available_factor"   .= statusFactorAstroAvailable  factor
+           , "metro_available_factor"   .= statusFactorMetroAvailable  factor
 
-           , "iconic_available_factor_normalized"  .= statusFactorIconicAvailable factor
-           , "efit_available_factor_normalized"    .= statusFactorEfitAvailable   factor
-           , "efit_g5_available_factor_normalized" .= statusFactorEfitG5Available factor
+           , "boost_available_factor_normalized"   .= statusFactorNormalizedBoostAvailable  factor
+           , "iconic_available_factor_normalized"  .= statusFactorNormalizedIconicAvailable factor
+           , "efit_available_factor_normalized"    .= statusFactorNormalizedEfitAvailable   factor
+           , "efit_g5_available_factor_normalized" .= statusFactorNormalizedEfitG5Available factor
+           , "chloe_available_factor_normalized"   .= statusFactorNormalizedChloeAvailable  factor
+           , "cosmo_available_factor_normalized"   .= statusFactorNormalizedCosmoAvailable  factor
+           , "astro_available_factor_normalized"   .= statusFactorNormalizedAstroAvailable  factor
+           , "metro_available_factor_normalized"   .= statusFactorNormalizedMetroAvailable  factor
            ]
 
 integralToFactor :: StatusIntegral -> StatusFactor
@@ -140,20 +175,40 @@ integralToFactor integral =
                , statusFactorBikesDisabled   = factor intStatusSecBikesDisabled
                , statusFactorDocksAvailable  = factor intStatusSecDocksAvailable
                , statusFactorDocksDisabled   = factor intStatusSecDocksDisabled
+
+               , statusFactorBoostAvailable  = factor intStatusSecBoostAvailable
                , statusFactorIconicAvailable = factor intStatusSecIconicAvailable
                , statusFactorEfitAvailable   = factor intStatusSecEfitAvailable
                , statusFactorEfitG5Available = factor intStatusSecEfitG5Available
-               , statusFactorNormalizedIconicAvailable = factor intStatusSecIconicAvailable / availableFactorSum
-               , statusFactorNormalizedEfitAvailable   = factor intStatusSecEfitAvailable   / availableFactorSum
-               , statusFactorNormalizedEfitG5Available = factor intStatusSecEfitG5Available / availableFactorSum
+               , statusFactorChloeAvailable  = factor intStatusSecChloeAvailable
+               , statusFactorCosmoAvailable  = factor intStatusSecCosmoAvailable
+               , statusFactorAstroAvailable  = factor intStatusSecAstroAvailable
+               , statusFactorMetroAvailable  = factor intStatusSecMetroAvailable
+
+               , statusFactorNormalizedBoostAvailable  = normalize intStatusSecBoostAvailable
+               , statusFactorNormalizedIconicAvailable = normalize intStatusSecIconicAvailable
+               , statusFactorNormalizedEfitAvailable   = normalize intStatusSecEfitAvailable
+               , statusFactorNormalizedEfitG5Available = normalize intStatusSecEfitG5Available
+               , statusFactorNormalizedChloeAvailable  = normalize intStatusSecChloeAvailable
+               , statusFactorNormalizedCosmoAvailable  = normalize intStatusSecCosmoAvailable
+               , statusFactorNormalizedAstroAvailable  = normalize intStatusSecAstroAvailable
+               , statusFactorNormalizedMetroAvailable  = normalize intStatusSecMetroAvailable
                }
   where
     totalSeconds = fromInteger (intStatusTotalSeconds integral)
     capacity     = fromInteger (intStatusCapacity     integral)
     factor field = boundFloat (fromInteger (field   integral) / totalSeconds / capacity)
-    availableFactorSum = factor intStatusSecIconicAvailable
+    normalize field
+      | availableFactorSum == 0 = 0
+      | otherwise               = factor field / availableFactorSum
+    availableFactorSum = factor intStatusSecBoostAvailable
+                       + factor intStatusSecIconicAvailable
                        + factor intStatusSecEfitAvailable
                        + factor intStatusSecEfitG5Available
+                       + factor intStatusSecChloeAvailable
+                       + factor intStatusSecCosmoAvailable
+                       + factor intStatusSecAstroAvailable
+                       + factor intStatusSecMetroAvailable
 
 boundFloat :: RealFloat a => a -> a
 boundFloat x
@@ -171,7 +226,12 @@ sumStatusFactors factors = statusFactorBikesAvailable  factors
                          + statusFactorDocksDisabled   factors
 
 sumBikeStatusFactors :: StatusFactor -> Double
-sumBikeStatusFactors factors = statusFactorNormalizedIconicAvailable factors
+sumBikeStatusFactors factors = statusFactorNormalizedBoostAvailable  factors
+                             + statusFactorNormalizedIconicAvailable factors
                              + statusFactorNormalizedEfitAvailable   factors
                              + statusFactorNormalizedEfitG5Available factors
+                             + statusFactorNormalizedChloeAvailable  factors
+                             + statusFactorNormalizedCosmoAvailable  factors
+                             + statusFactorNormalizedAstroAvailable  factors
+                             + statusFactorNormalizedMetroAvailable  factors
 

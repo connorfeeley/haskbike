@@ -46,7 +46,9 @@ insertChangedStationStatusGeneric maxRowNumber = do
         ( row, rowNum
           , ( pBikesAvail, pBikesDisab, pDocksAvail, pDocksDisab )
           , ( pIsChargingStation, pStatus, pIsInstalled, pIsRenting, pIsReturning )
-          , ( pVehicleDocksAvailable, pIconic, pEfit, pEfitG5)
+          , ( pVehicleDocksAvailable
+            , (pBoost, pIconic, pEfit, pEfitG5, pChloe, pCosmo, pAstro, pMetro)
+            )
           ) <-
           withWindow_ (\row ->
                          frame_ (partitionBy_ ((_unInformationStationId . _statusInfoId . _statusCommon) row))
@@ -68,9 +70,15 @@ insertChangedStationStatusGeneric maxRowNumber = do
                        -- Traffic is null - don't compare!
                      )
                      , ( lead_ (row ^. statusVehicleDocksAvailable) (val_ (1 :: Integer)) `over_` w
-                       , lead_ (row ^. vehicleTypesAvailableIconic) (val_ (1 :: Integer)) `over_` w
-                       , lead_ (row ^. vehicleTypesAvailableEfit  ) (val_ (1 :: Integer)) `over_` w
-                       , lead_ (row ^. vehicleTypesAvailableEfitG5) (val_ (1 :: Integer)) `over_` w
+                       , ( lead_ (row ^. vehicleTypesAvailableBoost ) (val_ (1 :: Integer)) `over_` w
+                         , lead_ (row ^. vehicleTypesAvailableIconic) (val_ (1 :: Integer)) `over_` w
+                         , lead_ (row ^. vehicleTypesAvailableEfit  ) (val_ (1 :: Integer)) `over_` w
+                         , lead_ (row ^. vehicleTypesAvailableEfitG5) (val_ (1 :: Integer)) `over_` w
+                         , lead_ (row ^. vehicleTypesAvailableChloe ) (val_ (1 :: Integer)) `over_` w
+                         , lead_ (row ^. vehicleTypesAvailableCosmo ) (val_ (1 :: Integer)) `over_` w
+                         , lead_ (row ^. vehicleTypesAvailableAstro ) (val_ (1 :: Integer)) `over_` w
+                         , lead_ (row ^. vehicleTypesAvailableMetro ) (val_ (1 :: Integer)) `over_` w
+                         )
                        )
                      )
           ) $
@@ -90,9 +98,14 @@ insertChangedStationStatusGeneric maxRowNumber = do
                       -- Traffic is null - don't compare!
                     ) ||?.
                     ((row ^. statusVehicleDocksAvailable ) /=?. pVehicleDocksAvailable ||?.
+                     (row ^. vehicleTypesAvailableBoost  ) /=?. pBoost                 ||?.
                      (row ^. vehicleTypesAvailableIconic ) /=?. pIconic                ||?.
                      (row ^. vehicleTypesAvailableEfit   ) /=?. pEfit                  ||?.
-                     (row ^. vehicleTypesAvailableEfitG5 ) /=?. pEfitG5
+                     (row ^. vehicleTypesAvailableEfitG5 ) /=?. pEfitG5                ||?.
+                     (row ^. vehicleTypesAvailableChloe  ) /=?. pChloe                 ||?.
+                     (row ^. vehicleTypesAvailableCosmo  ) /=?. pCosmo                 ||?.
+                     (row ^. vehicleTypesAvailableAstro  ) /=?. pAstro                 ||?.
+                     (row ^. vehicleTypesAvailableMetro  ) /=?. pMetro
                     )
                   ))
         pure row

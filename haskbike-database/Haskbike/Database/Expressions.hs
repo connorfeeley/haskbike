@@ -241,7 +241,16 @@ mkTime  = (`cast_` (DataType $ timestampType Nothing True)) . val_
 
 
 -- FIXME: ambiguously named; how is this different from 'querySystemStatusAtRange'?
-querySystemStatusAtRangeQ :: (HasEnv env m, MonadIO m, MonadCatch m) => UTCTime -> UTCTime -> Integer -> m [(UTCTime, Int32, Int32, Int32, Int32, Int32, Int32, Int32)]
+--
+-- Returns one row per time interval. The trailing 8-tuple carries per-vehicle-type sums in the order
+-- (boost, iconic, efit, efit_g5, chloe, cosmo, astro, metro) — packaged as a tuple to stay within
+-- beam's 8-tuple Beamable limit.
+querySystemStatusAtRangeQ :: (HasEnv env m, MonadIO m, MonadCatch m)
+                          => UTCTime -> UTCTime -> Integer
+                          -> m [( UTCTime
+                                , Int32, Int32, Int32, Int32
+                                , (Int32, Int32, Int32, Int32, Int32, Int32, Int32, Int32)
+                                )]
 querySystemStatusAtRangeQ start end increment = withPostgres . runSelectReturningList . selectWith $
     querySystemStatusAtRangeExpr start end increment
 
@@ -266,9 +275,15 @@ querySystemStatusAtRangeExpr :: UTCTime -> UTCTime -> Integer -> With Postgres B
                      QGenExpr QValueContext Postgres s Int32,
                      QGenExpr QValueContext Postgres s Int32,
                      QGenExpr QValueContext Postgres s Int32,
-                     QGenExpr QValueContext Postgres s Int32,
-                     QGenExpr QValueContext Postgres s Int32,
-                     QGenExpr QValueContext Postgres s Int32))
+                     ( QGenExpr QValueContext Postgres s Int32
+                     , QGenExpr QValueContext Postgres s Int32
+                     , QGenExpr QValueContext Postgres s Int32
+                     , QGenExpr QValueContext Postgres s Int32
+                     , QGenExpr QValueContext Postgres s Int32
+                     , QGenExpr QValueContext Postgres s Int32
+                     , QGenExpr QValueContext Postgres s Int32
+                     , QGenExpr QValueContext Postgres s Int32
+                     )))
 querySystemStatusAtRangeExpr earliestTime latestTime interval = do
   timeIntervals <- selecting $
     values_ $ map (\t -> (mkTime (addUTCTime (-60 * fromIntegral interval) t), mkTime t)) $
@@ -279,9 +294,15 @@ querySystemStatusAtRangeExpr earliestTime latestTime interval = do
                                 , as_ @Int32 (fromMaybe_ 0 (sumOver_ allInGroup_ (s ^. statusNumBikesDisabled )))
                                 , as_ @Int32 (fromMaybe_ 0 (sumOver_ allInGroup_ (s ^. statusNumDocksAvailable)))
                                 , as_ @Int32 (fromMaybe_ 0 (sumOver_ allInGroup_ (s ^. statusNumDocksDisabled )))
-                                , as_ @Int32 (fromMaybe_ 0 (sumOver_ allInGroup_ (s ^. vehicleTypesAvailableIconic)))
-                                , as_ @Int32 (fromMaybe_ 0 (sumOver_ allInGroup_ (s ^. vehicleTypesAvailableEfit  )))
-                                , as_ @Int32 (fromMaybe_ 0 (sumOver_ allInGroup_ (s ^. vehicleTypesAvailableEfitG5)))
+                                , ( as_ @Int32 (fromMaybe_ 0 (sumOver_ allInGroup_ (s ^. vehicleTypesAvailableBoost )))
+                                  , as_ @Int32 (fromMaybe_ 0 (sumOver_ allInGroup_ (s ^. vehicleTypesAvailableIconic)))
+                                  , as_ @Int32 (fromMaybe_ 0 (sumOver_ allInGroup_ (s ^. vehicleTypesAvailableEfit  )))
+                                  , as_ @Int32 (fromMaybe_ 0 (sumOver_ allInGroup_ (s ^. vehicleTypesAvailableEfitG5)))
+                                  , as_ @Int32 (fromMaybe_ 0 (sumOver_ allInGroup_ (s ^. vehicleTypesAvailableChloe )))
+                                  , as_ @Int32 (fromMaybe_ 0 (sumOver_ allInGroup_ (s ^. vehicleTypesAvailableCosmo )))
+                                  , as_ @Int32 (fromMaybe_ 0 (sumOver_ allInGroup_ (s ^. vehicleTypesAvailableAstro )))
+                                  , as_ @Int32 (fromMaybe_ 0 (sumOver_ allInGroup_ (s ^. vehicleTypesAvailableMetro )))
+                                  )
                                 ) ) $ do
     intervals' <- reuse timeIntervals
     latestStatusKeys <-
@@ -326,9 +347,14 @@ integrateColumns :: be ~ Postgres
                           , QGenExpr QValueContext be s Int32 -- ^ Integral of number of docks available (sum of (time delta * docks available) over rows)
                           , QGenExpr QValueContext be s Int32 -- ^ Integral of number of docks disabled  (sum of (time delta * docks disabled)  over rows)
                         )
-                        , ( QGenExpr QValueContext be s Int32 -- ^ Integral of number of iconic   bikes available (sum of (time delta * iconic   available) over rows)
-                          , QGenExpr QValueContext be s Int32 -- ^ Integral of number of e-fit    bikes disabled  (sum of (time delta * e-fit    available) over rows)
-                          , QGenExpr QValueContext be s Int32 -- ^ Integral of number of e-fit g5 bikes disabled  (sum of (time delta * e-fit g5 available) over rows)
+                        , ( QGenExpr QValueContext be s Int32 -- ^ Integral of Boost  bikes available
+                          , QGenExpr QValueContext be s Int32 -- ^ Integral of Iconic bikes available
+                          , QGenExpr QValueContext be s Int32 -- ^ Integral of E-Fit  bikes available
+                          , QGenExpr QValueContext be s Int32 -- ^ Integral of E-Fit G5 bikes available
+                          , QGenExpr QValueContext be s Int32 -- ^ Integral of CHLOE bikes available
+                          , QGenExpr QValueContext be s Int32 -- ^ Integral of Cosmo bikes available
+                          , QGenExpr QValueContext be s Int32 -- ^ Integral of Astro bikes available
+                          , QGenExpr QValueContext be s Int32 -- ^ Integral of Metro bikes available
                           )
                         )
                       )
@@ -355,9 +381,14 @@ integrateColumns variation = do
              , row ^. statusNumDocksAvailable * timeDelta (row ^. statusLastReported) pLastReported
              , row ^. statusNumDocksDisabled  * timeDelta (row ^. statusLastReported) pLastReported
              )
-           , ( row ^. vehicleTypesAvailableIconic  * timeDelta (row ^. statusLastReported) pLastReported
+           , ( row ^. vehicleTypesAvailableBoost   * timeDelta (row ^. statusLastReported) pLastReported
+             , row ^. vehicleTypesAvailableIconic  * timeDelta (row ^. statusLastReported) pLastReported
              , row ^. vehicleTypesAvailableEfit    * timeDelta (row ^. statusLastReported) pLastReported
              , row ^. vehicleTypesAvailableEfitG5  * timeDelta (row ^. statusLastReported) pLastReported
+             , row ^. vehicleTypesAvailableChloe   * timeDelta (row ^. statusLastReported) pLastReported
+             , row ^. vehicleTypesAvailableCosmo   * timeDelta (row ^. statusLastReported) pLastReported
+             , row ^. vehicleTypesAvailableAstro   * timeDelta (row ^. statusLastReported) pLastReported
+             , row ^. vehicleTypesAvailableMetro   * timeDelta (row ^. statusLastReported) pLastReported
              )
            )
        ) (reuse lagged)
@@ -371,9 +402,15 @@ integrateColumns variation = do
                      , secondsBikesDisabled
                      , secondsDocksAvailable
                      , secondsDocksDisabled)
-                   , ( secondsIconicAvailable
+                   , ( secondsBoostAvailable
+                     , secondsIconicAvailable
                      , secondsEfitAvailable
-                     , secondsEfitG5Available)
+                     , secondsEfitG5Available
+                     , secondsChloeAvailable
+                     , secondsCosmoAvailable
+                     , secondsAstroAvailable
+                     , secondsMetroAvailable
+                     )
                    ) -> ( group_       ((_unInformationStationId . _statusInfoId . _statusCommon) status)
                         , fromMaybe_ 0 (sum_ dLastReported)
                         , ( fromMaybe_ 0 (sum_ secondsBikesAvailable)
@@ -381,9 +418,14 @@ integrateColumns variation = do
                           , fromMaybe_ 0 (sum_ secondsDocksAvailable)
                           , fromMaybe_ 0 (sum_ secondsDocksDisabled)
                           )
-                        , ( fromMaybe_ 0 (sum_ secondsIconicAvailable)
+                        , ( fromMaybe_ 0 (sum_ secondsBoostAvailable)
+                          , fromMaybe_ 0 (sum_ secondsIconicAvailable)
                           , fromMaybe_ 0 (sum_ secondsEfitAvailable)
                           , fromMaybe_ 0 (sum_ secondsEfitG5Available)
+                          , fromMaybe_ 0 (sum_ secondsChloeAvailable)
+                          , fromMaybe_ 0 (sum_ secondsCosmoAvailable)
+                          , fromMaybe_ 0 (sum_ secondsAstroAvailable)
+                          , fromMaybe_ 0 (sum_ secondsMetroAvailable)
                           )
                         )
                  ) (reuse chargings)

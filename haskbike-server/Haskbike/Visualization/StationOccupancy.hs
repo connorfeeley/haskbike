@@ -30,10 +30,30 @@ availBikesOverTimeVL filterFn dataUrl =
 selectionProps :: SelectionLabel -> ([String] -> [T.Text]) -> T.Text -> T.Text -> [PropertySpec]
 selectionProps _selName filterFn label dataUrl =
   let
+    -- Common ordered list of legend categories. Keep the labels and colour list in lockstep.
+    typeLabels =
+      [ "Available Docks", "Available Boost", "Available Mechanical"
+      , "Available E-Fit", "Available E-Fit G5"
+      , "Available CHLOE", "Available Cosmo", "Available Astro", "Available Metro"
+      , "Disabled Bikes", "Disabled Docks"
+      ]
+    typeColours =
+      [ lemon              -- Available dock: lemon chiffron
+      , wineRed            -- Boost: wine red
+      , green              -- Iconic: Cal Poly Pomona green
+      , lightBlue          -- E-Fit: light blue
+      , skyBlue            -- E-Fit G5: sky blue
+      , chargingChartreuse -- CHLOE: chartreuse
+      , cosmoOrange        -- Cosmo: orange
+      , astroPink          -- Astro: pink
+      , metroGold          -- Metro: gold
+      , salmon             -- Disabled bike: salmon
+      , black              -- Disabled dock: black
+      ]
     -- Implement the `fold` transform
     dataTransforms =
       transform
-        . foldAs (filterFn [ "Available Docks", "Available Mechanical", "Available E-Fit", "Available E-Fit G5", "Disabled Bikes", "Disabled Docks" ]) "Type" "Count"
+        . foldAs (filterFn typeLabels) "Type" "Count"
     -- Setup encoding common to both 'area' and 'point' marks
     areaEncoding =
       encoding
@@ -41,14 +61,8 @@ selectionProps _selName filterFn label dataUrl =
         . position Y [ PTitle "Count", PName "Count",         PmType Quantitative, PStack StZero ]
         . color [ MName "Type"
                 , MmType Nominal -- Data are also categories, but ones which have some natural order.
-                , MScale [ SDomain (DStrings (filterFn [ "Available Docks", "Available Mechanical", "Available E-Fit", "Available E-Fit G5", "Disabled Bikes", "Disabled Docks" ]))
-                         , SRange (RStrings (filterFn [ lemon       -- Available dock: lemon chiffron
-                                                      , green       -- Iconic: Cal Poly Pomona green
-                                                      , lightBlue   -- E-Fit: light blue
-                                                      , skyBlue     -- E-Fit G5: sky blue
-                                                      , salmon      -- Disabled bike: salmon
-                                                      , black       -- Disabled dock: black
-                                                      ])) ]
+                , MScale [ SDomain (DStrings (filterFn typeLabels))
+                         , SRange (RStrings (filterFn typeColours)) ]
                 -- , MLegend [ LLabelExpr "'<' + datum.label + '>'" ]
                 -- , MSelectionCondition (SelectionName selName) [ MName "Vehicle Type", MmType Nominal ] [ MString "grey" ]
                 ]

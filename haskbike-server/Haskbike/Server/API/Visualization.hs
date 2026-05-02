@@ -109,16 +109,23 @@ systemStatusVisualizationPage startTime endTime = do
 
   -- TODO: querySystemStatusAtTime should probably just return this type directly.
   systemStatus <- querySystemStatusAtRange earliest latest increment
+  -- The 6th element of each row packs (Boost, Iconic, EFit, EFitG5, CHLOE, Cosmo, Astro, Metro).
   let systemStatusInfo st =
+        let bikeTypes = st ^. _6 in
         SystemStatusVisualizationInfo
         { sysStatVisInfNumStations   = 0
         , sysStatVisInfNumBikesAvail = st ^. _2 & fromIntegral
         , sysStatVisInfNumBikesDisab = st ^. _3 & fromIntegral
         , sysStatVisInfNumDocksAvail = st ^. _4 & fromIntegral
         , sysStatVisInfNumDocksDisab = st ^. _5 & fromIntegral
-        , sysStatVisInfNumIconic     = st ^. _6 & fromIntegral
-        , sysStatVisInfNumEfit       = st ^. _7 & fromIntegral
-        , sysStatVisInfNumEfitG5     = st ^. _8 & fromIntegral
+        , sysStatVisInfNumBoost      = bikeTypes ^. _1 & fromIntegral
+        , sysStatVisInfNumIconic     = bikeTypes ^. _2 & fromIntegral
+        , sysStatVisInfNumEfit       = bikeTypes ^. _3 & fromIntegral
+        , sysStatVisInfNumEfitG5     = bikeTypes ^. _4 & fromIntegral
+        , sysStatVisInfNumChloe      = bikeTypes ^. _5 & fromIntegral
+        , sysStatVisInfNumCosmo      = bikeTypes ^. _6 & fromIntegral
+        , sysStatVisInfNumAstro      = bikeTypes ^. _7 & fromIntegral
+        , sysStatVisInfNumMetro      = bikeTypes ^. _8 & fromIntegral
         }
 
   assetsLocation <- getServerAssetsLocation

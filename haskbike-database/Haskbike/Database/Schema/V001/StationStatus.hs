@@ -15,6 +15,7 @@ module Haskbike.Database.Schema.V001.StationStatus
      , StationStatusId
      , StationStatusT (..)
      , createStationStatus
+     , extraVehicleTypeColumnMigrations
      , fromBeamStationStatusToJSON
      , fromJSONToBeamStationStatus
      , stationStatusModification
@@ -54,7 +55,7 @@ import           Data.Coerce                                       ( coerce )
 import           Data.Int
 import qualified Data.Map                                          as Map
 import           Data.Maybe                                        ( listToMaybe )
-import           Data.String                                       ( IsString )
+import           Data.String                                       ( IsString, fromString )
 import qualified Data.Text                                         as T
 import           Data.Time
 
@@ -321,3 +322,20 @@ createStationStatus tableName =
 
 _extraStatusMigrations :: IsString a => [a]
 _extraStatusMigrations = ["CREATE INDEX IF NOT EXISTS station_status_info_station_id_last_reported_idx ON station_status (info_station_id, last_reported);"]
+
+
+-- | Idempotent ALTER TABLE statements that ensure the per-vehicle-type columns exist on
+-- both station_status tables.
+--
+-- Why: the V001 Beam schema describes the desired final shape (8 vehicle-type columns), but
+-- @bringUpToDateWithHooks@ does not always emit ADD COLUMN for changes to a previously-applied
+-- step. These IF NOT EXISTS statements close that gap idempotently for existing databases.
+extraVehicleTypeColumnMigrations :: IsString a => [a]
+extraVehicleTypeColumnMigrations = map fromString $ concatMap addColumns ["station_status", "station_status_changes"]
+  where
+    addColumns t =
+      [ "ALTER TABLE " <> t <> " ADD COLUMN IF NOT EXISTS vehicle_types_available_chloe int NOT NULL DEFAULT 0;"
+      , "ALTER TABLE " <> t <> " ADD COLUMN IF NOT EXISTS vehicle_types_available_cosmo int NOT NULL DEFAULT 0;"
+      , "ALTER TABLE " <> t <> " ADD COLUMN IF NOT EXISTS vehicle_types_available_astro int NOT NULL DEFAULT 0;"
+      , "ALTER TABLE " <> t <> " ADD COLUMN IF NOT EXISTS vehicle_types_available_metro int NOT NULL DEFAULT 0;"
+      ]

@@ -338,9 +338,14 @@ queryTableSize tableName = do
   [Only size] <- liftIO (withResource pool (\conn -> query_ conn $ fromString ("SELECT pg_size_pretty(pg_total_relation_size('" ++ tableName ++ "'))")))
   return size
 
+-- | Per-row return for 'querySystemStatusAtRange'. The trailing 8-tuple carries per-vehicle-type
+-- sums in the order (Boost, Iconic, EFit, EFitG5, CHLOE, Cosmo, Astro, Metro).
 querySystemStatusAtRange :: (HasEnv env m, MonadIO m, MonadCatch m)
                          => UTCTime -> UTCTime -> Integer
-                         -> m [(UTCTime, Integer, Integer, Integer, Integer, Integer, Integer, Integer)]
+                         -> m [( UTCTime
+                               , Integer, Integer, Integer, Integer
+                               , (Integer, Integer, Integer, Integer, Integer, Integer, Integer, Integer)
+                               )]
 querySystemStatusAtRange earliestTime latestTime intervalMins = do
   -- Execute query expression, returning 'Just (tup)' if one row was returned; otherwise 'Nothing'.
   statusAtTime <-
@@ -349,16 +354,23 @@ querySystemStatusAtRange earliestTime latestTime intervalMins = do
 
   (pure . map statusFieldsToInt) statusAtTime
   where
-    -- Convert fields from 'Int32' to 'Int'.
+    -- Convert fields from 'Int32' to 'Integer'.
     statusFieldsToInt statusAtTime =
+      let bikeTypes = statusAtTime ^. _6 in
       ( statusAtTime ^. _1
       , fromIntegral (statusAtTime ^. _2)
       , fromIntegral (statusAtTime ^. _3)
       , fromIntegral (statusAtTime ^. _4)
       , fromIntegral (statusAtTime ^. _5)
-      , fromIntegral (statusAtTime ^. _6)
-      , fromIntegral (statusAtTime ^. _7)
-      , fromIntegral (statusAtTime ^. _8)
+      , ( fromIntegral (bikeTypes ^. _1)
+        , fromIntegral (bikeTypes ^. _2)
+        , fromIntegral (bikeTypes ^. _3)
+        , fromIntegral (bikeTypes ^. _4)
+        , fromIntegral (bikeTypes ^. _5)
+        , fromIntegral (bikeTypes ^. _6)
+        , fromIntegral (bikeTypes ^. _7)
+        , fromIntegral (bikeTypes ^. _8)
+        )
       )
 
 -- | Insert system information into the database.

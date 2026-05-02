@@ -90,7 +90,7 @@ reset *ARGS:
 migrate *ARGS:
     #!/usr/bin/env bash
     source ./.env.local
-    {{ CABAL }} run haskbike-cli -- --plain debug --enable-migrations -v --log-database
+    {{ CABAL }} run haskbike-cli -- --plain --enable-migrations -v --log-database database migrate
 
 serve *ARGS:
     {{ CABAL }} v2-run --enable-profiling --profiling-detail all-functions haskbike-cli -- --plain serve {{ ARGS }} -v

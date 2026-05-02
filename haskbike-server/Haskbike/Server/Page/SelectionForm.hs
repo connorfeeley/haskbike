@@ -110,9 +110,14 @@ data OrderByOption where
   OrderByStationName         :: OrderByOption
   OrderByStationType         :: OrderByOption
   OrderByStationCapacity     :: OrderByOption
+  OrderByBoostAvailable      :: OrderByOption
   OrderByMechanicalAvailable :: OrderByOption
   OrderByEfitAvailable       :: OrderByOption
   OrderByEfitG5Available     :: OrderByOption
+  OrderByChloeAvailable      :: OrderByOption
+  OrderByCosmoAvailable      :: OrderByOption
+  OrderByAstroAvailable      :: OrderByOption
+  OrderByMetroAvailable      :: OrderByOption
   OrderByBikesDisabled       :: OrderByOption
   OrderByTimeFull            :: OrderByOption
   OrderByTimeEmpty           :: OrderByOption
@@ -124,9 +129,14 @@ instance FromHttpApiData OrderByOption where
                                     asciiCI "station-name"         $> OrderByStationName         <|>
                                     asciiCI "station-type"         $> OrderByStationType         <|>
                                     asciiCI "station-capacity"     $> OrderByStationCapacity     <|>
+                                    asciiCI "boost-available"      $> OrderByBoostAvailable      <|>
                                     asciiCI "mechanical-available" $> OrderByMechanicalAvailable <|>
-                                    asciiCI "efit-available"       $> OrderByEfitAvailable       <|>
                                     asciiCI "efit-g5-available"    $> OrderByEfitG5Available     <|>
+                                    asciiCI "efit-available"       $> OrderByEfitAvailable       <|>
+                                    asciiCI "chloe-available"      $> OrderByChloeAvailable      <|>
+                                    asciiCI "cosmo-available"      $> OrderByCosmoAvailable      <|>
+                                    asciiCI "astro-available"      $> OrderByAstroAvailable      <|>
+                                    asciiCI "metro-available"      $> OrderByMetroAvailable      <|>
                                     asciiCI "bikes-disabled"       $> OrderByBikesDisabled       <|>
                                     asciiCI "time-full"            $> OrderByTimeFull            <|>
                                     asciiCI "time-empty"           $> OrderByTimeEmpty
@@ -147,9 +157,14 @@ instance ToHtml OrderByOption where
     -- mkRadio stationFilter OrderByStationName         "order-by" "station-name" "Station Name"
     -- mkRadio stationFilter OrderByStationType         "order-by" "station-type" "Station Type"
     mkRadio stationFilter OrderByStationCapacity     "order-by" "station-capacity"     "Capacity"
+    mkRadio stationFilter OrderByBoostAvailable      "order-by" "boost-available"      "Boost"
     mkRadio stationFilter OrderByMechanicalAvailable "order-by" "mechanical-available" "Mechanical"
     mkRadio stationFilter OrderByEfitAvailable       "order-by" "efit-available"       "E-Fit"
     mkRadio stationFilter OrderByEfitG5Available     "order-by" "efit-g5-available"    "E-Fit G5"
+    mkRadio stationFilter OrderByChloeAvailable      "order-by" "chloe-available"      "CHLOE"
+    mkRadio stationFilter OrderByCosmoAvailable      "order-by" "cosmo-available"      "Cosmo"
+    mkRadio stationFilter OrderByAstroAvailable      "order-by" "astro-available"      "Astro"
+    mkRadio stationFilter OrderByMetroAvailable      "order-by" "metro-available"      "Metro"
     mkRadio stationFilter OrderByBikesDisabled       "order-by" "bikes-disabled"       "Bikes Disabled"
     mkRadio stationFilter OrderByTimeFull            "order-by" "time-full"            "Time Full"
     mkRadio stationFilter OrderByTimeEmpty           "order-by" "time-empty"           "Time Empty"

@@ -155,9 +155,12 @@ handleChargingEventsData stationId startTime endTime = do
                                                                     , LatestTime   (localTimeToUTC tz latest)
                                                                     ]
   events <- queryChargingEventsCount variation
-  let result = map (\(_info, _totalCount, efitCount, efitG5Count) ->
-                      [ ChargingEvent EFit (fromIntegral efitCount)
+  let result = map (\(_info, _totalCount, efitCount, efitG5Count, cosmoCount, astroCount, metroCount) ->
+                      [ ChargingEvent EFit   (fromIntegral efitCount)
                       , ChargingEvent EFitG5 (fromIntegral efitG5Count)
+                      , ChargingEvent Cosmo  (fromIntegral cosmoCount)
+                      , ChargingEvent Astro  (fromIntegral astroCount)
+                      , ChargingEvent Metro  (fromIntegral metroCount)
                       ])
                events
   pure $ concat result

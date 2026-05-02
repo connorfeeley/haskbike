@@ -35,9 +35,14 @@ data SystemStatusVisualizationInfo where
                                    , sysStatVisInfNumDocksDisab :: Int
                                    , sysStatVisInfNumBikesAvail :: Int
                                    , sysStatVisInfNumBikesDisab :: Int
+                                   , sysStatVisInfNumBoost      :: Int
                                    , sysStatVisInfNumIconic     :: Int
                                    , sysStatVisInfNumEfit       :: Int
                                    , sysStatVisInfNumEfitG5     :: Int
+                                   , sysStatVisInfNumChloe      :: Int
+                                   , sysStatVisInfNumCosmo      :: Int
+                                   , sysStatVisInfNumAstro      :: Int
+                                   , sysStatVisInfNumMetro      :: Int
                                    } -> SystemStatusVisualizationInfo
   deriving (Show, Eq)
 
@@ -48,9 +53,14 @@ instance Default SystemStatusVisualizationInfo where
     , sysStatVisInfNumDocksDisab = 0
     , sysStatVisInfNumBikesAvail = 0
     , sysStatVisInfNumBikesDisab = 0
+    , sysStatVisInfNumBoost      = 0
     , sysStatVisInfNumIconic     = 0
     , sysStatVisInfNumEfit       = 0
     , sysStatVisInfNumEfitG5     = 0
+    , sysStatVisInfNumChloe      = 0
+    , sysStatVisInfNumCosmo      = 0
+    , sysStatVisInfNumAstro      = 0
+    , sysStatVisInfNumMetro      = 0
     }
 
 instance ToHtml SystemStatusVisualizationInfo where
@@ -66,9 +76,14 @@ instance ToHtml SystemStatusVisualizationInfo where
             p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "Docks available: " <> span_ [class_ "pure-u-1-2"] (showth (sysStatVisInfNumDocksAvail params))
             p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "Docks disabled: "  <> span_ [class_ "pure-u-1-2"] (showth (sysStatVisInfNumDocksDisab params))
 
+            p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "Boost: "    <> span_ [class_ "pure-u-1-2"] (showth (sysStatVisInfNumBoost  params))
             p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "Iconic: "   <> span_ [class_ "pure-u-1-2"] (showth (sysStatVisInfNumIconic params))
-            p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "E-Fit: "    <> span_ [class_ "pure-u-1-2"] (showth (sysStatVisInfNumEfit params))
+            p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "E-Fit: "    <> span_ [class_ "pure-u-1-2"] (showth (sysStatVisInfNumEfit   params))
             p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "E-Fit G5: " <> span_ [class_ "pure-u-1-2"] (showth (sysStatVisInfNumEfitG5 params))
+            p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "CHLOE: "    <> span_ [class_ "pure-u-1-2"] (showth (sysStatVisInfNumChloe  params))
+            p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "Cosmo: "    <> span_ [class_ "pure-u-1-2"] (showth (sysStatVisInfNumCosmo  params))
+            p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "Astro: "    <> span_ [class_ "pure-u-1-2"] (showth (sysStatVisInfNumAstro  params))
+            p_ [class_ "pure-g"] $ b_ [class_ "pure-u-1-2"] "Metro: "    <> span_ [class_ "pure-u-1-2"] (showth (sysStatVisInfNumMetro  params))
 
 data SystemStatusVisualizationPage where
   SystemStatusVisualizationPage :: { _systemStatusVisPageTimeRange      :: TimePair (Maybe LocalTime)

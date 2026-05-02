@@ -116,16 +116,18 @@ sortOnVariation eventType = case eventType of
 -- | Sort a list of 'DockingEventsCount' by either the sum of 'Docking' or 'Undocking' events (across all bike types).
 sortOnVariationTotal :: AvailabilityCountVariation -> [DockingEventsCount] -> [DockingEventsCount]
 sortOnVariationTotal eventType events = case eventType of
-  Docking   -> sortOn (\ev -> (  ev ^. eventsBoostCount  . eventsCountDockings)
-                              + (ev ^. eventsIconicCount . eventsCountDockings)
-                              + (ev ^. eventsEfitCount   . eventsCountDockings)
-                              + (ev ^. eventsEfitG5Count . eventsCountDockings)
-                      ) events
-  Undocking -> sortOn (\ev -> (  ev ^. eventsBoostCount  . eventsCountUndockings)
-                              + (ev ^. eventsIconicCount . eventsCountUndockings)
-                              + (ev ^. eventsEfitCount   . eventsCountUndockings)
-                              + (ev ^. eventsEfitG5Count . eventsCountUndockings)
-                      ) events
+  Docking   -> sortOn (sumPerType eventsCountDockings)   events
+  Undocking -> sortOn (sumPerType eventsCountUndockings) events
+  where
+    sumPerType field ev =
+        ev ^. eventsBoostCount  . field
+      + ev ^. eventsIconicCount . field
+      + ev ^. eventsEfitCount   . field
+      + ev ^. eventsEfitG5Count . field
+      + ev ^. eventsChloeCount  . field
+      + ev ^. eventsCosmoCount  . field
+      + ev ^. eventsAstroCount  . field
+      + ev ^. eventsMetroCount  . field
 
 -- | Show with lowercase output.
 showLower :: (Show a) => a -> String
@@ -144,19 +146,38 @@ takeMaybe :: Maybe Int -> [a] -> [a]
 takeMaybe (Just limit) xs = take limit xs
 takeMaybe Nothing xs      = xs
 
+-- | Per-moment row: time + per-bike-type total counts (Boost, Iconic, EFit, EFitG5, CHLOE, Cosmo, Astro, Metro).
+data BikeCountsRow = BikeCountsRow
+  { bikeCountsDay      :: Day
+  , bikeCountsTime     :: TimeOfDay
+  , bikeCountsBoost    :: Int32
+  , bikeCountsIconic   :: Int32
+  , bikeCountsEfit     :: Int32
+  , bikeCountsEfitG5   :: Int32
+  , bikeCountsChloe    :: Int32
+  , bikeCountsCosmo    :: Int32
+  , bikeCountsAstro    :: Int32
+  , bikeCountsMetro    :: Int32
+  }
+
 bikeCountsAtMoment :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m)
-                   => Day -> TimeOfDay -> m (Day, TimeOfDay, Int32, Int32, Int32, Int32)
+                   => Day -> TimeOfDay -> m BikeCountsRow
 bikeCountsAtMoment day timeOfDay = do
   logInfo $ "Getting number of bikes by type in the system on " <> (T.pack . show) day <> " at " <> (T.pack . show) timeOfDay
   statusForMoment <- withPostgres $ runSelectReturningList $ select $
     queryLatestStatusBetweenExpr earliestTime latestTime
-  pure ( day
-       , timeOfDay
-       , totalBoost statusForMoment
-       , totalIconic statusForMoment
-       , totalEbikeEfit statusForMoment
-       , totalEbikeEfitG5 statusForMoment
-       )
+  pure BikeCountsRow
+    { bikeCountsDay     = day
+    , bikeCountsTime    = timeOfDay
+    , bikeCountsBoost   = totalBoost      statusForMoment
+    , bikeCountsIconic  = totalIconic     statusForMoment
+    , bikeCountsEfit    = totalEbikeEfit  statusForMoment
+    , bikeCountsEfitG5  = totalEbikeEfitG5 statusForMoment
+    , bikeCountsChloe   = totalChloe      statusForMoment
+    , bikeCountsCosmo   = totalCosmo      statusForMoment
+    , bikeCountsAstro   = totalAstro      statusForMoment
+    , bikeCountsMetro   = totalMetro      statusForMoment
+    }
     where
       earliestTime, latestTime :: UTCTime
       latestTime   = UTCTime day (timeOfDayToTime timeOfDay)
@@ -174,27 +195,44 @@ dayTimesRange startDay endDay = [(addDays n startDay, TimeOfDay h 0 0) | n <- [0
 -- ^ TODO: handle start and end times.
 
 
-totalBoost, totalIconic, totalEbikeEfit, totalEbikeEfitG5 :: Num (Columnar f Int32) => [StationStatusT f] -> Columnar f Int32
+totalBoost, totalIconic, totalEbikeEfit, totalEbikeEfitG5,
+  totalChloe, totalCosmo, totalAstro, totalMetro :: Num (Columnar f Int32) => [StationStatusT f] -> Columnar f Int32
 totalBoost       bikeCount = sum $ map (^. vehicleTypesAvailableBoost ) bikeCount
 totalIconic      bikeCount = sum $ map (^. vehicleTypesAvailableIconic) bikeCount
 totalEbikeEfit   bikeCount = sum $ map (^. vehicleTypesAvailableEfit  ) bikeCount
 totalEbikeEfitG5 bikeCount = sum $ map (^. vehicleTypesAvailableEfitG5) bikeCount
+totalChloe       bikeCount = sum $ map (^. vehicleTypesAvailableChloe ) bikeCount
+totalCosmo       bikeCount = sum $ map (^. vehicleTypesAvailableCosmo ) bikeCount
+totalAstro       bikeCount = sum $ map (^. vehicleTypesAvailableAstro ) bikeCount
+totalMetro       bikeCount = sum $ map (^. vehicleTypesAvailableMetro ) bikeCount
 
-formatBikeCounts :: [(Day, TimeOfDay, Int32, Int32, Int32, Int32)] -> IO ()
+formatBikeCounts :: [BikeCountsRow] -> IO ()
 formatBikeCounts allCounts = Box.printBox table
   where
-    col_day  = Box.vcat Box.left (showFn Dull White "Date"    : map (showFn Dull Green   . show) (toListOf (traverse . _1) allCounts))
-    col_time = Box.vcat Box.left (showFn Dull White "Time"    : map (showFn Vivid White  . show) (toListOf (traverse . _2) allCounts))
+    col_day  = Box.vcat Box.left (showFn Dull White "Date"    : map (showFn Dull Green   . show . bikeCountsDay)  allCounts)
+    col_time = Box.vcat Box.left (showFn Dull White "Time"    : map (showFn Vivid White  . show . bikeCountsTime) allCounts)
 
-    col1 = Box.vcat Box.left (showFn Dull White  "Total"      : [(showFn Vivid Red    . show) (c + d + e +f) | (_, _, c, d, e, f) <- allCounts])
-    col2 = Box.vcat Box.left (showFn Dull Green  "Mechanical" : [(showFn Vivid Green  . show) (c + d)        | (_, _, c, d, _, _) <- allCounts])
-    col3 = Box.vcat Box.left (showFn Dull Red    "E-Bikes"    : [(showFn Vivid Red    . show) (e + f)        | (_, _, _, _, e, f) <- allCounts])
-    col4 = Box.vcat Box.left (showFn Dull Yellow "E-Fit"      : [(showFn Dull Yellow  . show) e              | (_, _, _, _, e, _) <- allCounts])
-    col5 = Box.vcat Box.left (showFn Dull Yellow "E-Fit G5"   : [(showFn Vivid Yellow . show) f              | (_, _, _, _, _, f) <- allCounts])
+    mech    r = bikeCountsBoost  r + bikeCountsIconic r
+    eBikes  r = bikeCountsEfit   r + bikeCountsEfitG5 r + bikeCountsCosmo r + bikeCountsAstro r + bikeCountsMetro r
+    other_  r = bikeCountsChloe  r
+    totalT  r = mech r + eBikes r + other_ r
+
+    col1  = Box.vcat Box.left (showFn Dull White   "Total"      : map (showFn Vivid Red    . show . totalT)              allCounts)
+    col2  = Box.vcat Box.left (showFn Dull Green   "Mechanical" : map (showFn Vivid Green  . show . mech)                allCounts)
+    col3  = Box.vcat Box.left (showFn Dull Red     "E-Bikes"    : map (showFn Vivid Red    . show . eBikes)              allCounts)
+    col4  = Box.vcat Box.left (showFn Dull Yellow  "Iconic"     : map (showFn Dull Yellow  . show . bikeCountsIconic)    allCounts)
+    col5  = Box.vcat Box.left (showFn Dull Yellow  "Boost"      : map (showFn Dull Yellow  . show . bikeCountsBoost)     allCounts)
+    col6  = Box.vcat Box.left (showFn Dull Yellow  "E-Fit"      : map (showFn Dull Yellow  . show . bikeCountsEfit)      allCounts)
+    col7  = Box.vcat Box.left (showFn Dull Yellow  "E-Fit G5"   : map (showFn Vivid Yellow . show . bikeCountsEfitG5)    allCounts)
+    col8  = Box.vcat Box.left (showFn Dull Cyan    "CHLOE"      : map (showFn Dull Cyan    . show . bikeCountsChloe)     allCounts)
+    col9  = Box.vcat Box.left (showFn Dull Cyan    "Cosmo"      : map (showFn Dull Cyan    . show . bikeCountsCosmo)     allCounts)
+    col10 = Box.vcat Box.left (showFn Dull Cyan    "Astro"      : map (showFn Dull Cyan    . show . bikeCountsAstro)     allCounts)
+    col11 = Box.vcat Box.left (showFn Dull Cyan    "Metro"      : map (showFn Dull Cyan    . show . bikeCountsMetro)     allCounts)
 
     showFn :: ColorIntensity -> Color -> String -> Box.Box
     showFn intensity colour = Box.text . (unpack . colouredText intensity colour . pack)
-    table = Box.hsep 2 Box.left [col_day, col_time, col1, col2, col3, col4, col5]
+    table = Box.hsep 2 Box.left
+      [col_day, col_time, col1, col2, col3, col4, col5, col6, col7, col8, col9, col10, col11]
 
 
 -- | Get (undockings, dockings) for a day.
@@ -219,43 +257,54 @@ sortDockingEventsCount Docking   = sortOn (Down . _eventsCountDockings . _events
 formatDockingEventsCount :: [DockingEventsCount] -> IO ()
 formatDockingEventsCount events = Box.printBox table
   where
-    columns = zipWith (\index' counts ->
-                         ( index' :: Int
-                         , counts ^. eventsStation . infoStationId
-                         , counts ^. eventsStation . infoName
-                         , counts ^. eventsStation . infoIsChargingStation
-                         -- Total counts
-                         , (counts ^. eventsIconicCount . eventsCountUndockings)
-                           + (counts ^. eventsEfitCount   . eventsCountUndockings )
-                           + (counts ^. eventsEfitG5Count . eventsCountUndockings)
-                         , (counts ^. eventsIconicCount . eventsCountDockings) + (counts ^. eventsEfitCount . eventsCountDockings) + (counts ^. eventsEfitG5Count . eventsCountUndockings)
-                         -- Undocking counts by type
-                         , counts ^. eventsIconicCount . eventsCountUndockings
-                         , counts ^. eventsEfitCount   . eventsCountUndockings
-                         , counts ^. eventsEfitG5Count . eventsCountUndockings
-                         -- Docking counts by type
-                         , counts ^. eventsIconicCount . eventsCountDockings
-                         , counts ^. eventsEfitCount   . eventsCountDockings
-                         , counts ^. eventsEfitG5Count . eventsCountDockings
-                         )
-                      ) [1..] events
-    table = Box.punctuateH Box.left (Box.text " | ") [col1, col2, col3, col4, col5, col6, col7, col8, col9, col10, col11, col12]
-    -- Station information
-    col1  = Box.vcat Box.left    (showFn Dull  Cyan   "#"          : map (showFn Dull Cyan    . show)        (toListOf (traverse .  _1) columns))
-    col2  = Box.vcat Box.left    (showFn Dull  Green  "ID"         : map (showFn Dull Green   . show)        (toListOf (traverse .  _2) columns))
-    col3  = Box.vcat Box.left    (showFn Dull  White  "Name"       : map (showFn Vivid White  . read . show) (toListOf (traverse .  _3) columns))
-    col4  = Box.vcat Box.left    (showFn Dull  Yellow "Charger"    : map showBoolFn                          (toListOf (traverse .  _4) columns))
-    -- Total counts
-    col5  = Box.vcat Box.center2 (showFn Dull  Red    "Total ↧"    : map (showFn Vivid White  . show)        (toListOf (traverse .  _5) columns))
-    col6  = Box.vcat Box.center2 (showFn Dull  Green  "Total ↥"    : map (showFn Vivid White  . show)        (toListOf (traverse .  _6) columns))
-    -- Undocking counts by type
-    col7  = Box.vcat Box.center2 (showFn Dull  White  "Iconic ↧"   : map (showFn Dull  White  . show)        (toListOf (traverse .  _7) columns))
-    col8  = Box.vcat Box.center2 (showFn Vivid White  "E-Fit ↧"    : map (showFn Vivid White  . show)        (toListOf (traverse .  _8) columns))
-    col9  = Box.vcat Box.center2 (showFn Dull  White  "E-Fit G5 ↧" : map (showFn Dull  White  . show)        (toListOf (traverse .  _9) columns))
-    -- Docking counts by type
-    col10 = Box.vcat Box.center2 (showFn Vivid White  "Iconic ↥"   : map (showFn Vivid White  . show)        (toListOf (traverse . _10) columns))
-    col11 = Box.vcat Box.center2 (showFn Dull  White  "E-Fit ↥"    : map (showFn Dull  White  . show)        (toListOf (traverse . _11) columns))
-    col12 = Box.vcat Box.center2 (showFn Vivid White  "E-Fit G5 ↥" : map (showFn Vivid White  . show)        (toListOf (traverse . _12) columns))
+    -- Per-type pre-extracted (undocking, docking, label) so we don't try to put lenses in a list.
+    typeRows :: DockingEventsCount -> [(Int, Int, T.Text)]
+    typeRows c =
+      [ (c ^. eventsBoostCount  . eventsCountUndockings, c ^. eventsBoostCount  . eventsCountDockings, "Boost")
+      , (c ^. eventsIconicCount . eventsCountUndockings, c ^. eventsIconicCount . eventsCountDockings, "Iconic")
+      , (c ^. eventsEfitCount   . eventsCountUndockings, c ^. eventsEfitCount   . eventsCountDockings, "E-Fit")
+      , (c ^. eventsEfitG5Count . eventsCountUndockings, c ^. eventsEfitG5Count . eventsCountDockings, "E-Fit G5")
+      , (c ^. eventsChloeCount  . eventsCountUndockings, c ^. eventsChloeCount  . eventsCountDockings, "CHLOE")
+      , (c ^. eventsCosmoCount  . eventsCountUndockings, c ^. eventsCosmoCount  . eventsCountDockings, "Cosmo")
+      , (c ^. eventsAstroCount  . eventsCountUndockings, c ^. eventsAstroCount  . eventsCountDockings, "Astro")
+      , (c ^. eventsMetroCount  . eventsCountUndockings, c ^. eventsMetroCount  . eventsCountDockings, "Metro")
+      ]
+
+    typeLabels :: [T.Text]
+    typeLabels = ["Boost", "Iconic", "E-Fit", "E-Fit G5", "CHLOE", "Cosmo", "Astro", "Metro"]
+
+    -- Sums across all per-type pairs for a station.
+    totalUn c = sum [u | (u, _, _) <- typeRows c]
+    totalDk c = sum [d | (_, d, _) <- typeRows c]
+
+    indexedRows = zip [1 :: Int ..] events
+
+    -- Header columns and per-station-info columns.
+    indexCol     = Box.vcat Box.left    (showFn Dull  Cyan   "#"       : [showFn Dull Cyan    (show i)                                       | (i, _) <- indexedRows])
+    idCol        = Box.vcat Box.left    (showFn Dull  Green  "ID"      : [showFn Dull Green   (show (c ^. eventsStation . infoStationId))    | (_, c) <- indexedRows])
+    nameCol      = Box.vcat Box.left    (showFn Dull  White  "Name"    : [showFn Vivid White  (read . show $ c ^. eventsStation . infoName)  | (_, c) <- indexedRows])
+    chargerCol   = Box.vcat Box.left    (showFn Dull  Yellow "Charger" : [showBoolFn (c ^. eventsStation . infoIsChargingStation)            | (_, c) <- indexedRows])
+    totalUnCol   = Box.vcat Box.center2 (showFn Dull  Red    "Total ↧" : [showFn Vivid White  (show (totalUn c))                             | (_, c) <- indexedRows])
+    totalDkCol   = Box.vcat Box.center2 (showFn Dull  Green  "Total ↥" : [showFn Vivid White  (show (totalDk c))                             | (_, c) <- indexedRows])
+
+    -- Per-type undocking and docking columns.
+    typeUndockingCols =
+      [ Box.vcat Box.center2
+          (showFn Dull White (T.unpack label <> " ↧")
+            : [showFn Dull White (show u) | (_, c) <- indexedRows, let (u, _, _) = typeRows c !! idx])
+      | (idx, label) <- zip [0..] typeLabels
+      ]
+    typeDockingCols =
+      [ Box.vcat Box.center2
+          (showFn Dull White (T.unpack label <> " ↥")
+            : [showFn Dull White (show d) | (_, c) <- indexedRows, let (_, d, _) = typeRows c !! idx])
+      | (idx, label) <- zip [0..] typeLabels
+      ]
+
+    table = Box.punctuateH Box.left (Box.text " | ")
+              ([indexCol, idCol, nameCol, chargerCol, totalUnCol, totalDkCol]
+                 <> typeUndockingCols
+                 <> typeDockingCols)
 
     showFn :: ColorIntensity -> Color -> String -> Box.Box
     showFn intensity colour = Box.text . (unpack . colouredText intensity colour . pack)

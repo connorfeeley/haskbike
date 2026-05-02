@@ -8,18 +8,27 @@ module Haskbike.Database.EventCounts
      , DockingEventsCount (..)
      , EventsCountResult (..)
      , allBikeEvents
+     , astroEvents
+     , boostEvents
+     , chloeEvents
+     , cosmoEvents
      , efitEvents
      , efitG5Events
+     , eventsAstroCount
      , eventsBoostCount
+     , eventsChloeCount
+     , eventsCosmoCount
      , eventsCountBikeType
      , eventsCountDockings
      , eventsCountUndockings
      , eventsEfitCount
      , eventsEfitG5Count
      , eventsIconicCount
+     , eventsMetroCount
      , eventsStation
      , eventsVariation
      , iconicEvents
+     , metroEvents
      , sumEvents
      ) where
 
@@ -49,19 +58,33 @@ data DockingEventsCount where
                         , _eventsIconicCount :: EventsCountResult
                         , _eventsEfitCount   :: EventsCountResult
                         , _eventsEfitG5Count :: EventsCountResult
+                        , _eventsChloeCount  :: EventsCountResult
+                        , _eventsCosmoCount  :: EventsCountResult
+                        , _eventsAstroCount  :: EventsCountResult
+                        , _eventsMetroCount  :: EventsCountResult
                         } -> DockingEventsCount
   deriving (Generic, Show, Eq)
 
 instance ToJSON DockingEventsCount where
   toJSON events =
     object [ "station-id" .= _infoStationId (_eventsStation events)
-           , "dockings"   .= object [ "iconic"  .= abs (_eventsCountDockings (_eventsIconicCount events))
+           , "dockings"   .= object [ "boost"   .= abs (_eventsCountDockings (_eventsBoostCount  events))
+                                    , "iconic"  .= abs (_eventsCountDockings (_eventsIconicCount events))
                                     , "efit"    .= abs (_eventsCountDockings (_eventsEfitCount   events))
                                     , "efit-g5" .= abs (_eventsCountDockings (_eventsEfitG5Count events))
+                                    , "chloe"   .= abs (_eventsCountDockings (_eventsChloeCount  events))
+                                    , "cosmo"   .= abs (_eventsCountDockings (_eventsCosmoCount  events))
+                                    , "astro"   .= abs (_eventsCountDockings (_eventsAstroCount  events))
+                                    , "metro"   .= abs (_eventsCountDockings (_eventsMetroCount  events))
                                     ]
-           , "undockings" .= object [ "iconic"  .= abs (_eventsCountUndockings (_eventsIconicCount events))
+           , "undockings" .= object [ "boost"   .= abs (_eventsCountUndockings (_eventsBoostCount  events))
+                                    , "iconic"  .= abs (_eventsCountUndockings (_eventsIconicCount events))
                                     , "efit"    .= abs (_eventsCountUndockings (_eventsEfitCount   events))
                                     , "efit-g5" .= abs (_eventsCountUndockings (_eventsEfitG5Count events))
+                                    , "chloe"   .= abs (_eventsCountUndockings (_eventsChloeCount  events))
+                                    , "cosmo"   .= abs (_eventsCountUndockings (_eventsCosmoCount  events))
+                                    , "astro"   .= abs (_eventsCountUndockings (_eventsAstroCount  events))
+                                    , "metro"   .= abs (_eventsCountUndockings (_eventsMetroCount  events))
                                     ]
            ]
 
@@ -92,12 +115,17 @@ makeLenses ''DockingEventsCount
 makeLenses ''EventsCountResult
 
 
--- | Get events for a specific bike type (all, Iconic, E-Fit, or E-Fit G5).
-allBikeEvents, iconicEvents, efitEvents, efitG5Events :: [DockingEventsCount] -> [EventsCountResult]
-allBikeEvents ev = iconicEvents ev <> efitEvents ev <> efitG5Events ev
+-- | Get events for a specific bike type (all, or one of the per-type accessors).
+allBikeEvents, boostEvents, iconicEvents, efitEvents, efitG5Events, chloeEvents, cosmoEvents, astroEvents, metroEvents :: [DockingEventsCount] -> [EventsCountResult]
+allBikeEvents ev = boostEvents ev <> iconicEvents ev <> efitEvents ev <> efitG5Events ev <> chloeEvents ev <> cosmoEvents ev <> astroEvents ev <> metroEvents ev
+boostEvents  = map _eventsBoostCount
 iconicEvents = map _eventsIconicCount
 efitEvents   = map _eventsEfitCount
 efitG5Events = map _eventsEfitG5Count
+chloeEvents  = map _eventsChloeCount
+cosmoEvents  = map _eventsCosmoCount
+astroEvents  = map _eventsAstroCount
+metroEvents  = map _eventsMetroCount
 
 {-
 Sum bike events for 'Docking' or 'Undocking'.

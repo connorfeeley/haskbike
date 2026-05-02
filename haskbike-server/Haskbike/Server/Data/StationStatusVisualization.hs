@@ -43,9 +43,14 @@ data StationStatusVisualization where
                                 , _statusVisBikesDisabled   :: Int
                                 , _statusVisDocksAvailable  :: Int
                                 , _statusVisDocksDisabled   :: Int
+                                , _statusVisAvailableBoost  :: Int
                                 , _statusVisAvailableIconic :: Int
                                 , _statusVisAvailableEfit   :: Int
                                 , _statusVisAvailableEfitG5 :: Int
+                                , _statusVisAvailableChloe  :: Int
+                                , _statusVisAvailableCosmo  :: Int
+                                , _statusVisAvailableAstro  :: Int
+                                , _statusVisAvailableMetro  :: Int
                                 } -> StationStatusVisualization
   deriving (Show, Generic, Eq, Ord)
 
@@ -58,9 +63,14 @@ instance ToJSON StationStatusVisualization where
            , "Disabled Bikes"       .= _statusVisBikesDisabled    station
            , "Available Docks"      .= _statusVisDocksAvailable   station
            , "Disabled Docks"       .= _statusVisDocksDisabled    station
+           , "Available Boost"      .= _statusVisAvailableBoost   station
            , "Available Mechanical" .= _statusVisAvailableIconic  station
            , "Available E-Fit"      .= _statusVisAvailableEfit    station
            , "Available E-Fit G5"   .= _statusVisAvailableEfitG5  station
+           , "Available CHLOE"      .= _statusVisAvailableChloe   station
+           , "Available Cosmo"      .= _statusVisAvailableCosmo   station
+           , "Available Astro"      .= _statusVisAvailableAstro   station
+           , "Available Metro"      .= _statusVisAvailableMetro   station
            ]
 
 -- | Convert from the Beam StationStatus type to StationStatusVisualization
@@ -73,9 +83,14 @@ fromBeamStationStatusToVisJSON status =
                              , _statusVisBikesDisabled   = fromIntegral (status ^. statusNumBikesDisabled)
                              , _statusVisDocksAvailable  = fromIntegral (status ^. statusNumDocksAvailable)
                              , _statusVisDocksDisabled   = fromIntegral (status ^. statusNumDocksDisabled)
+                             , _statusVisAvailableBoost  = fromIntegral (status ^. vehicleTypesAvailableBoost)
                              , _statusVisAvailableIconic = fromIntegral (status ^. vehicleTypesAvailableIconic)
                              , _statusVisAvailableEfit   = fromIntegral (status ^. vehicleTypesAvailableEfit)
                              , _statusVisAvailableEfitG5 = fromIntegral (status ^. vehicleTypesAvailableEfitG5)
+                             , _statusVisAvailableChloe  = fromIntegral (status ^. vehicleTypesAvailableChloe)
+                             , _statusVisAvailableCosmo  = fromIntegral (status ^. vehicleTypesAvailableCosmo)
+                             , _statusVisAvailableAstro  = fromIntegral (status ^. vehicleTypesAvailableAstro)
+                             , _statusVisAvailableMetro  = fromIntegral (status ^. vehicleTypesAvailableMetro)
                              }
 
 
@@ -109,17 +124,25 @@ generateJsonDataSource Nothing startTime endTime = do
   where
     toVisualization st =
       -- Convert fields from 'Int32' to 'Int'.
-      StationStatusVisualization { _statusVisStationId       = Nothing
-                                 , _statusVisLastReported    = st ^. _1 -- Just use the latest time.
-                                 , _statusVisChargingStation = True
-                                 , _statusVisBikesAvailable  = st ^. _2 & fromIntegral
-                                 , _statusVisBikesDisabled   = st ^. _3 & fromIntegral
-                                 , _statusVisDocksAvailable  = st ^. _4 & fromIntegral
-                                 , _statusVisDocksDisabled   = st ^. _5 & fromIntegral
-                                 , _statusVisAvailableIconic = st ^. _6 & fromIntegral
-                                 , _statusVisAvailableEfit   = st ^. _7 & fromIntegral
-                                 , _statusVisAvailableEfitG5 = st ^. _8 & fromIntegral
-                                 }
+      -- The 6th element of the tuple packs (Boost, Iconic, EFit, EFitG5, CHLOE, Cosmo, Astro, Metro).
+      let bikeTypes = st ^. _6
+      in StationStatusVisualization
+            { _statusVisStationId       = Nothing
+            , _statusVisLastReported    = st ^. _1 -- Just use the latest time.
+            , _statusVisChargingStation = True
+            , _statusVisBikesAvailable  = st ^. _2 & fromIntegral
+            , _statusVisBikesDisabled   = st ^. _3 & fromIntegral
+            , _statusVisDocksAvailable  = st ^. _4 & fromIntegral
+            , _statusVisDocksDisabled   = st ^. _5 & fromIntegral
+            , _statusVisAvailableBoost  = bikeTypes ^. _1 & fromIntegral
+            , _statusVisAvailableIconic = bikeTypes ^. _2 & fromIntegral
+            , _statusVisAvailableEfit   = bikeTypes ^. _3 & fromIntegral
+            , _statusVisAvailableEfitG5 = bikeTypes ^. _4 & fromIntegral
+            , _statusVisAvailableChloe  = bikeTypes ^. _5 & fromIntegral
+            , _statusVisAvailableCosmo  = bikeTypes ^. _6 & fromIntegral
+            , _statusVisAvailableAstro  = bikeTypes ^. _7 & fromIntegral
+            , _statusVisAvailableMetro  = bikeTypes ^. _8 & fromIntegral
+            }
 
 
 generateJsonDataSourceIntegral :: (HasEnv env m, MonadIO m, MonadCatch m) => Maybe Int -> Maybe LocalTime -> Maybe LocalTime -> m [StatusIntegral]

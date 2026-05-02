@@ -39,9 +39,14 @@ instance ToRecord StatusIntegralCSV where
       , toField (intStatusSecDocksAvailable integral)
       , toField (intStatusSecDocksDisabled integral)
 
+      , toField (intStatusSecBoostAvailable  integral)
       , toField (intStatusSecIconicAvailable integral)
-      , toField (intStatusSecEfitAvailable integral)
+      , toField (intStatusSecEfitAvailable   integral)
       , toField (intStatusSecEfitG5Available integral)
+      , toField (intStatusSecChloeAvailable  integral)
+      , toField (intStatusSecCosmoAvailable  integral)
+      , toField (intStatusSecAstroAvailable  integral)
+      , toField (intStatusSecMetroAvailable  integral)
       ]
 
 -- | Encode 'StatusIntegral' by name to a CSV.
@@ -55,9 +60,14 @@ instance ToNamedRecord StatusIntegralCSV where
       , "Bike Disabled Seconds"      .= intStatusSecBikesDisabled   integral
       , "Dock Available Seconds"     .= intStatusSecDocksAvailable  integral
       , "Dock Disabled Seconds"      .= intStatusSecDocksDisabled   integral
+      , "Boost Available Seconds"    .= intStatusSecBoostAvailable  integral
       , "Iconic Available Seconds"   .= intStatusSecIconicAvailable integral
       , "E-Fit Available Seconds"    .= intStatusSecEfitAvailable   integral
       , "E-Fit G5 Available Seconds" .= intStatusSecEfitG5Available integral
+      , "CHLOE Available Seconds"    .= intStatusSecChloeAvailable  integral
+      , "Cosmo Available Seconds"    .= intStatusSecCosmoAvailable  integral
+      , "Astro Available Seconds"    .= intStatusSecAstroAvailable  integral
+      , "Metro Available Seconds"    .= intStatusSecMetroAvailable  integral
       ]
 
 -- | Field ordering of 'StatusIntegral' CSV encoding.
@@ -71,9 +81,14 @@ instance DefaultOrdered StatusIntegralCSV where
       , "Bike Disabled Seconds"
       , "Dock Available Seconds"
       , "Dock Disabled Seconds"
+      , "Boost Available Seconds"
       , "Iconic Available Seconds"
       , "E-Fit Available Seconds"
       , "E-Fit G5 Available Seconds"
+      , "CHLOE Available Seconds"
+      , "Cosmo Available Seconds"
+      , "Astro Available Seconds"
+      , "Metro Available Seconds"
       , "Variation"
       ]
 
@@ -82,7 +97,7 @@ newtype StatusFactorCSV where
   StatusFactorCSV :: StatusFactor -> StatusFactorCSV
   deriving (Generic, Show, Eq)
 
--- | Encode 'StatusIntegral' to a CSV.
+-- | Encode 'StatusFactor' to a CSV.
 instance ToRecord StatusFactorCSV where
     toRecord (StatusFactorCSV factor) = record
       [ toField (statusFactorStationId          factor)
@@ -95,13 +110,23 @@ instance ToRecord StatusFactorCSV where
       , toField (statusFactorDocksAvailable  factor)
       , toField (statusFactorDocksDisabled   factor)
 
+      , toField (statusFactorBoostAvailable  factor)
       , toField (statusFactorIconicAvailable factor)
       , toField (statusFactorEfitAvailable   factor)
       , toField (statusFactorEfitG5Available factor)
+      , toField (statusFactorChloeAvailable  factor)
+      , toField (statusFactorCosmoAvailable  factor)
+      , toField (statusFactorAstroAvailable  factor)
+      , toField (statusFactorMetroAvailable  factor)
 
+      , toField (statusFactorNormalizedBoostAvailable  factor)
       , toField (statusFactorNormalizedIconicAvailable factor)
       , toField (statusFactorNormalizedEfitAvailable   factor)
       , toField (statusFactorNormalizedEfitG5Available factor)
+      , toField (statusFactorNormalizedChloeAvailable  factor)
+      , toField (statusFactorNormalizedCosmoAvailable  factor)
+      , toField (statusFactorNormalizedAstroAvailable  factor)
+      , toField (statusFactorNormalizedMetroAvailable  factor)
       ]
 
 -- | Encode 'StatusFactor' by name to a CSV.
@@ -115,12 +140,22 @@ instance ToNamedRecord StatusFactorCSV where
       , "Bike Disabled Factor"                 .= statusFactorBikesDisabled     factor
       , "Dock Available Factor"                .= statusFactorDocksAvailable    factor
       , "Dock Disabled Factor"                 .= statusFactorDocksDisabled     factor
+      , "Boost Available Factor"               .= statusFactorBoostAvailable    factor
       , "Iconic Available Factor"              .= statusFactorIconicAvailable   factor
       , "E-Fit Available Factor"               .= statusFactorEfitAvailable     factor
       , "E-Fit G5 Available Factor"            .= statusFactorEfitG5Available   factor
-      , "Iconic Normalized Available Factor"   .= statusFactorIconicAvailable   factor
-      , "E-Fit Normalized Available Factor"    .= statusFactorEfitAvailable     factor
-      , "E-Fit G5 Normalized Available Factor" .= statusFactorEfitG5Available   factor
+      , "CHLOE Available Factor"               .= statusFactorChloeAvailable    factor
+      , "Cosmo Available Factor"               .= statusFactorCosmoAvailable    factor
+      , "Astro Available Factor"               .= statusFactorAstroAvailable    factor
+      , "Metro Available Factor"               .= statusFactorMetroAvailable    factor
+      , "Boost Normalized Available Factor"    .= statusFactorNormalizedBoostAvailable  factor
+      , "Iconic Normalized Available Factor"   .= statusFactorNormalizedIconicAvailable factor
+      , "E-Fit Normalized Available Factor"    .= statusFactorNormalizedEfitAvailable   factor
+      , "E-Fit G5 Normalized Available Factor" .= statusFactorNormalizedEfitG5Available factor
+      , "CHLOE Normalized Available Factor"    .= statusFactorNormalizedChloeAvailable  factor
+      , "Cosmo Normalized Available Factor"    .= statusFactorNormalizedCosmoAvailable  factor
+      , "Astro Normalized Available Factor"    .= statusFactorNormalizedAstroAvailable  factor
+      , "Metro Normalized Available Factor"    .= statusFactorNormalizedMetroAvailable  factor
       ]
 
 -- | Field ordering of 'StatusFactor' CSV encoding.
@@ -134,12 +169,22 @@ instance DefaultOrdered StatusFactorCSV where
       , "Bike Disabled Factor"
       , "Dock Available Factor"
       , "Dock Disabled Factor"
+      , "Boost Available Factor"
       , "Iconic Available Factor"
       , "E-Fit Available Factor"
       , "E-Fit G5 Available Factor"
+      , "CHLOE Available Factor"
+      , "Cosmo Available Factor"
+      , "Astro Available Factor"
+      , "Metro Available Factor"
+      , "Boost Normalized Available Factor"
       , "Iconic Normalized Available Factor"
       , "E-Fit Normalized Available Factor"
       , "E-Fit G5 Normalized Available Factor"
+      , "CHLOE Normalized Available Factor"
+      , "Cosmo Normalized Available Factor"
+      , "Astro Normalized Available Factor"
+      , "Metro Normalized Available Factor"
       ]
 
 -- | Combination of status integrals and factors.
@@ -162,9 +207,14 @@ instance ToRecord PerformanceDataCSV where
     , toField (intStatusSecDocksAvailable integral)
     , toField (intStatusSecDocksDisabled integral)
 
+    , toField (intStatusSecBoostAvailable  integral)
     , toField (intStatusSecIconicAvailable integral)
-    , toField (intStatusSecEfitAvailable integral)
+    , toField (intStatusSecEfitAvailable   integral)
     , toField (intStatusSecEfitG5Available integral)
+    , toField (intStatusSecChloeAvailable  integral)
+    , toField (intStatusSecCosmoAvailable  integral)
+    , toField (intStatusSecAstroAvailable  integral)
+    , toField (intStatusSecMetroAvailable  integral)
 
     -- Corresponding factor data:
     , toField (statusFactorBikesAvailable  factor)
@@ -172,13 +222,23 @@ instance ToRecord PerformanceDataCSV where
     , toField (statusFactorDocksAvailable  factor)
     , toField (statusFactorDocksDisabled   factor)
 
+    , toField (statusFactorBoostAvailable  factor)
     , toField (statusFactorIconicAvailable factor)
     , toField (statusFactorEfitAvailable   factor)
     , toField (statusFactorEfitG5Available factor)
+    , toField (statusFactorChloeAvailable  factor)
+    , toField (statusFactorCosmoAvailable  factor)
+    , toField (statusFactorAstroAvailable  factor)
+    , toField (statusFactorMetroAvailable  factor)
 
+    , toField (statusFactorNormalizedBoostAvailable  factor)
     , toField (statusFactorNormalizedIconicAvailable factor)
     , toField (statusFactorNormalizedEfitAvailable   factor)
     , toField (statusFactorNormalizedEfitG5Available factor)
+    , toField (statusFactorNormalizedChloeAvailable  factor)
+    , toField (statusFactorNormalizedCosmoAvailable  factor)
+    , toField (statusFactorNormalizedAstroAvailable  factor)
+    , toField (statusFactorNormalizedMetroAvailable  factor)
     ]
     where
       integral = performanceIntegrals performanceData
@@ -196,20 +256,35 @@ instance ToNamedRecord PerformanceDataCSV where
     , "Bike Disabled Seconds"      .= intStatusSecBikesDisabled   integral
     , "Dock Available Seconds"     .= intStatusSecDocksAvailable  integral
     , "Dock Disabled Seconds"      .= intStatusSecDocksDisabled   integral
+    , "Boost Available Seconds"    .= intStatusSecBoostAvailable  integral
     , "Iconic Available Seconds"   .= intStatusSecIconicAvailable integral
     , "E-Fit Available Seconds"    .= intStatusSecEfitAvailable   integral
     , "E-Fit G5 Available Seconds" .= intStatusSecEfitG5Available integral
+    , "CHLOE Available Seconds"    .= intStatusSecChloeAvailable  integral
+    , "Cosmo Available Seconds"    .= intStatusSecCosmoAvailable  integral
+    , "Astro Available Seconds"    .= intStatusSecAstroAvailable  integral
+    , "Metro Available Seconds"    .= intStatusSecMetroAvailable  integral
     -- Factor data:
     , "Bike Available Factor"                .= statusFactorBikesAvailable    factor
     , "Bike Disabled Factor"                 .= statusFactorBikesDisabled     factor
     , "Dock Available Factor"                .= statusFactorDocksAvailable    factor
     , "Dock Disabled Factor"                 .= statusFactorDocksDisabled     factor
+    , "Boost Available Factor"               .= statusFactorBoostAvailable    factor
     , "Iconic Available Factor"              .= statusFactorIconicAvailable   factor
     , "E-Fit Available Factor"               .= statusFactorEfitAvailable     factor
     , "E-Fit G5 Available Factor"            .= statusFactorEfitG5Available   factor
-    , "Iconic Normalized Available Factor"   .= statusFactorNormalizedIconicAvailable   factor
-    , "E-Fit Normalized Available Factor"    .= statusFactorNormalizedEfitAvailable     factor
-    , "E-Fit G5 Normalized Available Factor" .= statusFactorNormalizedEfitG5Available   factor
+    , "CHLOE Available Factor"               .= statusFactorChloeAvailable    factor
+    , "Cosmo Available Factor"               .= statusFactorCosmoAvailable    factor
+    , "Astro Available Factor"               .= statusFactorAstroAvailable    factor
+    , "Metro Available Factor"               .= statusFactorMetroAvailable    factor
+    , "Boost Normalized Available Factor"    .= statusFactorNormalizedBoostAvailable  factor
+    , "Iconic Normalized Available Factor"   .= statusFactorNormalizedIconicAvailable factor
+    , "E-Fit Normalized Available Factor"    .= statusFactorNormalizedEfitAvailable   factor
+    , "E-Fit G5 Normalized Available Factor" .= statusFactorNormalizedEfitG5Available factor
+    , "CHLOE Normalized Available Factor"    .= statusFactorNormalizedChloeAvailable  factor
+    , "Cosmo Normalized Available Factor"    .= statusFactorNormalizedCosmoAvailable  factor
+    , "Astro Normalized Available Factor"    .= statusFactorNormalizedAstroAvailable  factor
+    , "Metro Normalized Available Factor"    .= statusFactorNormalizedMetroAvailable  factor
     ]
     where
       integral = performanceIntegrals performanceData
@@ -226,14 +301,32 @@ instance DefaultOrdered PerformanceDataCSV where
       , "Bike Disabled Seconds"
       , "Dock Available Seconds"
       , "Dock Disabled Seconds"
+      , "Boost Available Seconds"
+      , "Iconic Available Seconds"
+      , "E-Fit Available Seconds"
+      , "E-Fit G5 Available Seconds"
+      , "CHLOE Available Seconds"
+      , "Cosmo Available Seconds"
+      , "Astro Available Seconds"
+      , "Metro Available Seconds"
       , "Bike Available Factor"
       , "Bike Disabled Factor"
       , "Dock Available Factor"
       , "Dock Disabled Factor"
+      , "Boost Available Factor"
       , "Iconic Available Factor"
       , "E-Fit Available Factor"
       , "E-Fit G5 Available Factor"
+      , "CHLOE Available Factor"
+      , "Cosmo Available Factor"
+      , "Astro Available Factor"
+      , "Metro Available Factor"
+      , "Boost Normalized Available Factor"
       , "Iconic Normalized Available Factor"
       , "E-Fit Normalized Available Factor"
       , "E-Fit G5 Normalized Available Factor"
+      , "CHLOE Normalized Available Factor"
+      , "Cosmo Normalized Available Factor"
+      , "Astro Normalized Available Factor"
+      , "Metro Normalized Available Factor"
       ]

@@ -36,7 +36,7 @@ import           UnliftIO
 unit_queryChargings :: IO ()
 unit_queryChargings = withTempDbM Silent (setupTestDatabase >> initDBWithStationTestData) $ do
   chargings <- queryChargingEventsCount variation
-  liftIO $ assertEqual "Expected number of chargings for entire system" (-1, 0, 1) (sumTuples chargings)
+  liftIO $ assertEqual "Expected number of chargings for entire system" (-1, 0, 1, 0, 0, 0) (sumTuples chargings)
   where
     -- Query for all stations, for all data in the test dataset.
     variation = StatusVariationQuery Nothing
@@ -44,14 +44,18 @@ unit_queryChargings = withTempDbM Silent (setupTestDatabase >> initDBWithStation
       , LatestTime   (UTCTime (read "2024-01-01") (timeOfDayToTime midnight))
       ]
 
-sumTuples :: Num a => [(b, a, a, a)] -> (a, a, a)
-sumTuples = foldr (\(_, a1, b1, c1) (a2, b2, c2) -> (a1 + a2, b1 + b2, c1 + c2)) (0, 0, 0)
+-- | Sum the per-bike-type charging counts across all stations. Drops the StationInformation.
+-- Tuple order: (totalDisabledChange, EFit, EFitG5, Cosmo, Astro, Metro).
+sumTuples :: Num a => [(b, a, a, a, a, a, a)] -> (a, a, a, a, a, a)
+sumTuples = foldr (\(_, a1, b1, c1, d1, e1, f1) (a2, b2, c2, d2, e2, f2)
+                     -> (a1 + a2, b1 + b2, c1 + c2, d1 + d2, e1 + e2, f1 + f2))
+                  (0, 0, 0, 0, 0, 0)
 
 -- | HUnit test to query all charging events (using exported database dump).
 unit_queryChargings' :: IO ()
 unit_queryChargings' = withTempDbM Silent (setupTestDatabase >> initDBWithExportedData) $ do
   chargings <- queryChargingEventsCount variation
-  liftIO $ assertEqual "Expected number of charging for entire system" (-110, 29, 81) (sumTuples chargings)
+  liftIO $ assertEqual "Expected number of charging for entire system" (-110, 29, 81, 0, 0, 0) (sumTuples chargings)
   where
     -- Query for all stations, for all data in the test dataset.
     variation = StatusVariationQuery Nothing
@@ -69,24 +73,25 @@ unit_queryChargingsManual = withTempDbM Silent setupTestDatabase $ do
   -- Insert manually constructed station status.
   void $ insertStationStatus manualStatus
 
-  -- Check charging events.
+  -- Check charging events. Expected tuple is (totalDisabled, EFit, EFitG5, Cosmo, Astro, Metro);
+  -- the test fixtures only exercise EFit/EFitG5, so the new e-bike types are 0.
   void $ do
     -- First E-Fit charged.
-    assertEqualBetweenMinute (-1, 1, 0) 0 5
+    assertEqualBetweenMinute (-1, 1, 0, 0, 0, 0) 0 5
 
     -- -- Second two bikes (E-Fit and E-Fit G5) charged.
-    assertEqualBetweenMinute (-3, 2, 1) 0 8
+    assertEqualBetweenMinute (-3, 2, 1, 0, 0, 0) 0 8
 
     -- -- Genuinely broken bike is docked.
-    assertEqualBetweenMinute (-3, 2, 1) 0 9
+    assertEqualBetweenMinute (-3, 2, 1, 0, 0, 0) 0 9
 
-    assertEqualBetweenMinute (-3, 2, 1) 0 10
+    assertEqualBetweenMinute (-3, 2, 1, 0, 0, 0) 0 10
 
     -- -- Dock a dead E-Fit G5, dock a charged E-Fit, undock the charged E-Fit, charge the initally docked E-Fit G5.
-    assertEqualBetweenMinute (-4, 2, 2) 0 14
+    assertEqualBetweenMinute (-4, 2, 2, 0, 0, 0) 0 14
 
     -- Dock an Iconic.
-    assertEqualBetweenMinute (-4, 2, 2) 0 15
+    assertEqualBetweenMinute (-4, 2, 2, 0, 0, 0) 0 15
   where
     -- | Get charging events between two timestamps (with varying minute values).
     assertEqualBetweenMinute expected startMinute endMinute = do
@@ -161,21 +166,18 @@ unit_querySystemStatus = withTempDbM Silent (setupTestDatabase >> initDBWithExpo
     ctz :: TimeZone = read "EDT"
     earliest tz = localTimeToUTC tz (LocalTime (fromGregorian 2023 10 30) (TimeOfDay 07 00 00))
     latest   tz = localTimeToUTC tz (LocalTime (fromGregorian 2023 10 30) (TimeOfDay 08 00 00))
+    -- Per-bike-type 8-tuple order: (Boost, Iconic, EFit, EFitG5, CHLOE, Cosmo, Astro, Metro).
     expected tz = [ ( earliest tz -- Latest time
                      , 6099 -- Total available bikes
                      , 192  -- Total disabled  bikes
                      , 7284 -- Total available docks
                      , 64   -- Total disabled  docks
-                     , 5714 -- Total available iconic  bikes
-                     , 106  -- Total available efit    bikes
-                     , 279  -- Total available efit g5 bikes
+                     , (0, 5714, 106, 279, 0, 0, 0, 0)
                      )
                    , ( latest tz -- Latest time
                      , 6038 -- Total available bikes
                      , 200  -- Total disabled  bikes
                      , 7336 -- Total available docks
                      , 62   -- Total disabled  docks
-                     , 5663 -- Total available iconic  bikes
-                     , 102  -- Total available efit    bikes
-                     , 273  -- Total available efit g5 bikes
+                     , (0, 5663, 102, 273, 0, 0, 0, 0)
                      ) ]

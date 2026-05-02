@@ -60,9 +60,14 @@ unit_queryFieldIntegrals = withTempDbM Silent (setupTestDatabase >> initDBWithEx
                        , intStatusSecBikesDisabled   = 496422
                        , intStatusSecDocksAvailable  = 191565
                        , intStatusSecDocksDisabled   = 0
+                       , intStatusSecBoostAvailable  = 0
                        , intStatusSecIconicAvailable = 62361
                        , intStatusSecEfitAvailable   = 54744
                        , intStatusSecEfitG5Available = 179423
+                       , intStatusSecChloeAvailable  = 0
+                       , intStatusSecCosmoAvailable  = 0
+                       , intStatusSecAstroAvailable  = 0
+                       , intStatusSecMetroAvailable  = 0
                        }
 
   integrals <- queryIntegratedStatus variation
@@ -85,12 +90,22 @@ unit_queryStatusFactors = withTempDbM Silent (setupTestDatabase >> initDBWithExp
                      , statusFactorBikesDisabled   = 0.5042300015743792
                      , statusFactorDocksAvailable  = 0.19457804096433268
                      , statusFactorDocksDisabled   = 0.0
+                     , statusFactorBoostAvailable  = 0.0
                      , statusFactorIconicAvailable = 6.334184852440035e-2
                      , statusFactorEfitAvailable   = 5.560504410801258e-2
                      , statusFactorEfitG5Available = 0.18224506482887512
+                     , statusFactorChloeAvailable  = 0.0
+                     , statusFactorCosmoAvailable  = 0.0
+                     , statusFactorAstroAvailable  = 0.0
+                     , statusFactorMetroAvailable  = 0.0
+                     , statusFactorNormalizedBoostAvailable  = 0.0
                      , statusFactorNormalizedIconicAvailable = 0.2103039173366428
                      , statusFactorNormalizedEfitAvailable   = 0.18461662979549995
                      , statusFactorNormalizedEfitG5Available = 0.6050794528678574
+                     , statusFactorNormalizedChloeAvailable  = 0.0
+                     , statusFactorNormalizedCosmoAvailable  = 0.0
+                     , statusFactorNormalizedAstroAvailable  = 0.0
+                     , statusFactorNormalizedMetroAvailable  = 0.0
                      }
 
   integrals <- queryStatusFactors variation
