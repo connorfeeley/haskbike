@@ -28,6 +28,7 @@ import qualified Data.String.Conversions.Monomorphic       as SCM
 import qualified Data.Text                                 as T
 
 import           Haskbike.Server.API.TopLevel
+import           Haskbike.Server.Middleware.Timing         ( mkRequestTimingMiddleware )
 import           Haskbike.Server.Page.ErrorPage
 import           Haskbike.ServerEnv
 
@@ -62,9 +63,12 @@ serveVisualization = do
     ]
 
   logger <- liftIO mkServerLogger
+  (_reqIdKey, timingM) <- liftIO mkRequestTimingMiddleware
 
   -- Run Warp/Wai server using specific settings.
-  liftIO $ runSettings (serverSettings env) (logger (gzipM (serverApp env)))
+  -- Middleware order (outermost first): timing -> logger -> gzip -> app.
+  -- 'timingM' is outermost so its measurement covers the full handler time.
+  liftIO $ runSettings (serverSettings env) (timingM (logger (gzipM (serverApp env))))
 
 
 -- | Log requests as JSON with response headers.

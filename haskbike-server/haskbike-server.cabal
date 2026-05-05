@@ -139,6 +139,7 @@ library
                     , Haskbike.Server.LatestQueries
                     , Haskbike.Server.LatestQueriesComponent
                     , Haskbike.Server.ExternalAssets
+                    , Haskbike.Server.Middleware.Timing
                     , Haskbike.ServerEnv
 
     -- Modules included in this library but not exported.
@@ -165,6 +166,7 @@ library
                     , unliftio
                     , data-default
                     , uuid
+                    , vault
                     , string-conversions
                     , resource-pool >= 0.4.0.0
 
