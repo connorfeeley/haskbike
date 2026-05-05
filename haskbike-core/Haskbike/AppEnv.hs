@@ -23,6 +23,7 @@ module Haskbike.AppEnv
      , mkDatabaseConnectionPool
      , mkDatabaseConnectionPoolFrom
      , mkDbConnectInfo
+     , prepareSqlLogger
      , runAppM
      , runWithAppM
      , runWithAppMDebug
@@ -41,11 +42,12 @@ module Haskbike.AppEnv
 import           Colog
 
 import           Control.Exception                      ( throw )
-import           Control.Monad                          ( when )
+import           Control.Monad                          ( forM_, when )
 import           Control.Monad.Catch
 import           Control.Monad.Except
 import           Control.Monad.Reader                   ( MonadReader, ReaderT (..), ask, asks )
 
+import           Data.IORef                             ( atomicModifyIORef', newIORef, readIORef )
 import           Data.Maybe                             ( fromMaybe, isNothing )
 import           Data.Pool
 import qualified Data.Text                              as T
@@ -57,6 +59,7 @@ import           Database.Beam.Postgres                 ( ConnectInfo (..), Conn
 import           Database.PostgreSQL.Simple             ( defaultConnectInfo )
 import           Database.PostgreSQL.Simple.Transaction ( withTransaction )
 
+import           GHC.Clock                              ( getMonotonicTime )
 import           GHC.Conc                               ( numCapabilities )
 
 import           Haskbike.API.BikeShare
@@ -71,6 +74,7 @@ import           Servant.Client
 
 import           System.Environment                     ( lookupEnv )
 
+import           Text.Printf                            ( printf )
 import           Text.Read                              ( readMaybe )
 
 import           UnliftIO                               ( MonadIO (..), MonadUnliftIO, withRunInIO )
@@ -208,14 +212,44 @@ executeWithConnPool dbFunction action pool = liftIO (withResource pool (`dbFunct
 withPooledConn :: (HasEnv env m, MonadIO m, MonadThrow m) => (Connection -> p -> IO b) -> p -> m b
 withPooledConn dbFunction action = withConnPool >>= executeWithConnPool dbFunction action
 
+-- | Build a Beam runner together with a finalizer that, when @logDatabase@
+-- is set, captures each executed SQL statement and logs it (along with the
+-- total elapsed wall-clock time of the block) through the Colog 'LogAction'
+-- at 'Debug' severity.
+--
+-- The finalizer is intended to be called regardless of whether the action
+-- succeeded, so partial SQL output is preserved even when a query throws.
+prepareSqlLogger :: (HasLogger env m, MonadIO m)
+                 => Bool
+                 -> m (Connection -> Pg a -> IO a, m ())
+prepareSqlLogger False = pure (runBeamPostgres, pure ())
+prepareSqlLogger True  = do
+  stmtsRef <- liftIO $ newIORef ([] :: [String])
+  startRef <- liftIO $ newIORef (0 :: Double)
+  let runner conn pg = do
+        t0 <- getMonotonicTime
+        atomicModifyIORef' startRef (const (t0, ()))
+        runBeamPostgresDebug
+          (\sql -> atomicModifyIORef' stmtsRef (\xs -> (sql : xs, ())))
+          conn pg
+      finalize = do
+        t1       <- liftIO getMonotonicTime
+        t0       <- liftIO $ readIORef startRef
+        captured <- liftIO $ reverse <$> readIORef stmtsRef
+        forM_ captured $ \sql -> logDebug ("[sql] " <> T.pack sql)
+        let elapsedMs :: Double
+            elapsedMs = (t1 - t0) * 1000
+        logDebug $ "[sql] block finished in "
+                <> T.pack (printf "%.2f ms" elapsedMs)
+                <> " (" <> T.pack (show (length captured)) <> " stmt(s))"
+  pure (runner, finalize)
+
 -- | Run a Beam operation using database connection from the environment.
 withPostgres :: (HasLogger env m, MonadCatch m, HasEnv env m, MonadIO m) => Pg b -> m b
 withPostgres action = do
-  logDatabase <- getLogDatabase
-  let dbFunction = if logDatabase
-        then runBeamPostgresDebug putStrLn
-        else runBeamPostgres
+  (dbFunction, logSql) <- prepareSqlLogger =<< getLogDatabase
   res <- try $ withPooledConn dbFunction action
+  logSql
   case res of
     Left (e :: SqlError) -> do
       logException e
@@ -226,12 +260,10 @@ withPostgres action = do
 -- | Run a Beam operation in a transaction using database connection from the environment.
 withPostgresTransaction :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m) => Pg a -> m a
 withPostgresTransaction action = do
-  logDatabase <- getLogDatabase
+  (dbFunction, logSql) <- prepareSqlLogger =<< getLogDatabase
   pool <- withConnPool
-  let dbFunction = if logDatabase
-        then runBeamPostgresDebug putStrLn
-        else runBeamPostgres
   res <- try $ liftIO $ withResource pool $ \conn -> withTransaction conn (dbFunction conn action)
+  logSql
   case res of
     Left (e :: SqlError) -> do
       logException e
@@ -242,12 +274,10 @@ withPostgresTransaction action = do
 -- | Specialized version of withPostgresTransaction for AppM that uses structured error handling
 withPostgresTransactionAppM :: Pg a -> AppM a
 withPostgresTransactionAppM action = do
-  logDatabase <- getLogDatabase
+  (dbFunction, logSql) <- prepareSqlLogger =<< getLogDatabase
   pool <- withConnPool
-  let dbFunction = if logDatabase
-        then runBeamPostgresDebug putStrLn
-        else runBeamPostgres
   res <- try $ liftIO $ withResource pool $ \conn -> withTransaction conn (dbFunction conn action)
+  logSql
   case res of
     Left (e :: SqlError) -> do
       logException e
@@ -294,11 +324,9 @@ mainLogAction severity enableRich = filterBySeverity severity msgSeverity (if en
   -- | Specialized version of withPostgres for AppM that uses structured error handling
 withPostgresAppM :: Pg b -> AppM b
 withPostgresAppM action = do
-  logDatabase <- getLogDatabase
-  let dbFunction = if logDatabase
-        then runBeamPostgresDebug putStrLn
-        else runBeamPostgres
+  (dbFunction, logSql) <- prepareSqlLogger =<< getLogDatabase
   res <- try $ withPooledConn dbFunction action
+  logSql
   case res of
     Left (e :: SqlError) -> do
       logException e

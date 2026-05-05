@@ -35,7 +35,7 @@ import           Data.Fixed                             ( Pico )
 import           Data.Pool
 import qualified Data.Text                              as T
 
-import           Database.Beam.Postgres                 ( Pg, SqlError, runBeamPostgres, runBeamPostgresDebug )
+import           Database.Beam.Postgres                 ( Pg, SqlError )
 import           Database.PostgreSQL.Simple.Transaction ( withTransaction )
 
 import           Haskbike.AppEnv
@@ -166,11 +166,9 @@ throwServerError = ServerAppM . throwM
 -- | Specialized version of withPostgres for ServerAppM
 withPostgresServerAppM :: Pg b -> ServerAppM b
 withPostgresServerAppM action = do
-  logDatabase <- getLogDatabase
-  let dbFunction = if logDatabase
-        then runBeamPostgresDebug putStrLn
-        else runBeamPostgres
+  (dbFunction, logSql) <- prepareSqlLogger =<< getLogDatabase
   res <- try $ withPooledConn dbFunction action
+  logSql
   case res of
     Left (e :: SqlError) -> do
       logException e
@@ -181,12 +179,10 @@ withPostgresServerAppM action = do
 -- | Specialized version of withPostgresTransaction for ServerAppM
 withPostgresTransactionServerAppM :: Pg a -> ServerAppM a
 withPostgresTransactionServerAppM action = do
-  logDatabase <- getLogDatabase
+  (dbFunction, logSql) <- prepareSqlLogger =<< getLogDatabase
   pool <- withConnPool
-  let dbFunction = if logDatabase
-        then runBeamPostgresDebug putStrLn
-        else runBeamPostgres
   res <- try $ liftIO $ withResource pool $ \conn -> withTransaction conn (dbFunction conn action)
+  logSql
   case res of
     Left (e :: SqlError) -> do
       logException e
