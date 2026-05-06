@@ -10,11 +10,14 @@ module Haskbike.Database.Operations.StationOccupancy
      , warmStationOccupancyAllStations
      ) where
 
+import           Colog                                       ( logDebug )
+
 import           Control.Lens                                hiding ( reuse, (<.) )
 import           Control.Monad
 import           Control.Monad.Catch                         ( MonadCatch )
 
 import           Data.Int                                    ( Int32 )
+import qualified Data.Text                                   as T
 import           Data.Time
 import           Data.Time.Extras                            ( ceilingUtcToBucket, floorUtcToBucket )
 
@@ -224,12 +227,34 @@ lookupStationOccupancy emptyThresh fullThresh stationId startT endT = do
   pure (info, occupancy)
 
 
--- | Query the station occupancy, either returning cached data or caching it and returning the result.
-queryStationOccupancy :: (HasEnv env m, MonadCatch m, Integral a)
+-- | Query the station occupancy, either returning cached data or caching it
+-- and returning the result.
+--
+-- The lookup is done OUTSIDE the cache-fill transaction so concurrent
+-- callers see each other's committed fills and don't all redo the
+-- expensive 'stationOccupancyThreshE' work. Logs each call as
+-- @[occupancy-cache] HIT|MISS station=... start=... end=... rows=N@
+-- at Debug severity (visible with @just serve --log-database@).
+queryStationOccupancy :: (HasEnv env m, MonadCatch m, Integral a, Show a)
                       => Int32 -> Int32 -> Maybe a -> UTCTime -> UTCTime
                       -> m [(StationInformation, StationOccupancy)]
 queryStationOccupancy emptyThresh fullThresh stationId startT endT = do
-  withPostgresTransaction $ queryStationOccupancyE emptyThresh fullThresh stationId startT endT
+  let tag = T.pack $ "station=" <> show stationId
+                  <> " start=" <> show startT
+                  <> " end="   <> show endT
+  -- Read-only lookup; no transaction.
+  cached <- withPostgres $ runSelectReturningList . select $
+              lookupStationOccupancy emptyThresh fullThresh stationId startT endT
+  case cached of
+    [] -> do
+      logDebug $ "[occupancy-cache] MISS " <> tag
+      result <- withPostgresTransaction $
+                  queryStationOccupancyE emptyThresh fullThresh stationId startT endT
+      logDebug $ "[occupancy-cache] FILLED " <> tag <> " rows=" <> T.pack (show (length result))
+      pure result
+    xs -> do
+      logDebug $ "[occupancy-cache] HIT " <> tag <> " rows=" <> T.pack (show (length xs))
+      pure xs
 
 -- | Bucket size used by 'queryStationOccupancyBucketed' and
 -- 'warmStationOccupancyAllStations' when keying the @station_occupancy@
@@ -250,7 +275,7 @@ occupancyCacheBucket = 3600
 --
 -- Returned data covers AT LEAST the requested range (by up to one bucket
 -- on each end). For day- or week-scale visualizations this is invisible.
-queryStationOccupancyBucketed :: (HasEnv env m, MonadCatch m, Integral a)
+queryStationOccupancyBucketed :: (HasEnv env m, MonadCatch m, Integral a, Show a)
                               => Int32 -> Int32 -> Maybe a -> UTCTime -> UTCTime
                               -> m [(StationInformation, StationOccupancy)]
 queryStationOccupancyBucketed emptyThresh fullThresh stationId startT endT =
