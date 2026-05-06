@@ -9,6 +9,8 @@ module Data.Time.Extras
      ( TimePair (..)
      , addHours
      , addMinutes
+     , ceilingUtcToBucket
+     , floorUtcToBucket
      , hourBefore
      , htmlTimeFormat
      , localToPosix
@@ -42,6 +44,26 @@ utcFromGregorian year month day = UTCTime (fromGregorian year month day) (timeOf
 -- | Subtract an hour from a UTCTime.
 hourBefore :: UTCTime -> UTCTime
 hourBefore = addUTCTime (-3600)
+
+-- | Round a 'UTCTime' down to the nearest multiple of @bucketSec@ seconds
+-- since the POSIX epoch. e.g. @floorUtcToBucket 3600 t@ floors to the top of
+-- the hour.
+floorUtcToBucket :: NominalDiffTime -> UTCTime -> UTCTime
+floorUtcToBucket = bucketUtc (floor :: Double -> Integer)
+
+-- | Round a 'UTCTime' up to the nearest multiple of @bucketSec@ seconds
+-- since the POSIX epoch. Returns the input unchanged if it is already
+-- bucket-aligned.
+ceilingUtcToBucket :: NominalDiffTime -> UTCTime -> UTCTime
+ceilingUtcToBucket = bucketUtc (ceiling :: Double -> Integer)
+
+bucketUtc :: (Double -> Integer) -> NominalDiffTime -> UTCTime -> UTCTime
+bucketUtc roundFn bucketSec t =
+  posixSecondsToUTCTime (fromIntegral (roundFn (posix / bucketDbl) * bucketInt))
+  where
+    posix     = realToFrac (utcTimeToPOSIXSeconds t) :: Double
+    bucketDbl = realToFrac bucketSec :: Double
+    bucketInt = floor bucketSec :: Integer
 
 -- | Add a number of hours to a LocalTime.
 addHours :: NominalDiffTime -> LocalTime -> LocalTime

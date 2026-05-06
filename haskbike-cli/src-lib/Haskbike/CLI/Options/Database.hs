@@ -6,6 +6,7 @@ module Haskbike.CLI.Options.Database
      ( DatabaseCommand (..)
      , ExportOptions (..)
      , ResetOptions (..)
+     , WarmOccupancyOptions (..)
      , databaseCommandParser
      ) where
 
@@ -20,9 +21,10 @@ import           Options.Applicative
 
 -- | Options for the 'Database' command.
 data DatabaseCommand where
-  Migrate :: DatabaseCommand
-  Export  :: !ExportOptions -> DatabaseCommand
-  Reset   :: !ResetOptions  -> DatabaseCommand
+  Migrate       :: DatabaseCommand
+  Export        :: !ExportOptions        -> DatabaseCommand
+  Reset         :: !ResetOptions         -> DatabaseCommand
+  WarmOccupancy :: !WarmOccupancyOptions -> DatabaseCommand
   deriving (Show)
 
 instance HasCommandDesc DatabaseCommand where
@@ -31,9 +33,11 @@ instance HasCommandDesc DatabaseCommand where
 -- | Parser for 'DatabaseOptions'.
 databaseCommandParser :: Parser DatabaseCommand
 databaseCommandParser = hsubparser
-  (  command "migrate" (info (pure Migrate)                   (progDesc "Run database migrations."))
-  <> command "export"  (info (Export <$> exportOptionsParser) (progDesc "Export data from the database."))
-  <> command "reset"   (info (Reset  <$> resetOptionsParser)  (progDesc "Reset the database. [DANGER]"))
+  (  command "migrate"        (info (pure Migrate)                          (progDesc "Run database migrations."))
+  <> command "export"         (info (Export        <$> exportOptionsParser) (progDesc "Export data from the database."))
+  <> command "reset"          (info (Reset         <$> resetOptionsParser)  (progDesc "Reset the database. [DANGER]"))
+  <> command "warm-occupancy" (info (WarmOccupancy <$> warmOccupancyOptionsParser)
+                                     (progDesc "Pre-fill station_occupancy cache for canonical ranges."))
   )
 
 
@@ -88,3 +92,53 @@ exportOptionsParser = ExportOptions
 
     helpWithFormat :: forall (f :: Type -> Type) a. String -> Mod f a
     helpWithFormat text = help (text <> " " <> formatHelp)
+
+
+-- * Options and parser for the 'WarmOccupancy' command.
+
+-- | Options for the 'WarmOccupancy' command.
+--
+-- Pre-fills the @station_occupancy@ cache for one or more rolling windows
+-- ending at the same anchor (defaults to the current UTC time, floored to
+-- the bucket boundary used by 'queryStationOccupancyBucketed').
+data WarmOccupancyOptions where
+  WarmOccupancyOptions :: { optWarmSpansDays   :: ![Int]
+                          , optWarmAnchorEnd   :: !(Maybe UTCTime)
+                          , optWarmEmptyThresh :: !Int
+                          , optWarmFullThresh  :: !Int
+                          } -> WarmOccupancyOptions
+  deriving (Show)
+
+warmOccupancyOptionsParser :: Parser WarmOccupancyOptions
+warmOccupancyOptionsParser = WarmOccupancyOptions
+  <$> option (eitherReader parseSpans)
+      ( long "spans"
+     <> metavar "DAYS,DAYS,..."
+     <> value [1, 7, 30]
+     <> showDefault
+     <> help "Comma-separated list of window sizes in days; one cache entry per span ending at the anchor time." )
+  <*> optional (option auto
+      ( long "end"
+     <> metavar "UTCTIME"
+     <> help "Anchor end time (UTC). Defaults to now. (format: YYYY-MM-DD HH:MM:SS UTC)" ))
+  <*> option auto
+      ( long "empty-thresh"
+     <> metavar "N"
+     <> value 0
+     <> showDefault
+     <> help "empty_thresh value to cache." )
+  <*> option auto
+      ( long "full-thresh"
+     <> metavar "N"
+     <> value 0
+     <> showDefault
+     <> help "full_thresh value to cache." )
+  where
+    parseSpans :: String -> Either String [Int]
+    parseSpans s =
+      let parts = filter (not . null) (splitOn ',' s)
+      in traverse readInt parts
+    splitOn c = foldr (\x acc -> if x == c then [] : acc else (x : head acc) : tail acc) [[]]
+    readInt p = case reads p of
+      [(n, "")] | n > 0 -> Right n
+      _                 -> Left ("invalid span '" <> p <> "': expected positive integer")

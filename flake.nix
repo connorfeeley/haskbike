@@ -228,6 +228,7 @@
                     timescaledb-parallel-copy
 
                     ghostscript
+                    k6
                     ;
                   inherit (pkgs.nodePackages) prettier;
                   # PostgreSQL with extensions

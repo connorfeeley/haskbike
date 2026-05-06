@@ -17,8 +17,10 @@ import           Data.Foldable                   ( for_ )
 import qualified Data.Text                       as T
 import qualified Data.Text                       as Text
 
+import           Data.Time                                   ( NominalDiffTime, UTCTime, getCurrentTime )
+
 import           Haskbike.API.Client
-import           Haskbike.API.ClientLifted       ( runQueryM )
+import           Haskbike.API.ClientLifted                   ( runQueryM )
 import           Haskbike.API.ResponseWrapper
 import           Haskbike.API.StationInformation
 import           Haskbike.API.StationStatus
@@ -27,6 +29,7 @@ import           Haskbike.CLI.Options
 import           Haskbike.Database.BikeShare
 import           Haskbike.Database.ImportExport
 import           Haskbike.Database.Operations
+import           Haskbike.Database.Operations.StationOccupancy ( warmStationOccupancyAllStations )
 import           Haskbike.Database.Utils
 
 import           Servant.Client                  ( ClientError )
@@ -52,10 +55,11 @@ dispatchDatabase options = do
 
 dispatchDatabaseCmd :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m)
                     => Options -> Command -> m ()
-dispatchDatabaseCmd options (Database Migrate)                 = handleMigrate options
-dispatchDatabaseCmd options (Database (Export  exportOptions)) = handleExport  options exportOptions
-dispatchDatabaseCmd options (Database (Reset   resetOptions))  = handleReset   options resetOptions
-dispatchDatabaseCmd _ _                                        = pure ()
+dispatchDatabaseCmd options (Database Migrate)                       = handleMigrate options
+dispatchDatabaseCmd options (Database (Export        exportOptions)) = handleExport  options exportOptions
+dispatchDatabaseCmd options (Database (Reset         resetOptions))  = handleReset   options resetOptions
+dispatchDatabaseCmd _       (Database (WarmOccupancy warmOptions))   = handleWarmOccupancy warmOptions
+dispatchDatabaseCmd _ _                                              = pure ()
 
 
 -- | Handle 'Migrate' command.
@@ -95,6 +99,28 @@ handleReset options resetOptions = do
     else logWarning "Resetting database..."      >> dropTables >> logWarning "Database reset." >>
          logWarning "Migrating database."        >> migrateDB  >> logWarning "Migrations performed." >>
          logInfo "Initializing database."        >> handleInformation >> liftIO exitSuccess
+
+-- | Handle the 'WarmOccupancy' command.
+--
+-- Iterates the requested span list and pre-fills the @station_occupancy@
+-- cache for each window ending at the anchor time. Logs a brief progress
+-- line per span.
+handleWarmOccupancy :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m)
+                    => WarmOccupancyOptions -> m ()
+handleWarmOccupancy opts = do
+  anchor <- maybe (liftIO getCurrentTime) pure (optWarmAnchorEnd opts)
+  let emptyT = fromIntegral (optWarmEmptyThresh opts)
+      fullT  = fromIntegral (optWarmFullThresh  opts)
+      spans  = optWarmSpansDays opts
+  logInfo $ "Warming station_occupancy cache; anchor=" <> T.pack (show anchor)
+         <> ", spans(days)=" <> T.pack (show spans)
+         <> ", empty/full thresholds=" <> T.pack (show (optWarmEmptyThresh opts, optWarmFullThresh opts))
+  for_ spans $ \days -> do
+    let spanSec :: NominalDiffTime
+        spanSec = fromIntegral (days * 24 * 60 * 60)
+    logInfo $ "  span=" <> T.pack (show days) <> "d ..."
+    warmStationOccupancyAllStations emptyT fullT (anchor :: UTCTime) spanSec
+  logInfo "station_occupancy warming complete."
 
 -- | Helper for station information request.
 handleInformation :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m) => m ()

@@ -21,6 +21,7 @@ module Haskbike.Database.Schema.V001.StationInformation
      , stationInformationModification
      , unInformationReported
        -- Lenses
+     , extraInfoIndexMigrations
      , extraInfoMigrations
      , infoActive
      , infoAddress
@@ -474,3 +475,15 @@ createStationInformation =
 
 extraInfoMigrations :: IsString a => [a]
 extraInfoMigrations = ["ALTER TABLE public.station_status ADD CONSTRAINT fk_station_information FOREIGN KEY (info_station_id, info_reported) REFERENCES public.station_information (station_id, reported) ON UPDATE CASCADE"]
+
+-- | Index supporting the @(PARTITION BY station_id ORDER BY id DESC)@ window
+-- frame used by 'queryLatestInfo', 'queryLatestInfoBefore', and
+-- 'queryChargingInfrastructureE' in @Haskbike.Database.Expressions@.
+--
+-- Without this, Postgres seq-scans @station_information@ and sorts on every
+-- call (observed at ~450 ms mean for a 1-row return, see
+-- @bench-results/STATUS.md@).
+extraInfoIndexMigrations :: IsString a => [a]
+extraInfoIndexMigrations =
+  [ "CREATE INDEX IF NOT EXISTS station_information_station_id_id_desc_idx ON public.station_information (station_id, id DESC)"
+  ]

@@ -102,7 +102,7 @@ performanceCsvHandler stationId startTime endTime = do
 
   (integrals, emptyFullTup) <- concurrently
     (queryIntegratedStatus variation)
-    (queryStationOccupancy 0 0 stationId (localTimeToUTC tz (earliestTime range)) (localTimeToUTC tz (latestTime range)))
+    (queryStationOccupancyBucketed 0 0 stationId (localTimeToUTC tz (earliestTime range)) (localTimeToUTC tz (latestTime range)))
 
   let emptyFull = head $ map (\(_inf, occ) -> DB.emptyFullFromSecs (DB._stnOccEmptySec occ) (DB._stnOccFullSec occ)) emptyFullTup
 
@@ -190,7 +190,7 @@ handleEmptyFullData start end = do
   logInfo $ "Rendering station empty/full data for time [" <> tshow start <> " - " <> tshow end <> "]"
 
   (latest, emptyFull) <- concurrently (queryStationBefore (end' currentUtc tz))
-                                      (queryStationOccupancy 0 0 (Nothing :: Maybe Int) (start' currentUtc tz) (end' currentUtc tz)
+                                      (queryStationOccupancyBucketed 0 0 (Nothing :: Maybe Int) (start' currentUtc tz) (end' currentUtc tz)
                                       )
   let combined = combineStations latest (resultToEmptyFull emptyFull)
 

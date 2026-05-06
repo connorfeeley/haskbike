@@ -2,9 +2,12 @@
 
 module Haskbike.Database.Operations.StationOccupancy
      ( lookupStationOccupancy
+     , occupancyCacheBucket
      , queryStationOccupancy
+     , queryStationOccupancyBucketed
      , queryStationOccupancyE
      , stationOccupancyE
+     , warmStationOccupancyAllStations
      ) where
 
 import           Control.Lens                                hiding ( reuse, (<.) )
@@ -13,6 +16,7 @@ import           Control.Monad.Catch                         ( MonadCatch )
 
 import           Data.Int                                    ( Int32 )
 import           Data.Time
+import           Data.Time.Extras                            ( ceilingUtcToBucket, floorUtcToBucket )
 
 import           Database.Beam
 import           Database.Beam.Backend.SQL.BeamExtensions    ( MonadBeamInsertReturning, conflictingFields,
@@ -226,6 +230,53 @@ queryStationOccupancy :: (HasEnv env m, MonadCatch m, Integral a)
                       -> m [(StationInformation, StationOccupancy)]
 queryStationOccupancy emptyThresh fullThresh stationId startT endT = do
   withPostgresTransaction $ queryStationOccupancyE emptyThresh fullThresh stationId startT endT
+
+-- | Bucket size used by 'queryStationOccupancyBucketed' and
+-- 'warmStationOccupancyAllStations' when keying the @station_occupancy@
+-- cache. Requests landing inside the same bucket pair share a cache entry.
+--
+-- 1 hour is small enough to be invisible on the long-range visualizations
+-- this cache feeds, and large enough to collapse the per-microsecond
+-- @now()@-style ranges that the UI tends to generate into a small number
+-- of distinct keys.
+occupancyCacheBucket :: NominalDiffTime
+occupancyCacheBucket = 3600
+
+-- | 'queryStationOccupancy', but with @startT@ floored and @endT@ ceilinged
+-- to 'occupancyCacheBucket' boundaries before lookup. Prefer this from
+-- HTTP handlers: per-request unique ranges (e.g. anything derived from
+-- @now()@) collide on a hour-aligned key, turning the second-and-later
+-- request for the same hour into a cache hit.
+--
+-- Returned data covers AT LEAST the requested range (by up to one bucket
+-- on each end). For day- or week-scale visualizations this is invisible.
+queryStationOccupancyBucketed :: (HasEnv env m, MonadCatch m, Integral a)
+                              => Int32 -> Int32 -> Maybe a -> UTCTime -> UTCTime
+                              -> m [(StationInformation, StationOccupancy)]
+queryStationOccupancyBucketed emptyThresh fullThresh stationId startT endT =
+  queryStationOccupancy emptyThresh fullThresh stationId
+    (floorUtcToBucket   occupancyCacheBucket startT)
+    (ceilingUtcToBucket occupancyCacheBucket endT)
+
+-- | Pre-populate the @station_occupancy@ cache for every station whose
+-- @info_active@ is currently true, for the bucket-aligned range
+-- @[floor(end - span), ceiling(end)]@. Idempotent: the underlying
+-- @INSERT ... ON CONFLICT@ updates the row in place.
+--
+-- Intended for periodic invocation (cron / systemd timer) so the request
+-- path always hits the cache. The expensive 'stationOccupancyThreshE' CTE
+-- runs once per bucket here, off the request path.
+warmStationOccupancyAllStations :: (HasEnv env m, MonadCatch m)
+                                => Int32 -> Int32 -> UTCTime -> NominalDiffTime
+                                -> m ()
+warmStationOccupancyAllStations emptyThresh fullThresh anchorEnd spanSec = do
+  let endBucket   = ceilingUtcToBucket occupancyCacheBucket anchorEnd
+      startBucket = floorUtcToBucket   occupancyCacheBucket (addUTCTime (negate spanSec) anchorEnd)
+  withPostgresTransaction $
+    runInsert $
+      cacheStationOccupancy emptyThresh fullThresh
+        (Nothing :: Maybe Int32)
+        startBucket endBucket
 
 queryStationOccupancyE :: (Integral a, MonadBeamInsertReturning Postgres m)
                       => Int32 -> Int32 -> Maybe a -> UTCTime -> UTCTime

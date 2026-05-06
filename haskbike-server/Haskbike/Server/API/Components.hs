@@ -130,7 +130,7 @@ performanceHeaderHandler stationId startTime endTime = do
         [ EarliestTime (localTimeToUTC tz (earliestTime range))
         , LatestTime   (localTimeToUTC tz (latestTime   range))
         ])
-    (queryStationOccupancy 0 0 stationId' (localTimeToUTC tz (earliestTime range)) (localTimeToUTC tz (latestTime range)))
+    (queryStationOccupancyBucketed 0 0 stationId' (localTimeToUTC tz (earliestTime range)) (localTimeToUTC tz (latestTime range)))
 
   mapPerformanceResult (listToMaybe statusIntegrals) (listToMaybe emptyFullTups)
   where
