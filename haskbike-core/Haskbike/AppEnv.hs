@@ -373,9 +373,19 @@ mkDatabaseConnectionPool :: MonadIO m => ConnectInfo -> m (Pool Connection)
 mkDatabaseConnectionPool = mkDatabaseConnectionPoolFrom acquireDbConnection
 {-# INLINE mkDatabaseConnectionPool #-}
 
+-- | Construct a 'resource-pool' 'Pool' for Postgres connections. The
+-- maximum pool size honours @HASKBIKE_PG_POOL_SIZE@ when set to a
+-- positive integer; otherwise it falls back to 'numCapabilities' so
+-- existing deployments keep their current sizing.
+--
+-- Under burst load, the DB pool can be a bottleneck.
 mkDatabaseConnectionPoolFrom :: MonadIO m => (t -> IO Connection) -> t -> m (Pool Connection)
-mkDatabaseConnectionPoolFrom connectFn param =
-  liftIO . newPool $ defaultPoolConfig (connectFn param) releaseDbConnection 5 numCapabilities
+mkDatabaseConnectionPoolFrom connectFn param = liftIO $ do
+  envSize <- lookupEnv "HASKBIKE_PG_POOL_SIZE"
+  let poolSize = case (readMaybe :: String -> Maybe Int) =<< envSize of
+        Just n | n > 0 -> n
+        _              -> numCapabilities
+  newPool $ defaultPoolConfig (connectFn param) releaseDbConnection 5 poolSize
 {-# INLINE mkDatabaseConnectionPoolFrom #-}
 
 acquireDbConnection :: ConnectInfo -> IO Connection
