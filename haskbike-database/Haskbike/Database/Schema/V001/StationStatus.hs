@@ -15,6 +15,7 @@ module Haskbike.Database.Schema.V001.StationStatus
      , StationStatusId
      , StationStatusT (..)
      , createStationStatus
+     , extraStatusMigrations
      , extraVehicleTypeColumnMigrations
      , fromBeamStationStatusToJSON
      , fromJSONToBeamStationStatus
@@ -320,8 +321,18 @@ createStationStatus tableName =
                                                (field "vehicle_types_available_metro"   int notNull (defaultTo_ 0))
   }
 
-_extraStatusMigrations :: IsString a => [a]
-_extraStatusMigrations = ["CREATE INDEX IF NOT EXISTS station_status_info_station_id_last_reported_idx ON station_status (info_station_id, last_reported);"]
+-- | Critical index for time-window queries against @station_status@.
+-- Supports @(info_station_id, last_reported)@ lookups used by every
+-- per-station time-bounded status query: 'integrateColumns',
+-- 'queryStationStatusBetween', 'statusBetweenExpr',
+-- 'queryDockingEventsCount', 'queryChargingEventsCount', and the
+-- @station_occupancy@ cache fill. Without it, those queries seq-scan
+-- @station_status@ (~100M rows in production) on every miss.
+--
+-- Idempotent (@IF NOT EXISTS@), so deployments that already created the
+-- index manually are unaffected.
+extraStatusMigrations :: IsString a => [a]
+extraStatusMigrations = ["CREATE INDEX IF NOT EXISTS station_status_info_station_id_last_reported_idx ON public.station_status (info_station_id, last_reported);"]
 
 
 -- | Idempotent ALTER TABLE statements that ensure the per-vehicle-type columns exist on

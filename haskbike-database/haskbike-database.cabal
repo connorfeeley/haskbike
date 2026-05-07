@@ -143,6 +143,7 @@ library
                     , Haskbike.Database.Schema.V004.BikeShare
                     , Haskbike.Database.Schema.V004.Migrations
                     , Haskbike.Database.Schema.V004.StationOccupancy
+                    , Haskbike.Database.Schema.V005.Migrations
 
 
     -- LANGUAGE extensions used by modules in this package.
