@@ -46,6 +46,8 @@ fromBeamSysInfoCntToVisJSON sysInfCnt =
 generateJsonDataSourceSysInfo :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m)
                               => Maybe LocalTime -> Maybe LocalTime -> m [SystemInformationCountVisualization]
 generateJsonDataSourceSysInfo startTime endTime = do
-  result <- queryLatestSystemInfo startTime endTime
+  tz <- getTz
+  let toUtc = fmap (localTimeToUTC tz)
+  result <- queryLatestSystemInfo (toUtc startTime) (toUtc endTime)
 
   pure $ map fromBeamSysInfoCntToVisJSON result

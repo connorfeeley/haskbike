@@ -18,6 +18,7 @@ module Haskbike.Database.Schema.V001.SystemInformation
      , SystemInformationT (..)
      , createSystemInformation
      , createSystemInformationCount
+     , extraSystemInformationCountIndexMigrations
      , fromBeamSystemInformationToJSON
      , fromJSONToBeamSystemInformation
      , fromJSONToBeamSystemInformationCount
@@ -227,3 +228,11 @@ createSystemInformationCount =
   , _sysInfCntMechanicalCount = field "mechanical_count"               int notNull
   , _sysInfCntEbikeCount      = field "ebike_count"                    int notNull
   }
+
+-- | Index supporting the @reported BETWEEN ?@ predicate in
+-- @queryLatestSystemInfoBetweenE@. Without it, a bounded query still
+-- seq-scans the whole table to find rows in the requested range.
+extraSystemInformationCountIndexMigrations :: IsString a => [a]
+extraSystemInformationCountIndexMigrations =
+  [ "CREATE INDEX IF NOT EXISTS system_information_count_reported_idx ON public.system_information_count (reported)"
+  ]

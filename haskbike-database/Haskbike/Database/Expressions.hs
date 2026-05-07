@@ -23,6 +23,7 @@ module Haskbike.Database.Expressions
      , queryLatestStatusBetweenExpr
      , queryLatestStatusLookup
      , queryLatestStatuses
+     , queryLatestSystemInfoBetweenE
      , queryLatestSystemInfoE
      , queryStationBefore
      , queryStationBeforeExpr
@@ -466,6 +467,25 @@ queryLatestSystemInfoE = do
     Pg.pgNubBy_ (\cnt -> (_sysInfCntStationCount cnt, _sysInfCntMechanicalCount cnt, _sysInfCntEbikeCount cnt)) $
     orderBy_ (asc_ . (_sysInfKeyReported . _sysInfCntKey))
     (all_ (bikeshareDb ^. bikeshareSystemInformationCount))
+
+  pure $ reuse sysInfoCte
+
+-- | Time-bounded variant of 'queryLatestSystemInfoE'. Filters
+-- @system_information_count@ to rows whose @reported@ falls in
+-- @[start, end]@ before deduping unique count tuples. The bound predicate
+-- is sargable on @reported@ so it benefits from a btree index on that
+-- column (see @extraSystemInformationCountIndexMigrations@).
+queryLatestSystemInfoBetweenE :: be ~ Postgres
+                              => UTCTime -> UTCTime
+                              -> With be BikeshareDb
+                              (Q be BikeshareDb s (SystemInformationCountT (QGenExpr QValueContext Postgres s)))
+queryLatestSystemInfoBetweenE startT endT = do
+  sysInfoCte <- selecting $
+    Pg.pgNubBy_ (\cnt -> (_sysInfCntStationCount cnt, _sysInfCntMechanicalCount cnt, _sysInfCntEbikeCount cnt)) $
+    orderBy_ (asc_ . (_sysInfKeyReported . _sysInfCntKey)) $
+    filter_ (\cnt -> between_ (_sysInfKeyReported (_sysInfCntKey cnt))
+                              (val_ startT) (val_ endT)) $
+    all_ (bikeshareDb ^. bikeshareSystemInformationCount)
 
   pure $ reuse sysInfoCte
 
