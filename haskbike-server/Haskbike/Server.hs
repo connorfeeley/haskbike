@@ -15,6 +15,7 @@ module Haskbike.Server
 import           Colog                                     ( HasLog, logError )
 
 import           Control.Conditional                       ( condM )
+import           Control.Exception                         ( fromException )
 import           Control.Monad.Catch                       ( MonadThrow )
 import           Control.Monad.Reader
 
@@ -108,11 +109,24 @@ serverNt env action =
   where
     onError x = runReaderT (unServerAppM (exceptionHandler x)) env
 
+-- | Catch handler for the natural transformation. Distinguishes intentional
+-- 'ServerError's (thrown via 'throwError', e.g. @err404 "Unknown station ID."@)
+-- from genuine runtime exceptions:
+--
+--   * 'ServerError' is re-thrown unchanged so its status / body / headers
+--     reach the client as the handler intended.
+--   * Anything else is logged and downgraded to a 500 with a generic body.
+--
+-- Without this distinction the catch-all rewrites every 4xx into a 500,
+-- which is what was masking the @viz-station-status@ "Unknown station ID."
+-- 404s as opaque server errors.
 exceptionHandler :: (MonadReader env m, HasLog env Message m, MonadThrow m, HasServerEnv env m) => SomeException -> m b
-exceptionHandler ex = do
-  email <- getServerContactEmail
-  logError $ "Caught servant exception (" <> "" <> "): " <> T.pack (show ex)
-  throwError (servantErrFromEx email ex)
+exceptionHandler ex
+  | Just (servantErr :: S.ServerError) <- fromException ex = throwError servantErr
+  | otherwise = do
+      email <- getServerContactEmail
+      logError $ "Caught unexpected exception: " <> T.pack (show ex)
+      throwError (servantErrFromEx email ex)
 
 servantErrFromEx :: Exception e => T.Text -> e -> S.ServerError
 servantErrFromEx email _ex =
