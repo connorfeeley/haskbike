@@ -593,6 +593,14 @@ maybeFilterDaysAgo reportedField (Just days) = filter_ (\s -> s ^. reportedField
 maybeFilterDaysAgo _ Nothing                 = id
 
 -- | Query charging infrastructure at given time.
+--
+-- Uses the windowed-RANK implementation. A 'pgNubBy_' (DISTINCT ON)
+-- variant was A/B-tested against the production mirror and lost on
+-- every measurement (~+11 % per-call mean, ~+73 % p95 for the
+-- @comp-charging-infra@ endpoint), see @bench-results/STATUS.md@. With
+-- the V005 @(station_id, id DESC)@ index the @WindowAgg@ runs in index
+-- order and the partitions are small (one row per station), so the
+-- DISTINCT ON sort+dedup overhead does not pay off here.
 queryChargingInfrastructure :: (MonadCatch m, HasEnv env m)
                             => UTCTime
                             -> m (Maybe (Int32, Int32))

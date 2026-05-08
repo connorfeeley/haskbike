@@ -35,6 +35,13 @@ import           UnliftIO                                    ( MonadUnliftIO )
 
 
 -- | Query the number of dockings and undockings for a station.
+--
+-- Uses the windowed-RANK implementation. A 'pgNubBy_' (DISTINCT ON)
+-- variant was A/B-tested against the production mirror and lost on
+-- both endpoint p95 (`data-events-docking` 192 → 2634 ms,
+-- `comp-events-docking` 426 → 2224 ms) and SQL mean exec, see
+-- @bench-results/STATUS.md@. RANK + the V005 station_status index
+-- beats DISTINCT ON for the small partitions this query produces.
 queryDockingEventsCount :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m)
                         => StatusVariationQuery -> m [DockingEventsCount]
 queryDockingEventsCount variation =  do
