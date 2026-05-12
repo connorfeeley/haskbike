@@ -39,6 +39,7 @@ import           Database.Beam.Postgres                 ( Pg, SqlError )
 import           Database.PostgreSQL.Simple.Transaction ( withTransaction )
 
 import           Haskbike.AppEnv
+import           Haskbike.Server.Cache.ChargingInfra    ( ChargingInfraCache, newChargingInfraCache )
 import           Haskbike.Server.ExternalAssets
 
 import           Prelude                                ()
@@ -64,13 +65,14 @@ newtype ServerAppM a where
                    )
 
 data ServerEnv m = ServerEnv
-  { serverEnvBase         :: !(Env AppM)
-  , serverPort            :: !Int                   -- ^ Port number on which the server is running
-  , serverTimeoutSeconds  :: !Int                   -- ^ Timeout in seconds for the server.
-  , serverGzipCompression :: !Bool                  -- ^ Whether to use gzip compression.
-  , serverMaxIntervals    :: !Pico
-  , serverContactEmail    :: !T.Text
-  , serverAssets          :: !ExternalAssetLocation
+  { serverEnvBase             :: !(Env AppM)
+  , serverPort                :: !Int                   -- ^ Port number on which the server is running
+  , serverTimeoutSeconds      :: !Int                   -- ^ Timeout in seconds for the server.
+  , serverGzipCompression     :: !Bool                  -- ^ Whether to use gzip compression.
+  , serverMaxIntervals        :: !Pico
+  , serverContactEmail        :: !T.Text
+  , serverAssets              :: !ExternalAssetLocation
+  , serverChargingInfraCache  :: !ChargingInfraCache    -- ^ In-memory TTL cache for the @comp-charging-infrastructure@ endpoint.
   }
 
 {- | Type alias for constraint for:
@@ -86,22 +88,24 @@ type WithServerEnv m = HasServerEnv (ServerEnv ServerAppM) m
 
 -- | 'HasServerEnv' class
 class (HasLog env Message m, MonadReader env m, MonadError S.ServerError m, MonadUnliftIO m, MonadCatch m) => HasServerEnv env m where
-  getServerPort            :: m Int
-  getServerTimeoutSeconds  :: m Int
-  getServerGzipCompression :: m Bool
-  getServerMaxIntervals    :: m Pico
-  getServerContactEmail    :: m T.Text
-  getServerAssetsLocation  :: m ExternalAssetLocation
+  getServerPort               :: m Int
+  getServerTimeoutSeconds     :: m Int
+  getServerGzipCompression    :: m Bool
+  getServerMaxIntervals       :: m Pico
+  getServerContactEmail       :: m T.Text
+  getServerAssetsLocation     :: m ExternalAssetLocation
+  getServerChargingInfraCache :: m ChargingInfraCache
 
 
 -- | 'HasServerEnv' instance for 'ServerEnv'
 instance (Monad m, MonadReader (ServerEnv m) m, HasLog (ServerEnv m) Message m, MonadUnliftIO m, MonadError S.ServerError m, MonadCatch m) => HasServerEnv (ServerEnv m) m where
-  getServerPort            = asks serverPort
-  getServerTimeoutSeconds  = asks serverTimeoutSeconds
-  getServerGzipCompression = asks serverGzipCompression
-  getServerMaxIntervals    = asks serverMaxIntervals
-  getServerContactEmail    = asks serverContactEmail
-  getServerAssetsLocation  = asks serverAssets
+  getServerPort               = asks serverPort
+  getServerTimeoutSeconds     = asks serverTimeoutSeconds
+  getServerGzipCompression    = asks serverGzipCompression
+  getServerMaxIntervals       = asks serverMaxIntervals
+  getServerContactEmail       = asks serverContactEmail
+  getServerAssetsLocation     = asks serverAssets
+  getServerChargingInfraCache = asks serverChargingInfraCache
 
 
 -- | 'HasLogger' instance for 'ServerAppM'
@@ -212,14 +216,16 @@ runServerAppM env app = flip runReaderT env $ unServerAppM app
 -- | Helper function to create a server environment
 createServerEnv :: Severity -> Bool -> Bool -> String -> IO (ServerEnv ServerAppM)
 createServerEnv sev logDatabase richLogging dbname = do
-  env <- createAppEnv sev logDatabase richLogging dbname
-  pure $ ServerEnv { serverEnvBase         = env
-                   , serverPort            = 8081
-                   , serverTimeoutSeconds  = 5 * 60
-                   , serverGzipCompression = True
-                   , serverMaxIntervals    = 20
-                   , serverContactEmail    = "bikes@cfeeley.org"
-                   , serverAssets          = ExternalAssetCDN
+  env                <- createAppEnv sev logDatabase richLogging dbname
+  chargingInfraCache <- newChargingInfraCache
+  pure $ ServerEnv { serverEnvBase            = env
+                   , serverPort               = 8081
+                   , serverTimeoutSeconds     = 5 * 60
+                   , serverGzipCompression    = True
+                   , serverMaxIntervals       = 20
+                   , serverContactEmail       = "bikes@cfeeley.org"
+                   , serverAssets             = ExternalAssetCDN
+                   , serverChargingInfraCache = chargingInfraCache
                    }
 
 -- | Helper function to run a computation in the ServerAppM monad, returning an IO monad.

@@ -10,9 +10,10 @@ import qualified Data.Text            as T
 import           Haskbike.AppEnv
 import           Haskbike.CLI.Options
 import           Haskbike.Server
+import           Haskbike.Server.Cache.ChargingInfra ( newChargingInfraCache )
 import           Haskbike.ServerEnv
 
-import           UnliftIO             ( liftIO )
+import           UnliftIO                            ( liftIO )
 
 
 -- | Dispatch CLI arguments to the visualization server.
@@ -23,13 +24,16 @@ dispatchServer options = do
 
   logInfo $ "Launching visualization web server on port " <> (T.pack . show) (optServerPort options)
 
-  let serverEnv = ServerEnv { serverEnvBase         = env
-                            , serverPort            = optServerPort options
-                            , serverTimeoutSeconds  = 5 * 60
-                            , serverGzipCompression = True
-                            , serverMaxIntervals    = 20
-                            , serverContactEmail    = "bikes@cfeeley.org"
-                            , serverAssets          = optServerAssetLocation options
+  chargingInfraCache <- newChargingInfraCache
+
+  let serverEnv = ServerEnv { serverEnvBase            = env
+                            , serverPort               = optServerPort options
+                            , serverTimeoutSeconds     = 5 * 60
+                            , serverGzipCompression    = True
+                            , serverMaxIntervals       = 20
+                            , serverContactEmail       = "bikes@cfeeley.org"
+                            , serverAssets             = optServerAssetLocation options
+                            , serverChargingInfraCache = chargingInfraCache
                             }
 
   logInfo $ "Gzip compression enabled: " <> (T.pack . show) (serverGzipCompression serverEnv)

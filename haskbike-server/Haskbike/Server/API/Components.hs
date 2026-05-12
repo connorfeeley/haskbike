@@ -30,6 +30,7 @@ import           Haskbike.Database.StatusVariationQuery                  ( Statu
 import           Haskbike.Database.Tables.StationInformation
 import           Haskbike.Database.Tables.StationOccupancy
 import qualified Haskbike.Database.Tables.StationOccupancy               as DB
+import           Haskbike.Server.Cache.ChargingInfra                     ( lookupOrFillChargingInfra )
 import           Haskbike.Server.Components.ChargingHeader
 import           Haskbike.Server.Components.ChargingInfrastructureHeader
 import           Haskbike.Server.Components.DockingHeader
@@ -98,14 +99,18 @@ chargingsHeader stationId startTime endTime = do
 
   pure $ ChargingHeader chargings
 
-chargingInfrastructureHeaderHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadError ServerError m)
+chargingInfrastructureHeaderHandler :: (HasEnv env m, MonadIO m, MonadCatch m, MonadError ServerError m, HasServerEnv env m)
                                     => Maybe LocalTime -> m ChargingInfrastructureHeader
 chargingInfrastructureHeaderHandler t = do
   tz <- getTz
   currentUtc <- liftIO getCurrentTime
 
-  -- Query charging infrastructure at given time.
-  infra <- queryChargingInfrastructure (maybe currentUtc (localTimeToUTC tz) t)
+  -- Query charging infrastructure at given time, via the in-memory
+  -- TTL cache. Concurrent users hitting "now" collide on the same
+  -- 5-minute bucketed key, so the ~600 ms SQL runs once per bucket
+  -- instead of once per request.
+  ref <- getServerChargingInfraCache
+  infra <- lookupOrFillChargingInfra ref (maybe currentUtc (localTimeToUTC tz) t)
 
   case infra of
     Just (eStationCnt, eDockCnt) ->
