@@ -205,7 +205,16 @@ cacheStationOccupancy emptyThresh fullThresh stationId startT endT =
            , empty
            , full
            )))
-    (conflictingFields primaryKey) Pg.onConflictUpdateAll
+    -- Was 'conflictingFields primaryKey' originally. That emits a column
+    -- list whose names didn't match the @uniq_station_occupancy@ unique
+    -- constraint at runtime (Beam's resolution of the nested
+    -- @PrimaryKey StationInformationT@ inside @_stnOccInfo@ produced
+    -- column names that Postgres couldn't bind to the constraint,
+    -- yielding @42P10 there is no unique or exclusion constraint
+    -- matching the ON CONFLICT specification@). Referring to the
+    -- constraint by name is unambiguous. The constraint itself is
+    -- created idempotently by @extraOccupancyKeyMigrations@.
+    (Pg.conflictingConstraint "uniq_station_occupancy") Pg.onConflictUpdateAll
 
 
 -- | Lookup station occupancy record from cache table.

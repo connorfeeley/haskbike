@@ -80,5 +80,6 @@ migrateDB = do
     forM_ V001.extraSystemInformationCountIndexMigrations $ \mig -> execute_ conn mig
     forM_ V001.extraStatusMigrations                      $ \mig -> execute_ conn mig
     forM_ V004.extraOccupancyMigrations                   $ \mig -> execute_ conn mig
+    forM_ V004.extraOccupancyKeyMigrations                $ \mig -> execute_ conn mig
 
   pure checkedDbSettings

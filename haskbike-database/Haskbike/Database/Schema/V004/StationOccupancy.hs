@@ -13,6 +13,7 @@ module Haskbike.Database.Schema.V004.StationOccupancy
      , StationOccupancyT (..)
      , createStationOccupancy
      , emptyFullFromSecs
+     , extraOccupancyKeyMigrations
      , extraOccupancyMigrations
      , stnOccCalculated
      , stnOccEmptySec
@@ -133,6 +134,26 @@ createStationOccupancy =
 
 extraOccupancyMigrations :: IsString a => [a]
 extraOccupancyMigrations = extraOccupancyConstraint "station_occupancy" "station_information" "fk_station_occupancy" ["station_id", "reported"] ["station_id", "reported"]
+
+-- | Idempotent UNIQUE constraint on the Beam @StationOccupancyT@
+-- primary-key columns @(station_id, reported, range_start, range_end,
+-- empty_thresh, full_thresh)@. Required for the @ON CONFLICT@ clause
+-- in @cacheStationOccupancy@: Postgres needs a unique or exclusion
+-- constraint on the exact column set named in @ON CONFLICT (...)@, and
+-- Beam's @createTable@ does not emit a PK constraint matching its
+-- @primaryKey@ definition for this table (the schema was originally
+-- generated without it; production-mirror DBs inherit that state). On
+-- a fresh DB the constraint name created here is a no-op alongside the
+-- Beam-generated PK; on an inherited DB it provides the missing
+-- constraint.
+extraOccupancyKeyMigrations :: IsString a => [a]
+extraOccupancyKeyMigrations = map fromString
+  [ "ALTER TABLE public.station_occupancy DROP CONSTRAINT IF EXISTS uniq_station_occupancy"
+  , T.unpack $
+      "ALTER TABLE public.station_occupancy ADD CONSTRAINT uniq_station_occupancy UNIQUE ("
+      <> T.intercalate ", " ["station_id", "reported", "range_start", "range_end", "empty_thresh", "full_thresh"]
+      <> ")"
+  ]
 
 extraOccupancyConstraint :: IsString a => T.Text -> T.Text -> T.Text -> [T.Text] -> [T.Text] -> [a]
 extraOccupancyConstraint tableName foreignTableName constraintName columns foreignColumns =
