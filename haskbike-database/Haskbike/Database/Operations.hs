@@ -18,8 +18,14 @@ module Haskbike.Database.Operations
      , module Haskbike.Database.Operations.StatusChanges
      , insertStationInformation
      , insertStationInformation'
+     , insertStationInformation'Pg
+     , insertStationInformationHistoric
+     , insertStationInformationHistoricPg
      , insertStationStatus
+     , insertStationStatusAsOf
+     , insertStationStatusAsOfPg
      , insertSystemInformation
+     , insertSystemInformationPg
      , lockTableAndSleep
      , printDisabledDocks
      , queryDisabledDocks
@@ -42,9 +48,10 @@ import           Control.Lens                                hiding ( reuse, (<.
 import           Control.Monad.Catch                         ( MonadCatch, MonadThrow )
 
 import           Data.Int                                    ( Int32 )
-import           Data.List                                   ( nubBy )
+import           Data.List                                   ( maximumBy, nubBy, partition )
 import qualified Data.Map                                    as Map
 import           Data.Maybe                                  ( catMaybes, fromMaybe, mapMaybe )
+import           Data.Ord                                    ( comparing )
 import           Data.Pool                                   ( withResource )
 import qualified Data.Text                                   as Text
 import           Data.Time
@@ -133,9 +140,19 @@ insertStationInformation' :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch 
                           -- ^ List of 'StationInformation' from the API response.
                           -> m ([StationInformation], [StationInformation], [StationInformation])
                           -- ^ List of 'StationInformation' that were: (active, updated, inserted).
-insertStationInformation' stations =
+insertStationInformation' =
   -- Use a transaction to ensure that the database is not left in an inconsistent state.
-  withPostgresTransaction $ do
+  withPostgresTransaction . insertStationInformation'Pg
+
+-- | 'Pg' core of 'insertStationInformation''. Demotes the currently active row for any station
+-- whose API payload is meaningfully different, then inserts the newer/new payloads as the new
+-- active rows. Runs outside a transaction of its own so callers (such as
+-- 'insertStationInformationHistoricPg') can compose it into a larger transaction.
+insertStationInformation'Pg :: [(UTCTime, AT.StationInformation)]
+                            -- ^ List of 'StationInformation' from the API response.
+                            -> Pg ([StationInformation], [StationInformation], [StationInformation])
+                            -- ^ List of 'StationInformation' that were: (active, updated, inserted).
+insertStationInformation'Pg stations = do
     -- Retrieve all active stations
     info <- runSelectReturningList $ select $
       filter_ (\inf -> _infoActive inf ==. val_ True)
@@ -161,6 +178,55 @@ insertStationInformation' stations =
      infoHasNewer apiInfo info = catMaybes . Map.elems $ Map.intersectionWith stationInfoChanged apiInfo info
      infoNewStation apiInfo info = Map.elems (Map.difference apiInfo info)
      idsToUpdate = map (fromIntegral . _infoId . fst)
+
+-- | Transactional wrapper for 'insertStationInformationHistoricPg'.
+insertStationInformationHistoric :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m)
+                                 => [(UTCTime, AT.StationInformation)]
+                                 -- ^ List of 'StationInformation' from the API response, potentially out of chronological order.
+                                 -> m ([StationInformation], [StationInformation])
+                                 -- ^ Rows inserted: (via the normal/newer path, directly as inactive history).
+insertStationInformationHistoric =
+  withPostgresTransaction . insertStationInformationHistoricPg
+
+{- | Insert historic (out-of-chronological-order) station information payloads without demoting
+the currently active row for any station.
+
+Used by the replay path: a replayed payload can be chronologically older than data already in
+the database, so it must never win the "active" row for its station. A payload is /newer/ for its
+station when its reported time is later than that station's currently active row's reported time,
+or when the station has no active row yet; such payloads go through the normal
+'insertStationInformation'Pg' path, which /does/ demote as usual. Payloads that are not newer are
+inserted directly as inactive history rows; this is a no-op
+(@ON CONFLICT (station_id, reported) DO NOTHING@) if that exact (station, reported) pair has
+already been inserted.
+-}
+insertStationInformationHistoricPg :: [(UTCTime, AT.StationInformation)]
+                                   -- ^ List of 'StationInformation' from the API response, potentially out of chronological order.
+                                   -> Pg ([StationInformation], [StationInformation])
+                                   -- ^ Rows inserted: (via the normal/newer path, directly as inactive history).
+insertStationInformationHistoricPg stations = do
+  activeInfo <- runSelectReturningList $ select $
+    filter_ (\inf -> _infoActive inf ==. val_ True)
+    (all_ (bikeshareDb ^. bikeshareStationInformation))
+
+  let activeReportedByStation = Map.fromList (map (\inf -> ((fromIntegral . _infoStationId) inf, _infoReported inf)) activeInfo)
+      isNewerThanActive (reported, apiInfo) = maybe True (reported >) (Map.lookup (AT.infoStationId apiInfo) activeReportedByStation)
+      (newer, older) = partition isNewerThanActive stations
+
+  (_, _, insertedNewer) <-
+    if null newer
+    then pure ([], [], [])
+    else insertStationInformation'Pg newer
+
+  insertedOlder <-
+    if null older
+    then pure []
+    else runInsertReturningList $
+         insertOnConflict (bikeshareDb ^. bikeshareStationInformation)
+         (insertExpressions (map (\(reported, apiInfo) -> fromJSONToBeamStationInformation reported apiInfo & infoActive .~ val_ False) older))
+         (conflictingFields primaryKey) onConflictDoNothing
+
+  pure (insertedNewer, insertedOlder)
 
 stationInfoChanged :: (UTCTime, AT.StationInformation) -> StationInformation -> Maybe (StationInformation, (UTCTime, AT.StationInformation))
 stationInfoChanged apiInfo info
@@ -229,6 +295,74 @@ insertStationStatus apiStatus =
       case Map.lookup (AT._statusStationId status) infoMap of
         Nothing  -> Nothing
         Just iId -> Just (iId, status)
+
+
+-- | Transactional wrapper for 'insertStationStatusAsOfPg'.
+insertStationStatusAsOf :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m)
+                        => [AT.StationStatus] -- ^ List of 'AT.StationStatus' from the API response, potentially out of chronological order.
+                        -> m [StationStatus]
+insertStationStatusAsOf =
+  withPostgresTransaction . insertStationStatusAsOfPg
+
+{- | Insert station statuses linked to the station_information row that was current /as of/
+each status's own @last_reported@ time, and advance 'station_lookup' only when doing so moves
+it forward.
+
+Used by the replay path: a replayed status can be chronologically older than the
+currently active station_information row, so linking it to that active row (as
+'insertStationStatus' does) would attribute it to the wrong station shape. Instead, for each
+status this looks up every station_information row on record for that station (active or not,
+unlike 'insertStationStatus') and picks the one with the latest @reported@ that is still @<=@ the
+status's @last_reported@ - the row that was actually in effect at that moment. A status with no
+such candidate (no info row exists at or before its @last_reported@) is dropped rather than
+inserted. 'station_lookup' - which points at each station's most recently seen status - is only
+advanced when the incoming status's @last_reported@ is later than the one already stored, so a
+historic insert can never regress the "latest status" pointer.
+-}
+insertStationStatusAsOfPg :: [AT.StationStatus] -- ^ List of 'AT.StationStatus' from the API response, potentially out of chronological order.
+                          -> Pg [StationStatus]
+insertStationStatusAsOfPg apiStatus = do
+    -- Retrieve every station_information row (active or not) for the stations in this batch.
+    info <- runSelectReturningList $ select $
+      filter_ (\inf -> _infoStationId inf `in_` map (val_ . fromIntegral . AT._statusStationId) apiStatus)
+      (all_ (bikeshareDb ^. bikeshareStationInformation))
+
+    let infoByStation  :: Map.Map Int [StationInformation] = Map.fromListWith (++)
+                                                              (map (\inf -> ((fromIntegral . _infoStationId) inf, [inf])) info)
+    let statusWithInfo :: [(StationInformation, AT.StationStatus)] = mapMaybe (asOfInfoFor infoByStation) apiStatus
+
+    status <- runInsertReturningList $
+              insertOnConflict (bikeshareDb ^. bikeshareStationStatus)
+              (insertExpressions
+               (mapMaybe (\(inf, sta) -> fromJSONToBeamStationStatus (StationInformationId (_infoStationId inf) (_infoReported inf)) sta) statusWithInfo)
+              ) (conflictingFields primaryKey) onConflictDoNothing
+
+    _statusLookup <- runInsertReturningList $
+      insertOnConflict (bikeshareDb ^. bikeshareStationLookup)
+      (insertExpressions $
+       map (\ss -> StationLookup (val_ $ StationStatusId (ss ^. statusInfoId) (ss ^. statusLastReported)))
+       (uniqueStatus status)
+      ) (conflictingFields (_unInformationStationId . _unStatusStationId . _stnLookup))
+        -- Only advance the lookup pointer forward: an out-of-order (historic) status must never
+        -- overwrite a lookup entry that already points at a later last_reported.
+        (onConflictUpdateSetWhere
+          (\current excluded ->
+             ((_unInformationReported . _unStatusStationId . _stnLookup) current <-. (_unInformationReported . _unStatusStationId . _stnLookup) excluded)
+             <> ((_unStatusLastReported . _stnLookup) current <-. (_unStatusLastReported . _stnLookup) excluded))
+          (\current excluded -> current_ ((_unStatusLastReported . _stnLookup) current) <. (_unStatusLastReported . _stnLookup) excluded))
+
+    pure status
+  where
+    uniqueStatus = nubBy (\s1 s2 -> (_unInformationStationId . _statusInfoId . _statusCommon) s1 == (_unInformationStationId . _statusInfoId . _statusCommon) s2)
+    -- Pick the station_information row that was current as of a status's last_reported: the
+    -- latest-reported row that is not later than the status itself. Drops statuses that have no
+    -- last_reported, or no station_information row on record at or before that time.
+    asOfInfoFor infoByStation status = do
+      lastReported <- AT._statusLastReported status
+      candidates   <- Map.lookup (AT._statusStationId status) infoByStation
+      case filter (\inf -> _infoReported inf <= lastReported) candidates of
+        []       -> Nothing
+        eligible -> Just (maximumBy (comparing _infoReported) eligible, status)
 
 
 {- |
@@ -388,6 +522,28 @@ insertSystemInformation reported inf = do
     insert (bikeshareDb ^. bikeshareSystemInformationCount)
     (insertExpressions [fromJSONToBeamSystemInformationCount reported inf])
   pure (insertedInfo, insertedInfoCount)
+
+{- | 'Pg' core combining the two inserts 'insertSystemInformation' performs (system_information,
+then system_information_count) into one action, for callers - such as the replay path - that need
+to run it as part of a larger transaction rather than its own standalone transaction. The returned
+count is the sum of rows inserted across /both/ tables; this is deliberately wider than the
+'Haskbike.API.APIEntity.APIPersistable' @insertAPI@ instance for @SystemInformationCountT@, whose
+count covers only the count-table insert.
+-}
+insertSystemInformationPg :: UTCTime
+                          -- ^ Time at which the system information was reported.
+                          -> AT.SystemInformation
+                          -- ^ 'SystemInformation' from the API response.
+                          -> Pg Int
+                          -- ^ Count of rows inserted across both tables.
+insertSystemInformationPg reported inf = do
+  insertedInfo <- runInsertReturningList $
+    insert (bikeshareDb ^. bikeshareSystemInformation)
+    (insertExpressions [fromJSONToBeamSystemInformation reported inf])
+  insertedInfoCount <- runInsertReturningList $
+    insert (bikeshareDb ^. bikeshareSystemInformationCount)
+    (insertExpressions [fromJSONToBeamSystemInformationCount reported inf])
+  pure (length insertedInfo + length insertedInfoCount)
 
 -- | Sleep the database for a given number of seconds.
 sleepDatabaseFor :: (HasEnv env m, MonadIO m, MonadCatch m, MonadUnliftIO m) => Int -> m ()

@@ -9,6 +9,7 @@ module Haskbike.CLI.Options
      , module Haskbike.CLI.Options.Events
      , module Haskbike.CLI.Options.Poll
      , module Haskbike.CLI.Options.Query
+     , module Haskbike.CLI.Options.Replay
      , module Haskbike.CLI.Options.Server
      , Options (..)
      , commandParser
@@ -21,6 +22,7 @@ import           Haskbike.CLI.Options.Debug
 import           Haskbike.CLI.Options.Events
 import           Haskbike.CLI.Options.Poll
 import           Haskbike.CLI.Options.Query
+import           Haskbike.CLI.Options.Replay
 import           Haskbike.CLI.Options.Server
 import           Haskbike.Database.Utils
 
@@ -95,6 +97,7 @@ data Command where
   Server         :: !ServerOptions   -> Command
   DebugMisc      :: !DebugCommand    -> Command
   Database       :: !DatabaseCommand -> Command
+  Replay         :: !ReplayOptions   -> Command
   deriving (Show)
 
 -- | Parser for 'Command'.
@@ -112,4 +115,6 @@ commandParser = hsubparser
     (info (DebugMisc     <$> debugCommandParser)     (progDesc (commandDesc @DebugCommand)))
   <> command "database"
     (info (Database      <$> databaseCommandParser)  (progDesc (commandDesc @DatabaseCommand)))
+  <> command "replay"
+    (info (Replay        <$> replayOptionsParser)    (progDesc (commandDesc @ReplayOptions)))
   )

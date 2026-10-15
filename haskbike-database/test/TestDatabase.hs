@@ -24,6 +24,7 @@ module TestDatabase
      , unit_insertStationStatus
      , unit_insertStationStatusApi
      , unit_insertSystemInformation
+     , unit_latestInfoOrdersByReported
      , unit_queryDockingUndockingCount
      , unit_queryStationByIdAndName
      , unit_queryStationStatus
@@ -44,6 +45,8 @@ import           Database.Beam.Postgres
 import           Haskbike.API.ResponseWrapper
 import qualified Haskbike.API.StationInformation             as AT
 import qualified Haskbike.API.SystemInformation              as AT
+import           Haskbike.API.Utils                          ( StationStatusSimple (..), baseStatus,
+                                                               stationStatusFromSimple )
 import           Haskbike.AppEnv
 import           Haskbike.Database.EventCounts
 import           Haskbike.Database.Expressions
@@ -434,3 +437,83 @@ unit_insertStationLookupLatest = withTempDbM Silent setupTestDatabase $ do
 
   liftIO $ assertEqual "Info lookup length" (length insertedInfo) (length infoLookup)
   liftIO $ assertEqual "Inserted station information is same as latest info" insertedInfo infoLookup
+
+
+{- | HUnit test that the "latest station_information per station" RANK windows order by
+@(reported DESC, id DESC)@, not by @id DESC@ alone.
+
+Replaying a failed query inserts a historically-older row /after/ a chronologically-later row
+already exists, so the replayed row can get a /higher/ @id@ than the already-inserted, more
+recently reported row. This test reproduces that shape directly (without replay): insert the
+later-reported row first (capacity 20), then an out-of-order earlier-reported row (capacity
+10) whose only difference from the first is capacity, so the existing insert path demotes the
+first row and inserts the second with a higher id despite its earlier reported time. An
+@id DESC@-only order would then pick the earlier, higher-id row as "latest", which is wrong;
+ordering by @reported@ first picks the later row correctly.
+
+'_infoActive' after the second insert is 'True' on the earlier row and 'False' on the later
+row (the insert path demotes by id, not by reported time); this test asserts on reported
+ordering, not on active.
+-}
+unit_latestInfoOrdersByReported :: IO ()
+unit_latestInfoOrdersByReported = withTempDbM Silent setupTestDatabase $ do
+  void $ insertStationInformation [(laterTime,   testInfoLater)]
+  void $ insertStationInformation [(earlierTime, testInfoEarlier)]
+
+  latestInfo <- withPostgres . runSelectReturningList . selectWith $ queryLatestInfo
+  liftIO $ assertEqual "queryLatestInfo picks the later-reported row" [laterTime] (map _infoReported latestInfo)
+  liftIO $ assertEqual "queryLatestInfo picks the higher-capacity row" [20] (map _infoCapacity latestInfo)
+
+  latestBeforeLater <- withPostgres . runSelectReturningList . selectWith $ queryLatestInfoBefore (addUTCTime 1 laterTime)
+  liftIO $ assertEqual "queryLatestInfoBefore(laterTime + 1s) picks capacity 20" [20] (map _infoCapacity latestBeforeLater)
+
+  latestBeforeEarlier <- withPostgres . runSelectReturningList . selectWith $ queryLatestInfoBefore (addUTCTime 1 earlierTime)
+  liftIO $ assertEqual "queryLatestInfoBefore(earlierTime + 1s) picks capacity 10" [10] (map _infoCapacity latestBeforeEarlier)
+
+  chargingInfra <- withPostgres . runSelectReturningOne . selectWith $ queryChargingInfrastructureE laterTime
+  liftIO $ assertEqual "queryChargingInfrastructureE at laterTime counts the later, higher-capacity row"
+    (Just (1, 20)) chargingInfra
+
+  -- Both statuses link (via the FK the insert path resolves against whichever info row is
+  -- currently active) to the earlier, higher-id row - but the docking query's own RANK window
+  -- must still independently pick the later-reported, capacity-20 row as "latest".
+  void $ insertStationStatus replayStatuses
+
+  dockingCounts <- queryDockingEventsCount (StatusVariationQuery (Just replayStationId) [EarliestTime earlierTime, LatestTime laterTime])
+  liftIO $ assertEqual "queryDockingEventsCount reports the later, higher-capacity station info"
+    [20] (dockingCounts ^.. traverse . eventsStation . infoCapacity)
+
+  where
+    replayStationId :: Int32
+    replayStationId = 9001
+
+    earlierTime = UTCTime (fromGregorian 2024 01 01) (timeOfDayToTime midday)
+    laterTime   = UTCTime (fromGregorian 2024 01 02) (timeOfDayToTime midday)
+
+    testInfoLater =
+      AT.StationInformation { AT.infoStationId             = fromIntegral replayStationId
+                             , AT.infoName                  = "Replay Ordering Test Station"
+                             , AT.infoPhysicalConfiguration = Just AT.Regular
+                             , AT.infoLat                   = 0.0
+                             , AT.infoLon                   = 0.0
+                             , AT.infoAltitude              = Just 0
+                             , AT.infoAddress               = Just "Nowhere"
+                             , AT.infoCapacity              = 20
+                             , AT.infoIsChargingStation     = True
+                             , AT.infoRentalMethods         = Nothing
+                             , AT.infoIsValetStation        = False
+                             , AT.infoIsVirtualStation      = False
+                             , AT.infoGroups                = []
+                             , AT.infoObcn                  = ""
+                             , AT.infoNearbyDistance        = 0
+                             , AT.infoBluetoothId           = ""
+                             , AT.infoRideCodeSupport       = True
+                             , AT.infoRentalUris            = AT.RentalURIs "" "" ""
+                             }
+    testInfoEarlier = testInfoLater { AT.infoCapacity = 10 }
+
+    replayStatuses =
+      map (stationStatusFromSimple baseStatus)
+      [ StationStatusSimple (fromIntegral replayStationId) earlierTime 0 0 0 0 0 0 0 0
+      , StationStatusSimple (fromIntegral replayStationId) laterTime   0 0 0 0 0 0 0 0
+      ]

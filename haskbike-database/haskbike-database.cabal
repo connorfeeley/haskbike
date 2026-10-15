@@ -144,6 +144,9 @@ library
                     , Haskbike.Database.Schema.V004.Migrations
                     , Haskbike.Database.Schema.V004.StationOccupancy
                     , Haskbike.Database.Schema.V005.Migrations
+                    , Haskbike.Database.Schema.V006.BikeShare
+                    , Haskbike.Database.Schema.V006.Migrations
+                    , Haskbike.Database.Schema.V006.QueryLogs
 
 
     -- LANGUAGE extensions used by modules in this package.
@@ -210,6 +213,7 @@ test-suite haskbike-database-test
                   , TestDatabase
                   , TestDatabaseRoundtrip
                   , TestOperations
+                  , TestReplay
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
@@ -225,6 +229,7 @@ test-suite haskbike-database-test
 
     -- Test dependencies.
     build-depends:    base
+                    , aeson
                     , haskbike-core
                     , haskbike-client
                     , haskbike-database

@@ -40,8 +40,11 @@ import           UnliftIO                                    ( MonadUnliftIO )
 -- variant was A/B-tested against the production mirror and lost on
 -- both endpoint p95 (`data-events-docking` 192 → 2634 ms,
 -- `comp-events-docking` 426 → 2224 ms) and SQL mean exec, see
--- @bench-results/STATUS.md@. RANK + the V005 station_status index
--- beats DISTINCT ON for the small partitions this query produces.
+-- @bench-results/STATUS.md@. RANK + the @station_information
+-- (station_id, reported DESC, id DESC)@ index beats DISTINCT ON for the
+-- small partitions this query produces. Ordering leads with @reported@,
+-- not @id@: @id@ is a serial and is not chronological once rows are
+-- replayed.
 queryDockingEventsCount :: (HasEnv env m, MonadIO m, MonadThrow m, MonadCatch m, MonadUnliftIO m)
                         => StatusVariationQuery -> m [DockingEventsCount]
 queryDockingEventsCount variation =  do
@@ -99,7 +102,7 @@ queryDockingEventsCountExpr' variation = withPostgres $ runSelectReturningList $
                                 ))
                      statusForStation
   rankedInfo' <- selecting $ do
-    withWindow_ (\row -> frame_ (partitionBy_ (_infoStationId row)) (orderPartitionBy_ (desc_ $ _infoId row)) noBounds_)
+    withWindow_ (\row -> frame_ (partitionBy_ (_infoStationId row)) (orderPartitionBy_ (desc_ (_infoReported row), desc_ (_infoId row))) noBounds_)
             (\row w -> ( row
                        , rank_ `over_` w
                        )

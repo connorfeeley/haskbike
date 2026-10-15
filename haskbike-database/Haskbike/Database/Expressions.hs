@@ -538,7 +538,7 @@ queryLatestInfo :: be ~ Postgres
                        (StationInformationT (QExpr be s)))
 queryLatestInfo = do
   ranked <- selecting $ do
-    withWindow_ (\row -> frame_ (partitionBy_ (_infoStationId row)) (orderPartitionBy_ (desc_ $ _infoId row)) noBounds_)
+    withWindow_ (\row -> frame_ (partitionBy_ (_infoStationId row)) (orderPartitionBy_ (desc_ (_infoReported row), desc_ (_infoId row))) noBounds_)
                 (\row w -> ( row
                            , rank_ `over_` w
                            )
@@ -553,7 +553,7 @@ queryLatestInfoBefore :: (be ~ Postgres, ctx ~ QValueContext, db ~ BikeshareDb, 
                       -> With be db (Q Postgres BikeshareDb s (StationInformationT (QGenExpr QValueContext Postgres s)))
 queryLatestInfoBefore t = do
   ranked <- selecting $ do
-    withWindow_ (\row -> frame_ (partitionBy_ (_infoStationId row)) (orderPartitionBy_ (desc_ $ _infoId row)) noBounds_)
+    withWindow_ (\row -> frame_ (partitionBy_ (_infoStationId row)) (orderPartitionBy_ (desc_ (_infoReported row), desc_ (_infoId row))) noBounds_)
                 (\row w -> ( row
                            , rank_ `over_` w
                            )
@@ -598,9 +598,13 @@ maybeFilterDaysAgo _ Nothing                 = id
 -- variant was A/B-tested against the production mirror and lost on
 -- every measurement (~+11 % per-call mean, ~+73 % p95 for the
 -- @comp-charging-infra@ endpoint), see @bench-results/STATUS.md@. With
--- the V005 @(station_id, id DESC)@ index the @WindowAgg@ runs in index
--- order and the partitions are small (one row per station), so the
--- DISTINCT ON sort+dedup overhead does not pay off here.
+-- the @station_information (station_id, reported DESC, id DESC)@ index
+-- the @WindowAgg@ runs in index order and the partitions are small (one
+-- row per station), so the DISTINCT ON sort+dedup overhead does not pay
+-- off here. Ordering leads with @reported@, not @id@: @id@ is a serial
+-- and is not chronological once rows are replayed (a replayed row can
+-- get a higher @id@ than a chronologically later one already in the
+-- table).
 queryChargingInfrastructure :: (MonadCatch m, HasEnv env m)
                             => UTCTime
                             -> m (Maybe (Int32, Int32))
@@ -614,7 +618,7 @@ queryChargingInfrastructureE :: (be ~ Postgres, ctx ~ QValueContext, db ~ Bikesh
                             -- ^ (Maybe) a tuple of (number of charging stations, number of charging docks)
 queryChargingInfrastructureE t = do
   ranked <- selecting $ do
-    withWindow_ (\row -> frame_ (partitionBy_ (_infoStationId row)) (orderPartitionBy_ (desc_ $ _infoId row)) noBounds_)
+    withWindow_ (\row -> frame_ (partitionBy_ (_infoStationId row)) (orderPartitionBy_ (desc_ (_infoReported row), desc_ (_infoId row))) noBounds_)
                 (\row w -> ( row
                            , rank_ `over_` w
                            )

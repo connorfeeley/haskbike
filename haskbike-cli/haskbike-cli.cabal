@@ -138,12 +138,14 @@ library
                    , Haskbike.CLI.Options.Server
                    , Haskbike.CLI.Options.Poll
                    , Haskbike.CLI.Options.Query
+                   , Haskbike.CLI.Options.Replay
                    , Haskbike.CLI.Options.Command
                    , Haskbike.CLI.Poll
                    -- , CLI.Poll.PollClientEnv
                    , Haskbike.CLI.Poll.Utils
                    , Haskbike.CLI.Query
                    , Haskbike.CLI.QueryFormat
+                   , Haskbike.CLI.Replay
                    , Haskbike.CLI.Server
                    , Haskbike.CLI.Utils
 
@@ -166,6 +168,7 @@ library
                     , ansi-terminal
                     , attoparsec
                     , boxes
+                    , bytestring
                     , co-log
                     , directory
                     , exceptions
@@ -178,6 +181,7 @@ library
                     , mtl
 
                     , aeson
+                    , servant
                     , servant-client
 
                     , beam-core
@@ -199,6 +203,7 @@ test-suite haskbike-cli-test
     ghc-options: -Wall -fwrite-ide-info -threaded "-with-rtsopts=-N"
 
     other-modules:  TestPoll
+                  , TestReplay
                   , Paths_haskbike_cli
 
     autogen-modules: Paths_haskbike_cli
@@ -214,8 +219,12 @@ test-suite haskbike-cli-test
                     , haskbike-client
                     , haskbike-database
                     , haskbike-cli
+                    , aeson
+                    , optparse-applicative
+                    , postgresql-simple
                     , tasty
                     , tasty-hunit
+                    , time
                     , unliftio
                     , mtl
                     , beam-core

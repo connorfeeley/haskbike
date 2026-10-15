@@ -55,7 +55,7 @@ import           Haskbike.Database.BikeShare
 import           Haskbike.Database.EndpointQueried
 import           Haskbike.Database.ImportExport
 import           Haskbike.Database.Operations
-import           Haskbike.Database.Schema.V001.QueryLogs
+import           Haskbike.Database.Tables.QueryLogs
 import qualified Haskbike.Database.Tables.StationInformation as DB
 import qualified Haskbike.Database.Tables.StationStatus      as DB
 import           Haskbike.Database.Utils

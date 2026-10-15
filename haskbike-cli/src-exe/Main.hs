@@ -24,6 +24,7 @@ import           Haskbike.CLI.Events
 import           Haskbike.CLI.Options
 import           Haskbike.CLI.Poll
 import           Haskbike.CLI.Query
+import           Haskbike.CLI.Replay
 import           Haskbike.CLI.Server
 import           Haskbike.Version
 
@@ -115,6 +116,7 @@ appMain options = do
     (DebugMisc d) -> dispatchDebug d
     (Database _)  -> pure ()
     (Server sv)   -> dispatchServer sv
+    (Replay r)    -> dispatchReplay r
 
 -- Convert CLI options to a logging severity.
 logLevel :: Options -> Severity
